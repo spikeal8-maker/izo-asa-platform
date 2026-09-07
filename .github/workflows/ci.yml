@@ -35,9 +35,7 @@ jobs:
           .venv/bin/python -m pytest
       - name: Install web
         working-directory: apps/web
-        run: |
-          if [ ! -f package-lock.json ]; then npm install --package-lock-only --ignore-scripts; fi
-          npm ci
+        run: npm ci
       - name: Dependency lock artifact
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
         with:

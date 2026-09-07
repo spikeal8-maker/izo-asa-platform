@@ -53,3 +53,24 @@ def test_no_production_deploy_or_self_hosted_ci():
     assert "self-hosted" not in ci
     assert "contents: read" in ci
     assert "secrets." not in ci
+
+
+def test_dependency_lock_matches_web_manifest():
+    import json
+    manifest = json.loads((ROOT / "apps/web/package.json").read_text())
+    lock = json.loads((ROOT / "apps/web/package-lock.json").read_text())
+    assert lock["lockfileVersion"] == 3
+    for group in ("dependencies", "devDependencies"):
+        assert lock["packages"][""][group] == manifest[group]
+        for name, version in manifest[group].items():
+            assert lock["packages"]["node_modules/" + name]["version"] == version
+
+
+def test_dependency_lock_is_required_not_bootstrapped_in_ci():
+    ci = (ROOT / ".github/workflows/ci.yml").read_text()
+    dockerfile = (ROOT / "infra/web.Dockerfile").read_text()
+    assert "npm install" not in ci
+    assert "npm install" not in dockerfile
+    assert "RUN npm ci" in dockerfile
+    assert "-r requirements-dev.txt" in ci
+    assert "-r requirements.lock" in (ROOT / "infra/api.Dockerfile").read_text()

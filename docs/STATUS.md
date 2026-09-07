@@ -1,20 +1,34 @@
 # Состояние
 
-Этап: Foundation 0, первый PR. Не готово для публичного развёртывания.
+Этап: Foundation 0, PR #1. Это техническое основание, не готовый публичный сервис.
+Код — в `foundation/initial-platform`; main и работающий сайт не обновлены этим PR.
 
-Локально выполненные и GitHub-проверки публикуются отдельно в описании PR с SHA.
-Наличие workflow не означает, что он выполнялся. Авторизация и генерация отсутствуют.
+## Подтверждённые проверки
 
-Пока не закрыты:
-- generated dependency locks после первого разрешения пакетов на GitHub;
-- проверка Docker Compose и настоящая browser-сборка в CI;
-- фиксация container base images по digest перед выпуском;
-- branch protection / required checks (CODEOWNERS сам по себе не защита);
-- финальная ограничительная лицензия и проверка лицензий зависимостей;
-- production HTTPS, secret files/manager, backup restore rehearsal и access control;
-- реальные Telegram/MAX SDK и signed auth, не эмуляция;
-- durable worker, auth, ledger и продуктовые функции из NEXT.
+GitHub Actions run `34157303460`, head `cca8e00ad6297604a693850a429db435efb7af89`:
+- 105 unit/architecture проверок и проверка OpenAPI прошли на целевых зависимостях;
+- TypeScript/Vite build и 30 Chromium-сценариев на шести размерах экрана прошли;
+- Docker Compose собран и запущен с PostgreSQL, Alembic, S3 и Caddy;
+- тестовые запись БД и S3-файл сохранились после `down` без `-v` и нового `up`;
+- при остановке S3: liveness остаётся 200, readiness возвращает 503.
 
-Первый workflow допускает bootstrap отсутствующих dependency locks и выводит только
-их сжатое содержимое, не secrets. Перед принятием основания locks надо закоммитить
-и убрать bootstrap-fallback. В обычной работе разрешены только locked installs.
+Этот commit добавляет полученный из того запуска npm lock и удаляет временное
+разрешение установки без lockfile. Python runtime/dev версии также закреплены.
+Результат проверки окончательного SHA надо смотреть в Checks и описании PR,
+а не автоматически переносить успех предыдущего коммита на новый.
+
+105 — число параметризованных проверок, не число готовых функций. Браузерные
+сценарии — эмуляция размеров и SDK hints, не реальные Telegram/MAX и iOS.
+
+## Остаются отдельными этапами
+
+- независимый review и приёмка PR; автоматический merge не включён;
+- container images по digest и управляемые обновления перед выпуском;
+- branch protection / required checks: CODEOWNERS сам по себе не защита;
+- окончательная лицензия и проверка лицензий зависимостей;
+- production HTTPS, секреты, backup/restore rehearsal и доступ к данным;
+- реальные Telegram/MAX SDK и серверная проверка подписанных данных;
+- durable worker, регистрация, ledger и продуктовые функции из NEXT.
+
+Регистрация, реальные генерации, балансы, платежи и local GPU ещё отсутствуют.
+Production deployment не выполнялся. Тестовые volumes не являются резервными копиями.

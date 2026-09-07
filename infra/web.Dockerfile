@@ -1,7 +1,7 @@
 FROM node:24-bookworm-slim AS build
 WORKDIR /build/apps/web
-COPY apps/web/package*.json ./
-RUN if [ -f package-lock.json ]; then npm ci; else npm install; fi
+COPY apps/web/package.json apps/web/package-lock.json ./
+RUN npm ci
 COPY apps/web ./
 COPY packages/contracts /build/packages/contracts
 RUN npm run build
