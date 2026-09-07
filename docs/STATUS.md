@@ -1,34 +1,60 @@
-# Состояние
+# Фактическое состояние IZO ASA
 
-Этап: Foundation 0, PR #1. Это техническое основание, не готовый публичный сервис.
-Код — в `foundation/initial-platform`; main и работающий сайт не обновлены этим PR.
+Срез документации: 7 сентября 2026. Этот файл — единственный агрегатор состояния, не список обещаний.
 
-## Подтверждённые проверки
+## 1. Код и публикация
 
-GitHub Actions run `34157303460`, head `cca8e00ad6297604a693850a429db435efb7af89`:
-- 105 unit/architecture проверок и проверка OpenAPI прошли на целевых зависимостях;
-- TypeScript/Vite build и 30 Chromium-сценариев на шести размерах экрана прошли;
-- Docker Compose собран и запущен с PostgreSQL, Alembic, S3 и Caddy;
-- тестовые запись БД и S3-файл сохранились после `down` без `-v` и нового `up`;
-- при остановке S3: liveness остаётся 200, readiness возвращает 503.
+Foundation source: `5f8f3187897316274e53fc9dd979e5770b80d988`, ветка `foundation/initial-platform`, [PR #1](https://github.com/spikeal8-maker/izo-asa-platform/pull/1).
 
-Этот commit добавляет полученный из того запуска npm lock и удаляет временное
-разрешение установки без lockfile. Python runtime/dev версии также закреплены.
-Результат проверки окончательного SHA надо смотреть в Checks и описании PR,
-а не автоматически переносить успех предыдущего коммита на новый.
+На момент подготовки DOC-001: PR открыт/Draft, не merged; main содержит начальное уведомление о сохранении прав. Production deployment не выполнялся. Старый сайт и его данные не изменялись. Новую текущую версию нужно сверять с GitHub, а не считать этот исторический SHA вечным HEAD.
 
-105 — число параметризованных проверок, не число готовых функций. Браузерные
-сценарии — эмуляция размеров и SDK hints, не реальные Telegram/MAX и iOS.
+DOC-001 дополняет этот PR документацией 0.1, не меняя application code, tests, dependencies, CI, Docker или LICENSE. Результат проверки нового документационного SHA фиксируется в Checks/описании PR после фактического запуска; успех исходного SHA ниже не автоматически переносится на новый.
 
-## Остаются отдельными этапами
+## 2. Что реально реализовано
 
-- независимый review и приёмка PR; автоматический merge не включён;
-- container images по digest и управляемые обновления перед выпуском;
-- branch protection / required checks: CODEOWNERS сам по себе не защита;
-- окончательная лицензия и проверка лицензий зависимостей;
-- production HTTPS, секреты, backup/restore rehearsal и доступ к данным;
-- реальные Telegram/MAX SDK и серверная проверка подписанных данных;
-- durable worker, регистрация, ledger и продуктовые функции из NEXT.
+| Область | Состояние |
+|---|---|
+| FastAPI factory, отдельные liveness/readiness | Код foundation, проверен |
+| PostgreSQL/Alembic baseline и S3 boundary | Код foundation, проверен в Compose |
+| React shell, навигация, themes/dialog, адаптивная структура | Техническая оболочка, не принятый дизайн |
+| JobSpec/Capability/AssetRef, routing/state policy | Только DTO/чистые правила |
+| OpenAPI export/TypeScript types, dependency locks | Реализованы |
+| Unit/architecture/Chromium shell/Compose tests | Реализованы; границы coverage ниже |
+| PRODUCT/ADMIN/UX/AI_RUNTIME/ARCHITECTURE/DEVELOPMENT/OPERATIONS/NEXT/INDEX | Спецификация 0.1 в DOC-001; не реализация перечисленных функций |
 
-Регистрация, реальные генерации, балансы, платежи и local GPU ещё отсутствуют.
-Production deployment не выполнялся. Тестовые volumes не являются резервными копиями.
+## 3. Проверенные доказательства foundation
+
+[CI run 34158092764](https://github.com/spikeal8-maker/izo-asa-platform/actions/runs/34158092764), job `101853992704`, source head `5f8f3187897316274e53fc9dd979e5770b80d988` — **SUCCESS**. Метаданные и реальные steps повторно прочитаны при подготовке DOC-001. Детализация исходной приёмки сохранена в PR #1.
+
+- 107 unit/architecture проверок, OpenAPI consistency, pip check.
+- npm ci, TypeScript/Vite build.
+- 30 Chromium shell cases: пять сценариев на шести viewport.
+- Compose build/start, migrations, PostgreSQL/S3 canary write.
+- down без -v, новый up и чтение DB/object canary.
+- Остановка S3: API liveness 200, readiness 503.
+
+107 — параметризованные проверки, не 107 функций. 30 — shell/viewport checks, не реальный Telegram/MAX/iOS. Пересоздание volumes-потребителей не доказывает восстановление из backup. DTO unit tests не доказывают durable queue или безопасность ещё отсутствующих user endpoints.
+
+Первоначальный npm peer conflict исправлен совместимой версией TypeScript, без force/legacy-peer-deps; locks закреплены. Локальные проверки прошлого сеанса не подменяют GitHub Docker/browser run.
+
+## 4. Что не реализовано
+
+Регистрация, trusted web-session, email verification/recovery, Telegram/MAX signed login; credits/ledger; административная компенсация; jobs/attempts в БД и worker; пользовательские media uploads/private ownership; реальные AI providers и local agent; галерея/лента как функции; чат; video/audio/3D; payments; real bot/mail delivery; production release/backup/alerts.
+
+Пустая страница /admin не предоставляет администрирование. S3Store без Accounts не является готовой системой доступа к пользовательским файлам.
+
+## 5. Решение по визуалу
+
+Владелец указал, что нынешний визуал неприемлем. Скриншоты остаются доказательством существования оболочки, не согласованной художественной концепцией. Следующая пользовательская задача — **UX-001** по NEXT: одна новая концепция студии/результата/галереи с интерактивной проверкой на телефоне/планшете/desktop.
+
+## 6. Незакрытые gates
+
+Независимый review и merge Foundation; branch protection/required checks (CODEOWNERS не равен защите); утверждение дизайна; точные product policies/provider/budget; окончательная licence/third-party notices; production image digests/HTTPS/secrets; backup restore и safe release; реальные Mini Apps и нагрузка.
+
+Не создавать отдельный бизнес-блокер из каждого будущего вопроса: только gate следующего пакета может запрещать этот пакет. Например, неопределённая цена video не мешает бесплатному image UX-прототипу.
+
+## 7. Как обновлять
+
+В том же ограниченном пакете обновлять реализованное поведение и подтверждённые проверки, а не переносить весь roadmap сюда. Для evidence указывать SHA, среду, команду/run и результат. IMPLEMENTED / TESTED / REVIEWED / MERGED / DEPLOYED / OPERATIONALLY VERIFIED не объединяются.
+
+Ближайшие действия и критерии — [NEXT](NEXT.md). Вход в комплект — [INDEX](INDEX.md).
