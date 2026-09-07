@@ -1,7 +1,7 @@
 name: Foundation CI
 on:
   push:
-    branches: [main, 'foundation/**']
+    branches: [main]
   pull_request:
     branches: [main]
 permissions:
@@ -27,13 +27,8 @@ jobs:
       - name: Install backend
         run: |
           python -m venv .venv
-          if [ -f requirements.lock ]; then
-            .venv/bin/pip install -r requirements.lock
-          else
-            .venv/bin/pip install -r requirements.in
-            .venv/bin/pip freeze > requirements.lock
-          fi
-          .venv/bin/pip install pytest==9.0.2 httpx==0.28.1
+          .venv/bin/pip install -r requirements-dev.txt
+          .venv/bin/pip check
       - name: Unit and architecture checks
         run: |
           .venv/bin/python tools/export_contracts.py --check
@@ -43,15 +38,15 @@ jobs:
         run: |
           if [ ! -f package-lock.json ]; then npm install --package-lock-only --ignore-scripts; fi
           npm ci
-      - name: Dependency bootstrap evidence
-        run: |
-          python - <<'PYCODE'
-          import base64, gzip
-          from pathlib import Path
-          for name in ['requirements.lock', 'apps/web/package-lock.json']:
-              data = gzip.compress(Path(name).read_bytes(), mtime=0)
-              print('LOCK_EVIDENCE ' + name + ' ' + base64.b64encode(data).decode())
-          PYCODE
+      - name: Dependency lock artifact
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: dependency-locks
+          path: |
+            requirements.lock
+            apps/web/package-lock.json
+          retention-days: 7
+          if-no-files-found: error
       - name: Build and responsive browser checks
         working-directory: apps/web
         run: |
@@ -73,7 +68,7 @@ jobs:
           docker compose exec -T api python -c "import http.client; c=http.client.HTTPConnection('localhost',8000,timeout=10); c.request('GET','/api/health/ready'); assert c.getresponse().status==503"
       - name: Safe status on failure
         if: failure()
-        run: docker compose ps || true
+        run: if [ -f .env ]; then docker compose ps; fi
       - name: Browser evidence
         if: always()
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
@@ -86,4 +81,4 @@ jobs:
           if-no-files-found: ignore
       - name: Remove isolated CI stack
         if: always()
-        run: docker compose down -v --remove-orphans || true
+        run: if [ -f .env ]; then docker compose down -v --remove-orphans; fi

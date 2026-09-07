@@ -1,8 +1,8 @@
 FROM python:3.13-slim-bookworm
 ENV PYTHONDONTWRITEBYTECODE=1 PYTHONUNBUFFERED=1 PYTHONPATH=/app/apps/api
 WORKDIR /app
-COPY requirements* ./
-RUN if [ -f requirements.lock ]; then pip install --no-cache-dir -r requirements.lock; else pip install --no-cache-dir -r requirements.in; fi
+COPY requirements.lock ./
+RUN pip install --no-cache-dir -r requirements.lock
 RUN useradd --uid 10001 --create-home app
 COPY apps/api apps/api
 COPY alembic.ini .
