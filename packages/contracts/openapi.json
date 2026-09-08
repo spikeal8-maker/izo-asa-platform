@@ -1,0 +1,112 @@
+{
+  "components": {
+    "schemas": {
+      "CapabilityStatus": {
+        "properties": {
+          "available": {
+            "title": "Available",
+            "type": "boolean"
+          },
+          "modality": {
+            "$ref": "#/components/schemas/Modality"
+          },
+          "reason": {
+            "title": "Reason",
+            "type": "string"
+          }
+        },
+        "required": [
+          "modality",
+          "available",
+          "reason"
+        ],
+        "title": "CapabilityStatus",
+        "type": "object"
+      },
+      "FoundationStatus": {
+        "properties": {
+          "build_sha": {
+            "title": "Build Sha",
+            "type": "string"
+          },
+          "capabilities": {
+            "items": {
+              "$ref": "#/components/schemas/CapabilityStatus"
+            },
+            "title": "Capabilities",
+            "type": "array"
+          },
+          "stage": {
+            "title": "Stage",
+            "type": "string"
+          }
+        },
+        "required": [
+          "stage",
+          "build_sha",
+          "capabilities"
+        ],
+        "title": "FoundationStatus",
+        "type": "object"
+      },
+      "Modality": {
+        "enum": [
+          "image",
+          "video",
+          "audio",
+          "3d",
+          "chat"
+        ],
+        "title": "Modality",
+        "type": "string"
+      }
+    }
+  },
+  "info": {
+    "title": "IZO ASA Platform",
+    "version": "0.1.0"
+  },
+  "openapi": "3.1.0",
+  "paths": {
+    "/api/health/live": {
+      "get": {
+        "operationId": "live_api_health_live_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": {
+                    "type": "boolean"
+                  },
+                  "title": "Response Live Api Health Live Get",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Live"
+      }
+    },
+    "/api/v1/foundation": {
+      "get": {
+        "operationId": "foundation_api_v1_foundation_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FoundationStatus"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Foundation"
+      }
+    }
+  }
+}

@@ -1,0 +1,73 @@
+name: izo-foundation
+x-api-environment: &api-environment
+  IZO_ENVIRONMENT: ${IZO_ENVIRONMENT:-development}
+  IZO_PG_HOST: postgres
+  IZO_PG_PASSWORD: ${IZO_PG_PASSWORD:?Run python tools/bootstrap.py first}
+  IZO_S3_ENDPOINT: http://storage:8333
+  IZO_S3_ACCESS_KEY: ${IZO_S3_ACCESS_KEY:?Run bootstrap first}
+  IZO_S3_SECRET_KEY: ${IZO_S3_SECRET_KEY:?Run bootstrap first}
+  IZO_BUILD_SHA: ${IZO_BUILD_SHA:-unreleased}
+services:
+  postgres:
+    image: postgres:17-bookworm
+    environment:
+      POSTGRES_USER: izo
+      POSTGRES_DB: izo
+      POSTGRES_PASSWORD: ${IZO_PG_PASSWORD:?Run bootstrap first}
+    volumes: [postgres-data:/var/lib/postgresql/data]
+    networks: [private]
+    healthcheck:
+      test: [CMD-SHELL, 'pg_isready -U izo -d izo']
+      interval: 3s
+      timeout: 3s
+      retries: 30
+  storage:
+    image: chrislusf/seaweedfs:4.29
+    command: [mini, '-dir=/data']
+    environment:
+      AWS_ACCESS_KEY_ID: ${IZO_S3_ACCESS_KEY:?Run bootstrap first}
+      AWS_SECRET_ACCESS_KEY: ${IZO_S3_SECRET_KEY:?Run bootstrap first}
+      S3_BUCKET: izo-private
+    volumes: [objects:/data]
+    networks: [private]
+  migrate:
+    build: {context: ., dockerfile: infra/api.Dockerfile}
+    environment: *api-environment
+    command: [python, '-m', alembic, upgrade, head]
+    networks: [private]
+    depends_on:
+      postgres: {condition: service_healthy}
+  api:
+    build: {context: ., dockerfile: infra/api.Dockerfile}
+    environment: *api-environment
+    networks: [private]
+    read_only: true
+    tmpfs: [/tmp]
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
+    depends_on:
+      migrate: {condition: service_completed_successfully}
+      storage: {condition: service_started}
+    healthcheck:
+      test: [CMD, python, '-c', "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/api/health/ready', timeout=8)"]
+      interval: 5s
+      timeout: 10s
+      retries: 30
+      start_period: 15s
+  web:
+    build: {context: ., dockerfile: infra/web.Dockerfile}
+    ports: ['127.0.0.1:${IZO_HTTP_PORT:-8080}:8080']
+    networks: [private, edge]
+    depends_on:
+      api: {condition: service_healthy}
+    healthcheck:
+      test: [CMD, wget, '-q', '--spider', 'http://127.0.0.1:8080/']
+      interval: 5s
+      timeout: 3s
+      retries: 20
+volumes:
+  postgres-data:
+  objects:
+networks:
+  private: {internal: true}
+  edge:
