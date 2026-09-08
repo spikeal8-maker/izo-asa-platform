@@ -13,5 +13,9 @@ export default defineConfig({
     { name: 'tablet-landscape', use: { viewport: { width: 1024, height: 768 }, hasTouch: true } },
     { name: 'laptop', use: { viewport: { width: 1440, height: 900 } } },
     { name: 'desktop', use: { viewport: { width: 1920, height: 1080 } } },
+    { name: 'qhd', use: { viewport: { width: 2560, height: 1440 }, deviceScaleFactor: 1 } },
+    { name: 'uhd', use: { viewport: { width: 3840, height: 2160 }, deviceScaleFactor: 1 } },
+    { name: 'hidpi-150', use: { viewport: { width: 2560, height: 1440 }, deviceScaleFactor: 1.5 } },
+    { name: 'hidpi-200', use: { viewport: { width: 1920, height: 1080 }, deviceScaleFactor: 2 } },
   ],
 })

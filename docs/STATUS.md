@@ -1,49 +1,56 @@
-# Фактическое состояние IZO ASA
+# IZO ASA · фактическое состояние
 
-Срез: 8 сентября 2026. Требования не равны готовым функциям. Ветка `foundation/initial-platform`, [PR #1](https://github.com/spikeal8-maker/izo-asa-platform/pull/1). Main и рабочий сайт не обновлены; merge/deploy не выполнялись.
+Срез 8 сентября 2026. Требования не равны реализованным возможностям. Foundation остаётся в PR #1, исходная версия нового UI-пакета — `077bfdb8862a5bbf783b2e483f22b91ca10db3df`. UX-001 разрабатывается отдельно в `ux/studio-gallery`. Main, рабочий сайт, данные и GPU не менялись; merge/deploy не выполнялись.
 
-## 1. F0-ACCEPT: технический разбор и ограниченные исправления
+## Новый пакет: UX-001 + экономная разработка
 
-Проверенная исходная версия — `a208ec3e42c9306e56dfe8d73f19bcf382553c84`. Пользователь поручил разработку и проверку следующего этапа. Выполнен отдельный технический проход по основанию и воспроизведение дефектов; это самопроверка с regression tests, **не независимое внешнее review**.
+Реализован интерактивный **демо-прототип**, ещё не утверждённый владельцем дизайн. Работают студия, локальный preview исходника, выбор демо-модели/пропорций, подтверждение условной цены, демонстрационные success/error/cancel, галерея/фильтр/поиск, подробный просмотр, скачивание SVG-примера, повторное использование настроек и удаление. Пустая галерея не заполнена чужими вымышленными работами.
 
-Исправления в этом пакете:
-- F0-R1: readiness больше не сравнивает БД с навечно зашитой `0001`. Читается единственный Alembic head из поставленного кода; БД с другой/пустой/несколькими revisions отвергается. Проверка БД read-only и ограничена timeout. Никаких миграций при импорте или health-запросе.
-- F0-R2: добавлен отсутствовавший `migrations/script.py.mako`. Создание следующей revision через Alembic проверяется в временном каталоге без подключения БД. Существующая migration 0001 не менялась.
-- F0-R3: необработанное исключение до начала HTTP-ответа даёт безопасный JSON 500, request ID, no-store/nosniff и структурированное событие ошибки без текста exception/query. Ожидаемые HTTP errors сохраняют свой статус.
-- F0-R4: конфигурация отвергает некорректные порты/встроенные credentials/неподходящие S3 URLs; печатная диагностика ValidationError не раскрывает вход. `ValidationError.errors()` без `include_input=False` по-прежнему нельзя публиковать: это не универсальный redactor.
+Демо использует предустановленную оригинальную векторную композицию, НЕ генерирует изображение из prompt и НЕ обрабатывает загруженный исходник. Об этом сообщается на странице, перед запуском и в результате. Настоящих баллов, авторизации, ownership или admin API нет. Пример карточки админки — только вымышленные данные.
 
-Изменён только этот STATUS, три существующих backend-файла, добавлен шаблон миграций и два файла тестов. UI/дизайн, contracts/generation policy, БД/0001, Docker, workflow, зависимости, LICENSE и реальные ключи не изменялись.
+Демо-состояние ограничено 24 работами и хранится в sessionStorage этой вкладки; запрет/повреждение storage обрабатывается. Перезапуск реального сервера и multi-device sync этим не доказываются. Изображения/file blobs не сохраняются в sessionStorage; локальный upload только для preview. Повтор submit guarded синхронно; терминальная обработка idempotent только в пределах демо.
 
-## 2. Проверки и ограничения evidence
+UI разделён на shell, shared/ui, studio, gallery и изолированный prototype. Зависимости npm/Python, OpenAPI/сервер, БД, Docker, workflow и лицензия не изменены. Старые shell scenarios сохранены, новые browser tests добавлены.
 
-Локально извлечённые через GitHub source-файлы сверены с Git blob SHAs исходного коммита. Это не полный git clone: прямой сетевой доступ из среды отсутствует. На исходном коде первоначальные regression cases дали **9 FAIL / 4 PASS**: восемь отказов в tests/test_acceptance_regressions.py и один в test_migration_workflow.py. После исправления и расширения — **24 PASS** в двух новых файлах; сеть запрещена существующим conftest.
+## Правила и экономия
 
-Локальный Python 3.13.5, FastAPI 0.128.2, Pydantic 2.13.4 и Alembic 1.18.4 отличаются от закреплённого GitHub-окружения. Полный suite, точные зависимости, browser и Docker проверяются в GitHub. Здесь Docker отсутствует; локального контейнерного запуска не было. Статус окончательного нового SHA фиксируется в Checks/описании PR после фактического завершения, не переносится с исходной версии.
+Корневой AGENTS сокращён и структурирован с сохранением safety/ownership/runtime/review правил. Добавлен scoped apps/web/AGENTS с картой «что менять → где искать → ближайший test». Это уточнение, не конкурирующий master plan. Пользователь явно поручил укрепить правила в этом пакете.
 
-Исходный [run 34212525390](https://github.com/spikeal8-maker/izo-asa-platform/actions/runs/34212525390), job `102016611508`, `a208ec3…` повторно прочитан: SUCCESS всех предусмотренных проверок. Исторический baseline `5f8f318…`, run `34158092764`: 107 unit/architecture и 30 Chromium shell cases. Число будущего полного suite не выводится из арифметики, пока не прочитан лог нового run.
+`tools/check_change.py` проверяет конечный scope относительно полного согласованного SHA: committed + staged + unstaged + untracked (не ignored), удаление и обе стороны rename. Возвращает отказ при чужих файлах/неразрешённых sensitive paths/превышении лимита. Печатает рекомендуемые проверки, **не запускает их**; unknown area требует полный CI, а не пропуск. Это помощник и evidence, не branch protection и не универсальный affected-test router.
 
-Новые тесты подтверждают создание/чтение следующей packaged revision, отказ неоднозначной/неподходящей БД, safe diagnostics, exception isolation для HTTP и сохранение 4xx-кодов. DB transport в unit fake; реальные PostgreSQL/S3 остаются отдельным шагом Compose CI. Cache metadata относится к неизменяемому release; после добавления migration процесс перезапускается.
+Правила выбора context/test, лимит первоначального чтения, остановка повторной неудачной попытки и краткий handoff записаны в AGENTS. Runtime limits и CI не ослаблялись ради экономии. Фактической telemetry tokens/стоимости здесь нет; процент экономии не заявляется.
 
-Наличие перечисленных положительных проверок не доказывает streaming/background error handling, полную безопасность секретов, ownership ещё отсутствующих endpoints или готовность production. QHD/4K и реальные Mini Apps пока требования; прежние shell cases их не заменяют. Volumes persistence не является backup restore.
+## Проверки текущего пакета
 
-## 3. Существующая реализация
+Добавлены browser cases studio/gallery и 4 профиля: QHD2560×1440, UHD3840×2160, DPR1.5 и DPR2. Вместе с прежними шестью это 10 профилей Chromium. Реальные Windows OS scaling125/150/200%, iOS и Telegram/MAX не имитируются одним DPR и пока не проверены.
 
-FastAPI factory/liveness/readiness, PostgreSQL/Alembic baseline, приватный S3 boundary, React shell/nav/themes/dialog, JobSpec/Capability/AssetRef и чистые routing/state rules, OpenAPI export/generated types, dependency locks и изолированный CI.
+Добавлены Python regression tests scope guard (включая временный git repo, untracked/delete/rename, sensitive paths и file budget) и конкретных web-boundaries. Проверки описанных новых функций считаются выполненными только после фактических результатов CI. Exact head/tree, результаты, screenshot review и ограничения фиксируются в PR после чтения логов. Эта строка не объявляет будущий запуск зелёным.
 
-Нет регистрации/session/recovery, работающих permissions/entitlements/ledger/admin, durable worker, owner-scoped uploads, live providers/credential resolver/local agent, функциональных gallery/feed/chat/video/audio/3D, оплаты и production release/restore. Технический shell не принят как дизайн.
+Локальный сетевой git clone недоступен (DNS failure), пакеты и Docker локально не запускались. Источники прочитаны через GitHub connector; новые файлы пишутся Git tree API. Build/browser/полный suite выполняются на GitHub. Remote compare заменяет локальный scope запуск в этой среде, но тесты самого инструмента входят в существующий pytest gate.
 
-Документация 0.2 сохранена: U45/D14 в PRODUCT; A30/AD10/S66 в ADMIN; единственный план NEXT. Маршруты, профили планов и DRAFT defaults — предлагаемые контракты, не согласованные коммерческие цены. F0-ACCEPT не меняет продуктовый scope и не начинает реализацию всего реестра.
+## Предыдущая приёмка основания
 
-## 4. Решение для продолжения и незакрытые gates
+F0-ACCEPT source `077bfdb…`: run34219197332, job102038057830 — SUCCESS. Проверен synthetic merge96f013f… с тем же tree0d6eaa…: 131 Python tests, 30 прежних Chromium cases, build, Compose/PostgreSQL/S3 persistence и health. В F0 исправлены revision readiness, Alembic template, safe error response и config diagnostics. Эти результаты относятся к той версии, не автоматически к новому UI.
 
-После успешного полного CI исправленного SHA техническое основание допускает дальнейшую **изолированную разработку UX-001 и AUTH-001**. Не требуется новый общий план или ещё одна повторная проверка того же основания без новых данных. Это не разрешение merge/deploy и не утверждение дизайна.
+## Ограничения и следующий результат
 
-При этом проверке GitHub `/branches/main` снова вернул `protected:false`, main=`93d9417…`. Доступный connector не предоставляет запись branch protection/administration; поиск дополнительных подключений не дал подходящего средства. Правила защиты и независимое review остаются отдельным организационным gate принятия в main; их нельзя объявить настроенными по файлам AGENTS/CODEOWNERS. Продолжение в ограниченной feature-ветке не требует выдачи production-доступа.
+Самопроверка не независимое review. Main protection не настроена; широкий write-token способен обойти инструкции. PR/ветки не merged, production не развёрнут. Новый UI должен получить визуальную приёмку владельца. После неё — ограниченный AUTH-001 и реальный первый image flow по NEXT. Не считать демо-галерею готовой системой хранения пользователей.
 
-Неблокирующие для прототипа задачи: расширенные QHD/4K/HiDPI tests и дизайн — UX-001; полноценные runtime-contract validators/user permissions — соответствующие feature-пакеты; image digests, production secrets/egress, safe telemetry/streaming, backup/restore и workload baseline — до своих публичных функций. Smoke tool сейчас использует стандартный dev-порт 8080; поддержку изменяемого порта нужно синхронизировать до инструкции с другим портом.
+Нет настоящих accounts/sessions/permissions/entitlements/ledger/compensation, durable jobs/worker, live AI/credentials/local agent, функциональных feed/chat/video/audio/3D, платежей или Mini App logins. Документация v0.2 и общий runtime-контракт сохранены. Дальнейший порядок — NEXT, предметные требования — PRODUCT/ADMIN/UX/AI_RUNTIME, не ещё один план.
 
-Следующий пользовательский результат — одна новая интерактивная концепция студии/результата/галереи по issue #2, без настоящих AI-вызовов. Затем вход и первый законченный image flow по NEXT. Список цен/квот/provider/budget/retention/LICENSE и публичный scope остаются решениями соответствующих этапов.
+## Проверить прототип после получения ветки
 
-## 5. Как обновлять
+```sh
+git clone --branch ux/studio-gallery https://github.com/spikeal8-maker/izo-asa-platform.git
+cd izo-asa-platform
+python tools/bootstrap.py
+docker compose up --build --wait
+```
 
-IMPLEMENTED / TESTED / REVIEWED / PUSHED / MERGED / DEPLOYED / OPERATIONALLY VERIFIED независимы. Для evidence указывать SHA, среду и реальный результат. [INDEX](INDEX.md) — карта документов; [NEXT](NEXT.md) — порядок работ. Само наличие этого документа не заменяет прочтение конечных Checks PR.
+Адрес стенда: http://localhost:8080/image. Это локальный dev-прототип, не public deploy. В полноценном checkout для проверки scope:
+
+```sh
+python tools/check_change.py --base 077bfdb8862a5bbf783b2e483f22b91ca10db3df --scope tools/scopes/ux-001.json
+```
+
+Команды создания .venv и профильных tests — README и apps/web/AGENTS.md. Не удалять volumes с нужными данными. Для каждого отчёта разделять IMPLEMENTED/TESTED/PUSHED/REVIEWED/MERGED/DEPLOYED.
