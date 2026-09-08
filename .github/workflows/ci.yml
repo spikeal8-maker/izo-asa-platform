@@ -1,0 +1,82 @@
+name: Foundation CI
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+permissions:
+  contents: read
+concurrency:
+  group: foundation-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  verify:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    env:
+      IZO_ENVIRONMENT: test
+      IZO_BUILD_SHA: ${{ github.sha }}
+      AWS_EC2_METADATA_DISABLED: 'true'
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd
+        with: {persist-credentials: false}
+      - uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1
+        with: {python-version: '3.13'}
+      - uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38
+        with: {node-version: '24'}
+      - name: Install backend
+        run: |
+          python -m venv .venv
+          .venv/bin/pip install -r requirements-dev.txt
+          .venv/bin/pip check
+      - name: Unit and architecture checks
+        run: |
+          .venv/bin/python tools/export_contracts.py --check
+          .venv/bin/python -m pytest
+      - name: Install web
+        working-directory: apps/web
+        run: npm ci
+      - name: Dependency lock artifact
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: dependency-locks
+          path: |
+            requirements.lock
+            apps/web/package-lock.json
+          retention-days: 7
+          if-no-files-found: error
+      - name: Build and responsive browser checks
+        working-directory: apps/web
+        run: |
+          npm run build
+          npx playwright install --with-deps chromium
+          npm run test:e2e
+      - name: Container integration
+        run: |
+          python tools/bootstrap.py
+          docker compose up --build --wait --wait-timeout 240
+          python tools/smoke.py
+          docker compose run --rm api python tools/persistence.py write
+          docker compose down
+          docker compose up --wait --wait-timeout 180
+          python tools/smoke.py
+          docker compose run --rm api python tools/persistence.py read
+          docker compose stop storage
+          docker compose exec -T api python -c "import urllib.request, urllib.error; r=urllib.request.urlopen('http://127.0.0.1:8000/api/health/live'); assert r.status==200"
+          docker compose exec -T api python -c "import http.client; c=http.client.HTTPConnection('localhost',8000,timeout=10); c.request('GET','/api/health/ready'); assert c.getresponse().status==503"
+      - name: Safe status on failure
+        if: failure()
+        run: if [ -f .env ]; then docker compose ps; fi
+      - name: Browser evidence
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: browser-evidence
+          path: |
+            apps/web/playwright-report
+            apps/web/test-results
+          retention-days: 7
+          if-no-files-found: ignore
+      - name: Remove isolated CI stack
+        if: always()
+        run: if [ -f .env ]; then docker compose down -v --remove-orphans; fi
