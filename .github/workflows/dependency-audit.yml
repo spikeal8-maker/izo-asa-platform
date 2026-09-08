@@ -32,15 +32,32 @@ jobs:
         id: audit
         working-directory: apps/web
         run: npm audit --registry=https://registry.npmjs.org --include=dev --include=optional --include=peer --audit-level=high --json > "$RUNNER_TEMP/izo-dependency-audit.json"
-      - name: Prepare reviewed SEC-001 candidate outside the checkout
+      - name: Prepare and probe the exact SEC-001 patch outside the checkout
         if: ${{ failure() && steps.audit.outcome == 'failure' && github.head_ref == 'security/npm-audit' }}
         working-directory: apps/web
         run: |
           mkdir "$RUNNER_TEMP/izo-sec001-candidate"
+          cat > "$RUNNER_TEMP/izo-sec001-probe.cjs" <<'JS'
+          const { createRequire } = require('node:module');
+          const { join } = require('node:path');
+          const req = createRequire(join(process.cwd(), 'package.json'));
+          const parser = createRequire(req.resolve('@redocly/openapi-core'));
+          const yaml = parser('js-yaml');
+          let rejected = false;
+          try { yaml.load('base: &e [{}, {}, {}, {}]\nvalue: {<<: *e}\n', { maxTotalMergeKeys: 2 }); }
+          catch (err) { if (!/maxTotalMergeKeys/.test(err.message)) throw err; rejected = true; }
+          require('node:assert/strict').deepEqual(yaml.load('a: &a {kind: image}\nb: {<<: *a, count: 1}\n', { maxTotalMergeKeys: 8 }).b, {kind:'image',count:1});
+          console.log(JSON.stringify({parser: parser('js-yaml/package.json').version, emptyMergeBudgetEnforced: rejected, normalMerge: true}));
+          if (process.argv[2] === 'patched' && !rejected) process.exit(1);
+          JS
+          node "$RUNNER_TEMP/izo-sec001-probe.cjs" > "$RUNNER_TEMP/izo-sec001-candidate/probe-before.json"
           cp package.json package-lock.json "$RUNNER_TEMP/izo-sec001-candidate/"
           cd "$RUNNER_TEMP/izo-sec001-candidate"
-          npm update @redocly/openapi-core --package-lock-only --ignore-scripts --no-audit --no-fund
+          node -e "const fs=require('node:fs'); const p=JSON.parse(fs.readFileSync('package.json')); p.overrides={'@redocly/openapi-core@1.34.19':{'js-yaml':'4.3.2'}}; fs.writeFileSync('package.json',JSON.stringify(p,null,2)+'\n');"
+          npm install --package-lock-only --ignore-scripts --no-audit --no-fund
           npm audit --registry=https://registry.npmjs.org --package-lock-only --include=dev --include=optional --include=peer --audit-level=high --json > audit-after.json
+          npm ci --ignore-scripts --no-audit --no-fund
+          node "$RUNNER_TEMP/izo-sec001-probe.cjs" patched > probe-after.json
       - name: Save candidate for review (never commit automatically)
         if: ${{ always() && github.head_ref == 'security/npm-audit' }}
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
