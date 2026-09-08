@@ -1,0 +1,43 @@
+name: Dependency Security
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+permissions:
+  contents: read
+concurrency:
+  group: dependency-security-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  npm-audit:
+    name: npm-audit
+    runs-on: ubuntu-24.04
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd
+        with: {persist-credentials: false}
+      - uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38
+        with:
+          node-version: '24'
+          package-manager-cache: false
+      - name: Install exact lock without package scripts
+        working-directory: apps/web
+        run: npm ci --ignore-scripts --no-audit --no-fund
+      - name: Record audited version
+        working-directory: apps/web
+        run: |
+          { git rev-parse HEAD; node --version; npm --version; sha256sum package.json package-lock.json; } > "$RUNNER_TEMP/izo-dependency-versions.txt"
+      - name: Audit all dependencies (high and critical block)
+        working-directory: apps/web
+        run: npm audit --registry=https://registry.npmjs.org --include=dev --include=optional --include=peer --audit-level=high --json > "$RUNNER_TEMP/izo-dependency-audit.json"
+      - name: Save audit evidence even on failure
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: dependency-audit
+          path: |
+            ${{ runner.temp }}/izo-dependency-audit.json
+            ${{ runner.temp }}/izo-dependency-versions.txt
+          retention-days: 7
+          if-no-files-found: error
