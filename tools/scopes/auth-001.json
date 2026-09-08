@@ -1,0 +1,35 @@
+{
+  "task": "AUTH-001",
+  "base": "591416bec096803ab2c0860a356299525f6a3d6d",
+  "max_files": 32,
+  "allowed": [
+    "apps/api/izo/accounts/*",
+    "apps/api/izo/app.py",
+    "apps/api/migrations/versions/0002_accounts.py",
+    "apps/api/AGENTS.md",
+    "apps/web/src/features/accounts/*",
+    "apps/web/src/shared/api.ts",
+    "apps/web/src/shell/App.tsx",
+    "apps/web/e2e/accounts.spec.ts",
+    "apps/web/e2e/shell.spec.ts",
+    "packages/contracts/openapi.json",
+    "tests/test_accounts.py",
+    "tests/test_auth_boundaries.py",
+    "tools/auth_acceptance.py",
+    "tools/bootstrap.py",
+    "tools/scopes/auth-001.json",
+    "compose.yaml",
+    ".github/workflows/ci.yml",
+    "docs/STATUS.md",
+    "README.md"
+  ],
+  "sensitive_approved": [
+    "apps/api/AGENTS.md",
+    "apps/api/migrations/versions/0002_accounts.py",
+    "tools/auth_acceptance.py",
+    "tools/bootstrap.py",
+    "tools/scopes/auth-001.json",
+    "compose.yaml",
+    ".github/workflows/ci.yml"
+  ]
+}
