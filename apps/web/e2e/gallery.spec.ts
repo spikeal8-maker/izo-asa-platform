@@ -8,6 +8,12 @@ test('U-19 empty state has no invented personal works', async ({ page }, info) =
   await expect(page.getByRole('heading', { level: 1 })).toHaveText('Галерея')
   await expect(page.getByText('Здесь начнётся ваша коллекция')).toBeVisible()
   await expect(page.locator('.asset-card')).toHaveCount(0)
+  const clearance = await page.getByLabel('Поиск работ').evaluate(input => {
+    const icon = input.parentElement!.querySelector('svg')!
+    const textStart = input.getBoundingClientRect().left + parseFloat(getComputedStyle(input).paddingLeft)
+    return textStart - icon.getBoundingClientRect().right
+  })
+  expect(clearance).toBeGreaterThan(4)
   await noOverflow(page)
   await page.screenshot({ path: info.outputPath('gallery-empty.png'), fullPage: true })
 })

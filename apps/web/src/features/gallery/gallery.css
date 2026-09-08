@@ -7,7 +7,7 @@
 .filter-tabs button.selected { background: var(--panel); border-color: var(--line); }
 .search-box { display: flex; align-items: center; position: relative; width: 250px; max-width: 100%; }
 .search-box > .icon { position: absolute; left: 13px; color: var(--muted); width: 16px; }
-.search-box input { padding-left: 40px; font-size: .8rem; height: 44px; }
+.gallery-toolbar .search-box input { padding-left: 40px; font-size: .8rem; height: 44px; }
 .gallery-meta { display: flex; align-items: center; gap: 6px; font-size: .7rem; margin: 18px 0 24px; }
 .gallery-meta .icon { width: 13px; }
 .gallery-meta > span { margin-left: auto; }
