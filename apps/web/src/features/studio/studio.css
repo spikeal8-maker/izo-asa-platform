@@ -27,7 +27,8 @@
 .model-picker strong { display: block; font-size: .83rem; font-weight: 600; }
 .model-picker small { font-size: .6rem; color: var(--muted); }
 .model-mark { background: var(--accent-soft); color: var(--accent); border-radius: 8px; padding: 8px; }
-.aspect-field { border: 0; padding: 0; margin: 0; min-width: 0; }
+.aspect-field { border: 0; padding: 0; margin: 20px 0 0; min-width: 0; }
+.aspect-field legend { margin: 0 0 9px; }
 .aspect-options { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 6px; }
 .aspect-options > button { display: flex; flex-direction: column; align-items: center; justify-content: flex-end; gap: 7px; font-size: .7rem; min-height: 65px; padding: 10px 4px; }
 .aspect-symbol { border: 1.5px solid currentColor; height: 16px; max-width: 29px; border-radius: 2px; }
@@ -78,4 +79,10 @@
   .art-stage { min-height: 260px; }
   .result-panel > .panel-heading { padding: 18px; }
   .result-caption { padding: 20px; }
+}
+@media (min-width: 701px) and (max-width: 980px) {
+  .studio-grid { grid-template-columns: minmax(280px, 320px) minmax(0, 1fr); }
+  .composer { padding: 18px; }
+  .result-panel > .panel-heading { padding: 16px; }
+  .art-stage { min-height: 240px; }
 }

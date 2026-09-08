@@ -19,6 +19,13 @@ def git(root: Path, *args: str) -> bytes:
     return result.stdout
 
 
+def validate_base(base: str, scope: dict) -> None:
+    if not isinstance(scope, dict) or not re.fullmatch(r"[0-9a-f]{40}", base):
+        raise ValueError("An explicit scope and full approved base SHA are required")
+    if scope.get("base") != base:
+        raise ValueError("CLI base must equal the reviewed task base; HEAD cannot silently replace it")
+
+
 def changed_paths(root: Path, base: str) -> list[str]:
     if not re.fullmatch(r"[0-9a-f]{40}", base):
         raise ValueError("Base must be the approved full commit SHA")
@@ -36,6 +43,8 @@ def matches(path: str, patterns: list[str] | tuple[str, ...]) -> bool:
 
 
 def inspect(paths: list[str], scope: dict) -> dict:
+    if not isinstance(scope, dict):
+        raise ValueError("Scope must be an object")
     allowed = scope.get("allowed", [])
     reviewed = scope.get("sensitive_approved", [])
     limit = scope.get("max_files")
@@ -79,6 +88,7 @@ def main() -> int:
     args = parser.parse_args()
     try:
         scope = json.loads(args.scope.read_text(encoding="utf-8"))
+        validate_base(args.base, scope)
         report = inspect(changed_paths(ROOT, args.base), scope)
         print(json.dumps(report, ensure_ascii=False, indent=2))
         return 0 if report["scope_ok"] else 1

@@ -68,3 +68,14 @@ def test_scope_manifest_is_explicit_about_non_goals():
     assert scope["max_files"] == 32
     assert not guard.inspect(["apps/api/izo/app.py"], scope)["scope_ok"]
     assert not guard.inspect([".github/workflows/ci.yml"], scope)["scope_ok"]
+
+
+def test_reviewed_base_cannot_be_replaced_with_current_head():
+    base = "a" * 40
+    guard.validate_base(base, {"base": base})
+    with pytest.raises(ValueError):
+        guard.validate_base("b" * 40, {"base": base})
+    with pytest.raises(ValueError):
+        guard.validate_base(base, {})
+    with pytest.raises(ValueError):
+        guard.inspect([], [])
