@@ -1,0 +1,47 @@
+"""Relational accounting schema; migration 0004 is a static independent copy."""
+import sqlalchemy as sa
+from ..accounts.credit_access import metadata
+
+wallets = sa.Table("credit_wallets", metadata,
+    sa.Column("account_id", sa.Uuid, sa.ForeignKey("accounts.id"), primary_key=True),
+    sa.Column("balance", sa.BigInteger, nullable=False),
+    sa.Column("reserved", sa.BigInteger, nullable=False),
+    sa.Column("sequence", sa.BigInteger, nullable=False),
+    sa.CheckConstraint("balance >= 0 AND balance <= 9000000000000 AND reserved >= 0 AND reserved <= balance AND sequence >= 0", name="credit_wallet_bounds"))
+reservations = sa.Table("credit_reservations", metadata,
+    sa.Column("id", sa.Uuid, primary_key=True),
+    sa.Column("account_id", sa.Uuid, sa.ForeignKey("credit_wallets.account_id"), nullable=False),
+    sa.Column("request_id", sa.Uuid, unique=True, nullable=False),
+    sa.Column("amount", sa.BigInteger, nullable=False),
+    sa.Column("state", sa.String(16), nullable=False),
+    sa.Column("charged", sa.BigInteger),
+    sa.Column("created_at", sa.BigInteger, nullable=False),
+    sa.Column("closed_at", sa.BigInteger),
+    sa.UniqueConstraint("account_id", "id", name="credit_reservation_owner"),
+    sa.CheckConstraint("amount > 0 AND amount <= 1000000000", name="credit_reservation_amount"),
+    sa.CheckConstraint("(state = 'active' AND charged IS NULL AND closed_at IS NULL) OR (state = 'settled' AND charged IS NOT NULL AND charged >= 0 AND charged <= amount AND closed_at IS NOT NULL) OR (state = 'released' AND charged IS NOT NULL AND charged = 0 AND closed_at IS NOT NULL)", name="credit_reservation_state"))
+sa.Index("ix_credit_reservation_owner_state", reservations.c.account_id, reservations.c.state)
+ledger = sa.Table("credit_ledger", metadata,
+    sa.Column("entry_id", sa.Uuid, primary_key=True),
+    sa.Column("account_id", sa.Uuid, sa.ForeignKey("credit_wallets.account_id"), nullable=False),
+    sa.Column("operation_id", sa.Uuid, nullable=False),
+    sa.Column("request_hash", sa.String(64), nullable=False),
+    sa.Column("sequence", sa.BigInteger, nullable=False),
+    sa.Column("kind", sa.String(16), nullable=False),
+    sa.Column("balance_delta", sa.BigInteger, nullable=False),
+    sa.Column("reserved_delta", sa.BigInteger, nullable=False),
+    sa.Column("balance_after", sa.BigInteger, nullable=False),
+    sa.Column("reserved_after", sa.BigInteger, nullable=False),
+    sa.Column("reservation_id", sa.Uuid),
+    sa.Column("case_id", sa.Uuid),
+    sa.Column("actor_id", sa.Uuid, sa.ForeignKey("accounts.id")),
+    sa.Column("reason", sa.String(32), nullable=False),
+    sa.Column("created_at", sa.BigInteger, nullable=False),
+    sa.UniqueConstraint("account_id", "operation_id", name="credit_operation_once"),
+    sa.UniqueConstraint("account_id", "sequence", name="credit_sequence_once"),
+    sa.UniqueConstraint("case_id", name="credit_case_once"),
+    sa.ForeignKeyConstraint(["account_id", "reservation_id"],
+        ["credit_reservations.account_id", "credit_reservations.id"]),
+    sa.CheckConstraint("sequence > 0 AND balance_after >= 0 AND balance_after <= 9000000000000 AND reserved_after >= 0 AND reserved_after <= balance_after", name="credit_entry_bounds"),
+    sa.CheckConstraint("(kind = 'grant' AND balance_delta > 0 AND balance_delta <= 1000000000 AND reserved_delta = 0 AND reservation_id IS NULL AND case_id IS NOT NULL AND actor_id IS NOT NULL) OR (kind = 'reserve' AND balance_delta = 0 AND reserved_delta > 0 AND reserved_delta <= 1000000000 AND reservation_id IS NOT NULL AND case_id IS NULL AND actor_id IS NULL) OR (kind = 'settle' AND balance_delta <= 0 AND reserved_delta < 0 AND balance_delta >= reserved_delta AND reservation_id IS NOT NULL AND case_id IS NULL AND actor_id IS NULL) OR (kind = 'release' AND balance_delta = 0 AND reserved_delta < 0 AND reservation_id IS NOT NULL AND case_id IS NULL AND actor_id IS NULL)", name="credit_entry_movement"),
+    sa.CheckConstraint("(kind = 'grant' AND reason IN ('compensation','test_grant')) OR (kind <> 'grant' AND reason = 'generation')", name="credit_entry_reason"))

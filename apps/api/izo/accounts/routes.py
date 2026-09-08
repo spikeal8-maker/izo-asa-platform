@@ -1,4 +1,5 @@
 """Thin HTTP layer: trusted cookie identity, strict origins and synchronizer CSRF."""
+from collections.abc import Callable
 from functools import lru_cache
 from contextlib import asynccontextmanager
 from threading import Lock
@@ -50,7 +51,7 @@ class AuthBodyLimit:
         await self.app(scope, replay, send)
 
 
-def attach_accounts(app, database_config) -> None:
+def attach_accounts(app, database_config) -> Callable[[Request], AuthService]:
     creation_lock = Lock()
     @lru_cache(maxsize=1)
     def configured_service():
@@ -168,3 +169,4 @@ def attach_accounts(app, database_config) -> None:
     app.add_middleware(AuthBodyLimit)
     attach_challenges(router, service, same_origin, bearer, clear_cookie)
     app.include_router(router)
+    return service

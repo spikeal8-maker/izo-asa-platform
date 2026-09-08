@@ -84,6 +84,32 @@
         "title": "AuthView",
         "type": "object"
       },
+      "Balance": {
+        "properties": {
+          "available": {
+            "default": 0,
+            "title": "Available",
+            "type": "integer"
+          },
+          "balance": {
+            "default": 0,
+            "title": "Balance",
+            "type": "integer"
+          },
+          "reserved": {
+            "default": 0,
+            "title": "Reserved",
+            "type": "integer"
+          },
+          "sequence": {
+            "default": 0,
+            "title": "Sequence",
+            "type": "integer"
+          }
+        },
+        "title": "Balance",
+        "type": "object"
+      },
       "CapabilityStatus": {
         "properties": {
           "available": {
@@ -161,6 +187,90 @@
         "additionalProperties": false,
         "properties": {},
         "title": "EmptyInput",
+        "type": "object"
+      },
+      "Entry": {
+        "properties": {
+          "balance_after": {
+            "title": "Balance After",
+            "type": "integer"
+          },
+          "balance_delta": {
+            "title": "Balance Delta",
+            "type": "integer"
+          },
+          "created_at": {
+            "title": "Created At",
+            "type": "integer"
+          },
+          "entry_id": {
+            "format": "uuid",
+            "title": "Entry Id",
+            "type": "string"
+          },
+          "kind": {
+            "enum": [
+              "grant",
+              "reserve",
+              "settle",
+              "release"
+            ],
+            "title": "Kind",
+            "type": "string"
+          },
+          "operation_id": {
+            "format": "uuid",
+            "title": "Operation Id",
+            "type": "string"
+          },
+          "reason": {
+            "enum": [
+              "compensation",
+              "test_grant",
+              "generation"
+            ],
+            "title": "Reason",
+            "type": "string"
+          },
+          "reservation_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reservation Id"
+          },
+          "reserved_after": {
+            "title": "Reserved After",
+            "type": "integer"
+          },
+          "reserved_delta": {
+            "title": "Reserved Delta",
+            "type": "integer"
+          },
+          "sequence": {
+            "title": "Sequence",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "entry_id",
+          "operation_id",
+          "sequence",
+          "kind",
+          "balance_delta",
+          "reserved_delta",
+          "balance_after",
+          "reserved_after",
+          "reservation_id",
+          "reason",
+          "created_at"
+        ],
+        "title": "Entry",
         "type": "object"
       },
       "ErrorDetail": {
@@ -252,6 +362,44 @@
         ],
         "title": "Modality",
         "type": "string"
+      },
+      "Overview": {
+        "properties": {
+          "account_id": {
+            "format": "uuid",
+            "title": "Account Id",
+            "type": "string"
+          },
+          "balance": {
+            "$ref": "#/components/schemas/Balance"
+          },
+          "entries": {
+            "items": {
+              "$ref": "#/components/schemas/Entry"
+            },
+            "title": "Entries",
+            "type": "array"
+          },
+          "next_before": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Next Before"
+          }
+        },
+        "required": [
+          "account_id",
+          "balance",
+          "entries",
+          "next_before"
+        ],
+        "title": "Overview",
+        "type": "object"
       },
       "ProofInput": {
         "additionalProperties": false,
@@ -1086,6 +1234,50 @@
         "summary": "Revoke Session",
         "tags": [
           "accounts"
+        ]
+      }
+    },
+    "/api/v1/credits": {
+      "get": {
+        "operationId": "own_credits_api_v1_credits_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 20,
+              "maximum": 100,
+              "minimum": 1,
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "before",
+            "required": false,
+            "schema": {
+              "maximum": 9000000000000,
+              "minimum": 1,
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Overview"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Own Credits",
+        "tags": [
+          "credits"
         ]
       }
     },
