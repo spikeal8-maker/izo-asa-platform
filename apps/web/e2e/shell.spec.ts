@@ -2,6 +2,7 @@ import { test, expect } from '@playwright/test'
 
 test.beforeEach(async ({ page }) => {
   await page.route('**/api/v1/foundation', route => route.fulfill({ json: { stage: 'foundation', build_sha: 'unreleased', capabilities: [] } }))
+  await page.route('**/api/v1/auth/me', route => route.fulfill({ status: 401, json: { error: { code: 'auth_required' } } }))
 })
 
 test('overview has honest capabilities, no document overflow and accessible dialog', async ({ page }, info) => {
@@ -48,7 +49,7 @@ for (const host of ['telegram', 'max'] as const) {
     await page.goto('/account')
     await expect(page.locator('.app')).toHaveAttribute('data-platform', host)
     await expect(page.getByRole('heading', { level: 1 })).toHaveText('Аккаунт')
-    await expect(page.getByText('Регистрация, вход и баланс появятся', { exact: false })).toBeVisible()
-    await expect(page.locator('input[type=password]')).toHaveCount(0)
+    await expect(page.getByRole('button', { name: 'Войти', exact: true })).toBeVisible()
+    await expect(page.getByTestId('server-account')).toHaveCount(0)
   })
 }

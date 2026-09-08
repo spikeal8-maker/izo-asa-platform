@@ -10,6 +10,7 @@ import { Studio } from '../features/studio/Studio'
 import { ResultPanel } from '../features/studio/ResultPanel'
 import { Gallery } from '../features/gallery/Gallery'
 import { AssetPage } from '../features/gallery/AssetPage'
+import { AccountPage } from '../features/accounts/AccountPage'
 import './layout.css'
 
 function initialTheme(): 'light' | 'dark' {
@@ -32,6 +33,7 @@ function AppContent() {
   const host = detectHost(window)
   const studio = ['/', '/app', '/image', '/studio/image'].includes(path)
   const gallery = path === '/gallery'
+  const account = ['/account', '/account/sessions', '/login', '/register'].includes(path)
   const detail = path.startsWith('/gallery/')
   const jobs = path === '/jobs' || path.startsWith('/jobs/')
   const activeJob = state.job?.state === 'running'
@@ -83,7 +85,7 @@ function AppContent() {
       <header className="topbar">
         <Link className="mobile-brand" href="/"><Icon name="spark" /> ИЗО АСА</Link>
         <div className="breadcrumb">Рабочее пространство <span>/</span>
-          <strong>{studio ? 'Студия' : gallery || detail ? 'Мои работы' : jobs ? 'Задания' : 'Обзор'}</strong>
+          <strong>{account ? 'Аккаунт' : studio ? 'Студия' : gallery || detail ? 'Мои работы' : jobs ? 'Задания' : 'Обзор'}</strong>
         </div>
         <div className="header-actions">
           <button className="balance-button" onClick={() => setAbout(true)} aria-label={`Демо-баланс: ${balance} баллов`}>
@@ -96,14 +98,15 @@ function AppContent() {
       </header>
       <div className="content">
         <div className="demo-notice" role="note">
-          <span><i />Интерактивный прототип <span className="notice-detail">· без реальных генераций и платежей</span></span>
+          <span><i />{account ? 'Серверный аккаунт' : 'Интерактивный прототип'} <span className="notice-detail">· без реальных генераций и платежей</span></span>
           <button onClick={() => setAbout(true)}>О состоянии <Icon name="info" /></button>
         </div>
-        {!storageAvailable && <p className="field-error" role="alert">
+        {!storageAvailable && !account && <p className="field-error" role="alert">
           Хранение в этой вкладке недоступно. После обновления демо-данные не сохранятся.
         </p>}
         <main id="main" tabIndex={-1}>
-          {studio ? <Studio />
+          {account ? <AccountPage key={path} mode={path === '/register' ? 'register' : path === '/login' ? 'login' : 'account'} />
+            : studio ? <Studio />
             : gallery ? <Gallery />
             : detail ? <AssetPage id={path.slice('/gallery/'.length)} />
             : jobs ? <>
@@ -128,12 +131,12 @@ function AppContent() {
               </section>}
             </>}
         </main>
-        <footer><span>ИЗО АСА · UX-001</span><ApiStatus /></footer>
+        <footer><span>ИЗО АСА · AUTH-001 / UX-001</span><ApiStatus /></footer>
       </div>
     </div>
     <Dialog open={about} title="Что работает сейчас" onClose={() => setAbout(false)}>
       <p>Студия, локальный предпросмотр исходника, тестовая задача, её отмена/ошибка, просмотр и скачивание SVG-примера. Это макет, не AI-сервис.</p>
-      <p>Демо-описания и примеры хранятся только в этой вкладке. Настоящих аккаунтов, прав, балансов и входа через Telegram/MAX пока нет.</p>
+      <p>Аккаунт и сессии работают через сервер. Генерация, баланс студии и её работы остаются демо этой вкладки. Почта и вход через Telegram/MAX ещё не подключены.</p>
       <label className="demo-checkbox">
         <input type="checkbox" checked={state.balance === 0} disabled={activeJob}
           onChange={event => setEmptyBalance(event.target.checked)} /> Нулевой демо-баланс
@@ -144,7 +147,7 @@ function AppContent() {
       </div>
     </Dialog>
     <Dialog open={resetting} title="Сбросить данные прототипа?" onClose={() => setResetting(false)}>
-      <p>Демо-описание, работы и текущая тестовая задача будут удалены из этой вкладки. Настоящих данных здесь нет.</p>
+      <p>Демо-описание, работы и текущая тестовая задача будут удалены из этой вкладки. Серверный аккаунт не удаляется.</p>
       <button className="danger-button" onClick={() => { reset(); setResetting(false) }}>Подтвердить сброс</button>
     </Dialog>
   </div>
