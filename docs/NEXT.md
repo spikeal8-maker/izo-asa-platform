@@ -1,101 +1,92 @@
-# План реализации IZO ASA · версия 0.1
+# План реализации IZO ASA · версия 0.2
 
-Это единственный план работ. Реальная готовность хранится в [STATUS](STATUS.md). Ни одна строка со статусом «план» не является поручением немедленно реализовать весь продукт. Правила постановки задачи — [DEVELOPMENT](DEVELOPMENT.md).
+Единственный порядок пакетов; факты — [STATUS](STATUS.md). Пакет не равен готовой функции и не является командой немедленно реализовать весь реестр. U/D принадлежат [PRODUCT](PRODUCT.md), A/AD/S — [ADMIN](ADMIN.md). Правила процесса — [DEVELOPMENT](DEVELOPMENT.md).
 
-## 1. Что делать сейчас
+## 1. Ближайшая последовательность
 
-Технический Foundation 0 существует в PR #1 и прошёл свой CI, но не объединён в main и не прошёл отдельную приёмку. Полноценная продуктовая спецификация добавляется документационным пакетом DOC-001. Текущий визуал владельцем не принят.
+DOC-003 закрывает документальные пробелы: страницы, действия, доступ и типизированные настройки. После проверки этого пакета не создавать ещё один «генеральный план». Следующий шаг — F0-ACCEPT, затем один интерактивный UX-001 с отдельной визуальной приёмкой, затем ограниченный image flow. Продуктовая спецификация v0.2 не утверждает окончательные цены/дизайн и не разрешает production.
 
-Порядок ближайших действий: проверить Foundation/diff/документацию → принять безопасную техническую основу → выполнить **UX-001** → утвердить визуальное направление → строить AUTH-001 и первый image flow. Backend-задачи, не зависящие от дизайна, допускаются после принятия foundation отдельным scope; не запускать нескольких пишущих агентов в одних файлах.
+Backend-пакеты, не зависящие от оформления, допустимы после F0-ACCEPT отдельными scopes. Один пишущий агент на пересекающиеся файлы. Нельзя превращать реестр экранов в обязательство сначала построить весь settings engine, всю админку и все модальности.
 
-Следующий результат для владельца — не ещё один абстрактный фундамент, а интерактивно проверяемые студия, результат и галерея. Пока это прототип, он прямо так обозначается.
+## 2. Пакеты, зависимости и связь с реестрами
 
-## 2. Полная последовательность и зависимости
+Зависимость — результат уже принятого пакета, не просто наличие issue. Ранее описанные DOC-001/DOC-002 — история, DOC-003 — текущее уточнение. Все будущие пакеты в таблице имеют статус ПЛАН, если STATUS не доказывает иное.
 
-| ID | Результат | Зависит от | Главная проверка | Соответствие продукту |
-|---|---|---|---|---|
-| DOC-001 | Единая спецификация, admin/UX/runtime/план и фактический статус | Foundation source | Только документация; нет ложных claims | P-01…P-12 |
-| F0-ACCEPT | Review и принятие каркаса; решение о branch protection | PR #1 + DOC-001 | Exact-SHA checks, границы, отсутствие secrets | Основа |
-| UX-001 | Интерактивный прототип image/result/gallery | F0-ACCEPT, UX | Владелец принимает mobile/tablet/desktop | P-02/P-07 |
-| AUTH-001 | Web аккаунт/session/logout/permissions skeleton | F0-ACCEPT | Forgery, CSRF, expiry, revoke, rate limit | P-01/P-12 |
-| AUTH-002 | Подтверждение адреса/восстановление/связывание identity | AUTH-001 | Fake mail, replay, double-link, account isolation | P-01/P-12 |
-| CREDIT-001 | Журнал, резерв/списание/освобождение | AUTH-001 | Конкурентный расход не уводит ниже допустимого остатка | P-09 |
-| ADMIN-001 | Ограниченная карточка пользователя + компенсация | AUTH-001, CREDIT-001, UX tokens | Permission + одна проводка на заявку + audit | P-10/P-09 |
-| MEDIA-001 | Owner-scoped assets, upload/finalize/private download | AUTH-001 | MIME/size, чужой ID, expired URL, S3 failure | P-07 |
-| JOBS-001 | Durable job/attempt, worker, lease/recovery, fake provider | CREDIT-001, MEDIA-001 | Restart, duplicate, cancel, stale lease, bad-job isolation | P-02…P-05 |
-| IMAGE-001 | Первый сквозной image flow и галерея | UX-001, AUTH, ADMIN-001, JOBS-001 | Browser → API → worker → S3 → gallery | P-02/P-07 |
-| CHANGE-001 | Проверка стоимости трёх обычных изменений | IMAGE-001 | Изолированный scope и фактические расходы агента | Управляемость |
-| API-001 | Один реальный AI provider/модель | IMAGE-001, выбранный provider/бюджет | Разрешённый реальный result + settlement + errors | P-02 |
-| CATALOG-001 | Админский registry моделей/версионность/credentials | API-001, ADMIN-001 | Disabled candidate, публикация, no key leakage | P-10 |
-| LOCAL-001 | Agent на GPU-ПК, outbound protocol, отдельный pool | JOBS-001, API-001, CATALOG-001 | GPU outage не останавливает API | P-02/local |
-| PLATFORM-001 | Telegram adapter и signed login | AUTH-002, стабильный image flow | Реальный клиент + forged/expired initData negative tests | P-01 |
-| PLATFORM-002 | MAX adapter и signed login | AUTH-002, стабильный image flow | Реальный MAX + проверка официального алгоритма | P-01 |
-| FEED-001 | Публикация, чтение, снятие, жалоба/модерация | MEDIA-001, ADMIN-001, IMAGE-001 | Private original не раскрыт; снятие закрывает выдачу | P-08/P-10 |
-| CHAT-001 | Streaming text, история, image tool | AUTH, CREDIT, IMAGE, API | Budget, tool rights, duplicate, disconnect, injection | P-06 |
-| VIDEO-001 | Один video capability + viewer/галерея | JOBS, MEDIA, API, утверждённый UX | Poll/reconcile, cancel cost, duration, сохранность | P-03 |
-| AUDIO-001 | Одна audio capability, затем ASR/TTS/music отдельно | JOBS, MEDIA, API | Permission mic, player, безопасный файл и cost | P-04 |
-| THREE-D-001 | Один 3D capability + manifest/viewer/download | JOBS, MEDIA, API | Safe resources, формат, memory budget, preview fallback | P-05 |
-| NOTIFY-001 | Durable inbox, потом bot/mail delivery | AUTH, JOBS, preferences | Дубликат/сбой доставки не повторяет генерацию | P-11 |
-| OPS-001 | Staging, alerts, secrets, backup/restore, release | Стабильный ограниченный продукт | Restore в отдельную среду, exact artifact, rollback | Надёжность |
-| BILLING-001 | Оплата/тарифы — отдельный разрешённый этап | CREDIT, ADMIN, юридические/провайдерские решения | Verified provider event, idempotency, refund/reconcile | P-09 |
-| LAUNCH-001 | Публичный перезапуск заявленного scope | Принятые включённые функции + OPS + safety gates | Никаких обещанных неработающих разделов | Релиз |
+| ID | Результат / основные U/A/S | Зависит от | Критерий завершения |
+|---|---|---|---|
+| DOC-001 | Спецификация продукта 0.1 | Foundation source | Разделены требования и реализация |
+| DOC-002 | Agent rules, credentials, QHD/4K | DOC-001 | Расширены контракты, без claims новой функциональности |
+| DOC-003 | PRODUCT §11–13, ADMIN §2–11, traceability | DOC-002 | Уникальные IDs, покрытие экранов/доступа/полей/пакетов, docs-only diff |
+| F0-ACCEPT | Технический review PR #1, правила приёмки/защиты main | Foundation + DOC-003 | Exact-SHA CI, отсутствие secrets/production зависимости, ограничения понятны; отдельное разрешение merge |
+| UX-001 | Прототип U-09/U-10/U-18/U-19/U-20/U-44/U-45, D-01…D-05; пример A-03 | F0-ACCEPT | Одна принятая концепция, настоящий UI на fake data, QHD/4K/HiDPI; не real AI |
+| AUTH-001 | U-02/U-03/U-26, trusted sessions и basic permission model; S-01…S-08 минимально | F0-ACCEPT | Register/login/logout, CSRF, revoke, expiry, forgery/rate limits, no role escalation |
+| AUTH-002 | U-04…U-06/U-25/U-27; подтверждение/recovery и linking service | AUTH-001 | Replay/expiry, нейтральное восстановление, последний метод, чужая identity; fake mail |
+| CREDIT-001 | U-28/A-04; ledger/reserve/settle/release | AUTH-001 | Race/insufficient funds/idempotency, целочисленный баланс; без реальных денег |
+| ENTITLEMENT-001 | PRODUCT §12, A-06/A-07, S-09…S-23 | AUTH-001, CREDIT-001 | Один basic revision, allowlists/finite quotas, zero/expired/overquota tests; extended/custom можно выключить |
+| ADMIN-001 | A-02/A-03/A-05/A-29, AD-01/AD-02, S-56 | AUTH-001, CREDIT-001 | Минимальный owner scope и одно начисление на вручную заведённый case; audit; не полная CRM |
+| MEDIA-001 | Private assets/uploads/download, A-17/A-18; S-15/S-16/S-50 | AUTH-001, ENTITLEMENT-001 | Owner/MIME/size/quarantine/expired URL, S3 failure; не public bucket |
+| PROFILE-001 | U-24 имя/avatar/preferences | AUTH-001, MEDIA-001, UX-001 | Свой профиль, безопасный avatar, theme choice не меняет права |
+| JOBS-001 | U-17/U-18/A-15/A-16, AD-06, S-42/S-43 | CREDIT-001, ENTITLEMENT-001, MEDIA-001 | Durable attempt/lease/fencing, fake provider, bad-job isolation/restart/cancel; outbox intent |
+| IMAGE-001 | U-09/U-10/U-19/U-20 с настоящим изолированным backend | UX-001, AUTH-002, ADMIN-001, JOBS-001 | Вход → баллы → fake image → private S3 → gallery/download → restart; второй user denied |
+| CHANGE-001 | Стоимость обычных изменений | IMAGE-001 | Три изолированные задачи: mobile button, entitlement, provider error; фактические tokens/attempts или «нет данных» |
+| API-001 | Один настоящий API adapter/capability/connection | IMAGE-001, выбранные provider/бюджет | Разрешённый real result, settlement/error/reconcile, controlled egress, no leaked key |
+| SETTINGS-001 | A-27/AD-08, typed policy lifecycle для используемых полей | ADMIN-001, ENTITLEMENT-001 | expectedRevision, validation/default/REQ, safe publish/audit; не все 66 групп сразу |
+| CATALOG-001 | A-08…A-12, AD-03/AD-04; S-24…S-38 | API-001, SETTINGS-001 | Draft → proof → publish, connections/secret sources, rotation/scope tests; key-balancer не обязателен |
+| ACCESS-001 | A-28/AD-09, ограниченное делегирование персоналу | AUTH-002, ADMIN-001 | Scope/expiry/delegation/last-owner, negative access; до реальных сотрудников |
+| LOCAL-001 | Outbound agent, A-13/A-14/AD-05; S-39…S-43 | JOBS-001, API-001, CATALOG-001 | GPU outage не останавливает API; revoke, stale lease, approved workflows, no DB access |
+| PLATFORM-001 | Telegram U-07/U-27/A-23, S-51 | AUTH-002, IMAGE-001 | Подписанные данные + реальный клиент, input/download/back/keyboard; не только JS hint |
+| PLATFORM-002 | MAX U-08/U-27/A-23, S-52 | AUTH-002, IMAGE-001 | Собственный signed protocol + реальные клиенты; общий Account и UI |
+| FEED-001 | U-21…U-23, D-06…D-08, A-19/A-20/AD-07; S-44…S-46 | MEDIA-001, ADMIN-001, IMAGE-001 | Publication/report/moderation/unpublish, private original закрыт; reactions отдельно включаемы |
+| CHAT-001 | U-15/U-16/D-14, S-21 | AUTH-002, CREDIT-001, ENTITLEMENT-001, IMAGE-001, API-001 | Streaming/history + image tool, бюджет/ownership/confirmation, disconnect/injection negative tests |
+| IMAGE-002 | U-11 и расширенные image modes | IMAGE-001, MEDIA-001, API-001 | Поддержанные references/masks, source сохранён; отдельная UX приёмка editor |
+| VIDEO-001 | U-12 + result в U-20 | JOBS-001, MEDIA-001, API-001 | Один capability, duration/poll/reconcile/cancel cost, poster/full distinction |
+| AUDIO-001 | U-13 + result/player/transcript | JOBS-001, MEDIA-001, API-001 | Сначала одна из ASR/TTS/music; mic denial, файл/cost/ownership; не обещать остальные |
+| THREE-D-001 | U-14 + viewer/manifest | JOBS-001, MEDIA-001, API-001 | Safe resources, format/memory limits и fallback poster |
+| SUPPORT-001 | U-34…U-36/D-11, A-21/A-22, S-65 | AUTH-002, ADMIN-001, MEDIA-001 | Own tickets, guest contact без account history, case-bound compensation/attachments |
+| ACCOUNT-DATA-001 | U-37/D-12, S-47…S-49/S-66 | AUTH-002, MEDIA-001, CREDIT-001, JOBS-001 | Export/delete/fresh auth, grace/holds/active refs, restore-safe deletion; сроки отдельно принять |
+| NOTIFY-001 | U-33/A-24, delivery в A-23; S-53…S-55 | AUTH-002, JOBS-001 | Inbox/outbox, идемпотентная доставка; real bot/email только при разрешении и consent |
+| BILLING-001 | U-29…U-32/U-41/D-13, A-25/A-26/AD-10, S-60 | CREDIT-001, ENTITLEMENT-001, ADMIN-001, API-001, OPS-001 | Verified provider event/refund/idempotency; юр. решения, реальные вызовы по разрешению |
+| OPS-001 | Staging/health/restore/release, A-01/A-30; S-57…S-59/S-62 | IMAGE-001, API-001 | Exact artifact, backup restore, scoped secrets/alerts/controlled release; не только down/up |
+| LAUNCH-001 | U-01/U-38…U-40/U-42/U-43, S-61/S-63/S-64; выбранный публичный scope | F0-ACCEPT, принятые включённые функции, AUTH-002, SUPPORT-001, ACCOUNT-DATA-001, OPS-001 | Реальные claims, правовые документы, все launch gates; PLATFORM/FEED/BILLING обязательны только если объявлены |
 
-Это порядок по зависимостям, не календарная оценка и не требование ждать 3D ради закрытой image-alpha. После API/LOCAL можно изменить порядок Feed/Chat/Video/Audio/3D по решению владельца без переделки общего foundation. Telegram/MAX и безопасность обязательны до запуска, если Mini Apps входят в публичное обещание. Реальные payments включаются только когда отдельно готовы.
+S-01…S-08 технически валидируются уже в AUTH-001; SETTINGS-001 лишь даёт staff UI используемым policy, а не переписывает auth. Аналогично API-001 может иметь одно серверное проверенное connection из конфигурации до полной админки CATALOG-001. Реестр не создаёт циклическую зависимость «сначала все settings, потом первая функция».
 
-## 3. Карточки ближайших пакетов
+U/A функциональны только после своей реализации, UI-прототип UX-001 не закрывает IMAGE-001. Public legal тексты — LAUNCH-001, не доказательство правомерности шаблона. Новые plans и увеличение квот вводятся только после выбранных чисел/стоимости, без переноса старых тарифов по умолчанию.
 
-### F0-ACCEPT — не добавлять продуктовые функции
+## 3. Карточки ближайших работ
 
-Результат: проверенная отправная точка. Scope: review существующего PR, состояние CI, dependency locks, реальные команды, licence/status без изменения лицензии. Отдельно проверить security-sensitive конфигурацию и фактическую доступность branch protection.
+### F0-ACCEPT
 
-Приёмка: понятно, какие tests действительно запускались; нет production/GPU зависимости; отмечены limits проверок. Merge не означает deploy. Продуктовая спецификация и дизайн принимаются отдельно. Найденные критические дефекты исправляются ограниченными пакетами, не широким переписыванием foundation.
+Scope: прочитать diff PR #1, точный SHA/CI и документацию; проверить boundaries, locks, actual commands, изоляцию, license-status. Защита main/required checks и reviewer проверяются отдельно, не считаются включёнными из-за AGENTS/CODEOWNERS. Исправления найденного дефекта — узким scope. Не добавлять новые AI/UI-функции и не деплоить. Результат — принятое исходное состояние и явный перечень незакрытых gates.
 
-### UX-001 — ближайшая пользовательская задача
+### UX-001
 
-Вход: UX и PRODUCT P-02/P-07, отрицательная оценка текущего оформления. Результат: одна качественная концепция, работающая навигация image → result → gallery, состояния error/loading, примеры адаптации на трёх типах устройств.
+Предметные входы: PRODUCT U-09/U-10/U-18/U-19/U-20, общие D, UX и отрицательная оценка нынешнего shell. Результат: одна концепция с навигацией studio → running/error/result → private gallery. Пример A-03 нужен для проверки общих компонентов, не для реализации административных операций.
 
-Scope: `apps/web/src/shell/`, новые связные UI-components/features под этот прототип, e2e и соответствующая документация. Новые каталоги создаются только если нужен реальный компонент. Не входят backend, SQL, credits, providers, CI, Docker, реальная генерация и полная админка.
+Scope: web components/styles/fake data, UI tests и предметная документация. Не менять backend/SQL/credits/providers/Docker/workflow/LICENSE. Разработка тестового viewport профиля разрешена внутри web; не ослаблять существующие проверки. Реальные ключи/платные вызовы запрещены.
 
-Evidence: интерактивный просмотр, screenshots с viewport, keyboard/touch/overflow tests, перечень fake data. Владелец принимает внешний вид; зелёный CI этого не заменяет. При отказе меняется концепция, а не разводятся несколько параллельных версий UI.
+Acceptance: phone/tablet/desktop/QHD2560×1440/UHD3840×2160; HiDPI1920×1080×2 и2560×1440×1.5; long Russian text, focus/keyboard/overflow/safe areas, price/result clarity. OS125/150/200% и реальные Mini Apps отдельно маркируются как проверенные или нет. Никакого общего transform:scale вместо адаптации. Evidence содержит viewport/DPR/browser/zoom и явные fake states. Владелец принимает визуал отдельно от CI.
 
-### AUTH-001 — надёжная единая identity
+### AUTH-001 → CREDIT-001 → ENTITLEMENT-001 → ADMIN-001
 
-Вход: Accounts/security из ARCHITECTURE и PRODUCT P-01. Scope: новый accounts domain в `apps/api/izo/`, необходимые migration/API/UI/test, без generation и оплаты. Сразу один immutable account ID, credential/session отдельно, default user role. Для публичного использования нужны AUTH-002 и разрешённая доставка.
+Последовательные ограниченные изменения, не одна мегазадача. AUTH даёт доверенный Account/session и минимальные permissions. CREDIT вводит ledger и concurrency. ENTITLEMENT описывает один basic plan revision и реальные deny decisions для zero/expired/quotas. ADMIN — только карточка и compensation/audit, case может завести сотрудник без ещё не готовой ticket-системы.
 
-Evidence: регистрация/вход/выход на изолированной базе, безопасное хранение пароля/session, отказ forged identity, CSRF/rate limit, отзыв/expiry, запрет role escalation. API-схема генерируется и используется UI. Settings по session TTL и policy документируются в том же пакете.
+До приёмки требуются AC/AP сценарии, относящиеся к пакету: чужой account denied, forged/replayed session/CSRF, no self-admin, one grant per case, race reserve, no overspend, metadata/private scope. Пароль/token не видны в logs/artifacts. Тестовые значения помечены; регистрация не обещает бонус автоматически.
 
-### CREDIT-001 + ADMIN-001 — два отдельных PR
+### MEDIA-001 → JOBS-001 → IMAGE-001
 
-CREDIT создаёт целочисленный ledger и reservation model с атомарными командами, без денег. ADMIN добавляет только разрешённое начисление по заявке и минимальную карточку пользователя. Не строить полную CRM прежде первого результата.
+MEDIA реализует private upload/finalize/read; JOBS — durable state/attempt/lease/worker; IMAGE соединяет это с принятой оболочкой. Нельзя закрыть JOBS тестами enum или IMAGE скриншотом fake API.
 
-Evidence: двойное/конкурентное подтверждение, insufficient funds, reserve/settle/release, отказ без permission, audit и компенсация ошибки новой проводкой. Пользовательский экран показывает доступные/зарезервированные баллы и историю.
+На двух аккаунтах через настоящий изолированный backend проверить: duplicate submit, чужой input, cancel race, bad-job isolation, API/worker restart, S3 failure после result, unknown provider outcome, late/stale completion. DB/objects/баланс сохраняются. Один опубликованный fake screenshot не доказательство end-to-end.
 
-### MEDIA-001 + JOBS-001 — также отдельные PR
+### CHANGE-001 и API-001
 
-MEDIA: загрузка/проверка/finalize/private access. JOBS: durable lifecycle поверх этих assets и credits. Fake provider детерминированно возвращает тестовый результат; fake mode не включается в production по умолчанию.
+До разрастания выполнить три обычные правки с фактическим измерением расхода/попыток/области. Только затем реальный provider c одним key/connection и установленным budget. Contract/errors проверяются fake; реальный вызов отдельно разрешён. Добавление adapter не создаёт новую auth/gallery/ledger систему. Не начинать key-balancer и все модальности одновременно.
 
-Evidence: restart API/worker, bad job isolation, concurrency, lease expiry, stale result, S3 failure после внешнего результата, unknown outcome. Нельзя принять только unit state enum за рабочую очередь.
+## 4. Проверяемость и работа агентов
 
-### IMAGE-001 — первый законченный продуктовый путь
+Любая экранная задача указывает U/D/A/AD-ID, state/entitlement из PRODUCT, permission/S-ID из ADMIN и один ID пакета. Для одного UI-label не читать все 66 групп настроек. Если задача затрагивает новый экран/поле, сначала добавить строку в существующий документ-владелец, не новый master plan.
 
-На новом тестовом аккаунте: войти → получить административные баллы → выбрать fake image model → создать → увидеть состояние → открыть результат в своих работах → скачать → перезапустить контейнеры → снова увидеть результат и корректный баланс.
+Для каждого реализованного экрана: вход и доступ, данные/actions, success/empty/error/denied/refresh, ссылка на tests и ограничения реального клиента. Для S-группы — SV-01…SV-08; для прав — AC/AP отрицательные случаи. Это ещё не выполненные тесты DOC-003. Source of truth — actual code/contracts, спецификация меняется вместе с осознанным scope, не задним числом для оправдания дефекта.
 
-Второй пользователь не может прочитать работу первого. Повтор клика/HTTP request не повторяет списание. Ошибка не создаёт фальшивый успех. Evidence включает браузерные сценарии по настоящему изолированному backend, не только mock routes.
-
-### API-001 — только один внешний adapter
-
-Нужны отдельно выбранные provider/model, разрешённый реальный ключ, бюджет и supported modes. Добавляются adapter, controlled egress, catalogue configuration и contract/error tests. Не вводить много ключей, пять модальностей и fallback chain одновременно.
-
-Evidence: один разрешённый end-to-end real flow; server cost/usage при доступности; безопасные ошибки и reconciliation; ключ не попал в browser/log/artifact. Наличие ключа само по себе не разрешает вызов.
-
-## 4. Сквозные критерии качества
-
-Каждый пакет: определён пользовательский результат, scope и non-goals; есть tests на ошибки, которые он вводит; docs/schema синхронны; exact SHA и evidence сохранены; явно сказано, что не реализовано. Для UI — affected devices, для денег/identity — отдельный review, для внешнего действия — разрешение.
-
-Нельзя принимать весь foundation по числу тестов, а дизайн по отсутствию TypeScript ошибок. Нельзя объявлять «все модальности поддержаны» по наличию enum. Нельзя считать production готовым по одной успешной Compose-сборке.
-
-## 5. Что требуется решить владельцу, а что решает разработчик
-
-До UX-001: владелец оценивает предложенную концепцию; техническую структуру компонентов выбирает разработчик. До API-001: модель/provider и максимальный расход. До публичного запуска: состав обещанных функций, цены/квоты, правила отмены/превышения, retention/privacy/moderation, licence и оператор/хостинг.
-
-Технологические детали внутри принятых ограничений не требуют постоянных вопросов владельцу. Нельзя молча принимать за него денежные, правовые и продуктовые обещания. Нерешённые вопросы не блокируют бесплатный UI/fake development, если не затронуты его контракты.
+Нерешённые provider price/retention не мешают UX/fake development. Они блокируют только включение реальной соответствующей функции. Merge не deploy; самостоятельная проверка не независимый review. Все фактические изменения и evidence агрегируются только в STATUS/Checks/PR.
