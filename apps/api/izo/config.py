@@ -8,7 +8,9 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
 class Settings(BaseSettings):
-    model_config = SettingsConfigDict(env_prefix="IZO_", extra="ignore")
+    model_config = SettingsConfigDict(
+        env_prefix="IZO_", extra="ignore", hide_input_in_errors=True
+    )
     environment: Literal["development", "test"] = "development"
     pg_host: str = "postgres"
     pg_port: int = Field(default=5432, ge=1, le=65535)
@@ -24,10 +26,21 @@ class Settings(BaseSettings):
 
     @model_validator(mode="after")
     def validate_storage(self):
-        u = urlsplit(self.s3_endpoint)
-        if (u.scheme not in {"http", "https"} or not u.hostname or u.username
-                or u.password or u.query or u.fragment or u.path not in {"", "/"}):
-            raise ValueError("Invalid S3 endpoint; credentials belong in secret settings")
+        # urlsplit alone does not validate ports; parser errors can echo input.
+        try:
+            u = urlsplit(self.s3_endpoint)
+            invalid = (
+                any(c.isspace() or ord(c) < 32 for c in self.s3_endpoint)
+                or u.scheme not in {"http", "https"}
+                or not u.hostname or u.username is not None or u.password is not None
+                or u.query or u.fragment or u.path not in {"", "/"}
+                or u.netloc.endswith(":")
+                or (u.port is not None and not 1 <= u.port <= 65535)
+            )
+        except ValueError:
+            invalid = True
+        if invalid:
+            raise ValueError("Invalid S3 endpoint; credentials belong in secret settings") from None
         return self
 
 
