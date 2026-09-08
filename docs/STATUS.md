@@ -29,9 +29,11 @@ SQLite и fake clock. Это не доказательство PG locking или
 
 Расширенный CI содержит настоящую PostgreSQL+HTTP приёмку before/after фактического
 Compose down/up, concurrency tests приглашений/identity/session cap и limiter.
-При подготовке этого STATUS итог нового head **ещё не подтверждён**; точный SHA,
-результаты и ограничения будут закреплены в PR после реального чтения logs/Checks.
-Успех предыдущего UX-коммита не переносится автоматически на AUTH-001.
+Реализация `3dd3c01e8e46fe2b51b392fceb03a723172d3ec2` прошла [CI 34241678240](https://github.com/spikeal8-maker/izo-asa-platform/actions/runs/34241678240), job `102113156085`: completed/success. Прочитаны все step summaries: backend, contracts, web build/browser, настоящая PostgreSQL/HTTP/Compose integration и cleanup успешны. Число полного suite этим чтением не подсчитывалось.
+
+Завершающее уточнение README/scope/этого STATUS не меняет runtime или tests.
+Его отдельный итоговый SHA/CI фиксируются в PR после проверки; успех кода не
+переносится автоматически на любую будущую версию.
 
 Browser tests UI используют fake API; их не называть настоящим end-to-end входом
 через production. PG/HTTP gate — отдельное доказательство. Защита public branch,
