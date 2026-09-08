@@ -52,3 +52,4 @@ export function ResultPanel() {
       <button className="primary" onClick={() => { cancel(); setConfirmCancel(false) }}>Да, отменить демо</button>
     </Dialog>
   </section>
+}
