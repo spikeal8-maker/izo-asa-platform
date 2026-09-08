@@ -99,8 +99,9 @@ export function AccountPage({ mode }: { mode: 'account' | 'login' | 'register' }
     {loading ? <p role="status">Проверяем серверную сессию…</p> : auth ? <div data-testid="server-account" className="account-panel">
       <h2>{auth.account.display_name}</h2>
       <p>{auth.account.email ?? 'Адрес не привязан'} · код {auth.account.public_code}</p>
-      <p>Адрес {auth.account.email_verified ? 'подтверждён' : 'ещё не подтверждён'}. Отправка писем и восстановление доступа появятся в AUTH-002.</p>
+      <p>Адрес {auth.account.email_verified ? 'подтверждён' : 'ещё не подтверждён'}. Подтверждение и восстановление работают через тестовые письма; реальная отправка отключена.</p>
       <p>Полномочия: {auth.account.permissions.length ? auth.account.permissions.join(', ') : 'обычный пользователь, без административных прав'}.</p>
+      <p><Link href="/verify-email">Подтвердить почту</Link> · <Link href="/account/security">Изменить пароль</Link> · <Link href="/account/connections">Способы входа</Link></p>
       <h3>Активные сессии</h3>
       <ul className="session-list">{sessions.map(session => <li key={session.id}>
         <div><strong>{session.current ? 'Эта сессия' : 'Другое устройство'}</strong>
@@ -122,6 +123,7 @@ export function AccountPage({ mode }: { mode: 'account' | 'login' | 'register' }
           <small>Приглашение выдаёт оператор закрытого тестового стенда. Оно не даёт административных прав.</small></label>}
         <button className="primary" type="submit" disabled={busy}>{busy ? 'Проверяем…' : registering ? 'Создать аккаунт' : 'Войти'}</button>
       </form>
+      <p><Link href="/password/forgot">Забыли пароль?</Link></p>
       <p><Link href={registering ? '/login' : '/register'}>{registering ? 'Уже есть аккаунт — войти' : 'Зарегистрироваться по приглашению'}</Link></p>
     </div>}
   </section>

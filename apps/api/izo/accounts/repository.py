@@ -31,7 +31,11 @@ def account_by_email(conn, email: str):
 def account_by_id(conn, account_id, lock=False):
     query = account_query().where(t.accounts.c.id == account_id)
     if lock:
-        query = query.with_for_update(of=t.accounts)
+        # Acquire the account lock BEFORE reading joined credentials. Under
+        # PostgreSQL READ COMMITTED a blocked joined SELECT may otherwise keep
+        # an older password snapshot even after a reset has committed.
+        conn.execute(sa.select(t.accounts.c.id).where(t.accounts.c.id == account_id)
+                     .with_for_update()).first()
     return conn.execute(query).mappings().first()
 
 

@@ -11,6 +11,7 @@ import { ResultPanel } from '../features/studio/ResultPanel'
 import { Gallery } from '../features/gallery/Gallery'
 import { AssetPage } from '../features/gallery/AssetPage'
 import { AccountPage } from '../features/accounts/AccountPage'
+import { SecurityPage, securityPages } from '../features/accounts/SecurityPage'
 import './layout.css'
 
 function initialTheme(): 'light' | 'dark' {
@@ -33,7 +34,8 @@ function AppContent() {
   const host = detectHost(window)
   const studio = ['/', '/app', '/image', '/studio/image'].includes(path)
   const gallery = path === '/gallery'
-  const account = ['/account', '/account/sessions', '/login', '/register'].includes(path)
+  const security = securityPages[path]
+  const account = !!security || ['/account', '/account/sessions', '/login', '/register'].includes(path)
   const detail = path.startsWith('/gallery/')
   const jobs = path === '/jobs' || path.startsWith('/jobs/')
   const activeJob = state.job?.state === 'running'
@@ -105,7 +107,8 @@ function AppContent() {
           Хранение в этой вкладке недоступно. После обновления демо-данные не сохранятся.
         </p>}
         <main id="main" tabIndex={-1}>
-          {account ? <AccountPage key={path} mode={path === '/register' ? 'register' : path === '/login' ? 'login' : 'account'} />
+          {security ? <SecurityPage key={path} mode={security} />
+            : account ? <AccountPage key={path} mode={path === '/register' ? 'register' : path === '/login' ? 'login' : 'account'} />
             : studio ? <Studio />
             : gallery ? <Gallery />
             : detail ? <AssetPage id={path.slice('/gallery/'.length)} />
@@ -131,12 +134,12 @@ function AppContent() {
               </section>}
             </>}
         </main>
-        <footer><span>ИЗО АСА · AUTH-001 / UX-001</span><ApiStatus /></footer>
+        <footer><span>ИЗО АСА · AUTH-002 / UX-001</span><ApiStatus /></footer>
       </div>
     </div>
     <Dialog open={about} title="Что работает сейчас" onClose={() => setAbout(false)}>
       <p>Студия, локальный предпросмотр исходника, тестовая задача, её отмена/ошибка, просмотр и скачивание SVG-примера. Это макет, не AI-сервис.</p>
-      <p>Аккаунт и сессии работают через сервер. Генерация, баланс студии и её работы остаются демо этой вкладки. Почта и вход через Telegram/MAX ещё не подключены.</p>
+      <p>Аккаунт и сессии работают через сервер. Генерация, баланс студии и её работы остаются демо этой вкладки. Подтверждение и восстановление используют тестовые письма. Реальная почта и Telegram/MAX ещё не подключены.</p>
       <label className="demo-checkbox">
         <input type="checkbox" checked={state.balance === 0} disabled={activeJob}
           onChange={event => setEmptyBalance(event.target.checked)} /> Нулевой демо-баланс

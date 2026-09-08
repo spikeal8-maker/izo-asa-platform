@@ -58,13 +58,16 @@ jobs:
           python tools/smoke.py
           umask 077
           docker compose run --rm -T -e IZO_ENVIRONMENT=test -e IZO_AUTH_ACCEPTANCE=isolated api python tools/auth_acceptance.py before > "$RUNNER_TEMP/izo-auth-session.json"
+          docker compose run --rm -T -e IZO_ENVIRONMENT=test -e IZO_AUTH_ACCEPTANCE=isolated api python tools/email_acceptance.py before > "$RUNNER_TEMP/izo-email-proof.json"
           docker compose run --rm api python tools/persistence.py write
           docker compose down
           docker compose up --wait --wait-timeout 180
           python tools/smoke.py
           docker compose run --rm api python tools/persistence.py read
           docker compose run --rm -T -e IZO_ENVIRONMENT=test -e IZO_AUTH_ACCEPTANCE=isolated api python tools/auth_acceptance.py after < "$RUNNER_TEMP/izo-auth-session.json"
+          docker compose run --rm -T -e IZO_ENVIRONMENT=test -e IZO_AUTH_ACCEPTANCE=isolated api python tools/email_acceptance.py after < "$RUNNER_TEMP/izo-email-proof.json"
           rm -f "$RUNNER_TEMP/izo-auth-session.json"
+          rm -f "$RUNNER_TEMP/izo-email-proof.json"
           docker compose stop storage
           docker compose exec -T api python -c "import urllib.request, urllib.error; r=urllib.request.urlopen('http://127.0.0.1:8000/api/health/live'); assert r.status==200"
           docker compose exec -T api python -c "import http.client; c=http.client.HTTPConnection('localhost',8000,timeout=10); c.request('GET','/api/health/ready'); assert c.getresponse().status==503"
@@ -85,4 +88,5 @@ jobs:
         if: always()
         run: |
           rm -f "$RUNNER_TEMP/izo-auth-session.json"
+          rm -f "$RUNNER_TEMP/izo-email-proof.json"
           if [ -f .env ]; then docker compose down -v --remove-orphans; fi

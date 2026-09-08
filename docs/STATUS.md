@@ -1,66 +1,53 @@
 # Фактическое состояние IZO ASA
 
-Срез: 8 сентября 2026. Следующий функциональный пакет — AUTH-001.
-Исходная проверенная база: `591416bec096803ab2c0860a356299525f6a3d6d` (UX PR #3).
-Работа ведётся в отдельной `auth/server-sessions`; PR #1/#3, main, старый сайт,
-его данные, GPU и настоящие AI-ключи не изменяются. MERGED/DEPLOYED: нет.
+8 сентября 2026. Новый ограниченный шаг: AUTH-002 / email confirmation + password recovery.
+База `f09c48eba527ddeb167f02f225e3263f02e74fa3` (PR #4), отдельная ветка `auth/email-recovery`.
+Main/предыдущие PR/старый сайт/пользовательская БД/GPU/реальные ключи не изменяются.
+Ни merge, ни deployment, ни real SMTP/API вызовы этим шагом не разрешены.
 
-## Что написано в AUTH-001
+## Написано
 
-Настоящий backend: Account/AuthIdentity/PasswordCredential/Session, одноразовые
-приглашения, серверные permissions, журнал успешных auth-команд и DB-rate counters.
-Новая Alembic migration0002; исходная0001 не меняется. Регистрация по приглашению,
-вход, me, список/отзыв сессий и logout — реальные HTTP API, не DemoProvider.
+Миграция0003: одноразовые email proofs и secret-free TEST mail intents поверх существующих
+Account/Identity/Session. Пять API для запроса/подтверждения адреса, запроса восстановления,
+сброса и смены пароля. Старые0001/0002 не меняются. Новый proof не создаёт новую identity.
+Пароль/отзыв sessions/proofs/audit атомарны, неизвестные/неподтверждённые адреса дают
+одинаковый ответ, security restrictions не снимаются. Отдельный recovery secret,
+срок/attempt/rate limits, purpose/binding, отсутствие открытых токенов в DB/mail metadata.
 
-Пароли — scrypt, bearer в БД хэширован; cookie HttpOnly/SameSite, отдельный CSRF и
-строгий Origin. Auth errors не возвращают входные пароли. Роль, баллы и owner
-не принимаются из public payload; новая email identity не помечается проверенной.
+Тонкие формы verify-email/password-forgot/reset/security; connections только read-only.
+Убирается fragment из адреса, proof не расходуется на GET и не хранится в browser storage.
+Studio/gallery/баллы остаются DEMO. Новый дизайн здесь не утверждался и не перерабатывался.
 
-В UI добавлены только тонкие формы входа/регистрации и аккаунт/сессии. Студия,
-её условный баланс и галерея по-прежнему демонстрационные и не объявляются
-серверными функциями. Новый дизайн не считается принятым владельцем.
+Уточнён общий account lock/read: сначала блокируется account, потом свежий SELECT
+читает присоединённые credentials. Это важно для конкуренции login/reset. Старые auth
+API и защитные tests сохраняются. Новых зависимостей, live sender и второго auth ядра нет.
 
 ## Проверки
 
-При подготовке локально прошли 43 unit/HTTP/architecture случаев на изолированной
-SQLite и fake clock. Это не доказательство PG locking или Docker. Локально проверен
-синтаксис новых TS/TSX; полноценные TypeScript/React/browser tests — в GitHub CI.
-Прямой сетевой clone недоступен, полный checkout/локальный Docker не запускались.
+Локально на Python3.13.5/FastAPI0.128.2 прошли 35 новых HTTP/service/boundary cases;
+исходные используемые auth-модули и root factory сверены по Git blob SHA. Исходники
+доставлены через connector, полного git clone нет. Новые TS/TSX проверены локальным
+parser, не полноценной npm-сборкой. В этой среде нет Docker/PG; SQLite не доказывает locks.
 
-Расширенный CI содержит настоящую PostgreSQL+HTTP приёмку before/after фактического
-Compose down/up, concurrency tests приглашений/identity/session cap и limiter.
-Реализация `3dd3c01e8e46fe2b51b392fceb03a723172d3ec2` прошла [CI 34241678240](https://github.com/spikeal8-maker/izo-asa-platform/actions/runs/34241678240), job `102113156085`: completed/success. Прочитаны все step summaries: backend, contracts, web build/browser, настоящая PostgreSQL/HTTP/Compose integration и cleanup успешны. Число полного suite этим чтением не подсчитывалось.
+OpenAPI сгенерирован существующим инструментом из кода; полный CI на lock-версиях
+должен отдельно подтвердить contracts, весь Python suite, frontend и PG/HTTP/restart.
+CI дополнен `email_acceptance.py` before/after вокруг уже существующего down/up:
+реальные PG-lock wait, конкурентный consume, сохранность pending/consumed proofs,
+verified identity и отозванных sessions. Fixtures синтетические, в закрытом RUNNER_TEMP,
+не artifacts. Итоговый source SHA/точные результаты закрепляются в PR после чтения
+проверок; успех прошлой версии не переносится на новый коммит.
 
-Завершающее уточнение README/scope/этого STATUS не меняет runtime или tests.
-Его отдельный итоговый SHA/CI фиксируются в PR после проверки; успех кода не
-переносится автоматически на любую будущую версию.
+## Что не объявлено готовым
 
-Browser tests UI используют fake API; их не называть настоящим end-to-end входом
-через production. PG/HTTP gate — отдельное доказательство. Защита public branch,
-независимое review, Windows scaling и реальные Telegram/MAX этим пакетом не проверены.
+В большой карточке AUTH-002 ещё остаются смена адреса и linking/unlinking identities;
+PLATFORM требует проверки подписей настоящих Telegram/MAX. Последний email-способ
+не удаляется через UI/API в этой версии; отсутствие такого endpoint не равно готовому
+сервису linking. Real SMTP, MFA, public HTTPS/edge/rate/load, cleanup/retention proofs
+и независимый security review не выполнены. Recovery пока только закрытый dev/test.
 
-## Где контракт и команды
-
-[Accounts README](../apps/api/izo/accounts/README.md) — маршруты, поля, defaults,
-миграция/запуск, приглашение, защита, ограничения и команды приёмки этого модуля.
-[Backend AGENTS](../apps/api/AGENTS.md) — короткая карта для следующего агента.
-`tools/scopes/auth-001.json` ограничивает изменения 32 файлами, перечисляет чувствительные
-миграцию/Compose/CI/bootstrap, необходимые именно для реальной серверной проверки.
-Новые зависимости не добавляются. Проверки не отключаются ради зелёного результата.
-
-## Что ещё не реализовано
-
-AUTH-002: почта/проверка адреса/recovery/linking; signed Telegram/MAX; MFA.
-CREDIT/ENTITLEMENT/ADMIN: серверные баллы, разрешения моделей и админские начисления.
-MEDIA/JOBS: private owner-scoped файлы, persistent jobs/worker; реальные AI/local
-подключения; функциональные gallery/feed/chat/video/audio/3D; платежи; production.
-
-Приглашения — закрытый dev/test доступ, не публичный перезапуск. Текущие счётчики
-ограничивают попытки в фиксированном окне; за proxy требуется отдельная edge/trust
-политика и нагрузочная проверка. Cookie HTTP допускается только на local origin;
-публичный HTTPS/production gate не снимается. Независимое рассмотрение и защита
-main остаются отдельными организационными gates, не частью существования AGENTS.
-
-Foundation, спецификация U45/D14/A30/AD10/S66 и план NEXT сохраняются. Не создавать
-новый общий план перед следующим ограниченным серверным сценарием. Каждая
-готовность обозначается отдельно: IMPLEMENTED/TESTED/REVIEWED/PUSHED/MERGED/DEPLOYED.
+AUTH-001 аккаунты/сессии реализованы ранее; CREDIT/ENTITLEMENT/ADMIN, MEDIA/JOBS,
+реальные providers/local worker и пользовательская облачная галерея ещё впереди.
+README и accounts/EMAIL описывают запуск этой ветки. NEXT остаётся единственным планом.
+Следующий полезный серверный scope — CREDIT-001 (его зависимость AUTH-001 уже реализована);
+оставшиеся identity-операции нельзя отмечать закрытыми ради продвижения к генерации.
+Защита main и независимая приёмка — отдельные незакрытые gates; эта ветка их не включает.

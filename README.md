@@ -1,124 +1,88 @@
 # ИЗО АСА · новая платформа
 
-Новая реализация IZO ASA: общая система изображений, видео, аудио, 3D и чата.
-Старые аккаунты, база и Windows-службы сюда не переносятся. Витрина продукта —
-`spikeal8-maker/izo-asa`; здесь находится новая реализация.
+Новая реализация IZO ASA. Старые аккаунты/БД/Windows-службы не переносятся.
+Текущая разработка — ветка **auth/email-recovery**, поверх AUTH-001 и UX-прототипа.
+Это **закрытый dev/test, не готовый AI-сервис и не разрешение публичного запуска**.
 
-**Текущий этап — AUTH-001:** серверные аккаунты и сессии в PostgreSQL, технический
-Foundation и интерактивный UX-прототип. Это ещё не готовый публичный AI-сервис.
-Код этого этапа находится в `auth/server-sessions`, не автоматически в `main`.
-Точный проверенный commit/CI и ограничения — [STATUS](docs/STATUS.md) и PR ветки.
+Есть реальные серверные аккаунты/сессии, приглашения, подтверждение email, сброс/смена
+пароля с отзывом сессий. Доставка писем пока только тестовая, доступная оператору.
+Баланс, задания и работы в студии — демо браузера, не server ledger или облачная галерея.
+Нет real AI, signed Telegram/MAX, payments, identity linking, SMTP или production deployment.
 
-## Что действительно работает
+## Документы
 
-Регистрация закрытого стенда по одноразовому приглашению, вход по паролю,
-получение своего аккаунта, список активных сессий, отзыв и выход. Пароль хэшируется,
-сессия хранится на сервере; браузерный demo-state не предоставляет identity.
+[INDEX](docs/INDEX.md) → карта продукта; [STATUS](docs/STATUS.md) → факты;
+[NEXT](docs/NEXT.md) → единственный план;
+[Accounts](apps/api/izo/accounts/README.md) → AUTH-001;
+[Email security](apps/api/izo/accounts/EMAIL.md) → AUTH-002, API/проверки/ограничения.
+[AGENTS](AGENTS.md) → правила разработчика; [Backend AGENTS](apps/api/AGENTS.md) → краткая карта source/tests.
+[PRODUCT](docs/PRODUCT.md), [ADMIN](docs/ADMIN.md), [UX](docs/UX.md),
+[ARCHITECTURE](docs/ARCHITECTURE.md), [AI_RUNTIME](docs/AI_RUNTIME.md),
+[DEVELOPMENT](docs/DEVELOPMENT.md), [OPERATIONS](docs/OPERATIONS.md) — спецификации,
+а не обещание уже работающих функций. Дизайн не принят владельцем.
 
-Студия, условные баллы и галерея из UX-001 остаются **демонстрацией во вкладке**:
-предустановленный SVG не является результатом AI. Письма/подтверждение адреса,
-восстановление, настоящий Telegram/MAX login, серверный ledger, медиа/генерации
-и production-развёртывание ещё не реализованы. Визуал не принят владельцем.
+## Новый локальный стенд
 
-## Первый запуск — только изолированный development
-
-Нужны Git, Python 3.13 и Docker Engine/Desktop с Compose v2. В новом каталоге:
+Git, Python3.13 и Docker с Compose v2:
 
 ```sh
-git clone --branch auth/server-sessions https://github.com/spikeal8-maker/izo-asa-platform.git
+git clone https://github.com/spikeal8-maker/izo-asa-platform.git
 cd izo-asa-platform
+git switch auth/email-recovery
 python tools/bootstrap.py
 docker compose up --build --wait
 docker compose run --rm api python -m izo.accounts.invites --hours 24
 ```
 
-Открыть **http://localhost:8080/register**, ввести выданное приглашение и создать
-тестовый аккаунт. Команда показывает одноразовый код намеренно; не публиковать его
-в issue или общем логе. Для следующего аккаунта выпустить новый код. Страницы
-`/login`, `/account` и `/account/sessions` работают с серверным API.
+Открыть http://localhost:8080/register и ввести выданное одноразовое приглашение.
+Не публиковать приглашение, cookies, .env и коды писем. База/S3 не открываются наружу.
+Secrets создаются локально и не печатаются; тестовые письма не отправляются по сети.
 
-Если локальный `.env` уже создан предыдущим этапом, не удалять его. В checkout
-новой ветки выполнить только добавление отсутствующих auth-настроек:
+## Уже существующий .env
 
 ```sh
 python tools/bootstrap.py --auth-only
+python tools/bootstrap.py --recovery-only
 docker compose up --build --wait
 ```
 
-Существующие значения не заменяются. В новом dev-стенде bootstrap создаёт случайные
-секреты и включает invite signup. Без настроенного auth-secret вход возвращает503,
-а регистрация не становится публичной автоматически. База и S3 не открыты наружу;
-сайт опубликован только на loopback. Это не production-конфигурация.
+Добавляются только отсутствующие поля; старые secrets/disabled не заменяются.
+Для просмотра запрошенного письма: справка `python -m izo.accounts.test_mail --help`
+в API-контейнере; нужны UUID аккаунта и явный `--show-sensitive`. HTTP mailbox нет.
+Подробнее — accounts/EMAIL.md. При выключенном канале recovery отвечает503, а не
+сообщает о якобы отправленном письме. Реальная доставка — отдельная интеграция.
 
-```sh
-python tools/smoke.py
-docker compose down
-docker compose up --wait
-```
+## Проверки и остановка
 
-Smoke использует стандартный порт8080. `down` без `-v` сохраняет именованные volumes.
-**Не использовать `down -v` с нужными данными. Volumes не заменяют резервные копии.**
-
-## Проверки без production и платных сервисов
+Создать venv и установить закреплённые `requirements-dev.txt` только при новом checkout:
 
 ```sh
 python -m venv .venv
 ```
 
-Linux/macOS:
+После активации venv:
+
 ```sh
-.venv/bin/python -m pip install -r requirements-dev.txt
-.venv/bin/python -m pytest
-.venv/bin/python tools/export_contracts.py --check
+python -m pip install -r requirements-dev.txt
+python -m pytest
+python tools/export_contracts.py --check
 ```
 
-Windows:
-```powershell
-.\.venv\Scripts\python.exe -m pip install -r requirements-dev.txt
-.\.venv\Scripts\python.exe -m pytest
-.\.venv\Scripts\python.exe tools/export_contracts.py --check
-```
+UI при установленном Node24, из `apps/web`:
 
-После первой установки для auth-правки достаточно начать с профильного набора:
-`python -m pytest tests/test_accounts.py tests/test_auth_boundaries.py` в активной
-venv; зависимости не переустанавливать после каждой строки. Полный CI при приёмке
-не отменяется.
-
-UI, Node24:
 ```sh
-cd apps/web
 npm ci
 npm run build
 npx playwright install chromium
 npm run test:e2e
 ```
 
-Browser UI tests используют fake API. PostgreSQL и HTTP проверяются отдельным
-Compose gate, включая реальное down/up, гонки приглашений/идентичностей/сессий и
-повторное использование отозванной cookie. Нельзя считать SQLite unit или fake
-browser тест доказательством PostgreSQL/production-поведения.
+Unit/UI без real AI/GPU/SMTP; PostgreSQL races/restart отдельно проверяются Compose CI.
+Для обычной остановки `docker compose down` **без -v**; затем `docker compose up --wait`.
+Volumes не backup; `down -v` удалит локальные данные и не является способом обновления.
+Source SHA/CI/merge/deploy указываются раздельно. Публичная витрина — `spikeal8-maker/izo-asa`.
 
-## Документы и карта кода
+## Права
 
-Вход — [INDEX](docs/INDEX.md). [PRODUCT](docs/PRODUCT.md) и [ADMIN](docs/ADMIN.md)
-описывают целевые экраны/права/настройки, [NEXT](docs/NEXT.md) — единственный план,
-[UX](docs/UX.md) — визуальные требования, [OPERATIONS](docs/OPERATIONS.md) — эксплуатация.
-Существующая спецификация0.2 не означает, что все её функции реализованы.
-
-- [Accounts README](apps/api/izo/accounts/README.md) — маршруты, защита, defaults и ограничения AUTH-001.
-- `apps/api/izo/accounts` — service/SQL/routes/security, без генерации и ledger.
-- `apps/api/migrations` — отдельный Alembic шаг; нет миграций на HTTP startup.
-- `apps/web/src/features/accounts` — UI серверного аккаунта; общий транспорт в `shared/api.ts`.
-- `apps/web/src/features/prototype` — исключительно demo, не хранилище пользователей.
-- `apps/api/izo/contracts.py` и `generation.py` — чистые правила, ещё не durable worker.
-- `packages/contracts` — generated OpenAPI; TypeScript типы создаются существующей сборкой.
-
-[AGENTS](AGENTS.md), [backend AGENTS](apps/api/AGENTS.md) и [web AGENTS](apps/web/AGENTS.md)
-указывают короткий предметный контекст и профильные tests. Подробности архитектуры
-и API/local providers — [ARCHITECTURE](docs/ARCHITECTURE.md), [AI_RUNTIME](docs/AI_RUNTIME.md).
-
-## Лицензирование
-
-Репозиторий публичный, но не объявлен open source. `LICENSE` временно сохраняет
-права владельца; окончательная лицензия не выбрана. Права платформы GitHub и
-лицензии внешних зависимостей сохраняются. AUTH-001 лицензию не меняет.
+LICENSE не изменён: репозиторий публичный, но не объявлен open source; окончательная
+лицензия не выбрана. Условия зависимостей и права GitHub сохраняются.

@@ -1,0 +1,41 @@
+{
+  "base": "f09c48eba527ddeb167f02f225e3263f02e74fa3",
+  "max_files": 32,
+  "allowed": [
+    "apps/api/AGENTS.md",
+    "apps/api/izo/accounts/EMAIL.md",
+    "apps/api/izo/accounts/challenge_schema.py",
+    "apps/api/izo/accounts/challenge_tables.py",
+    "apps/api/izo/accounts/challenge_policy.py",
+    "apps/api/izo/accounts/challenges.py",
+    "apps/api/izo/accounts/challenge_routes.py",
+    "apps/api/izo/accounts/test_mail.py",
+    "apps/api/izo/accounts/routes.py",
+    "apps/api/izo/accounts/repository.py",
+    "apps/api/migrations/versions/0003_email_proofs.py",
+    "apps/web/src/features/accounts/SecurityPage.tsx",
+    "apps/web/src/features/accounts/AccountPage.tsx",
+    "apps/web/src/shell/App.tsx",
+    "apps/web/index.html",
+    "apps/web/e2e/email-security.spec.ts",
+    ".github/workflows/ci.yml",
+    "compose.yaml",
+    "tools/bootstrap.py",
+    "tools/email_acceptance.py",
+    "packages/contracts/openapi.json",
+    "tests/test_email_proofs.py",
+    "tests/test_email_boundaries.py",
+    "README.md",
+    "docs/STATUS.md",
+    "tools/scopes/auth-002.json"
+  ],
+  "sensitive_approved": [
+    "apps/api/AGENTS.md",
+    "apps/api/migrations/versions/0003_email_proofs.py",
+    ".github/workflows/ci.yml",
+    "compose.yaml",
+    "tools/bootstrap.py",
+    "tools/email_acceptance.py",
+    "tools/scopes/auth-002.json"
+  ]
+}

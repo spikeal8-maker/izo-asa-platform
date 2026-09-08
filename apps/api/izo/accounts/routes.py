@@ -14,6 +14,7 @@ from .schemas import AuthView, LoginInput, RegisterInput, SessionList, AuthError
 from .security import AuthError
 from .service import AuthService
 from .settings import AuthSettings
+from .challenge_routes import attach_challenges
 
 
 class AuthBodyLimit:
@@ -165,4 +166,5 @@ def attach_accounts(app, database_config) -> None:
 
     app.router.lifespan_context = lifespan
     app.add_middleware(AuthBodyLimit)
+    attach_challenges(router, service, same_origin, bearer, clear_cookie)
     app.include_router(router)

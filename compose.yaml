@@ -10,6 +10,8 @@ x-api-environment: &api-environment
   IZO_AUTH_RATE_SECRET: ${IZO_AUTH_RATE_SECRET:-}
   IZO_AUTH_REGISTRATION: ${IZO_AUTH_REGISTRATION:-disabled}
   IZO_AUTH_ORIGINS: '["http://localhost:${IZO_HTTP_PORT:-8080}","http://127.0.0.1:${IZO_HTTP_PORT:-8080}"]'
+  IZO_RECOVERY_SECRET: ${IZO_RECOVERY_SECRET:-}
+  IZO_RECOVERY_DELIVERY: ${IZO_RECOVERY_DELIVERY:-disabled}
 services:
   postgres:
     image: postgres:17-bookworm
