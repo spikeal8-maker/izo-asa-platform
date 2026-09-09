@@ -1,4 +1,6 @@
 import { test, expect } from '@playwright/test'
+import { ApiError } from '../src/shared/api'
+import { rejectedBeforeAdmission } from '../src/shared/submission'
 import { workspace, estimate, create, noOverflow, owner } from './workspace-fixtures'
 
 test('IMAGE-001 studio uses server account, plan and price on every viewport', async ({ page }, info) => {
@@ -128,4 +130,97 @@ test('IMAGE-001 failure removes stale private job data and retry reads server ag
   await expect(page.getByRole('heading', { name: 'Войдите, чтобы продолжить' })).toBeVisible()
   await expect(page.getByTestId('job-status')).toHaveCount(0)
   await expect(page.getByTestId('job-charged')).toHaveCount(0)
+})
+
+
+test('CHANGE-001 A confirmation shows the server reserve beside the touch action', async ({ page }, info) => {
+  const app = await workspace(page); app.cost = 19
+  await estimate(page)
+  const dialog = page.getByRole('dialog')
+  const confirm = dialog.getByRole('button', { name: 'Подтвердить создание', exact: true })
+  await expect(confirm.getByTestId('quote-submit-price')).toHaveText('Резерв: 19 балл.')
+  await expect(confirm).toHaveAttribute('aria-describedby', 'quote-reserve')
+  await expect(dialog.locator('#quote-reserve')).toHaveText('19 балл.')
+  await confirm.scrollIntoViewIfNeeded()
+  const box = (await confirm.boundingBox())!, panel = (await dialog.boundingBox())!
+  expect(box.height).toBeGreaterThanOrEqual(48)
+  expect(box.x).toBeGreaterThanOrEqual(panel.x)
+  expect(box.x + box.width).toBeLessThanOrEqual(panel.x + panel.width + 1)
+  if (page.viewportSize()!.width <= 700) {
+    const title = (await confirm.getByText('Подтвердить создание', { exact: true }).boundingBox())!
+    const price = (await confirm.getByTestId('quote-submit-price').boundingBox())!
+    expect(price.y).toBeGreaterThanOrEqual(title.y + title.height)
+  }
+  expect(app.jobs).toHaveLength(0)
+  await noOverflow(page)
+  await page.screenshot({ path: info.outputPath('confirmation-price.png'), fullPage: true })
+})
+
+
+test('CHANGE-001 C failure classification requires the exact pre-admission protocol', () => {
+  for (const code of ['provider_unavailable', 'image_size_restricted', 'action_budget_exceeded']) {
+    expect(rejectedBeforeAdmission(new ApiError(409, code))).toBe(true)
+    expect(rejectedBeforeAdmission(new ApiError(500, code))).toBe(false)
+    expect(rejectedBeforeAdmission(new ApiError(503, code))).toBe(false)
+  }
+  for (const code of ['idempotency_conflict', 'quote_already_used', 'unknown', 'toString', '__proto__']) {
+    expect(rejectedBeforeAdmission(new ApiError(409, code))).toBe(false)
+  }
+  for (const [status, code] of [[403, 'account_restricted'], [403, 'verification_required'],
+    [422, 'invalid_input'], [429, 'rate_limited']] as const) {
+    expect(rejectedBeforeAdmission(new ApiError(status, code))).toBe(false)
+  }
+  expect(rejectedBeforeAdmission(new Error('connection lost'))).toBe(false)
+  expect(rejectedBeforeAdmission({ status: 409, code: 'plan_restricted' })).toBe(false)
+})
+
+test('CHANGE-001 C definite rejections free only the pending ID and never create a job', async ({ page }) => {
+  const app = await workspace(page)
+  let code = ''; let submissions = 0
+  await page.route('**/api/v1/jobs', route => {
+    if (route.request().method() !== 'POST') return route.fallback()
+    submissions++
+    return route.fulfill({ status: 409, json: { error: { code } } })
+  })
+  for (const [next, text] of [
+    ['provider_unavailable', 'Исполнитель сейчас недоступен'],
+    ['image_size_restricted', 'Этот размер не разрешён'],
+    ['action_budget_exceeded', 'Стоимость превышает лимит'],
+  ]) {
+    code = next
+    await estimate(page)
+    await page.getByRole('button', { name: 'Подтвердить создание', exact: true }).click()
+    await expect(page.getByRole('alert')).toContainText(text)
+    await expect(page.getByRole('button', { name: 'Проверить прежний запрос' })).toHaveCount(0)
+    await expect(page.getByRole('button', { name: 'Рассчитать стоимость' })).toBeEnabled()
+    expect(await page.evaluate(id => sessionStorage.getItem(`izo-pending-submit:${id}`), owner)).toBeNull()
+  }
+  expect(submissions).toBe(3)
+  expect(app.jobs).toHaveLength(0); expect(app.balance).toBe(100); expect(app.reserved).toBe(0)
+})
+
+test('CHANGE-001 C a familiar code inside server failure still reuses the pending ID', async ({ page }) => {
+  const app = await workspace(page); const calls: unknown[] = []
+  let status = 500; let code = 'plan_restricted'
+  await page.route('**/api/v1/jobs', route => {
+    if (route.request().method() !== 'POST') return route.fallback()
+    calls.push(route.request().postDataJSON())
+    return route.fulfill({ status, json: { error: { code } } })
+  })
+  await estimate(page)
+  await page.getByRole('button', { name: 'Подтвердить создание', exact: true }).click()
+  await expect(page.getByRole('alert')).toContainText('Результат отправки пока неизвестен')
+  await page.reload()
+  await expect(page.getByRole('button', { name: 'Рассчитать стоимость' })).toBeDisabled()
+  await page.getByRole('button', { name: 'Проверить прежний запрос' }).click()
+  await expect(page.getByRole('alert')).toContainText('Результат отправки пока неизвестен')
+  for (const [nextStatus, nextCode] of [[403, 'account_restricted'], [422, 'invalid_input'], [429, 'rate_limited']] as const) {
+    status = nextStatus; code = nextCode
+    await page.getByRole('button', { name: 'Проверить прежний запрос' }).click()
+    await expect(page.getByRole('alert')).toContainText('Результат отправки пока неизвестен')
+    await expect(page.getByRole('button', { name: 'Проверить прежний запрос' })).toBeEnabled()
+  }
+  expect(calls).toHaveLength(5)
+  for (const call of calls) expect(call).toEqual(calls[0])
+  expect(app.jobs).toHaveLength(0)
 })

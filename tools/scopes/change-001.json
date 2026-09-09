@@ -1,0 +1,23 @@
+{
+  "base": "f2e6f3a29410363412b22ee632e8e1d2e3921ac7",
+  "max_files": 12,
+  "allowed": [
+    "apps/web/src/features/studio/Studio.tsx",
+    "apps/web/src/features/studio/studio.css",
+    "apps/web/e2e/studio.spec.ts",
+    "apps/web/src/shared/submission.ts",
+    "apps/web/src/shared/workspace-api.ts",
+    "tests/test_change_access.py",
+    "tools/jobs_access_acceptance.py",
+    "tools/jobs_acceptance.py",
+    "apps/web/src/features/studio/README.md",
+    "docs/STATUS.md",
+    "tools/scopes/change-001.json",
+    "docs/reviews/CHANGE-001.md"
+  ],
+  "sensitive_approved": [
+    "tools/jobs_access_acceptance.py",
+    "tools/jobs_acceptance.py",
+    "tools/scopes/change-001.json"
+  ]
+}

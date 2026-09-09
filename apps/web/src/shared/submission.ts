@@ -1,4 +1,5 @@
 import { isId } from './workspace-api'
+import { ApiError } from './api'
 
 export type Pending = { version: 1; owner: string; quote_id: string; operation_id: string }
 export const submissionKey = (owner: string) => `izo-pending-submit:${owner}`
@@ -26,3 +27,23 @@ export function remember(owner: string, quoteId: string): Pending {
   return saved
 }
 export function forget(owner: string) { sessionStorage.removeItem(submissionKey(owner)) }
+
+/** Only replies documented as atomic pre-admission denials may clear a pending ID.
+ * The status must match too: a familiar code inside a 500/unknown reply is NOT
+ * proof that no job was committed. Auth/validation/throttle failures can happen
+ * BEFORE replay lookup, so they cannot disprove an earlier successful submit.
+ * Conflicts/replayed quotes remain pending.
+ */
+const deniedStatuses: Record<string, readonly number[]> = {
+  quote_expired: [409], insufficient_credits: [409],
+  plan_unconfigured: [403], plan_restricted: [409], image_size_restricted: [409],
+  storage_quota_exceeded: [409], concurrency_limit: [409], rate_limited: [409],
+  feature_unavailable: [409], jobs_disabled: [503],
+  verification_required: [409], account_restricted: [409],
+  input_limit: [409], invalid_input_usage: [409], action_budget_exceeded: [409],
+  capability_unsupported: [409], provider_unavailable: [409],
+}
+export function rejectedBeforeAdmission(reason: unknown): boolean {
+  return reason instanceof ApiError && Object.hasOwn(deniedStatuses, reason.code)
+    && deniedStatuses[reason.code].includes(reason.status)
+}
