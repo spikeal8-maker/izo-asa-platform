@@ -1,0 +1,26 @@
+{
+  "base": "cab337ddd2dc6a573b4a5366b071d31e26bd0523",
+  "max_files": 34,
+  "allowed": [
+    ".github/workflows/review-source.yml", ".github/workflows/ci.yml",
+    "apps/web/AGENTS.md", "apps/web/src/shell/App.tsx",
+    "apps/web/src/shared/api.ts", "apps/web/src/shared/workspace.tsx",
+    "apps/web/src/shared/workspace-api.ts", "apps/web/src/shared/submission.ts",
+    "apps/web/src/features/studio/Studio.tsx", "apps/web/src/features/studio/ResultPanel.tsx",
+    "apps/web/src/features/studio/UploadBox.tsx", "apps/web/src/features/studio/studio.css",
+    "apps/web/src/features/gallery/Gallery.tsx", "apps/web/src/features/gallery/AssetPage.tsx",
+    "apps/web/src/features/gallery/gallery.css", "apps/web/src/features/gallery/PrivateImage.tsx",
+    "apps/web/src/features/prototype/DemoState.tsx", "apps/web/src/features/prototype/demo.ts",
+    "apps/web/src/features/prototype/art.ts", "apps/web/src/features/accounts/AccountPage.tsx",
+    "apps/web/e2e/studio.spec.ts", "apps/web/e2e/gallery.spec.ts", "apps/web/e2e/shell.spec.ts",
+    "apps/web/e2e/workspace-fixtures.ts", "apps/web/acceptance/image-live.mjs",
+    "apps/web/src/features/studio/AGENTS.md", "apps/web/src/features/studio/README.md",
+    "tests/test_image_boundaries.py", "tests/test_web_boundaries.py",
+    "tools/image_acceptance.py", "docs/STATUS.md", "README.md", "tools/scopes/image-001.json"
+  ],
+  "sensitive_approved": [
+    ".github/workflows/review-source.yml", ".github/workflows/ci.yml",
+    "apps/web/AGENTS.md", "apps/web/src/features/studio/AGENTS.md",
+    "tools/image_acceptance.py", "tools/scopes/image-001.json"
+  ]
+}
