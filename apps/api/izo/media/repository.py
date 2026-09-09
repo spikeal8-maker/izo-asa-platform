@@ -50,7 +50,9 @@ def usage(conn, owner):
         .where(t.assets.c.account_id == owner)).scalar_one()
     held = conn.execute(sa.select(sa.func.coalesce(sa.func.sum(t.uploads.c.reserved_bytes), 0))
         .where(t.uploads.c.account_id == owner)).scalar_one()
-    return int(used), int(held)
+    output_held = conn.execute(sa.select(sa.func.coalesce(sa.func.sum(t.outputs.c.reserved_bytes), 0))
+        .where(t.outputs.c.account_id == owner)).scalar_one()
+    return int(used), int(held) + int(output_held)
 
 
 def update_upload(conn, upload_id, **values):

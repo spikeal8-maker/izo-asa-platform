@@ -24,6 +24,11 @@ def test_migration_is_additive_and_matches_metadata(tmp_path):
     with engine.begin() as conn:
         with Operations.context(MigrationContext.configure(conn)):
             module.upgrade()
+            path8=ROOT/'apps/api/migrations/versions/0008_jobs.py'
+            spec8=importlib.util.spec_from_file_location('jobs_media_extension_snapshot',path8)
+            module8=importlib.util.module_from_spec(spec8)
+            spec8.loader.exec_module(module8)
+            module8.upgrade()
         inspector=sa.inspect(conn)
         for table in t.TABLES:
             assert {x['name'] for x in inspector.get_columns(table.name)}==set(table.c.keys())

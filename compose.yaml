@@ -12,6 +12,7 @@ x-api-environment: &api-environment
   IZO_AUTH_ORIGINS: '["http://localhost:${IZO_HTTP_PORT:-8080}","http://127.0.0.1:${IZO_HTTP_PORT:-8080}"]'
   IZO_RECOVERY_SECRET: ${IZO_RECOVERY_SECRET:-}
   IZO_RECOVERY_DELIVERY: ${IZO_RECOVERY_DELIVERY:-disabled}
+  IZO_JOBS_ENABLED: ${IZO_JOBS_ENABLED:-false}
 services:
   postgres:
     image: postgres:17-bookworm
@@ -59,6 +60,20 @@ services:
       timeout: 10s
       retries: 30
       start_period: 15s
+  job-worker:
+    profiles: [jobs]
+    build: {context: ., dockerfile: infra/api.Dockerfile}
+    environment: *api-environment
+    command: [python, '-m', izo.jobs.worker]
+    networks: [private]
+    read_only: true
+    tmpfs: [/tmp]
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
+    stop_grace_period: 40s
+    depends_on:
+      migrate: {condition: service_completed_successfully}
+      storage: {condition: service_started}
   web:
     build: {context: ., dockerfile: infra/web.Dockerfile}
     ports: ['127.0.0.1:${IZO_HTTP_PORT:-8080}:8080']

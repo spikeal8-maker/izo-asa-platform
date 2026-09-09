@@ -118,7 +118,7 @@ class MediaService(MediaReader):
                 raise MediaError(409, "upload_not_stored")
             if len(data) != row["stored_size"] or hashlib.sha256(data).hexdigest() != row["stored_hash"]:
                 raise MediaError(503, "media_integrity_error")
-            conn.execute(sa.insert(t.assets).values(id=upload_id, account_id=p.account_id,
+            conn.execute(sa.insert(t.assets).values(id=upload_id, upload_id=upload_id, account_id=p.account_id,
                 object_key=row["object_key"], sha256=row["stored_hash"], byte_size=row["stored_size"],
                 width=row["width"], height=row["height"], created_at=p.now))
             repo.update_upload(conn, upload_id, status="ready", reserved_bytes=0, lease_until=0)
