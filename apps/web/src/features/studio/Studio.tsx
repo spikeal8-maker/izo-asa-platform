@@ -2,10 +2,10 @@ import { useEffect, useRef, useState } from 'react'
 import { Dialog } from '../../shared/ui/Dialog'
 import { Icon, type IconName } from '../../shared/ui/Icon'
 import { Link } from '../../shell/router'
-import { apiRequest, ApiError, type AuthView } from '../../shared/api'
+import { apiRequest, type AuthView } from '../../shared/api'
 import { WorkspaceGate, ResourceState, useResource } from '../../shared/workspace'
 import { type Plan, type Credits, type Quote, type Job, problem, navigate } from '../../shared/workspace-api'
-import { type Pending, readPending, remember, forget } from '../../shared/submission'
+import { type Pending, readPending, remember, forget, rejectedBeforeAdmission } from '../../shared/submission'
 import './studio.css'
 
 const directions: { title: string; href: string; icon: IconName }[] = [
@@ -15,10 +15,6 @@ const directions: { title: string; href: string; icon: IconName }[] = [
   { title: '3D', href: '/studio/3d', icon: 'cube' },
   { title: 'Чат', href: '/studio/chat', icon: 'chat' },
 ]
-const deniedBeforeAdmission = new Set(['quote_expired', 'invalid_input', 'insufficient_credits',
-  'plan_unconfigured', 'plan_restricted', 'storage_quota_exceeded', 'concurrency_limit',
-  'rate_limited', 'feature_unavailable', 'jobs_disabled', 'verification_required', 'account_restricted'])
-
 function Composer({ auth }: { auth: AuthView }) {
   const plan = useResource<Plan>('/api/v1/entitlements')
   const credits = useResource<Credits>('/api/v1/credits')
@@ -78,7 +74,7 @@ function Composer({ auth }: { auth: AuthView }) {
         setQuote(null)
         setStorageError(true)
         setError('Не удалось сохранить номер запроса. Отправка задания не выполнялась.')
-      } else if (reason instanceof ApiError && deniedBeforeAdmission.has(reason.code)) {
+      } else if (rejectedBeforeAdmission(reason)) {
         try { forget(auth.account.id); setPending(null) } catch { setStorageError(true) }
         setError(problem(reason))
       } else {
@@ -132,11 +128,15 @@ function Composer({ auth }: { auth: AuthView }) {
     <Dialog open={!!quote} title="Подтвердить серверное задание?" onClose={() => { if (!busy) setQuote(null) }}>
       {quote && <><p>{quote.notice}</p><dl className="summary-list">
         <div><dt>Размер файла</dt><dd>{quote.width} × {quote.height}</dd></div>
-        <div><dt>Серверный резерв</dt><dd>{quote.credits} балл.</dd></div>
+        <div><dt>Серверный резерв</dt><dd id="quote-reserve">{quote.credits} балл.</dd></div>
         <div><dt>Реальный AI-вызов</dt><dd>Нет</dd></div></dl>
         <p className="quote-prompt">{quote.prompt}</p>
         {expired && <p role="alert">Цена устарела. Закройте окно и рассчитайте её заново.</p>}
-        <button className="primary full-width" disabled={busy || expired} onClick={() => void submit()}>Подтвердить создание</button></>}
+        <button className="primary full-width quote-submit" aria-label="Подтвердить создание"
+          aria-describedby="quote-reserve" disabled={busy || expired} onClick={() => void submit()}>
+          <span>Подтвердить создание</span>
+          <small data-testid="quote-submit-price" aria-hidden="true">Резерв: {quote.credits} балл.</small>
+        </button></>}
     </Dialog>
   </div>
 }

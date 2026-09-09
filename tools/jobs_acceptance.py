@@ -10,6 +10,7 @@ from uuid import UUID, uuid4
 
 import sqlalchemy as sa
 from media_acceptance import checked, command as upload_intent, pixels
+from jobs_access_acceptance import check_model_access_change
 from izo.config import Settings
 from izo.accounts import tables as a
 from izo.accounts.repository import create_auth_engine
@@ -103,6 +104,7 @@ def before(auth, config):
     owner, limited, other = users
     service = JobService(auth, JobSettings(enabled=True))
     store = MediaStore(config)
+    check_model_access_change(auth, store, owner, other)
     command = quote(auth, owner)
     pair = race([lambda: service.submit(owner['bearer'], owner['csrf'], command)] * 2)
     assert pair[0].id == pair[1].id, 'submission replay race'

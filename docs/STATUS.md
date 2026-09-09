@@ -1,62 +1,64 @@
 # Фактическое состояние IZO ASA
 
-IMAGE-001, 9 сентября 2026. База `cab337ddd2dc6a573b4a5366b071d31e26bd0523`,
-PR #12; новая ветка `image/server-workspace`, PR #13. Текущий HEAD и окончательные
-Checks находятся в PR. Этот файл не объявляет публикацию или успех заранее.
-Main, родительские ветки и рабочий сайт не менялись; MERGED/DEPLOYED — NO.
+CHANGE-001, 10 сентября 2026. База — `f2e6f3a29410363412b22ee632e8e1d2e3921ac7`,
+ветка image/server-workspace, PR #13. Новый пакет — change/targeted-maintenance.
+Точный опубликованный head и окончательные результаты — Checks/комментарий PR.
+Main, родительские ветки и рабочий сайт не меняются; MERGED/DEPLOYED — NO.
 
-## Подтверждённая база
+## Подтверждённая база, не повторная публикация старого пакета
 
-JOBS-001: 671 Python, 270 viewport cases, PostgreSQL/S3/worker/restart и npm-audit
-прошли в CI34388638041/34388638004. Это не автоматический PASS следующего SHA.
-Аккаунты, email proofs с тестовой доставкой, Credits, Entitlements, Admin, Media
-и durable Jobs реализованы. Реального AI-провайдера/SMTP/GPU/платежей нет.
+При возобновлении обнаружено, что MEDIA-001, JOBS-001 и IMAGE-001 уже опубликованы.
+Устаревший архив MEDIA повторно не применялся. Для source f2e6f3a… прочитан полный лог
+Foundation CI34402090357/job102636174543:679 Python,360 viewport cases, все прежние
+PostgreSQL/S3/перезапуск и реальный image-browser путь до/после restart — SUCCESS.
+Dependency Security34402090422 и Review Source34402090426 — SUCCESS. Synthetic checkout
+9780455507029ca600e4508401d8086f1ad12caa имеет tree3a57a9fb1b666c3c57acb21defa979ad29d7a662,
+совпадающее с source tree. Скачанный source.tar.gz и231 blobs сверены локально.
+В PR #13 записано подтверждение вместо устаревшего ожидания CI. Отдельный Review Source
+в действующем коде сохранён; старое описание его удаления не соответствует этой версии.
 
-## Изменения IMAGE-001
+## Изменения этого пакета
 
-Основные Studio/Jobs/Gallery теперь используют серверные API. Из runtime удалены
-DemoState, браузерный кошелёк, вымышленные работы и тестовый SVG-renderer. Возврат к
-демо при ошибке API запрещён. Старые документы прототипа остаются историческими.
+A — кнопка подтверждения показывает серверный резерв и перестраивается на телефоне.
+Стабильное доступное имя/описание, touch-height48px; без локального расчёта цены,
+глобального масштабирования, переустройства навигации или нового дизайна всей студии.
 
-Цена/размеры/права приходят из серверного контракта. Quote подтверждается человеком;
-до submit сохраняются account-scoped operation/quote IDs. Потерянный ответ повторяется
-тем же ID после refresh, не новой платной операцией. Повреждённое/недоступное storage
-блокирует новую отправку. Jobs list/detail читают реальное состояние, cancel не
-выполняет клиентский refund. Terminal/error/reconciliation_required останавливают poll.
+B — доказана смена доступа через существующую версию плана. После удаления capability
+или executor, либо max_action_credits=0, старый ещё не принятый quote отвергается без
+нового резерва/задания. Ранее принятые jobs сохраняют snapshot и читаемый результат.
+Новая business-логика, коммерческие тарифы и админский редактор планов не добавлялись.
+В existing PostgreSQL acceptance добавлен scoped сценарий на синтетическом аккаунте.
 
-Gallery читает свою страницу metadata, поиск ограничен ею. До открытия работы нет
-массовой загрузки originals. Detail проверяет PNG/hash/byte bound, Object URL отзывается
-при уходе; новая загрузка файла требует fresh session-bound ticket. При401 private UI
-очищается. Возврат во вкладку перепроверяет сессию. Пароли/CSRF/pixels не хранятся
-в новом sessionStorage. Это не возможность отозвать уже скачанную копию изображения.
+C — явный отказ по размеру/бюджету не оставляет студию навечно в неопределённом submit.
+rejectedBeforeAdmission проверяет пару status/code. Незнакомый ответ/ошибка500/обрыв
+сохраняют тот же operation ID; знакомый код внутри500 также не считается доказанным
+отказом. Отдельное сообщение provider_unavailable подготовлено для протокола409,
+но это не подключение настоящего AI. Локальные списания/refund/retry provider не добавлены.
 
-Исполнитель пока test.image.v1: диагностический PNG с TEST ONLY, реальная очередь и
-серверные тестовые баллы, но не нейросетевая генерация. Backend jobs по умолчанию off.
-Неподдержанные input references/delete/publish/thumbnail не представлены как готовые.
-Визуальная концепция не считается принятой владельцем.
+## Проверки и воспроизводимость
 
-## Проверка
+Локально: 5 новых transactional policy tests — PASS, затем114 профильных tests — PASS,
+без failures/errors/skips. Настоящие Accounts/Credits/Entitlements/Jobs с SQLite и fake S3;
+отдельная PostgreSQL-проверка находится в существующем Compose gate. Node:27 assertions
+классификатора/сообщений и транспиляцииTS — PASS, не полный TypeScript typecheck.
+Python3.13.5/FastAPI0.128.2/Alembic1.18.4/Node22 отличаются от locked CI. Полного Docker
+и браузеров локально нет; новые browser/PG сценарии не считаются пройденными до Checks.
 
-Review Source выдаёт git-tracked snapshot с tree и blob manifest; исходные227 blobs
-подготовительного commit сверены локально. Локальный snapshot — все tracked файлы,
-но не полный upstream git history. Прямой сетевой clone недоступен. Docker локально
-отсутствует; Node22 отличается от целевого24, npm offline install не нашёл часть cache.
-Поэтому локальная проверка не выдаётся за полный locked build.
+Исходники восстановлены из git-tracked source artifact, upstream history локально нет.
+Точное дерево и blobs проверены; локальный snapshot-коммит не выдаётся за remote source.
+Scope проверяется по diff снимка и после публикации по GitHub compare от f2e6f3a….
+Цена tokens и полное время работы агента не измерялись. Измерены только число путей,
+команды и длительность локальных tests (см. [протокол CHANGE-001](reviews/CHANGE-001.md)); гарантий кратной экономии нет.
 
-Написаны новые protocol-based browser scenarios вместо прежних demo assumptions,
-guards границ и настоящий browser→API→PostgreSQL/S3→worker сценарий. Новый browser
-сам начисляет через Admin UI и отправляет job; отдельный процесс выполняет его;
-download hash/balance проверяются до и после реального Compose restart. Другой
-пользователь не получает job/asset. Секретные fixture только RUNNER_TEMP, не artifacts.
-Прежние backend/acceptance/audit проверки сохранены. Итог нужно прочитать в Checks,
-наличие файлов тестов не означает, что они прошли.
+## Границы
 
-## Scope и дальше
+Конечный scope12 путей, без изменений backend business-code, миграций, dependencies,
+Docker-конфигурации, workflow, LICENSE или родительских веток. Три подзадачи выполнены
+последовательно; документация дополняет текущие файлы, нового master plan нет.
+Исходный IMAGE умеет истинный server job/галерею, но исполнитель только test.image.v1
+с PNG TEST ONLY. Нет реальных AI/API-ключей/SMTP/GPU/payments. Визуал не принят владельцем,
+OS scaling/настоящие Mini Apps и независимый review не объявлены проверенными.
 
-Конечный предел34 paths; backend business code, schema, locks, зависимости и лицензия
-не меняются. Расширение transport/CI ограничено соединением пользовательского пути.
-Ближайший UI-контракт — studio/README.md; карта файлов — apps/web/AGENTS.md.
-
-После успешной приёмки — CHANGE-001 и один согласованный provider API-001.
-До публичного выпуска остаются deployment/backup restore/нагрузка/security review,
-принятие дизайна/тарифов/retention и реальных Mini Apps. Никакого нового master plan.
+После принятия CHANGE-001 — API-001 с явно выбранными provider/model/ключом/бюджетом.
+До разрешения реальные вызовы не выполняются. Release/backup-restore/security review,
+защита main, коммерческие квоты/retention и публичный scope остаются отдельными gates.
