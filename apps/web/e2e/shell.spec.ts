@@ -9,7 +9,7 @@ test('overview has honest capabilities, no document overflow and accessible dial
   await page.goto('/')
   await expect(page.getByRole('heading', { level: 1 })).toContainText('Ваша идея')
   await expect(page.locator('.workspace-card')).toHaveCount(5)
-  await expect(page.getByRole('status')).toContainText('API отвечает')
+  await expect(page.locator('footer').getByRole('status')).toContainText('API отвечает')
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true)
   await page.getByRole('button', { name: 'О состоянии' }).click()
   await expect(page.getByRole('dialog')).toBeVisible()
@@ -33,10 +33,10 @@ test('deep links, shared navigation and themes work', async ({ page }) => {
 test('API failure is visible and retry recovers', async ({ page }) => {
   await page.route('**/api/v1/foundation', route => route.fulfill({ status: 503, body: '{}' }))
   await page.goto('/')
-  await expect(page.getByRole('status')).toContainText('API недоступен')
+  await expect(page.locator('footer').getByRole('status')).toContainText('API недоступен')
   await page.route('**/api/v1/foundation', route => route.fulfill({ json: { stage: 'foundation', capabilities: [] } }))
   await page.getByRole('button', { name: 'Повторить' }).click()
-  await expect(page.getByRole('status')).toContainText('API отвечает')
+  await expect(page.locator('footer').getByRole('status')).toContainText('API отвечает')
 })
 
 for (const host of ['telegram', 'max'] as const) {

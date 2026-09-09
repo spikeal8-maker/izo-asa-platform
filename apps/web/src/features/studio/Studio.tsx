@@ -1,11 +1,11 @@
-import { useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { Dialog } from '../../shared/ui/Dialog'
 import { Icon, type IconName } from '../../shared/ui/Icon'
 import { Link } from '../../shell/router'
-import { useDemo } from '../prototype/DemoState'
-import { aspects, models } from '../prototype/demo'
-import { ResultPanel } from './ResultPanel'
-import { UploadBox } from './UploadBox'
+import { apiRequest, ApiError, type AuthView } from '../../shared/api'
+import { WorkspaceGate, ResourceState, useResource } from '../../shared/workspace'
+import { type Plan, type Credits, type Quote, type Job, problem, navigate } from '../../shared/workspace-api'
+import { type Pending, readPending, remember, forget } from '../../shared/submission'
 import './studio.css'
 
 const directions: { title: string; href: string; icon: IconName }[] = [
@@ -15,121 +15,137 @@ const directions: { title: string; href: string; icon: IconName }[] = [
   { title: '3D', href: '/studio/3d', icon: 'cube' },
   { title: 'Чат', href: '/studio/chat', icon: 'chat' },
 ]
-const prompts = [
-  'Минималистичная арка у спокойного моря, мягкий свет, тёплая палитра',
-  'Скульптурная форма в прохладном утреннем свете',
-  'Тихое пространство, отражения и геометрия',
-]
+const deniedBeforeAdmission = new Set(['quote_expired', 'invalid_input', 'insufficient_credits',
+  'plan_unconfigured', 'plan_restricted', 'storage_quota_exceeded', 'concurrency_limit',
+  'rate_limited', 'feature_unavailable', 'jobs_disabled', 'verification_required', 'account_restricted'])
 
+function Composer({ auth }: { auth: AuthView }) {
+  const plan = useResource<Plan>('/api/v1/entitlements')
+  const credits = useResource<Credits>('/api/v1/credits')
+  const [prompt, setPrompt] = useState('')
+  const [size, setSize] = useState('')
+  const [quote, setQuote] = useState<Quote | null>(null)
+  const [busy, setBusy] = useState(false)
+  const [error, setError] = useState('')
+  const [expired, setExpired] = useState(false)
+  const [pending, setPending] = useState<Pending | null>(null)
+  const [storageError, setStorageError] = useState(false)
+  const active = useRef(false)
+  const alive = useRef(true)
+  useEffect(() => {
+    alive.current = true
+    try { setPending(readPending(auth.account.id)) } catch { setStorageError(true) }
+    return () => { alive.current = false }
+  }, [auth.account.id])
+  useEffect(() => {
+    setExpired(!!quote && quote.expires_at * 1000 <= Date.now())
+    if (!quote) return
+    const timer = setTimeout(() => setExpired(true), Math.max(0, quote.expires_at * 1000 - Date.now()))
+    return () => clearTimeout(timer)
+  }, [quote])
+  const sizes = plan.data?.policy?.image_sizes.filter(item => item.width >= 32 && item.width <= 512
+    && item.height >= 32 && item.height <= 512) ?? []
+  const chosen = sizes.find(item => `${item.width}x${item.height}` === size) ?? sizes[0]
+  const permitted = auth.account.email_verified && auth.account.state === 'active'
+    && plan.data?.configured && plan.data.policy?.capability_ids.includes('test.image.v1')
+    && plan.data.policy.executors.includes('api') && !!chosen
+  const canQuote = permitted && !!credits.data && !!prompt.trim() && !busy && !pending && !storageError
+
+  async function estimate() {
+    if (!canQuote || active.current || !chosen) return
+    active.current = true; setBusy(true); setError('')
+    try {
+      const value = await apiRequest<Quote>('/api/v1/jobs/quotes', { method: 'POST', csrf: auth.csrf_token,
+        data: { capability_id: 'test.image.v1', prompt, width: chosen.width, height: chosen.height } })
+      if (alive.current) setQuote(value)
+    } catch (reason) { if (alive.current) setError(problem(reason)) }
+    finally { active.current = false; if (alive.current) setBusy(false) }
+  }
+  async function submit() {
+    if (active.current || (!pending && (!quote || expired))) return
+    active.current = true; setBusy(true); setError('')
+    let command: Pending | null = pending
+    try {
+      command = pending ?? remember(auth.account.id, quote!.id)
+      setPending(command); setQuote(null)
+      const value = await apiRequest<Job>('/api/v1/jobs', { method: 'POST', csrf: auth.csrf_token,
+        data: { quote_id: command.quote_id, operation_id: command.operation_id } })
+      try { forget(auth.account.id) } catch { /* A surviving ID only replays this receipt. */ }
+      if (alive.current) { setPending(null); navigate(`/jobs/${value.id}`) }
+    } catch (reason) {
+      if (!alive.current) return
+      if (!command) {
+        setQuote(null)
+        setStorageError(true)
+        setError('Не удалось сохранить номер запроса. Отправка задания не выполнялась.')
+      } else if (reason instanceof ApiError && deniedBeforeAdmission.has(reason.code)) {
+        try { forget(auth.account.id); setPending(null) } catch { setStorageError(true) }
+        setError(problem(reason))
+      } else {
+        setError('Результат отправки пока неизвестен. Повторите тот же запрос или проверьте задания; новое списание не создаётся.')
+      }
+    } finally { active.current = false; if (alive.current) setBusy(false) }
+  }
+  return <div className="studio-grid">
+    <section className="composer" aria-labelledby="composer-title">
+      <div className="panel-heading"><h2 id="composer-title">Что создаём?</h2><Icon name="spark" /></div>
+      <ResourceState loading={plan.loading || credits.loading} error={plan.error || credits.error}
+        retry={() => { plan.refresh(); credits.refresh() }} />
+      {credits.data && <p>Доступно на сервере: <strong data-testid="studio-available">{credits.data.balance.available}</strong> баллов.
+        В резерве: {credits.data.balance.reserved}.</p>}
+      {!auth.account.email_verified && <p className="field-error"><Link href="/verify-email">Подтвердите почту</Link> перед созданием задания.</p>}
+      {plan.data && !permitted && auth.account.email_verified && <p className="field-error">Оператор должен разрешить тестовый исполнитель и размеры в вашем плане.</p>}
+      {storageError && <p role="alert" className="field-error">Хранилище номера запроса недоступно или повреждено.
+        Отправка заблокирована, чтобы не потерять защиту от повторов. <Link href="/jobs">Проверить задания</Link>.</p>}
+      {pending && <div className="pending-command" role="status">
+        <strong>Есть незавершённое подтверждение</strong>
+        <p>Сохраняется прежний номер запроса. Не создавайте замену, пока не проверен результат.</p>
+        <button className="primary" disabled={busy} onClick={() => void submit()}>Проверить прежний запрос</button>
+        <Link href="/jobs">Открыть задания</Link>
+      </div>}
+      <label className="field-label" htmlFor="prompt">Описание</label>
+      <div className="prompt-field"><textarea id="prompt" rows={5} maxLength={2000}
+        placeholder="Опишите задачу…" disabled={busy || !!pending} value={prompt}
+        onChange={event => { setPrompt(event.target.value); setQuote(null) }} />
+        <span>{prompt.length} / 2000</span></div>
+      <p className="field-label">Исполнитель</p>
+      <p><strong>Диагностическое изображение</strong><br /><small>test.image.v1 · не нейросеть</small></p>
+      <label className="field-label" htmlFor="image-size">Размер результата</label>
+      <select id="image-size" value={chosen ? `${chosen.width}x${chosen.height}` : ''} disabled={busy || !!pending}
+        onChange={event => { setSize(event.target.value); setQuote(null) }}>
+        {!sizes.length && <option value="">Нет доступных размеров</option>}
+        {sizes.map(item => <option key={`${item.width}x${item.height}`} value={`${item.width}x${item.height}`}>
+          {item.width} × {item.height}</option>)}
+      </select>
+      <p>Исходники, редактирование и другие модели пока не подключены. Разрешение вашего экрана не меняет размер файла.</p>
+      {error && <p className="field-error" role="alert">{error}</p>}
+      <button className="primary generate-button" disabled={!canQuote} onClick={() => void estimate()}>
+        <Icon name="spark" />{busy ? 'Проверяем…' : 'Рассчитать стоимость'}</button>
+      <p><Link href="/account/credits">Баланс и история</Link> · <Link href="/jobs">Мои задания</Link></p>
+    </section>
+    <section className="result-panel"><div className="panel-heading"><h2>От запроса к сохранённой работе</h2></div>
+      <div className="server-result-empty"><Icon name="image" /><h3>Результат создаётся на сервере</h3>
+        <p>Подтвердите цену. Задание сохранится в базе и будет выполнено отдельным процессом, даже после закрытия страницы.</p>
+        <p>Сейчас создаётся диагностический PNG с отметкой TEST ONLY. Реальные AI-модели ещё не подключены.</p>
+        <Link className="secondary" href="/gallery">Открыть мою галерею</Link></div>
+    </section>
+    <Dialog open={!!quote} title="Подтвердить серверное задание?" onClose={() => { if (!busy) setQuote(null) }}>
+      {quote && <><p>{quote.notice}</p><dl className="summary-list">
+        <div><dt>Размер файла</dt><dd>{quote.width} × {quote.height}</dd></div>
+        <div><dt>Серверный резерв</dt><dd>{quote.credits} балл.</dd></div>
+        <div><dt>Реальный AI-вызов</dt><dd>Нет</dd></div></dl>
+        <p className="quote-prompt">{quote.prompt}</p>
+        {expired && <p role="alert">Цена устарела. Закройте окно и рассчитайте её заново.</p>}
+        <button className="primary full-width" disabled={busy || expired} onClick={() => void submit()}>Подтвердить создание</button></>}
+    </Dialog>
+  </div>
+}
 export function Studio() {
-  const { state, start, updateDraft } = useDemo()
-  const [modelPicker, setModelPicker] = useState(false)
-  const [confirmation, setConfirmation] = useState(false)
-  const [fail, setFail] = useState(false)
-  const model = models.find(item => item.id === state.draft.model) ?? models[0]
-  const active = state.job?.state === 'running'
-  const affordable = state.balance >= model.cost
-  const canStart = !!state.draft.prompt.trim() && !active && affordable && state.works.length < 24
-
-  return <>
-    <header className="page-heading">
-      <p className="eyebrow">СТУДИЯ / 01</p>
-      <h1>Ваша идея. <span>Новая форма.</span></h1>
-      <p>От первого слова — к тому, что хочется сохранить.</p>
-    </header>
-    <div className="direction-tabs" aria-label="Направления творчества">
-      {directions.map((direction, index) => <Link
-        key={direction.href} href={direction.href}
-        className={`workspace-card ${index === 0 ? 'selected' : ''}`}
-        aria-current={index === 0 ? 'page' : undefined}
-      >
-        <Icon name={direction.icon} />{direction.title}
-        {index > 0 && <span className="direction-soon">позже</span>}
-      </Link>)}
-    </div>
-    <div className="studio-grid">
-      <section className="composer" aria-labelledby="composer-title">
-        <div className="panel-heading"><h2 id="composer-title">Что создаём?</h2><Icon name="spark" /></div>
-        <label className="field-label" htmlFor="prompt">Описание</label>
-        <div className="prompt-field">
-          <textarea id="prompt" maxLength={1500} rows={5}
-            placeholder="Опишите сюжет, настроение, свет и детали…"
-            value={state.draft.prompt} onChange={event => updateDraft({ prompt: event.target.value })} />
-          <span>{state.draft.prompt.length} / 1500</span>
-        </div>
-        <div className="prompt-ideas">
-          <span>Начать с примера</span>
-          {prompts.map((prompt, index) => <button
-            type="button" key={prompt} onClick={() => updateDraft({ prompt, palette: index })}
-          >{['Архитектура', 'Предмет', 'Атмосфера'][index]} <Icon name="arrow" /></button>)}
-        </div>
-        <UploadBox />
-        <div className="field-label">Модель <span className="demo-inline">демо</span></div>
-        <button className="model-picker" onClick={() => setModelPicker(true)}>
-          <span className="model-mark"><Icon name="spark" /></span>
-          <span>
-            <strong>{model.title}</strong>
-            <small>{model.id === 'local-demo' ? 'Локальный исполнитель · макет' : 'Внешний провайдер · макет'}</small>
-          </span>
-          <span aria-hidden="true">⌄</span>
-        </button>
-        <fieldset className="aspect-field">
-          <legend>Формат</legend>
-          <div className="aspect-options">
-            {aspects.map(aspect => <button
-              type="button" key={aspect} aria-pressed={state.draft.aspect === aspect}
-              className={state.draft.aspect === aspect ? 'selected' : ''}
-              onClick={() => updateDraft({ aspect })}
-            ><span className="aspect-symbol" style={{ aspectRatio: aspect.replace(':', '/') }} />{aspect}</button>)}
-          </div>
-        </fieldset>
-        <details className="demo-options">
-          <summary>Проверка состояний макета</summary>
-          <label>
-            <input type="checkbox" checked={fail} onChange={event => setFail(event.target.checked)} />
-            Показать ошибку вместо успеха
-          </label>
-          <p>Выбранный исходник и описание не отправляются модели.</p>
-        </details>
-        {!affordable && <p className="field-error" role="alert">
-          Недостаточно демо-баллов. Просмотр сохранённых примеров остаётся доступен.
-        </p>}
-        {state.works.length >= 24 && <p className="field-error" role="alert">
-          Достигнут лимит 24 демо-работ. Удалите пример или сбросьте макет.
-        </p>}
-        <div className="composer-submit">
-          <button className="primary generate-button" disabled={!canStart} onClick={() => setConfirmation(true)}>
-            <Icon name="spark" />{active ? 'Демо выполняется' : 'Создать демо'}
-            <span>{model.cost} {model.cost === 4 ? 'балла' : 'баллов'}</span>
-          </button>
-          <small><Icon name="lock" /> Без ключей, платежей и AI-запросов</small>
-        </div>
-      </section>
-      <ResultPanel />
-    </div>
-    <Dialog open={modelPicker} title="Выберите демо-модель" onClose={() => setModelPicker(false)}>
-      <p>Это варианты одного интерфейса. Настоящие провайдеры ещё не подключены.</p>
-      <div className="model-options">
-        {models.map(item => <button
-          className="model-option" key={item.id} disabled={!item.enabled}
-          onClick={() => { updateDraft({ model: item.id }); setModelPicker(false) }}
-        >
-          <strong>{item.title}</strong><span>{item.description}</span>
-          <small>{item.enabled ? `${item.cost} демо-баллов` : 'Недоступно'}</small>
-        </button>)}
-      </div>
-    </Dialog>
-    <Dialog open={confirmation} title="Запустить демонстрацию?" onClose={() => setConfirmation(false)}>
-      <p>Вы получите предустановленный векторный пример. Это проверка интерфейса, не генерация изображения по описанию.</p>
-      <dl className="summary-list">
-        <div><dt>Модель</dt><dd>{model.title}</dd></div>
-        <div><dt>Формат</dt><dd>{state.draft.aspect}</dd></div>
-        <div><dt>Демо-резерв</dt><dd>{model.cost} баллов</dd></div>
-        <div><dt>Реальный расход</dt><dd>0 ₽ · запросов нет</dd></div>
-      </dl>
-      <button className="primary full-width" disabled={!canStart}
-        onClick={() => { start(fail); setConfirmation(false) }}
-      >Подтвердить демо-запуск <Icon name="arrow" /></button>
-    </Dialog>
-  </>
+  return <><header className="page-heading"><p className="eyebrow">СТУДИЯ / СЕРВЕР</p>
+    <h1>Ваша идея. <span>Новая форма.</span></h1><p>Задания и результаты сохраняются в вашем аккаунте.</p></header>
+    <div className="direction-tabs" aria-label="Направления творчества">{directions.map((item, index) =>
+      <Link key={item.href} href={item.href} className={`workspace-card ${index === 0 ? 'selected' : ''}`}
+        aria-current={index === 0 ? 'page' : undefined}><Icon name={item.icon} />{item.title}
+        {index > 0 && <span className="direction-soon">позже</span>}</Link>)}</div>
+    <WorkspaceGate>{auth => <Composer auth={auth} />}</WorkspaceGate></>
 }

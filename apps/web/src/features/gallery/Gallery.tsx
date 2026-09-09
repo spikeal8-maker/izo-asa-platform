@@ -1,68 +1,38 @@
 import { useState } from 'react'
 import { Link } from '../../shell/router'
 import { Icon } from '../../shared/ui/Icon'
-import { useDemo } from '../prototype/DemoState'
-import { artUrl } from '../prototype/art'
+import { WorkspaceGate, ResourceState, useResource } from '../../shared/workspace'
+import { type Assets } from '../../shared/workspace-api'
 import './gallery.css'
 
-const filters = [['all', 'Все работы'], ['api-demo', 'API · демо'], ['local-demo', 'Local · демо']] as const
-
-export function Gallery() {
-  const { state } = useDemo()
+function Works() {
+  const [offset, setOffset] = useState(0)
   const [query, setQuery] = useState('')
-  const [filter, setFilter] = useState<string>('all')
-  const works = state.works.filter(work =>
-    (filter === 'all' || filter === work.model) && work.title.toLowerCase().includes(query.toLowerCase()))
-
-  return <>
-    <header className="page-heading gallery-heading">
-      <div>
-        <p className="eyebrow">ЛИЧНОЕ ПРОСТРАНСТВО</p>
-        <h1>Галерея</h1>
-        <p>Ваши идеи, к которым хочется вернуться.</p>
-      </div>
-      <Link className="primary" href="/image"><Icon name="plus" /> Создать демо</Link>
-    </header>
-    <div className="gallery-toolbar">
-      <div className="filter-tabs" aria-label="Фильтр работ">
-        {filters.map(([id, title]) => <button
-          key={id} aria-pressed={filter === id}
-          className={filter === id ? 'selected' : ''} onClick={() => setFilter(id)}
-        >{title}</button>)}
-      </div>
-      <label className="search-box">
-        <Icon name="search" />
-        <input aria-label="Поиск работ" placeholder="Найти работу" value={query}
-          onChange={event => setQuery(event.target.value)} maxLength={100} />
-      </label>
-    </div>
-    <p className="gallery-meta">
-      <Icon name="lock" /> Только демо этой вкладки
-      <span>{works.length} из {state.works.length} работ</span>
-    </p>
-    {works.length ? <div className="gallery-grid">
-      {works.map(work => <Link className="asset-card" href={`/gallery/${work.id}`} key={work.id}>
-        <div className="asset-thumbnail">
-          <img src={artUrl(work.palette)} alt={work.title} loading="lazy" />
-          <span>SVG · ДЕМО</span>
-        </div>
-        <div className="asset-card-copy">
-          <strong>{work.title}</strong>
-          <small>{work.model === 'api-demo' ? 'Studio · API' : 'Studio · Local'}<span>{work.aspect}</span></small>
-        </div>
-      </Link>)}
-    </div> : <section className="gallery-empty">
-      <div className="empty-icon"><Icon name="grid" /></div>
-      <h2>{state.works.length ? 'Ничего не найдено' : 'Здесь начнётся ваша коллекция'}</h2>
-      <p>{state.works.length
-        ? 'Измените запрос или фильтр. Работы не удалены.'
-        : 'Создайте первый демонстрационный результат в студии. В настоящем сервисе здесь будут ваши приватные работы.'}</p>
-      {state.works.length
-        ? <button className="secondary" onClick={() => { setQuery(''); setFilter('all') }}>Сбросить фильтры</button>
-        : <Link className="primary" href="/image">Открыть студию <Icon name="arrow" /></Link>}
-    </section>}
-    <p className="prototype-note">
-      Прототип · не облачная галерея. Закрытие вкладки или сброс демо может удалить эти примеры.
-    </p>
+  const { data, error, loading, refresh } = useResource<Assets>(`/api/v1/media/assets?limit=20&offset=${offset}`)
+  const works = data?.assets.filter(asset => `${asset.id} ${asset.width}x${asset.height}`.includes(query.trim().toLowerCase())) ?? []
+  return <><ResourceState error={error} loading={loading} retry={refresh} />
+    {data && <><div className="gallery-toolbar"><p>PNG · приватные файлы</p>
+      <label className="search-box"><Icon name="search" /><input aria-label="Поиск на этой странице" placeholder="Код или размер"
+        value={query} maxLength={100} onChange={event => setQuery(event.target.value)} /></label></div>
+      <p className="gallery-meta"><Icon name="lock" /> Только ваш серверный аккаунт
+        <span>Занято: {data.used_bytes.toLocaleString('ru-RU')} байт · резерв: {data.reserved_bytes.toLocaleString('ru-RU')}</span></p>
+      {works.length ? <div className="gallery-grid">{works.map(asset => <Link className="asset-card" href={`/gallery/${asset.id}`} key={asset.id}>
+        <div className="asset-thumbnail server-thumbnail"><Icon name="image" /><span>PNG · {asset.width} × {asset.height}</span></div>
+        <div className="asset-card-copy"><strong>Изображение {asset.id.slice(0, 8)}</strong>
+          <small>{new Date(asset.created_at * 1000).toLocaleString('ru-RU')}<span>{Math.ceil(asset.byte_size / 1024)} КБ</span></small></div>
+      </Link>)}</div> : <section className="gallery-empty"><div className="empty-icon"><Icon name="grid" /></div>
+        <h2>{data.assets.length ? 'Ничего не найдено на этой странице' : 'Здесь начнётся ваша коллекция'}</h2>
+        <p>{data.assets.length ? 'Измените поиск. Сохранённые файлы не удалены.' : 'В галерее пока нет сохранённых файлов. Создайте задание в студии.'}</p>
+        {data.assets.length ? <button onClick={() => setQuery('')}>Сбросить поиск</button> : <Link className="primary" href="/image">Открыть студию</Link>}</section>}
+      <div className="workspace-actions">{offset > 0 && <button onClick={() => { setOffset(Math.max(0, offset - 20)); setQuery('') }}>Предыдущая страница</button>}
+        {data.next_offset !== null && <button onClick={() => { setOffset(data.next_offset!); setQuery('') }}>Следующая страница</button>}
+        <button onClick={refresh}>Обновить галерею</button></div>
+      <p className="prototype-note">Полное изображение загружается только при открытии работы. Уменьшенные превью, удаление и публикация ещё не подключены.</p></>}
   </>
+}
+export function Gallery() {
+  return <><header className="page-heading gallery-heading"><div><p className="eyebrow">ЛИЧНОЕ ПРОСТРАНСТВО</p>
+    <h1>Галерея</h1><p>Приватные файлы сохраняются на сервере и доступны после повторного входа.</p></div>
+    <Link className="primary" href="/image"><Icon name="plus" /> Создать изображение</Link></header>
+    <WorkspaceGate>{() => <Works />}</WorkspaceGate></>
 }

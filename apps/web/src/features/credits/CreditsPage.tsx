@@ -24,7 +24,7 @@ export function CreditsPage() {
     return()=>controller.abort()
   },[before,version])
   return <section className="credits-page"><header className="page-heading"><p className="eyebrow">МОЙ СЕРВЕРНЫЙ СЧЁТ</p>
-    <h1>Баллы</h1><p>Данные PostgreSQL. Демонстрационная студия пока использует отдельный условный счёт и не расходует эти баллы.</p></header>
+    <h1>Баллы</h1><p>Серверный журнал. Студия резервирует эти баллы при подтверждении задания; окончательное списание выполняет сервер.</p></header>
     <p><Link href="/account">Аккаунт</Link> · <Link href="/login">Вход</Link></p>
     {busy&&<p role="status">Получаем баланс…</p>}{error&&<p className="field-error" role="alert">{error}
       <button disabled={busy} onClick={()=>setVersion(v=>v+1)}>Повторить</button></p>}

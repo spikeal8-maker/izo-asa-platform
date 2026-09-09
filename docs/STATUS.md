@@ -1,86 +1,62 @@
 # Фактическое состояние IZO ASA
 
-Срез JOBS-001: 9 сентября 2026. База — `f9cfe80508416d8ab1a22ca1c15c56ec2aa43d80`,
-ветка `media/private-images`, PR #11. Код новой задачи не считается опубликованным
-по наличию этого файла: конечный SHA и результаты находятся в Checks/описании PR.
-Main, предыдущие ветки и действующий сайт этим пакетом не изменяются.
+IMAGE-001, 9 сентября 2026. База `cab337ddd2dc6a573b4a5366b071d31e26bd0523`,
+PR #12; новая ветка `image/server-workspace`, PR #13. Текущий HEAD и окончательные
+Checks находятся в PR. Этот файл не объявляет публикацию или успех заранее.
+Main, родительские ветки и рабочий сайт не менялись; MERGED/DEPLOYED — NO.
 
-## Подтверждённое основание
+## Подтверждённая база
 
-MEDIA-001: Foundation CI34374607745 и Dependency Security34374607921 прошли.
-Проверены real PostgreSQL/S3 HTTP, одновременные квоты, сохранённый объект с потерянным
-ответом и восстановление после Compose down/up. Ранее реализованы Accounts, email
-proofs с тестовой доставкой, Credits, Entitlements и минимальная админка с одним
-настоящим browser→API→PostgreSQL сценарием. Студия и галерея в UI остаются DEMO.
+JOBS-001: 671 Python, 270 viewport cases, PostgreSQL/S3/worker/restart и npm-audit
+прошли в CI34388638041/34388638004. Это не автоматический PASS следующего SHA.
+Аккаунты, email proofs с тестовой доставкой, Credits, Entitlements, Admin, Media
+и durable Jobs реализованы. Реального AI-провайдера/SMTP/GPU/платежей нет.
 
-## Что добавляет JOBS-001
+## Изменения IMAGE-001
 
-Серверный путь quote → job → attempt → сохранённый PNG → списание. Цена и capability
-принадлежат серверу, caller передаёт только разрешённые параметры и operation ID.
-Исполнитель `test.image.v1` создаёт диагностическое изображение, **не AI-результат**.
-Реальных ключей/платежей/SMTP/GPU нет. Функция по умолчанию выключена.
+Основные Studio/Jobs/Gallery теперь используют серверные API. Из runtime удалены
+DemoState, браузерный кошелёк, вымышленные работы и тестовый SVG-renderer. Возврат к
+демо при ошибке API запрещён. Старые документы прототипа остаются историческими.
 
-Единая транзакция admission под Accounts-lock: актуальные plan/usage → резерв Media
-и Credits → durable Job + outbox. Повтор не создаёт новый резерв. Одноразовая quote
-действует120s. Неизвестный owner/price/executor не принимается из HTTP.
+Цена/размеры/права приходят из серверного контракта. Quote подтверждается человеком;
+до submit сохраняются account-scoped operation/quote IDs. Потерянный ответ повторяется
+тем же ID после refresh, не новой платной операцией. Повреждённое/недоступное storage
+блокирует новую отправку. Jobs list/detail читают реальное состояние, cancel не
+выполняет клиентский refund. Terminal/error/reconciliation_required останавливают poll.
 
-Новый standalone worker, explicit dev/test и opt-in Compose profile. БД не открывается
-при импорте API, поток обработки в web-процессе не запускается. Claim/heartbeat/finish
-проверяют lease/fence; повтор после crash разрешён только для чистого тестового
-исполнителя. До seal отмена освобождает оба резерва, после seal — отдельное намерение.
-Сначала фиксируются metadata результата, затем выполняется S3; SQL-транзакция не
-держится во время обработки/записи. Неизвестная запись сверяется без новой генерации.
-После пяти неудачных чтений требуется операторский разбор, обязательства сохраняются.
+Gallery читает свою страницу metadata, поиск ограничен ею. До открытия работы нет
+массовой загрузки originals. Detail проверяет PNG/hash/byte bound, Object URL отзывается
+при уходе; новая загрузка файла требует fresh session-bound ticket. При401 private UI
+очищается. Возврат во вкладку перепроверяет сессию. Пароли/CSRF/pixels не хранятся
+в новом sessionStorage. Это не возможность отозвать уже скачанную копию изображения.
 
-Forward migration0008 создаёт jobs/quotes/attempts/outbox/output allocations и явное
-происхождение media_assets. Существующие upload IDs/keys/hash сохраняются; generated
-result использует тот же Media API, не фиктивную загрузку и не вторую галерею.
+Исполнитель пока test.image.v1: диагностический PNG с TEST ONLY, реальная очередь и
+серверные тестовые баллы, но не нейросетевая генерация. Backend jobs по умолчанию off.
+Неподдержанные input references/delete/publish/thumbnail не представлены как готовые.
+Визуальная концепция не считается принятой владельцем.
 
-## Локальная проверка и границы
+## Проверка
 
-На частичной восстановленной копии исходных файлов совместно прошли259 проверок:
-новые67 Jobs и192 существующих Credits/Entitlements/Media. После трёх дополнительных
-регрессий точечно повторены40 Jobs execution/recovery cases — PASS. Все локальные
-проверки используют SQLite и реальный AuthService, но не доказывают PostgreSQL locks.
-Обработка test PNG проходит отдельный ограниченный subprocess только в соответствующих
-codec-тестах; в большинстве unit она заменена синхронным тестовым адаптером.
+Review Source выдаёт git-tracked snapshot с tree и blob manifest; исходные227 blobs
+подготовительного commit сверены локально. Локальный snapshot — все tracked файлы,
+но не полный upstream git history. Прямой сетевой clone недоступен. Docker локально
+отсутствует; Node22 отличается от целевого24, npm offline install не нашёл часть cache.
+Поэтому локальная проверка не выдаётся за полный locked build.
 
-Локально Python3.13.5/FastAPI0.128.2/Pillow12.3.0; GitHub lock отличается. Полного checkout,
-локального Docker и итогового GitHub CI до публикации нет. Первая попытка общего запуска
-оборвалась по лимиту инструмента; повторный завершённый verbose run и JUnit подтверждают
-259 PASS. Незавершённый запуск не считается отдельным PASS.
+Написаны новые protocol-based browser scenarios вместо прежних demo assumptions,
+guards границ и настоящий browser→API→PostgreSQL/S3→worker сценарий. Новый browser
+сам начисляет через Admin UI и отправляет job; отдельный процесс выполняет его;
+download hash/balance проверяются до и после реального Compose restart. Другой
+пользователь не получает job/asset. Секретные fixture только RUNNER_TEMP, не artifacts.
+Прежние backend/acceptance/audit проверки сохранены. Итог нужно прочитать в Checks,
+наличие файлов тестов не означает, что они прошли.
 
-OpenAPI: сохранена точная прежняя схема blob3e7f2b0…, новые пять endpoints сгенерированы
-из router. Совпадение целевого exporter обязательно проверяется CI. Нельзя отключать
-этот gate из-за различия локальных библиотек.
+## Scope и дальше
 
-## Проверка на полном стенде
+Конечный предел34 paths; backend business code, schema, locks, зависимости и лицензия
+не меняются. Расширение transport/CI ограничено соединением пользовательского пути.
+Ближайший UI-контракт — studio/README.md; карта файлов — apps/web/AGENTS.md.
 
-Написан `tools/jobs_acceptance.py before/after`: настоящие HTTP/PostgreSQL/S3,
-конкурентные submit/claim и upload/job quota, отдельный worker-process, bad-job isolation,
-восстановление заранее записанного S3 объекта и просроченной попытки после Compose
-restart, отказ старому fence и сверка ledger. До прочтения успешного журнала это
-**написанная проверка, не её успешное выполнение**. Прежние acceptance и270 viewport
-cases сохраняются. Нового live-browser задания пока нет.
-
-## Область и экономность
-
-34 изменённых пути при лимите36, новые зависимости отсутствуют. Старые миграции,
-LICENSE, UI и предыдущие ветки не меняются. Ближайшие инструкции — jobs/AGENTS.md и
-README. Оба workflow теперь проверяют PR в любую базовую ветку, а не требуют добавлять
-новое имя базы на каждом этапе; push main, read-only tokens, tests/audit сохранены.
-PR должен быть направлен в непосредственную media-базу, не показывать весь проект.
-Изменение ожидания trigger в старом boundary-test соответствует расширению проверки,
-не отключает существующие отрицательные assertions.
-
-## Не завершено и следующий результат
-
-Нет настоящего AI/local executor, сохранения input references, operator job UI,
-доставки outbox, готового orphan purge/ручного разрешения неопределённого outcome,
-нагрузочного доказательства fairness, полного security review, production hardening,
-принятого дизайна и branch protection. Хранение томов не backup restore.
-
-После успешной технической приёмки Jobs следующий пользовательский результат —
-IMAGE-001: соединить студию, задания и общую галерею с настоящим backend на тестовом
-renderer. Потом один согласованный live API. Не писать ещё один общий master plan.
-MERGED и DEPLOYED остаются NO до отдельного разрешения.
+После успешной приёмки — CHANGE-001 и один согласованный provider API-001.
+До публичного выпуска остаются deployment/backup restore/нагрузка/security review,
+принятие дизайна/тарифов/retention и реальных Mini Apps. Никакого нового master plan.

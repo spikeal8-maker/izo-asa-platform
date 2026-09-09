@@ -1,95 +1,131 @@
 import { test, expect } from '@playwright/test'
-import { fakeApi, createWork, noOverflow } from './demo-fixture'
-import { freshState, restoreDemo, settleDemo, DEMO_KEY } from '../src/features/prototype/demo'
+import { workspace, estimate, create, noOverflow, owner } from './workspace-fixtures'
 
-test.beforeEach(async ({ page }) => { await fakeApi(page) })
-
-test('U-10 @smoke studio is explicit demo, responsive and free of console errors', async ({ page }, info) => {
-  const errors: string[] = []
-  page.on('pageerror', e => errors.push(e.message))
-  await page.goto('/image')
-  await expect(page.getByRole('heading', { level: 1 })).toContainText('Ваша идея')
-  await expect(page.getByRole('button', { name: /Создать демо/ })).toBeDisabled()
-  await expect(page.getByText('ПРИМЕР · НЕ AI-ГЕНЕРАЦИЯ', { exact: true })).toBeVisible()
+test('IMAGE-001 studio uses server account, plan and price on every viewport', async ({ page }, info) => {
+  const app = await workspace(page)
+  await estimate(page, 'Длинное описание по-русски. '.repeat(20))
+  await expect(page.getByRole('dialog')).toContainText('7 балл.')
+  expect(app.requests.filter(r => r.path === '/api/v1/jobs')).toHaveLength(0)
+  const quote = app.requests.find(r => r.path === '/api/v1/jobs/quotes')!
+  expect(Object.keys(quote.body!).sort()).toEqual(['capability_id', 'height', 'prompt', 'width'])
+  await page.getByRole('button', { name: 'Закрыть диалог' }).click()
   await noOverflow(page)
-  expect(errors).toEqual([])
-  await page.screenshot({ path: info.outputPath('studio.png'), fullPage: true })
-  await info.attach('display-profile', { body: JSON.stringify({ project: info.project.name, viewport: page.viewportSize(), dpr: await page.evaluate(() => devicePixelRatio), browser: 'Chromium', zoom: 'browser default; OS scaling not emulated' }), contentType: 'application/json' })
+  await page.screenshot({ path: info.outputPath('server-studio.png'), fullPage: true })
 })
 
-test('U-18 demo reservation settles once, survives reload, and makes no AI submission', async ({ page }) => {
-  const mutations: string[] = []
-  page.on('request', r => { if (r.method() !== 'GET') mutations.push(r.url()) })
-  await createWork(page)
-  await expect(page.getByRole('button', { name: 'Демо-баланс: 40 баллов', exact: true })).toBeVisible()
+test('IMAGE-001 explicit submit is idempotent and server result survives refresh', async ({ page }) => {
+  const app = await workspace(page)
+  await estimate(page)
+  await page.getByRole('button', { name: 'Подтвердить создание' }).evaluate(node => {
+    (node as HTMLButtonElement).click(); (node as HTMLButtonElement).click()
+  })
+  await expect(page.getByTestId('job-status')).toHaveText('Готово')
+  const calls = app.requests.filter(r => r.path === '/api/v1/jobs' && r.method === 'POST')
+  expect(calls).toHaveLength(1)
+  expect(Object.keys(calls[0].body!).sort()).toEqual(['operation_id', 'quote_id'])
+  await expect(page.getByTestId('job-charged')).toHaveText('7')
   await page.reload()
-  await expect(page.getByRole('button', { name: 'Демо-баланс: 40 баллов', exact: true })).toBeVisible()
-  await page.getByRole('link', { name: 'Открыть работу', exact: false }).click()
-  await expect(page.getByRole('heading', { level: 1 })).toContainText('Тестовая архитектурная')
-  await expect(page.getByRole('link', { name: 'Скачать SVG-пример' })).toHaveAttribute('download', 'izo-demo-example.svg')
-  const [download] = await Promise.all([page.waitForEvent('download'), page.getByRole('link', { name: 'Скачать SVG-пример' }).click()])
-  expect(download.suggestedFilename()).toBe('izo-demo-example.svg')
-  expect(mutations).toEqual([])
-  await noOverflow(page)
+  await expect(page.getByTestId('job-status')).toHaveText('Готово')
+  expect(app.jobs).toHaveLength(1); expect(app.balance).toBe(93)
+  await page.getByRole('link', { name: 'Открыть работу', exact: true }).click()
+  await expect(page.getByTestId('private-image')).toBeVisible()
 })
 
-test('D-01 model capabilities, focus return, aspect, and local price', async ({ page }) => {
-  await page.goto('/image')
-  const picker = page.getByRole('button', { name: /Studio · API/ })
-  await picker.click()
-  await expect(page.getByRole('button', { name: /Следующая модель/ })).toBeDisabled()
-  await page.keyboard.press('Escape')
-  await expect(picker).toBeFocused()
-  await picker.click()
-  await page.getByRole('button', { name: /Studio · Local/ }).click()
-  await page.getByRole('button', { name: '16:9', exact: true }).click()
-  await expect(page.getByRole('button', { name: '16:9', exact: true })).toHaveAttribute('aria-pressed', 'true')
-  await page.getByLabel('Описание', { exact: true }).fill('Локальный макет')
-  await expect(page.getByRole('button', { name: /Создать демо/ })).toContainText('4 балла')
-  await noOverflow(page)
+test('IMAGE-001 lost submit response restores the same command after reload', async ({ page }) => {
+  const app = await workspace(page); app.uncertainOnce = true
+  await estimate(page)
+  await page.getByRole('button', { name: 'Подтвердить создание' }).click()
+  await expect(page.getByRole('alert')).toContainText('Результат отправки пока неизвестен')
+  await page.reload()
+  await expect(page.getByRole('button', { name: 'Рассчитать стоимость' })).toBeDisabled()
+  await page.getByRole('button', { name: 'Проверить прежний запрос' }).click()
+  await expect(page.getByTestId('job-status')).toHaveText('Готово')
+  const calls = app.requests.filter(r => r.path === '/api/v1/jobs' && r.method === 'POST')
+  expect(calls).toHaveLength(2); expect(calls[0].body).toEqual(calls[1].body)
+  expect(app.jobs).toHaveLength(1); expect(app.balance).toBe(93)
+  expect(await page.evaluate(id => sessionStorage.getItem(`izo-pending-submit:${id}`), owner)).toBeNull()
 })
 
-test('U-18 controlled failure and cancellation do not spend demo balance', async ({ page }) => {
-  const date = new Date('2026-09-01T00:00:00Z')
-  await page.clock.install({ time: date })
-  await page.clock.pauseAt(new Date(date.getTime() + 1000))
-  await page.goto('/image')
-  await page.getByLabel('Описание', { exact: true }).fill('Проверка ошибки')
-  await page.getByText('Проверка состояний макета', { exact: true }).click()
-  await page.getByLabel('Показать ошибку вместо успеха').check()
-  await page.getByRole('button', { name: /Создать демо/ }).click()
-  await page.getByRole('button', { name: 'Подтвердить демо-запуск' }).click()
-  await expect(page.getByText('Проверяем сценарий ожидания')).toBeVisible()
-  await page.clock.runFor(1800)
-  await expect(page.getByText('Тестовая ошибка провайдера')).toBeVisible()
-  await expect(page.getByRole('button', { name: 'Демо-баланс: 48 баллов' })).toBeVisible()
-  await page.getByLabel('Показать ошибку вместо успеха').uncheck()
-  await page.getByRole('button', { name: /Создать демо/ }).click()
-  await page.getByRole('button', { name: 'Подтвердить демо-запуск' }).click()
-  await page.getByRole('button', { name: 'Отменить демо', exact: true }).click()
-  await page.getByRole('button', { name: 'Да, отменить демо' }).click()
-  await page.clock.runFor(1800)
-  await expect(page.getByText('Демо отменено', { exact: true })).toBeVisible()
-  await expect(page.getByRole('button', { name: 'Демо-баланс: 48 баллов' })).toBeVisible()
+test('IMAGE-001 disabled storage prevents sending an unremembered request', async ({ page }) => {
+  const app = await workspace(page)
+  await page.addInitScript(() => {
+    const original = Storage.prototype.setItem
+    Storage.prototype.setItem = function (key, value) {
+      if (key.startsWith('izo-pending-submit:')) throw new DOMException('denied', 'SecurityError')
+      original.call(this, key, value)
+    }
+  })
+  await estimate(page)
+  await page.getByRole('button', { name: 'Подтвердить создание' }).click()
+  await expect(page.getByText('Не удалось сохранить номер запроса. Отправка задания не выполнялась.', { exact: true })).toBeVisible()
+  await expect(page.getByRole('button', { name: 'Рассчитать стоимость' })).toBeDisabled()
+  expect(app.requests.filter(r => r.path === '/api/v1/jobs' && r.method === 'POST')).toHaveLength(0)
 })
 
-test('D-02 invalid local image is rejected without upload', async ({ page }) => {
+test('IMAGE-001 corrupted pending record blocks mutation instead of inventing another ID', async ({ page }) => {
+  const app = await workspace(page)
+  await page.addInitScript(id => sessionStorage.setItem(`izo-pending-submit:${id}`, '{broken'), owner)
   await page.goto('/image')
-  await page.getByLabel('Выбрать исходное изображение').setInputFiles({ name: 'bad.png', mimeType: 'image/png', buffer: Buffer.from('not an image') })
-  await expect(page.getByRole('alert')).toContainText('не удалось прочитать')
-  await expect(page.getByText('Только предпросмотр в браузере.', { exact: false })).toBeVisible()
+  await expect(page.getByRole('alert')).toContainText('повреждено')
+  await expect(page.getByRole('button', { name: 'Рассчитать стоимость' })).toBeDisabled()
+  expect(app.jobs).toHaveLength(0)
 })
 
-test('demo parsing, idempotent settlement, and damaged storage are bounded', async ({ page }) => {
-  expect(restoreDemo('{broken')).toEqual(freshState())
-  expect(restoreDemo(JSON.stringify({ ...freshState(), balance: -5 }))).toEqual(freshState())
-  const state = freshState()
-  state.job = { ...state.draft, prompt: 'fixture', id: 'demo-00000000-0000-0000-0000-000000000000', startedAt: 0, cost: 8, state: 'running', fail: false }
-  const completed = settleDemo(state, 2000)
-  expect(completed.balance).toBe(40)
-  expect(completed.works).toHaveLength(1)
-  expect(settleDemo(completed, 5000)).toBe(completed)
-  await page.addInitScript(key => sessionStorage.setItem(key, '{broken'), DEMO_KEY)
+test('IMAGE-001 zero balance is server denial, not access loss to gallery', async ({ page }) => {
+  const app = await workspace(page); app.balance = 0; app.quoteError = 'insufficient_credits'
   await page.goto('/image')
-  await expect(page.getByRole('button', { name: 'Демо-баланс: 48 баллов' })).toBeVisible()
+  await expect(page.getByTestId('studio-available')).toHaveText('0')
+  await page.getByLabel('Описание', { exact: true }).fill('Проверка')
+  await page.getByRole('button', { name: 'Рассчитать стоимость' }).click()
+  await expect(page.getByRole('alert')).toContainText('Недостаточно баллов')
+  await expect(page.getByRole('dialog')).toHaveCount(0)
+  await page.getByRole('navigation').getByRole('link', { name: 'Галерея', exact: true }).click()
+  await expect(page.getByRole('heading', { name: 'Здесь начнётся ваша коллекция' })).toBeVisible()
+  expect(app.jobs).toHaveLength(0)
+})
+
+test('IMAGE-001 cancellation uses server state and never settles locally', async ({ page }) => {
+  const app = await workspace(page); app.autoFinish = false
+  await estimate(page)
+  await page.getByRole('button', { name: 'Подтвердить создание' }).click()
+  await expect(page.getByTestId('job-status')).toHaveText('В очереди')
+  await page.getByRole('button', { name: 'Отменить задание', exact: true }).click()
+  await page.getByRole('button', { name: 'Подтвердить отмену' }).click()
+  await expect(page.getByTestId('job-status')).toHaveText('Отменено')
+  expect(app.balance).toBe(100); expect(app.reserved).toBe(0)
+  expect(app.requests.filter(r => r.path.endsWith('/cancel'))).toHaveLength(1)
+})
+
+test('IMAGE-001 exhausted reconciliation does not start a new job or pretend refund', async ({ page }) => {
+  const app = await workspace(page)
+  await create(page)
+  app.jobs[0].status = 'reconciling'; app.jobs[0].error_code = 'reconciliation_required'
+  app.jobs[0].asset_id = null; app.jobs[0].charged_credits = 0; app.jobs[0].reserved_credits = 7
+  await page.reload()
+  await expect(page.getByTestId('job-status')).toHaveText('Уточняем результат')
+  await expect(page.locator('.job-record')).toContainText('Нужен разбор оператором. Резерв сохранён.')
+  await expect(page.getByRole('link', { name: 'Открыть работу', exact: true })).toHaveCount(0)
+  expect(app.jobs).toHaveLength(1)
+})
+
+test('IMAGE-001 guest and unverified identity never submit using platform hints', async ({ page }) => {
+  const app = await workspace(page); app.signedIn = false
+  await page.goto('/image')
+  await expect(page.getByRole('heading', { name: 'Войдите, чтобы продолжить' })).toBeVisible()
+  await expect(page.getByTestId('studio-available')).toHaveCount(0)
+  app.signedIn = true; app.account.email_verified = false
+  await page.reload()
+  await expect(page.getByRole('link', { name: 'Подтвердите почту' })).toBeVisible()
+  await expect(page.getByRole('button', { name: 'Рассчитать стоимость' })).toBeDisabled()
+  expect(app.jobs).toHaveLength(0)
+})
+
+test('IMAGE-001 failure removes stale private job data and retry reads server again', async ({ page }) => {
+  const app = await workspace(page)
+  await create(page)
+  app.signedIn = false
+  await page.getByRole('button', { name: 'Обновить задание' }).click()
+  await expect(page.getByRole('heading', { name: 'Войдите, чтобы продолжить' })).toBeVisible()
+  await expect(page.getByTestId('job-status')).toHaveCount(0)
+  await expect(page.getByTestId('job-charged')).toHaveCount(0)
 })
