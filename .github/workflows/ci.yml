@@ -31,7 +31,11 @@ jobs:
           .venv/bin/pip check
       - name: Unit and architecture checks
         run: |
-          .venv/bin/python tools/export_contracts.py --check
+          if ! .venv/bin/python tools/export_contracts.py --check; then
+            .venv/bin/python tools/export_contracts.py
+            git --no-pager diff -- packages/contracts/openapi.json
+            exit 1
+          fi
           .venv/bin/python -m pytest
       - name: Install web
         working-directory: apps/web
