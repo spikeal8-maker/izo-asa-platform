@@ -16,6 +16,7 @@ from .accounts.routes import attach_accounts
 from .credits.routes import attach_credits
 from .entitlements.routes import attach_entitlements
 from .admin.routes import attach_admin
+from .media.routes import attach_media
 
 logger = logging.getLogger("izo.http")
 
@@ -41,6 +42,7 @@ def create_app(config: Settings | None = None,
     attach_credits(app, accounts_service)
     attach_entitlements(app, accounts_service)
     attach_admin(app, accounts_service)
+    attach_media(app, accounts_service, config)
 
     @app.middleware("http")
     async def request_context(request: Request, call_next):
