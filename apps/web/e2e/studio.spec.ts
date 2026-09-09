@@ -166,6 +166,10 @@ test('CHANGE-001 C failure classification requires the exact pre-admission proto
   for (const code of ['idempotency_conflict', 'quote_already_used', 'unknown', 'toString', '__proto__']) {
     expect(rejectedBeforeAdmission(new ApiError(409, code))).toBe(false)
   }
+  for (const [status, code] of [[403, 'account_restricted'], [403, 'verification_required'],
+    [422, 'invalid_input'], [429, 'rate_limited']] as const) {
+    expect(rejectedBeforeAdmission(new ApiError(status, code))).toBe(false)
+  }
   expect(rejectedBeforeAdmission(new Error('connection lost'))).toBe(false)
   expect(rejectedBeforeAdmission({ status: 409, code: 'plan_restricted' })).toBe(false)
 })
@@ -197,10 +201,11 @@ test('CHANGE-001 C definite rejections free only the pending ID and never create
 
 test('CHANGE-001 C a familiar code inside server failure still reuses the pending ID', async ({ page }) => {
   const app = await workspace(page); const calls: unknown[] = []
+  let status = 500; let code = 'plan_restricted'
   await page.route('**/api/v1/jobs', route => {
     if (route.request().method() !== 'POST') return route.fallback()
     calls.push(route.request().postDataJSON())
-    return route.fulfill({ status: 500, json: { error: { code: 'plan_restricted' } } })
+    return route.fulfill({ status, json: { error: { code } } })
   })
   await estimate(page)
   await page.getByRole('button', { name: 'Подтвердить создание', exact: true }).click()
@@ -209,6 +214,13 @@ test('CHANGE-001 C a familiar code inside server failure still reuses the pendin
   await expect(page.getByRole('button', { name: 'Рассчитать стоимость' })).toBeDisabled()
   await page.getByRole('button', { name: 'Проверить прежний запрос' }).click()
   await expect(page.getByRole('alert')).toContainText('Результат отправки пока неизвестен')
-  expect(calls).toHaveLength(2); expect(calls[0]).toEqual(calls[1])
+  for (const [nextStatus, nextCode] of [[403, 'account_restricted'], [422, 'invalid_input'], [429, 'rate_limited']] as const) {
+    status = nextStatus; code = nextCode
+    await page.getByRole('button', { name: 'Проверить прежний запрос' }).click()
+    await expect(page.getByRole('alert')).toContainText('Результат отправки пока неизвестен')
+    await expect(page.getByRole('button', { name: 'Проверить прежний запрос' })).toBeEnabled()
+  }
+  expect(calls).toHaveLength(5)
+  for (const call of calls) expect(call).toEqual(calls[0])
   expect(app.jobs).toHaveLength(0)
 })

@@ -8,6 +8,8 @@ from uuid import uuid4
 import pytest
 import sqlalchemy as sa
 
+from izo.accounts import tables as accounts
+from izo.accounts.security import AuthError
 from izo.entitlements.schemas import PlanPolicy, PublishPlan, SetDefault
 from izo.entitlements.service import EntitlementService
 from izo.jobs import tables as j
@@ -85,6 +87,25 @@ def test_restore_access_uses_current_policy_and_one_reservation(env):
         service.submit(user.bearer, user.view.csrf_token, command)
     revise(service, user.view.account.id, {"capability_ids": ("test.image.v1",)})
     job = service.submit(user.bearer, user.view.csrf_token, command)
+    assert service.submit(user.bearer, user.view.csrf_token, command).id == job.id
+    assert balances(env).consistent and balances(env).wallet.reserved == 1
+    assert balances(env).wallet.available == 99
+
+
+def test_access_denial_before_replay_lookup_does_not_disprove_an_existing_job(env):
+    service, _, users, *_ = env
+    user = users[0]
+    job, command = create(env)
+    with service.auth.engine.begin() as conn:
+        conn.execute(sa.update(accounts.accounts).where(accounts.accounts.c.id == user.view.account.id)
+                     .values(state="deletion_pending"))
+    with pytest.raises(AuthError, match="account_restricted") as failure:
+        service.submit(user.bearer, user.view.csrf_token, command)
+    assert failure.value.status == 403
+    with service.auth.engine.begin() as conn:
+        conn.execute(sa.update(accounts.accounts).where(accounts.accounts.c.id == user.view.account.id)
+                     .values(state="active"))
+    # Same receipt still exists. A new client ID after that 403 would be unsafe.
     assert service.submit(user.bearer, user.view.csrf_token, command).id == job.id
     assert balances(env).consistent and balances(env).wallet.reserved == 1
     assert balances(env).wallet.available == 99

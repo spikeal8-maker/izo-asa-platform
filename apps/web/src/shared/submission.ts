@@ -30,14 +30,16 @@ export function forget(owner: string) { sessionStorage.removeItem(submissionKey(
 
 /** Only replies documented as atomic pre-admission denials may clear a pending ID.
  * The status must match too: a familiar code inside a 500/unknown reply is NOT
- * proof that no job was committed. Conflicts/replayed quotes remain pending.
+ * proof that no job was committed. Auth/validation/throttle failures can happen
+ * BEFORE replay lookup, so they cannot disprove an earlier successful submit.
+ * Conflicts/replayed quotes remain pending.
  */
 const deniedStatuses: Record<string, readonly number[]> = {
-  invalid_input: [422], quote_expired: [409], insufficient_credits: [409],
+  quote_expired: [409], insufficient_credits: [409],
   plan_unconfigured: [403], plan_restricted: [409], image_size_restricted: [409],
-  storage_quota_exceeded: [409], concurrency_limit: [409], rate_limited: [409, 429],
+  storage_quota_exceeded: [409], concurrency_limit: [409], rate_limited: [409],
   feature_unavailable: [409], jobs_disabled: [503],
-  verification_required: [403, 409], account_restricted: [403, 409],
+  verification_required: [409], account_restricted: [409],
   input_limit: [409], invalid_input_usage: [409], action_budget_exceeded: [409],
   capability_unsupported: [409], provider_unavailable: [409],
 }
