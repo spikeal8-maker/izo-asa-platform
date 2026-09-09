@@ -2987,7 +2987,7 @@
           "content": {
             "application/octet-stream": {
               "schema": {
-                "format": "binary",
+                "contentMediaType": "application/octet-stream",
                 "title": "Data",
                 "type": "string"
               }
