@@ -31,6 +31,6 @@
 @media (max-width: 700px) { .studio-grid { grid-template-columns: 1fr; } .composer { padding: 20px; } .server-result-empty { min-height: 260px; padding: 24px; } .direction-soon { display: none; } .direction-tabs .workspace-card { padding: 10px; } }
 
 /* Price stays next to the actual confirmation action; no global scaling/sticky overlay. */
-.quote-submit { min-height: 48px; display: flex; justify-content: space-between; gap: 8px 16px; flex-wrap: wrap; }
+.quote-submit.primary { min-height: 48px; display: flex; justify-content: space-between; gap: 8px 16px; flex-wrap: wrap; }
 .quote-submit > small { font-size: .85rem; white-space: nowrap; }
 @media (max-width: 700px) { .quote-submit { flex-direction: column; align-items: center; } }
