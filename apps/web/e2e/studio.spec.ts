@@ -57,7 +57,8 @@ test('IMAGE-001 disabled storage prevents sending an unremembered request', asyn
   })
   await estimate(page)
   await page.getByRole('button', { name: 'Подтвердить создание' }).click()
-  await expect(page.locator('.composer').getByRole('alert')).toContainText('Отправка')
+  await expect(page.getByText('Не удалось сохранить номер запроса. Отправка задания не выполнялась.', { exact: true })).toBeVisible()
+  await expect(page.getByRole('button', { name: 'Рассчитать стоимость' })).toBeDisabled()
   expect(app.requests.filter(r => r.path === '/api/v1/jobs' && r.method === 'POST')).toHaveLength(0)
 })
 

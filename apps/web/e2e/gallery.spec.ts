@@ -93,16 +93,16 @@ test('IMAGE-001 navigation releases private object URL; signout clears loaded wo
   const app = await workspace(page); const item = asset(); app.assets.push(item)
   await page.addInitScript(() => {
     const original = URL.revokeObjectURL
-    Object.assign(window, { revokedImages: 0 })
+    const counter = Object.assign(window, { revokedImages: 0 })
     URL.revokeObjectURL = function (url) {
-      ;(window as Window & { revokedImages: number }).revokedImages++
+      counter.revokedImages++
       original.call(URL, url)
     }
   })
   await page.goto(`/gallery/${item.id}`)
   await expect(page.getByTestId('private-image')).toBeVisible()
   await page.getByRole('link', { name: 'Мои работы', exact: true }).click()
-  expect(await page.evaluate(() => (window as Window & { revokedImages: number }).revokedImages)).toBeGreaterThan(0)
+  expect(await page.evaluate(() => Number(Reflect.get(window, 'revokedImages')))).toBeGreaterThan(0)
   await page.locator('.asset-card').click()
   await expect(page.getByTestId('private-image')).toBeVisible()
   app.signedIn = false
