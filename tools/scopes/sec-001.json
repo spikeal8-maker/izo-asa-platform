@@ -1,0 +1,21 @@
+{
+  "task": "SEC-001",
+  "base": "21621137b51c938251fd35f909dddd2a07d67d21",
+  "max_files": 8,
+  "allowed": [
+    ".github/workflows/dependency-audit.yml",
+    "apps/web/package.json",
+    "apps/web/package-lock.json",
+    "apps/web/security/dependencies.test.mjs",
+    "apps/web/security/README.md",
+    "tests/test_dependency_security.py",
+    "tools/scopes/sec-001.json",
+    "docs/STATUS.md"
+  ],
+  "sensitive_approved": [
+    ".github/workflows/dependency-audit.yml",
+    "apps/web/package.json",
+    "apps/web/package-lock.json",
+    "tools/scopes/sec-001.json"
+  ]
+}

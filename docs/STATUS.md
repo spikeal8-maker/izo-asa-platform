@@ -1,62 +1,70 @@
 # Фактическое состояние IZO ASA
 
-## CREDIT-001 — публикация серверного учёта баллов, 9 сентября 2026
+## SEC-001 — зависимости web, 9 сентября 2026
 
-Проверенная база `8880dd2084ad43e239391037a707bea43ea763f7` (PR #5, auth/email-recovery).
-Запись GitHub восстановлена; для пакета создана отдельная ветка `credits/server-ledger`.
-Точный commit, PR и итоговый CI фиксируются в описании PR после фактической публикации.
-Ни main, ни прежние ветки, ни рабочий сайт не изменяются; merge/deploy не выполняются.
+База `21621137b51c938251fd35f909dddd2a07d67d21` (CREDIT-001, PR #6).
+Отдельная ветка `security/npm-audit`, PR #8. Main, прежние ветки и рабочий сайт
+не меняются. Ни merge, ни deployment, ни live AI/письма/платежи не выполнялись.
 
-### Реализация
+### Найдено и ограниченное исправление
 
-Три таблицы credit_wallets/credit_ledger/credit_reservations и миграция0004_credits
-(parent0003); внутренние grant/reserve/settle/release; owner-only GET /api/v1/credits
-с ограниченной пагинацией. Целые баллы, общая транзакция проекции/журнала/резерва/audit,
-идемпотентные receipts, глобальная защита повторной заявки, проверка staff permission
-и доверенного лимита начисления. Никакого auto-bonus или публичных мутаций баланса.
+Реальный npm audit исходного lock подтвердил high2: js-yaml4.3.1 и зависимый
+@redocly/openapi-core1.34.19. Один исходный GHSA-2883-xcg3-v3hh / CVE-2026-84375,
+не две независимые CVE. Цепочка — build/codegen через openapi-typescript7.10.1,
+не обнаруженная ошибка Python-ledger. Подробности — apps/web/security/README.md.
 
-Существующий resolver Accounts и pool используются через ограниченный фасад;
-пароли/сессии/почтовая логика не переписываются. Нулевой баланс не запрещает чтение
-своей истории. Журнал нельзя каскадно удалить вместе с Account; retention/удаление
-данных должны отдельно учитывать финансовую историю. PostgreSQL triggers запрещают
-обычные UPDATE/DELETE/TRUNCATE; это не защита от администратора самой БД.
+Обновление родителя внутри разрешённого диапазона не дало исправления. Выбран
+узкий override только для @redocly/openapi-core@1.34.19 на upstream js-yaml4.3.2.
+Ни прямые версии web-пакетов, ни backend, ни миграции не изменены. Lock сгенерирован
+npm на runner; сохранение старого формата записей не меняет его JSON-дерево.
 
-### Что повторно проверено перед отправкой
+Добавлен независимый read-only `Dependency Security / npm-audit`. Он не меняет
+lock/исходники, не запускает package lifecycle scripts и не скрывает dev dependencies.
+High/critical либо ошибка audit дают отказ; сохраняются отчёт и идентификация версии.
+Четыре Node-regression tests проверяют actual parser, bounded merge budget,
+обычный YAML и исходный OpenAPI. Четыре Python tests защищают свойства workflow.
+Существующий Foundation CI с PG/restart сохранён без изменений.
 
-Архив и все20 исходных файлов сверены с manifest SHA256. Через connector проверено,
-что auth/email-recovery всё ещё указывает на8880dd2. Прямой git clone из среды
-не выполнился из-за DNS; вместо заявления о полном checkout необходимые исходные
-модули восстановлены из GitHub и сверены по blob SHA.
+### Доказательства и ограничения
 
-Локально повторно прошли103 профильных теста (SQLite/ASGI + настоящий AuthService),
-с запретом сетевых соединений. Генерация общего OpenAPI выполнена штатным
-export_contracts.py; старая часть схемы совпала с blob исходной версии.
-Локальные FastAPI0.128.2/Alembic1.18.4 отличаются от lock; полный CI должен проверить
-новую версию на закреплённых зависимостях. Успех предыдущего PR не переносится.
+На исходном lock audit-gate сработал отрицательно (run34292712936, high2).
+Изолированный кандидат npm (run34292981711/artifact10082049192) дал audit total0,
+маленький probe показал false→true для ограничения пустых merge sources на
+4.3.1→4.3.2, обычный merge сохранился. Исходный диагностический run при этом
+FAILURE: кандидат не подменял проверяемый checkout и не публиковался автоматически.
 
-Подготовленный CI добавляет credit_acceptance before/after вокруг существующего
-Compose down/up: PG-races, один grant/case, отсутствие overspend, неизменяемость
-журнала, owner-only HTTP и сохранение/закрытие резерва после restart. Синтетические
-cookie/fixtures — только закрытый RUNNER_TEMP, не публичные логи или artifacts.
-Окончательный результат этого сценария записывается в Checks/PR по exact SHA.
+Локально выполнены четыре Python-проверки нового workflow и Node syntax check.
+Полного checkout/Node24/npm registry/Docker в локальной среде нет; приёмка
+окончательного source, build/browser/PostgreSQL выполняется в GitHub. Точный
+итоговый SHA и все завершённые Checks фиксируются в PR #8, не переносятся с
+изолированного candidate или предыдущего PR. Наличие тестов не равно их успеху.
 
-Пакет:20 исходных файлов плюс1 generated OpenAPI при лимите24. Существующие
-auth/email/browser/container gates сохранены; dependencies, Docker Compose,
-старые миграции, UI/дизайн и LICENSE не изменены. Короткий маршрут бота и команды —
-apps/api/izo/credits/AGENTS.md и README.md; новый общий план не создаётся.
+Scope: до8 путей — manifest/lock, новый workflow, regression tests, предметный
+security README, task scope и этот STATUS. Temporary candidate-generator удалён
+из окончательного workflow. Нет переписывания приложения или общего master plan.
+Самопроверка не независимое security review. Main protection остаётся отдельным gate.
 
-### Границы готовности
+## Ранее реализовано
 
-Это серверное ядро; ADMIN-001/JOBS-001 ещё должны авторизовать команды, цены и
-результаты. UI баланса, админское начисление, тарифы/entitlements, реальные платежи,
-постоянные jobs и AI не реализованы. Прототип студии/галереи остаётся DEMO.
-Самопроверка не независимое review; публикация не означает merge/deploy или
-production readiness. Полный GitHub CI/PG/restart требуется до технической приёмки.
+Foundation: FastAPI/PostgreSQL/S3/Compose, schema readiness, OpenAPI, ограничения
+кода и UI-прототип. AUTH-001: аккаунты, пароли, серверные сессии. Почтовая часть
+AUTH-002: подтверждение/reset/change password с TEST-mail, без настоящей доставки.
+CREDIT-001: wallet/ledger/reservations, grant/reserve/settle/release и owner-only
+GET /api/v1/credits. PR #6/run34289604222:336 Python,220 browser и реальные PG/HTTP/
+restart проверки прошли; найденный npm-сигнал стал отдельным SEC-001, не был скрыт.
 
-AUTH-001 и почтовая часть AUTH-002 реализованы ранее. Смена адреса, linking/unlinking,
-настоящие Telegram/MAX и SMTP, MFA, production gates и защита main остаются отдельными
-задачами. Старый сайт, реальные аккаунты, GPU, DNS и ключи не затрагиваются.
-После успешной приёмки — ENTITLEMENT-001/ADMIN-001 по NEXT, не весь биллинг сразу.
+Нет entitlements, рабочей admin-формы начисления, UI серверного баланса, durable jobs,
+owner-scoped cloud gallery, live providers/credential resolver/local agent. Студия,
+её баланс/галерея пока DEMO. Нынешний дизайн не принят. AUTH-002 не закрыт целиком:
+смена email и linking/unlinking identities ещё впереди; настоящие Mini Apps/SMTP,
+MFA/нагрузка/production secrets/backup restore также не объявляются выполненными.
 
-NEXT — единственный план, INDEX — карта. Код, локальные tests, CI, review, публикация,
-merge и deployment — разные состояния. Итог exact SHA читается в Checks/PR.
+## Продолжение
+
+После успешного окончательного SEC-001 CI — ENTITLEMENT-001, затем ADMIN-001 по NEXT:
+разрешённые модели/квоты и минимальная компенсация через авторизованную админку.
+Не повторять foundation или переписывать существующую auth/credits без нового дефекта.
+Ноль известных advisories не доказывает полной безопасности и не разрешает deploy.
+
+NEXT — единственный план. IMPLEMENTED/TESTED/REVIEWED/PUSHED/MERGED/DEPLOYED
+различаются; фактические coding-token расходы недоступны, процент экономии не заявлен.
