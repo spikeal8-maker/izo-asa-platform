@@ -24,6 +24,8 @@ jobs:
         with: {python-version: '3.13'}
       - uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38
         with: {node-version: '24'}
+      - name: Prepare isolated browser sources
+        run: sudo env IZO_CI_BROWSER_SETUP=isolated python3 tools/ci_browser_sources.py
       - name: Install backend
         run: |
           python -m venv .venv
@@ -53,36 +55,6 @@ jobs:
         working-directory: apps/web
         run: |
           npm run build
-          # Playwright installs its own Chromium. The preinstalled Chrome APT
-          # feed is unrelated and currently serves an inconsistent package index.
-          # Keep every Ubuntu source and all signature/hash checks unchanged.
-          sudo python3 - <<'PY'
-          from pathlib import Path
-          import re
-
-          def disable_unused_chrome(root):
-              source = root / "google-chrome.list"
-              if source.is_symlink():
-                  raise RuntimeError("Unexpected Chrome source symlink")
-              if not source.exists():
-                  return
-              active = [line.split("#", 1)[0].strip()
-                        for line in source.read_text().splitlines()]
-              active = [line for line in active if line]
-              expected = re.compile(
-                  r"deb(?:-src)?(?:\s+\[[^]\r\n]+\])?\s+"
-                  r"https?://dl\.google\.com/linux/chrome(?:-stable)?/deb/?\s+stable\s+main")
-              if not active or not all(expected.fullmatch(line) for line in active):
-                  raise RuntimeError("Unexpected Chrome source contents; nothing disabled")
-              destination = source.with_suffix(".list.izo-disabled")
-              if destination.exists() or destination.is_symlink():
-                  raise RuntimeError("Chrome source backup already exists")
-              source.rename(destination)
-              print("Unused Chrome APT feed disabled on disposable CI runner")
-
-          if __name__ == "__main__":
-              disable_unused_chrome(Path("/etc/apt/sources.list.d"))
-          PY
           npx playwright install --with-deps chromium
           npm run test:e2e
       - name: Container integration

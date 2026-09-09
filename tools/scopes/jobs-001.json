@@ -35,7 +35,9 @@
     "tests/test_media_boundaries.py",
     "tests/test_media_migration.py",
     "tools/jobs_acceptance.py",
-    "tools/scopes/jobs-001.json"
+    "tools/scopes/jobs-001.json",
+    "tools/ci_browser_sources.py",
+    "tests/test_ci_browser_sources.py"
   ],
   "sensitive_approved": [
     ".github/workflows/ci.yml",
@@ -44,6 +46,7 @@
     "apps/api/migrations/versions/0008_jobs.py",
     "compose.yaml",
     "tools/jobs_acceptance.py",
-    "tools/scopes/jobs-001.json"
+    "tools/scopes/jobs-001.json",
+    "tools/ci_browser_sources.py"
   ]
 }
