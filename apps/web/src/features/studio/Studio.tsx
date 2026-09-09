@@ -75,6 +75,7 @@ function Composer({ auth }: { auth: AuthView }) {
     } catch (reason) {
       if (!alive.current) return
       if (!command) {
+        setQuote(null)
         setStorageError(true)
         setError('Не удалось сохранить номер запроса. Отправка задания не выполнялась.')
       } else if (reason instanceof ApiError && deniedBeforeAdmission.has(reason.code)) {

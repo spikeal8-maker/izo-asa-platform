@@ -36,7 +36,7 @@ function JobDetail({ id, auth }: { id: string; auth: AuthView }) {
       await apiRequest<Job>(`/api/v1/jobs/${id}/cancel`, { method: 'POST', csrf: auth.csrf_token })
       setConfirm(false); result.refresh()
     } catch (reason) { setError(problem(reason)); result.refresh() }
-    finally { setBusy(false) }
+    finally { setConfirm(false); setBusy(false) }
   }
   return <><Link className="back-link" href="/jobs"><Icon name="back" /> Все задания</Link>
     <ResourceState error={result.error} loading={result.loading} retry={result.refresh} />
