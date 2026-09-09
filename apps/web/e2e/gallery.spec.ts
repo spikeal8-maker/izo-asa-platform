@@ -1,74 +1,124 @@
+import { createHash } from 'node:crypto'
 import { test, expect } from '@playwright/test'
-import { fakeApi, createWork, noOverflow } from './demo-fixture'
+import { workspace, asset, create, noOverflow, hash } from './workspace-fixtures'
 
-test.beforeEach(async ({ page }) => { await fakeApi(page) })
-
-test('U-19 empty state has no invented personal works', async ({ page }, info) => {
+test('IMAGE-001 gallery empty state has no invented works or original prefetch', async ({ page }) => {
+  const app = await workspace(page)
   await page.goto('/gallery')
-  await expect(page.getByRole('heading', { level: 1 })).toHaveText('Галерея')
-  await expect(page.getByText('Здесь начнётся ваша коллекция')).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Здесь начнётся ваша коллекция' })).toBeVisible()
+  expect(app.contentReads).toBe(0)
   await expect(page.locator('.asset-card')).toHaveCount(0)
-  const clearance = await page.getByLabel('Поиск работ').evaluate(input => {
-    const icon = input.parentElement!.querySelector('svg')!
-    const textStart = input.getBoundingClientRect().left + parseFloat(getComputedStyle(input).paddingLeft)
-    return textStart - icon.getBoundingClientRect().right
-  })
-  expect(clearance).toBeGreaterThan(4)
   await noOverflow(page)
-  await page.screenshot({ path: info.outputPath('gallery-empty.png'), fullPage: true })
 })
 
-test('U-19/U-20 @smoke list, filter, navigation, refresh, reuse and delete', async ({ page }, info) => {
-  await createWork(page, 'Тёплый горизонт')
-  await createWork(page, 'Геометрия тишины')
-  await page.getByRole('navigation').getByRole('link', { name: 'Галерея', exact: true }).click()
-  await expect(page.locator('.asset-card')).toHaveCount(2)
-  await page.getByRole('button', { name: 'Local · демо', exact: true }).click()
-  await expect(page.getByText('Ничего не найдено', { exact: true })).toBeVisible()
-  await page.getByRole('button', { name: 'Сбросить фильтры' }).click()
-  await page.getByLabel('Поиск работ').fill('Геометрия')
+test('IMAGE-001 own list, page search, protected preview and server download', async ({ page }, info) => {
+  const app = await workspace(page)
+  await create(page)
+  await page.goto('/gallery')
   await expect(page.locator('.asset-card')).toHaveCount(1)
-  await page.getByLabel('Поиск работ').fill('')
-  await page.screenshot({ path: info.outputPath('gallery.png'), fullPage: true })
-  await page.locator('.asset-card').first().click()
-  const url = page.url()
+  expect(app.contentReads).toBe(0)
+  await page.getByLabel('Поиск на этой странице').fill('неттакого')
+  await expect(page.getByRole('heading', { name: 'Ничего не найдено на этой странице' })).toBeVisible()
+  await page.getByRole('button', { name: 'Сбросить поиск' }).click()
+  await page.locator('.asset-card').click()
+  await expect(page.getByTestId('private-image')).toBeVisible()
+  const previewTicketCount = app.tickets
+  const waiting = page.waitForEvent('download')
+  await page.getByRole('button', { name: 'Скачать PNG' }).click()
+  const download = await waiting
+  const stream = await download.createReadStream()
+  expect(stream).not.toBeNull()
+  const digest = createHash('sha256')
+  for await (const chunk of stream!) digest.update(chunk)
+  expect(digest.digest('hex')).toBe(hash)
+  expect(app.tickets).toBe(previewTicketCount + 1)
+  await noOverflow(page)
+  await page.screenshot({ path: info.outputPath('server-asset.png'), fullPage: true })
   await page.reload()
-  await expect(page.getByRole('heading', { level: 1 })).toHaveText('Геометрия тишины')
-  await page.screenshot({ path: info.outputPath('asset.png'), fullPage: true })
-  await page.getByRole('link', { name: 'Использовать настройки' }).click()
-  await expect(page.getByLabel('Описание', { exact: true })).toHaveValue('Геометрия тишины')
-  await page.goBack()
-  await expect(page).toHaveURL(url)
-  await page.getByRole('button', { name: 'Удалить демо-работу' }).click()
-  await page.getByRole('button', { name: 'Удалить пример', exact: true }).click()
-  await expect(page.getByRole('heading', { level: 1 })).toHaveText('Работа не найдена')
+  await expect(page.getByTestId('private-image')).toBeVisible()
+})
+
+test('IMAGE-001 gallery pagination is explicit and never fetches all originals', async ({ page }) => {
+  const app = await workspace(page)
+  for (let i = 0; i < 21; i++) app.assets.push(asset())
+  await page.goto('/gallery')
+  await expect(page.locator('.asset-card')).toHaveCount(20)
+  await page.getByRole('button', { name: 'Следующая страница' }).click()
+  await expect(page.locator('.asset-card')).toHaveCount(1)
+  await page.getByRole('button', { name: 'Предыдущая страница' }).click()
+  await expect(page.locator('.asset-card')).toHaveCount(20)
+  expect(app.contentReads).toBe(0)
   await noOverflow(page)
 })
 
-test('zero demo balance does not remove gallery access, reset is explicit', async ({ page }) => {
-  await createWork(page)
-  await page.getByRole('button', { name: 'О состоянии' }).click()
-  await page.getByLabel('Нулевой демо-баланс').check()
-  await page.getByRole('button', { name: 'Понятно' }).click()
-  await expect(page.getByRole('button', { name: /Создать демо/ })).toBeDisabled()
-  await page.getByRole('navigation').getByRole('link', { name: 'Галерея', exact: true }).click()
+test('IMAGE-001 gallery error cannot fall back to old demo data', async ({ page }) => {
+  const app = await workspace(page); app.assets.push(asset())
+  await page.goto('/gallery')
   await expect(page.locator('.asset-card')).toHaveCount(1)
-  await page.getByRole('button', { name: 'О состоянии' }).click()
-  await page.getByRole('button', { name: 'Сбросить демо', exact: true }).click()
-  await page.getByRole('button', { name: 'Подтвердить сброс' }).click()
+  app.assetError = 'unavailable'
+  await page.getByRole('button', { name: 'Обновить галерею' }).click()
+  await expect(page.getByRole('alert')).toBeVisible()
   await expect(page.locator('.asset-card')).toHaveCount(0)
+  app.assetError = ''
+  await page.getByRole('button', { name: 'Повторить загрузку' }).click()
+  await expect(page.locator('.asset-card')).toHaveCount(1)
 })
 
-test('storage denied is honest; unknown deep links and dark mode remain usable', async ({ page }, info) => {
-  await page.addInitScript(() => { Storage.prototype.setItem = () => { throw new DOMException('Test storage denied', 'SecurityError') } })
-  await page.goto('/gallery/not-owned')
-  await expect(page.getByRole('heading', { level: 1 })).toHaveText('Работа не найдена')
-  await expect(page.getByRole('alert')).toContainText('Хранение в этой вкладке недоступно')
+test('IMAGE-001 missing or foreign identifiers never fetch image contents', async ({ page }) => {
+  const app = await workspace(page)
+  await page.goto('/gallery/22222222-2222-4222-8222-222222222222')
+  await expect(page.getByRole('alert')).toContainText('недоступен')
+  await expect(page.getByTestId('private-image')).toHaveCount(0)
+  await page.goto('/gallery/not-an-id')
+  await expect(page.getByRole('heading', { name: 'Работа не найдена' })).toBeVisible()
+  expect(app.contentReads).toBe(0)
+})
+
+test('IMAGE-001 malformed ticket and corrupt bytes never become visible pixels', async ({ page }) => {
+  const app = await workspace(page); const item = asset(); app.assets.push(item)
+  app.evilTicket = true
+  await page.goto(`/gallery/${item.id}`)
+  await expect(page.locator('.private-image').getByRole('alert')).toBeVisible()
+  expect(app.contentReads).toBe(0)
+  app.evilTicket = false; app.badImage = true
+  await page.getByRole('button', { name: 'Повторить предпросмотр' }).click()
+  await expect(page.locator('.private-image').getByRole('alert')).toBeVisible()
+  await expect(page.getByTestId('private-image')).toHaveCount(0)
+  app.badImage = false
+  await page.getByRole('button', { name: 'Повторить предпросмотр' }).click()
+  await expect(page.getByTestId('private-image')).toBeVisible()
+})
+
+test('IMAGE-001 navigation releases private object URL; signout clears loaded work', async ({ page }) => {
+  const app = await workspace(page); const item = asset(); app.assets.push(item)
+  await page.addInitScript(() => {
+    const original = URL.revokeObjectURL
+    Object.assign(window, { revokedImages: 0 })
+    URL.revokeObjectURL = function (url) {
+      ;(window as Window & { revokedImages: number }).revokedImages++
+      original.call(URL, url)
+    }
+  })
+  await page.goto(`/gallery/${item.id}`)
+  await expect(page.getByTestId('private-image')).toBeVisible()
+  await page.getByRole('link', { name: 'Мои работы', exact: true }).click()
+  expect(await page.evaluate(() => (window as Window & { revokedImages: number }).revokedImages)).toBeGreaterThan(0)
+  await page.locator('.asset-card').click()
+  await expect(page.getByTestId('private-image')).toBeVisible()
+  app.signedIn = false
+  await page.evaluate(() => window.dispatchEvent(new Event('focus')))
+  await expect(page.getByRole('heading', { name: 'Войдите, чтобы продолжить' })).toBeVisible()
+  await expect(page.getByTestId('private-image')).toHaveCount(0)
+})
+
+test('IMAGE-001 zero balance still reads own files and theme persists', async ({ page }) => {
+  const app = await workspace(page); app.balance = 0; app.assets.push(asset())
+  await page.goto('/gallery')
+  await expect(page.locator('.asset-card')).toHaveCount(1)
   await page.getByRole('button', { name: 'Переключить тему' }).click()
   await expect(page.locator('html')).toHaveAttribute('data-theme', 'dark')
-  await page.goto('/unknown-page')
-  await expect(page.getByRole('heading', { level: 1 })).toHaveText('Страница не найдена')
-  await page.getByRole('button', { name: 'Переключить тему' }).click()
-  await noOverflow(page)
-  await page.screenshot({ path: info.outputPath('dark-error.png'), fullPage: true })
+  await page.reload()
+  await expect(page.locator('html')).toHaveAttribute('data-theme', 'dark')
+  await expect(page.locator('.asset-card')).toHaveCount(1)
+  expect(app.requests.filter(r => r.path === '/api/v1/credits')).toHaveLength(0)
 })

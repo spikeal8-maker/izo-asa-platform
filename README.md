@@ -1,74 +1,56 @@
 # ИЗО АСА · новая платформа
 
-Новая реализация IZO ASA. Старые аккаунты/БД/Windows-службы не переносятся.
-Текущая разработка — ветка **auth/email-recovery**, поверх AUTH-001 и UX-прототипа.
-Это **закрытый dev/test, не готовый AI-сервис и не разрешение публичного запуска**.
+Текущая разработка: **image/server-workspace**, IMAGE-001 / PR #13 поверх серверных
+заданий. Старые аккаунты/БД/Windows-службы не переносятся. Это закрытый dev/test,
+не готовый публичный AI-сервис. Последний source SHA и результаты — Checks PR.
 
-Есть реальные серверные аккаунты/сессии, приглашения, подтверждение email, сброс/смена
-пароля с отзывом сессий. Доставка писем пока только тестовая, доступная оператору.
-Баланс, задания и работы в студии — демо браузера, не server ledger или облачная галерея.
-Нет real AI, signed Telegram/MAX, payments, identity linking, SMTP или production deployment.
+Аккаунты, сессии, баллы, планы, компенсации, приватные изображения и задания работают
+через общий backend. Основные студия, задания и галерея подключаются к этим API,
+без браузерного demo ledger. Сейчас только диагностический `test.image.v1`: PNG
+с отметкой TEST ONLY, **не нейросеть**. Настоящие AI/SMTP/Telegram/MAX ещё не подключены.
 
-## Документы
+## Документы и правки
 
-[INDEX](docs/INDEX.md) → карта продукта; [STATUS](docs/STATUS.md) → факты;
-[NEXT](docs/NEXT.md) → единственный план;
-[Accounts](apps/api/izo/accounts/README.md) → AUTH-001;
-[Email security](apps/api/izo/accounts/EMAIL.md) → AUTH-002, API/проверки/ограничения.
-[AGENTS](AGENTS.md) → правила разработчика; [Backend AGENTS](apps/api/AGENTS.md) → краткая карта source/tests.
-[PRODUCT](docs/PRODUCT.md), [ADMIN](docs/ADMIN.md), [UX](docs/UX.md),
-[ARCHITECTURE](docs/ARCHITECTURE.md), [AI_RUNTIME](docs/AI_RUNTIME.md),
-[DEVELOPMENT](docs/DEVELOPMENT.md), [OPERATIONS](docs/OPERATIONS.md) — спецификации,
-а не обещание уже работающих функций. Дизайн не принят владельцем.
+[INDEX](docs/INDEX.md) — карта; [STATUS](docs/STATUS.md) — факты;
+[NEXT](docs/NEXT.md) — единственный порядок этапов; [AGENTS](AGENTS.md) — правила.
+[Серверное рабочее пространство](apps/web/src/features/studio/README.md) — IMAGE-001;
+[Jobs](apps/api/izo/jobs/README.md), [Media](apps/api/izo/media/README.md),
+[Accounts](apps/api/izo/accounts/README.md), [Email](apps/api/izo/accounts/EMAIL.md).
+Дизайн не принят владельцем. Документы требований не означают готовой функции.
 
 ## Новый локальный стенд
 
-Git, Python3.13 и Docker с Compose v2:
+Нужны Git, Python3.13 и Docker Compose v2:
 
 ```sh
 git clone https://github.com/spikeal8-maker/izo-asa-platform.git
 cd izo-asa-platform
-git switch auth/email-recovery
+git switch image/server-workspace
 python tools/bootstrap.py
 docker compose up --build --wait
 docker compose run --rm api python -m izo.accounts.invites --hours 24
 ```
 
-Открыть http://localhost:8080/register и ввести выданное одноразовое приглашение.
-Не публиковать приглашение, cookies, .env и коды писем. База/S3 не открываются наружу.
-Secrets создаются локально и не печатаются; тестовые письма не отправляются по сети.
+Открыть http://localhost:8080/register. Приглашение не даёт staff-права/баллы/план.
+Для тестового выполнения оператор должен явно разрешить `IZO_JOBS_ENABLED=true`
+в локальном `.env` и запустить `docker compose --profile jobs up --build --wait`.
+Также нужны подтверждённый аккаунт, назначенный план с test.image.v1 и размерами32…512,
+а затем компенсационные баллы. Публичное самоназначение этих прав не предусмотрено.
+Неполная настройка даёт понятный отказ, не бесплатный неограниченный режим.
 
-## Уже существующий .env
+Для проверки всего пути CI создаёт изолированные synthetic fixtures через
+`tools/image_acceptance.py`, без реальных писем/ключей. Не запускайте acceptance
+на рабочей базе. Сценарий требует именно изолированные PostgreSQL/S3 и opt-in test.
 
-```sh
-python tools/bootstrap.py --auth-only
-python tools/bootstrap.py --recovery-only
-docker compose up --build --wait
-```
+При старом `.env`: `python tools/bootstrap.py --auth-only` и
+`python tools/bootstrap.py --recovery-only` добавляют только отсутствующие поля.
+Тестовые письма доступны оператору через `python -m izo.accounts.test_mail --help`
+в API-контейнере; HTTP-mailbox отсутствует. Подробности — accounts/EMAIL.md.
 
-Добавляются только отсутствующие поля; старые secrets/disabled не заменяются.
-Для просмотра запрошенного письма: справка `python -m izo.accounts.test_mail --help`
-в API-контейнере; нужны UUID аккаунта и явный `--show-sensitive`. HTTP mailbox нет.
-Подробнее — accounts/EMAIL.md. При выключенном канале recovery отвечает503, а не
-сообщает о якобы отправленном письме. Реальная доставка — отдельная интеграция.
+## Проверки
 
-## Проверки и остановка
-
-Создать venv и установить закреплённые `requirements-dev.txt` только при новом checkout:
-
-```sh
-python -m venv .venv
-```
-
-После активации venv:
-
-```sh
-python -m pip install -r requirements-dev.txt
-python -m pytest
-python tools/export_contracts.py --check
-```
-
-UI при установленном Node24, из `apps/web`:
+Backend: `python -m pip install -r requirements-dev.txt`, `python -m pytest`,
+`python tools/export_contracts.py --check`. Frontend под Node24 из `apps/web`:
 
 ```sh
 npm ci
@@ -77,12 +59,17 @@ npx playwright install chromium
 npm run test:e2e
 ```
 
-Unit/UI без real AI/GPU/SMTP; PostgreSQL races/restart отдельно проверяются Compose CI.
-Для обычной остановки `docker compose down` **без -v**; затем `docker compose up --wait`.
-Volumes не backup; `down -v` удалит локальные данные и не является способом обновления.
-Source SHA/CI/merge/deploy указываются раздельно. Публичная витрина — `spikeal8-maker/izo-asa`.
+После малой UI-правки — ближайший spec/phone+laptop; общий CI перед приёмкой сохраняется.
+Mocked viewport не доказывает серверный путь: image-live.mjs проверяет настоящий
+browser/API/PostgreSQL/S3/worker, затем повтор после Compose down/up.
+Review Source предоставляет tracked snapshot+manifest для воспроизводимого чтения;
+не включает `.git`, окружение, node_modules и runtime fixtures.
+
+Обычная остановка — `docker compose down` **без -v**, запуск — `docker compose up --wait`.
+`down -v` уничтожает локальные данные и не является обновлением. Volumes не backup.
+Merge и deployment требуют отдельного разрешения. Публичная витрина — izo-asa.
 
 ## Права
 
-LICENSE не изменён: репозиторий публичный, но не объявлен open source; окончательная
-лицензия не выбрана. Условия зависимостей и права GitHub сохраняются.
+LICENSE не изменён: публичный код не объявлен open source. Условия зависимостей и
+права GitHub сохраняются; окончательное решение лицензии принимается отдельно.

@@ -1,61 +1,45 @@
 import { useState } from 'react'
 import { Link } from '../../shell/router'
-import { Dialog } from '../../shared/ui/Dialog'
 import { Icon } from '../../shared/ui/Icon'
-import { useDemo } from '../prototype/DemoState'
-import { artUrl } from '../prototype/art'
+import type { AuthView } from '../../shared/api'
+import { WorkspaceGate, ResourceState, useResource } from '../../shared/workspace'
+import { type Asset, isId, downloadTicket, problem } from '../../shared/workspace-api'
+import { PrivateImage } from './PrivateImage'
 import './gallery.css'
 
+function Work({ id, auth }: { id: string; auth: AuthView }) {
+  const { data: asset, error, loading, refresh } = useResource<Asset>(`/api/v1/media/assets/${id}`)
+  const [busy, setBusy] = useState(false)
+  const [downloadError, setDownloadError] = useState('')
+  async function download() {
+    if (!asset || busy) return
+    setBusy(true); setDownloadError('')
+    try {
+      // Always obtain a new session-bound ticket. Do not download the old preview blob.
+      const url = await downloadTicket(asset, auth)
+      const link = document.createElement('a')
+      link.href = url; link.download = `${asset.id}.png`; link.referrerPolicy = 'no-referrer'
+      document.body.append(link); link.click(); link.remove()
+    } catch (reason) { setDownloadError(problem(reason)) }
+    finally { setBusy(false) }
+  }
+  return <><ResourceState loading={loading} error={error} retry={refresh} />{asset && <div className="asset-detail">
+    <PrivateImage asset={asset} auth={auth} />
+    <section className="asset-information"><h2>Изображение {asset.id.slice(0, 8)}</h2>
+      <p>Файл получен из приватного серверного хранилища. Тестовый генератор создаёт PNG с отметкой TEST ONLY.</p>
+      <dl className="summary-list"><div><dt>Размер</dt><dd>{asset.width} × {asset.height}</dd></div>
+        <div><dt>Формат</dt><dd>PNG</dd></div><div><dt>Объём</dt><dd>{asset.byte_size.toLocaleString('ru-RU')} байт</dd></div>
+        <div><dt>Создано</dt><dd>{new Date(asset.created_at * 1000).toLocaleString('ru-RU')}</dd></div></dl>
+      <button className="primary full-width" disabled={busy} onClick={() => void download()}><Icon name="download" /> Скачать PNG</button>
+      {downloadError && <p className="field-error" role="alert">{downloadError}</p>}
+      <p>Удаление, публикация и использование файла как исходника пока не подключены. Архив доступен независимо от остатка баллов.</p>
+      <Link href="/jobs">Открыть мои задания</Link>
+    </section></div>}</>
+}
 export function AssetPage({ id }: { id: string }) {
-  const { state, remove, updateDraft } = useDemo()
-  const [deleting, setDeleting] = useState(false)
-  const work = state.works.find(item => item.id === id)
-
-  if (!work) return <section className="gallery-empty">
-    <Icon name="image" />
-    <h1>Работа не найдена</h1>
-    <p>Демо-пример удалён или отсутствует в этой вкладке.</p>
-    <Link className="primary" href="/gallery">Вернуться в галерею</Link>
-  </section>
-
-  return <>
-    <Link className="back-link" href="/gallery"><Icon name="back" /> Мои работы</Link>
-    <div className="asset-detail">
-      <div className="detail-image">
-        <img src={artUrl(work.palette)} alt="Демонстрационный SVG, не AI-результат"
-          style={{ aspectRatio: work.aspect.replace(':', '/') }} />
-        <span>ПРЕДУСТАНОВЛЕННЫЙ ПРИМЕР</span>
-      </div>
-      <section className="asset-information">
-        <p className="eyebrow">РАБОТА / ДЕМО</p>
-        <h1>{work.title}</h1>
-        <p className="detail-disclaimer">
-          Это векторный образец для проверки интерфейса. Настоящая генерация ещё не подключена.
-        </p>
-        <dl className="summary-list">
-          <div><dt>Модель интерфейса</dt><dd>{work.model === 'api-demo' ? 'Studio · API' : 'Studio · Local'}</dd></div>
-          <div><dt>Пропорции просмотра</dt><dd>{work.aspect}</dd></div>
-          <div><dt>Скачиваемый файл</dt><dd>SVG · исходный пример 1:1</dd></div>
-          <div><dt>Доступность</dt><dd>Демо этой вкладки</dd></div>
-        </dl>
-        <label className="field-label" htmlFor="saved-prompt">Описание</label>
-        <textarea id="saved-prompt" readOnly value={work.prompt} rows={4} />
-        <a className="primary full-width" href={artUrl(work.palette)} download="izo-demo-example.svg">
-          <Icon name="download" /> Скачать SVG-пример
-        </a>
-        <Link className="secondary full-width" href="/image" onClick={() => updateDraft({
-          prompt: work.prompt, model: work.model, aspect: work.aspect, palette: work.palette,
-        })}>
-          <Icon name="spark" /> Использовать настройки
-        </Link>
-        <button className="text-danger" onClick={() => setDeleting(true)}>
-          <Icon name="bin" /> Удалить демо-работу
-        </button>
-      </section>
-    </div>
-    <Dialog open={deleting} title="Удалить этот демо-пример?" onClose={() => setDeleting(false)}>
-      <p>Пример исчезнет из этой вкладки. Настоящие файлы и сервер не затрагиваются.</p>
-      <button className="danger-button" onClick={() => { remove(id); setDeleting(false) }}>Удалить пример</button>
-    </Dialog>
+  return <><Link className="back-link" href="/gallery"><Icon name="back" /> Мои работы</Link>
+    <header className="page-heading"><p className="eyebrow">ПРИВАТНЫЙ ФАЙЛ</p><h1>Работа</h1></header>
+    {!isId(id) ? <section className="gallery-empty"><h2>Работа не найдена</h2><Link href="/gallery">Вернуться в галерею</Link></section>
+      : <WorkspaceGate>{auth => <Work id={id} auth={auth} />}</WorkspaceGate>}
   </>
 }

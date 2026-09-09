@@ -22,11 +22,11 @@ def test_gallery_and_studio_are_sibling_features_not_a_dependency_cycle():
             assert not any(other in name for name in imports(path)), path
 
 
-def test_demo_has_no_network_or_backend_dependencies():
-    for path in (WEB / "features/prototype").glob("*.ts*"):
-        text = path.read_text(encoding="utf-8")
-        assert not re.search(r"\b(?:fetch|XMLHttpRequest|WebSocket)\s*\(", text), path
-        assert not any("shared/api" in name or "shell" in name for name in imports(path)), path
+def test_browser_demo_is_retired_not_a_fallback_for_missing_server_data():
+    assert not list((WEB / "features/prototype").glob("*.ts*"))
+    for path in (WEB / "features").rglob("*.ts*"):
+        assert not any("prototype" in name for name in imports(path)), path
+    assert 'DemoProvider' not in (WEB / 'shell/App.tsx').read_text()
 
 
 def test_features_do_not_bypass_shared_transport():

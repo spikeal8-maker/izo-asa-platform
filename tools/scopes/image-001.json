@@ -14,13 +14,12 @@
     "apps/web/src/features/prototype/art.ts", "apps/web/src/features/accounts/AccountPage.tsx",
     "apps/web/e2e/studio.spec.ts", "apps/web/e2e/gallery.spec.ts", "apps/web/e2e/shell.spec.ts",
     "apps/web/e2e/workspace-fixtures.ts", "apps/web/acceptance/image-live.mjs",
-    "apps/web/src/features/studio/AGENTS.md", "apps/web/src/features/studio/README.md",
-    "tests/test_image_boundaries.py", "tests/test_web_boundaries.py",
-    "tools/image_acceptance.py", "docs/STATUS.md", "README.md", "tools/scopes/image-001.json"
+    "apps/web/src/features/studio/README.md", "tests/test_image_boundaries.py", "tests/test_web_boundaries.py",
+    "tools/image_acceptance.py", "docs/STATUS.md", "README.md", "tools/scopes/image-001.json",
+    "apps/web/src/features/credits/CreditsPage.tsx", "apps/web/e2e/demo-fixture.ts"
   ],
   "sensitive_approved": [
-    ".github/workflows/review-source.yml", ".github/workflows/ci.yml",
-    "apps/web/AGENTS.md", "apps/web/src/features/studio/AGENTS.md",
+    ".github/workflows/review-source.yml", ".github/workflows/ci.yml", "apps/web/AGENTS.md",
     "tools/image_acceptance.py", "tools/scopes/image-001.json"
   ]
 }

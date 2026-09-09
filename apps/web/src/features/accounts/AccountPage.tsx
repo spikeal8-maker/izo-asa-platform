@@ -91,7 +91,7 @@ export function AccountPage({ mode }: { mode: 'account' | 'login' | 'register' }
   return <section className="account-page">
     <header className="page-heading"><p className="eyebrow">СЕРВЕРНЫЙ АККАУНТ · AUTH-001</p>
       <h1>{auth || mode === 'account' ? 'Аккаунт' : registering ? 'Регистрация' : 'Вход'}</h1>
-      <p>Аккаунт и сессии сохраняются в PostgreSQL. Студия и её демо-баланс пока остаются отдельным прототипом.</p>
+      <p>Аккаунт, сессии, баллы, задания и приватные работы используют общий сервер. Исполнитель пока диагностический, не нейросеть.</p>
     </header>
     {error && <div className="field-error" role="alert">{error}
       <button disabled={busy} onClick={() => setReload(value => value + 1)}>Повторить проверку сессии</button>

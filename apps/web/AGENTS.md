@@ -1,21 +1,23 @@
 # Web · точечные изменения
 
-Наследует корневой AGENTS. Код UI не предоставляет серверные права.
+Наследует корневой AGENTS. Реальная identity, цена, лимиты, задания и баланс принадлежат backend.
 
-| Что меняется | Где искать сначала | Ближайшая проверка |
+| Что меняется | Читать сначала | Ближайшая проверка |
 |---|---|---|
-| Навигация/тема/общая раскладка | src/shell/App.tsx, layout.css, theme.css | shell.spec.ts, phone+laptop |
-| Форма/параметры/цена макета | src/features/studio/Studio.tsx | studio.spec.ts, phone+laptop |
-| Состояние результата | src/features/studio/ResultPanel.tsx | studio.spec.ts |
-| Список/просмотр работ | src/features/gallery/Gallery.tsx, AssetPage.tsx | gallery.spec.ts |
-| Демо-состояние | src/features/prototype/DemoState.tsx, demo.ts | studio+gallery, refresh/cancel/error |
-| Общий dialog/icon | src/shared/ui | shell+studio+gallery, focus/keyboard |
-| Широкий экран | styles затронутой области | тот же spec: qhd/uhd/hidpi-150/hidpi-200 |
+| Навигация и общая тема | src/shell/App.tsx, layout.css, theme.css | shell.spec.ts |
+| Студия, quote, подтверждение | features/studio/Studio.tsx, studio/README.md | studio.spec.ts |
+| Повтор потерянного submit | shared/submission.ts, Studio.tsx | lost response / damaged storage |
+| Список/карточка задания, отмена | studio/ResultPanel.tsx, shared/workspace.tsx | studio.spec.ts |
+| Список работ и просмотр | gallery/Gallery.tsx, AssetPage.tsx, PrivateImage.tsx | gallery.spec.ts |
+| Сессия/общий transport | shared/workspace.tsx, api.ts, workspace-api.ts | все затронутые account/admin/studio/gallery specs |
+| Телефон/QHD/4K | CSS затронутой области | тот же spec с нужным viewport |
 
-Использовать уже установленные зависимости, npm ci только для нового checkout/изменённого lock/runtime. Для UI не запускать Docker, не читать backend и старый проект без конкретной зависимости.
+Начать с компонента и ближайшего теста; не читать всю админку, старую IZO_ASA или весь generated API ради кнопки. В UI нет отдельного кошелька, fallback-галереи или provider SDK. Прототип удалён; не возвращать DemoState, имитацию успешной генерации и локальное списание.
 
-После кода: `npm run build`, затем `npx playwright test e2e/studio.spec.ts --project=phone --project=laptop` (заменить только имя действительно затронутого spec). Общий компонент требует всех зависимых specs; расширенная матрица и полный CI перед приёмкой не отменяются. Playwright-профиль не доказывает реальную ОС/SDK.
+Профильный цикл: `npm run build`, затем `npx playwright test e2e/studio.spec.ts --project=phone --project=laptop` для студии. Gallery — свой spec. Общий transport требует всех зависимых экранов. npm ci только для нового checkout или изменённого lock/runtime. Полный CI и 10 viewport перед приёмкой сохраняются; тесты реального PostgreSQL/S3 отдельно от mocked viewport.
 
-Shell знает маршруты, shared/ui не знает features, studio/gallery используют общий demo-state только в прототипе. Не импортировать studio из gallery или наоборот. src/features/prototype — явно fake adapter, не место будущей авторизации/ledger. Реальный API вводится отдельным этапом, не скрытой заменой demo на paid call.
+У каждого эффекта с частными данными — abort/cleanup; Object URL освобождается. Номер незавершённого submit привязан к account, содержит только IDs. Не менять operation ID после сетевого сбоя. Цена берётся только из quote. Ошибка auth/хранилища не превращается в успешный локальный результат.
 
-Сначала читать нужный компонент и его test; не весь CSS и docs/ADMIN для кнопки. Новые стили локализованы областью, общие tokens — theme.css. Не сжимать строки и не переносить случайные куски ради лимита. Никаких новых пакетов или глобального transform:scale ради вёрстки.
+Studio и Gallery — соседние features; не импортировать их друг из друга. shared/ui не знает features. Новые API-клиенты используют общий transport. Неподдержанные delete/publish/input-reference не изображать работающими кнопками.
+
+`Review Source` выдаёт проверяемый архив tracked source с tree/blob manifest. Это не архив .git/окружения и не доказательство прохождения тестов; сравнить tree с точным SHA PR. Приватные runtime fixtures/пароли и содержимое RUNNER_TEMP в артефакты не добавлять.
