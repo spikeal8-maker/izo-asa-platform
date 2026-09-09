@@ -3,7 +3,7 @@ on:
   push:
     branches: [main]
   pull_request:
-    branches: [main]
+    branches: [main, admin/users-compensation]
 permissions:
   contents: read
 concurrency:

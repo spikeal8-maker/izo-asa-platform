@@ -1,59 +1,66 @@
 # Фактическое состояние IZO ASA
 
-## ADMIN-001 · минимальная рабочая админка, 9 сентября 2026
+Срез: 9 сентября 2026. Source base нового пакета MEDIA-001 —
+`16aba52bb5ea811423237915a38d4ec013b92ba6`, `admin/users-compensation`, PR #10.
+Main не изменена; слияние и развёртывание не выполнялись.
 
-База 1aba446b8b91752aeacd62f8291f851507d4cf14 (ENTITLEMENT-001, PR #9).
-Новая ветка admin/users-compensation. Main/прошлые ветки/старый сайт не меняются.
-Никаких настоящих AI/писем/платежей, пользователей, keys, GPU или deployment.
+## Подтверждённый ADMIN-001
 
-Добавлены typed staff API и интерфейс поиска/карточки пользователя, чтения баланса,
-подтверждения компенсации с текущим паролем и ограниченного административного
-журнала; /account/credits показывает настоящий собственный ledger вместо mock.
-Это не подключает DEMO-генератор/галерею к настоящим средствам.
+Foundation run34327811372/job102389047577 завершён успешно. Предыдущие 495 Python
+и270 viewport cases плюс ADMIN_BEFORE_OK/ADMIN_BROWSER_OK/ADMIN_AFTER_OK относятся
+именно к admin-base. Реальный браузер прошёл login → поиск → компенсация → баланс;
+после Compose down/up проверены сохранность, отсутствие дубля и отзыв permission.
+Это не приёмка будущих media endpoints.
 
-Начисление использует существующий CreditService.grant, общий Account/session,
-конечную per-operation policy, business case и одну транзакцию с audit. Права,
-состояние, verified identity, пароль/сессия повторно проверяются после KDF.
-Нет самостоятельного admin signup, wallet SQL в модуле админки, роли по плану,
-скрытой новой платной генерации или прямого secret editor.
+## MEDIA-001: реализуемый объём
 
-Общий origin/body limit вынесен из Accounts в http_security без смены алгоритма;
-тот же guard применяется к auth/admin. Validation ошибок admin не отражает пароль.
-Новая миграция 0006_admin: конечный cap оператора и append-only admin_events.
-CLI первичного назначения требует явной isolated dev/test среды и existing verified
-аккаунта. В этом пакете не реализуется полный ACCESS-001/AD-02.
+Подготовлены9 API endpoints: private upload intent/content/status/complete/cancel,
+список/metadata assets и короткоживущий session-bound download. Миграция0007_media
+добавляет reservations/assets/tickets, не переписывает прежние migrations.
+AuthService и EntitlementService общие; Credits не изменяется. Публичных uploads,
+user-supplied owner/object URL или admin bypass нет. Квота считает ready bytes и
+активные reservations под owner-lock; S3/codec не держат DB transaction.
 
-Локально проверены169 случаев (новые admin + профильные existing Credit), SQLite/ASGI,
-настоящие AuthService/CreditService. Локальный FastAPI0.128.2/Alembic1.18.4 отличаются
-от lock; полный целевой стек должен подтвердить GitHub. Локального Docker/полного
-checkout нет: source восстановлен через fetch/прошлые архивы и сверяется по blobSHA.
-OpenAPI новых routes сгенерирован и объединён с точным base без изменения старых
-schemas; полный export_contracts --check обязательный этап CI.
+PNG/JPEG/WebP до16MiB и16,777,216px декодируются отдельным ограниченным процессом
+с Pillow12.3.0 и сохраняются очищенным RGBA PNG. Оригинал, EXIF/ICC не сохраняются;
+это не архивная копия. Нет animation/SVG/HTML, thumbnails, удаления ready-assets,
+cloud-gallery UI, video/audio/3D и generator output. Child limits не полный sandbox.
 
-В CI добавлены реальные PostgreSQL/HTTP before/after и прямой браузерный сценарий
-через собранный web/Caddy/API/PostgreSQL. Полный итоговый SHA и выполненные проверки
-фиксируются в PR/Checks после публикации. Подготовленный script не означает PASS.
-Synthetic credentials сохраняются только в RUNNER_TEMP с umask077 и удаляются;
-immutable journal triggers не выключаются для уборки, удаляется весь CI volume.
+Неизвестный исход записи удерживает reservation и sealed metadata; complete
+сверяет сохранённый объект. Поздняя validation не завершает cancelled upload.
+Download требует первоначальной session и ограниченного ticket, проверяется до
+и после S3; истечение/revoke не делает файл публичным.
 
-Scope: до30 путей, без новых dependencies, Docker/старых migrations/LICENSE, без
-перерисовки всей студии. Локальные AGENTS/README дают предметный путь для правок,
-нового master plan нет. Реальный расход coding-tokens неизвестен.
+## Проверки и публикация
 
-## Проверенная основа и ограничения
+Исторические локальные80 новых tests прошли на SQLite/ASGI/in-memory store и
+настоящем codec subprocess. Исходный пакет повторно проверен по29 hashes.
+В этом продолжении добавлена проверка сохранения обоих CI при incremental PR.
+Результаты повторного прогона и окончательного GitHub CI относятся только к
+реально выполненной команде и фиксируются в exact-head Checks/описании PR.
+Наличие acceptance script не означает его успешный запуск.
 
-PR #9, source1aba446…: Foundation CI34299435284 (420 Python,220 browser, настоящая
-PG/persistence) и security34299435148 — SUCCESS по ранее прочитанным logs. Статус
-предыдущих запусков не переносится на новые изменения автоматически.
+Прямой network checkout в локальной среде недоступен (DNS github.com). Частичная
+материализация и тесты не объявляются полным checkout/lock environment. Полная
+проверка должна включать export/typecheck/browser, PostgreSQL/S3 concurrency и
+before/after media_acceptance через настоящий Compose down/up. Синтетические
+cookies/fixture state только RUNNER_TEMP, не artifacts/логи. Main и production
+не затрагиваются. Не переносить зелёный результат предыдущего SHA на новый.
 
-Уже есть Accounts/session, почтовая часть AUTH-002 с TEST-mail, Credits ledger,
-Entitlement plans/preflight. Последний НЕ резервирует quota/jobs: admission_reserved=false.
-Нет durable Jobs/Media allocator, настоящей cloud gallery, live providers/local agent,
-полной админки, настоящих Telegram/MAX/SMTP, payments и production release/restore.
-Изменение email/identity linking и технические gates публичного запуска ещё впереди.
+## Ограниченная область и следующий шаг
 
-Дизайн не принят; UI-viewport не доказывает реальную ОС/Mini App. Добавленный live
-browser scenario должен отдельно подтвердиться, прежние220 mock cases не заменяют его.
-Самопроверка не независимое security review; main protection не настраивается здесь.
-PR Draft, merge/deploy не выполняются. Следующий пакет после успешной приёмки —
-MEDIA-001 по NEXT, не новое проектирование основания.
+Пакет30 путей при пределе30: прежние29 + dependency-audit trigger для конкретной
+базы admin/users-compensation. PR на эту базу показывает только приращение MEDIA.
+Оба workflow продолжают запускаться и для main; permissions read-only, audit
+high/critical и прежние tests сохранены. Отдельного обхода защиты или force-push нет.
+Визуал, Accounts/Credits business rules, старые migrations, LICENSE не меняются.
+Причина прошлой блокировки создания Git tree не установлена; корректность архива
+не считается объяснением отказа. PUSHED/TESTED подтверждаются только ответом API.
+
+После подтверждённой media-приёмки — JOBS-001: durable jobs/attempts и атомарная
+admission с reservations Credits/Media. Нельзя dispatch по одним лишь разрешениям
+Entitlements (admission_reserved=false). Полное независимое review, branch
+protection, production secrets/egress, backup restore и реальная почта остаются
+открытыми; не заявлять готовность рабочего сервиса или AI-генератора.
+
+INDEX — карта; NEXT — порядок. IMPLEMENTED/TESTED/PUSHED/MERGED/DEPLOYED независимы.

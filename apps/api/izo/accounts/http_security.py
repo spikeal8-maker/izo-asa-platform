@@ -36,12 +36,12 @@ class AuthBodyLimit:
         await self.app(scope, replay, send)
 
 
-def same_origin(request, instance):
+def same_origin(request, instance, *, content_type="application/json"):
     origins = request.headers.getlist("origin")
     if (len(origins) != 1 or origins[0] not in instance.policy.origins
             or request.headers.get("x-izo-request") != "web"
             or request.headers.get("sec-fetch-site") == "cross-site"):
         raise AuthError(403, "origin_rejected")
-    if request.headers.get("content-type", "").split(";")[0].strip().lower() != "application/json":
-        raise AuthError(415, "json_required")
+    if request.headers.get("content-type", "").split(";")[0].strip().lower() != content_type:
+        raise AuthError(415, "json_required" if content_type == "application/json" else "content_type_rejected")
 
