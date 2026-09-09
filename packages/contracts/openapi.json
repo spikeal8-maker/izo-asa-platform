@@ -189,6 +189,152 @@
         "title": "EmptyInput",
         "type": "object"
       },
+      "EntitlementView": {
+        "additionalProperties": false,
+        "properties": {
+          "account_id": {
+            "format": "uuid",
+            "title": "Account Id",
+            "type": "string"
+          },
+          "account_state": {
+            "title": "Account State",
+            "type": "string"
+          },
+          "as_of": {
+            "maximum": 253402300799.0,
+            "minimum": 0.0,
+            "title": "As Of",
+            "type": "integer"
+          },
+          "assignment_state": {
+            "enum": [
+              "none",
+              "scheduled",
+              "active",
+              "expired"
+            ],
+            "title": "Assignment State",
+            "type": "string"
+          },
+          "assignment_version": {
+            "maximum": 2000000000.0,
+            "minimum": 0.0,
+            "title": "Assignment Version",
+            "type": "integer"
+          },
+          "configured": {
+            "title": "Configured",
+            "type": "boolean"
+          },
+          "default_version": {
+            "maximum": 2000000000.0,
+            "minimum": 0.0,
+            "title": "Default Version",
+            "type": "integer"
+          },
+          "identity_verified": {
+            "title": "Identity Verified",
+            "type": "boolean"
+          },
+          "next_change_at": {
+            "anyOf": [
+              {
+                "maximum": 253402300799.0,
+                "minimum": 0.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Next Change At"
+          },
+          "plan_code": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Plan Code"
+          },
+          "policy": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/PlanPolicy"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "policy_hash": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Policy Hash"
+          },
+          "revision": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Revision"
+          },
+          "revision_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Revision Id"
+          },
+          "source": {
+            "enum": [
+              "none",
+              "basic",
+              "assignment"
+            ],
+            "title": "Source",
+            "type": "string"
+          }
+        },
+        "required": [
+          "account_id",
+          "account_state",
+          "identity_verified",
+          "configured",
+          "source",
+          "assignment_state",
+          "assignment_version",
+          "default_version",
+          "revision_id",
+          "plan_code",
+          "revision",
+          "policy_hash",
+          "policy",
+          "as_of",
+          "next_change_at"
+        ],
+        "title": "EntitlementView",
+        "type": "object"
+      },
       "Entry": {
         "properties": {
           "balance_after": {
@@ -312,6 +458,29 @@
         "title": "FoundationStatus",
         "type": "object"
       },
+      "ImageSize": {
+        "additionalProperties": false,
+        "properties": {
+          "height": {
+            "maximum": 8192.0,
+            "minimum": 1.0,
+            "title": "Height",
+            "type": "integer"
+          },
+          "width": {
+            "maximum": 8192.0,
+            "minimum": 1.0,
+            "title": "Width",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "width",
+          "height"
+        ],
+        "title": "ImageSize",
+        "type": "object"
+      },
       "LoginInput": {
         "additionalProperties": false,
         "properties": {
@@ -399,6 +568,99 @@
           "next_before"
         ],
         "title": "Overview",
+        "type": "object"
+      },
+      "PlanPolicy": {
+        "additionalProperties": false,
+        "properties": {
+          "active_jobs": {
+            "default": 0,
+            "maximum": 256.0,
+            "minimum": 0.0,
+            "title": "Active Jobs",
+            "type": "integer"
+          },
+          "can_publish": {
+            "default": false,
+            "title": "Can Publish",
+            "type": "boolean"
+          },
+          "capability_ids": {
+            "default": [],
+            "items": {
+              "pattern": "^[a-z0-9][a-z0-9._-]{0,79}$",
+              "type": "string"
+            },
+            "maxItems": 256,
+            "title": "Capability Ids",
+            "type": "array"
+          },
+          "executors": {
+            "default": [],
+            "items": {
+              "enum": [
+                "api",
+                "local"
+              ],
+              "type": "string"
+            },
+            "maxItems": 2,
+            "title": "Executors",
+            "type": "array"
+          },
+          "image_sizes": {
+            "default": [],
+            "items": {
+              "$ref": "#/components/schemas/ImageSize"
+            },
+            "maxItems": 32,
+            "title": "Image Sizes",
+            "type": "array"
+          },
+          "input_count": {
+            "default": 0,
+            "maximum": 32.0,
+            "minimum": 0.0,
+            "title": "Input Count",
+            "type": "integer"
+          },
+          "max_action_credits": {
+            "default": 0,
+            "maximum": 1000000000.0,
+            "minimum": 0.0,
+            "title": "Max Action Credits",
+            "type": "integer"
+          },
+          "storage_bytes": {
+            "default": 0,
+            "maximum": 1000000000000.0,
+            "minimum": 0.0,
+            "title": "Storage Bytes",
+            "type": "integer"
+          },
+          "submissions": {
+            "default": 0,
+            "maximum": 1000000.0,
+            "minimum": 0.0,
+            "title": "Submissions",
+            "type": "integer"
+          },
+          "upload_bytes": {
+            "default": 0,
+            "maximum": 1000000000.0,
+            "minimum": 0.0,
+            "title": "Upload Bytes",
+            "type": "integer"
+          },
+          "window_seconds": {
+            "default": 60,
+            "maximum": 86400.0,
+            "minimum": 1.0,
+            "title": "Window Seconds",
+            "type": "integer"
+          }
+        },
+        "title": "PlanPolicy",
         "type": "object"
       },
       "ProofInput": {
@@ -1278,6 +1540,27 @@
         "summary": "Own Credits",
         "tags": [
           "credits"
+        ]
+      }
+    },
+    "/api/v1/entitlements": {
+      "get": {
+        "operationId": "own_entitlements_api_v1_entitlements_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EntitlementView"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Own Entitlements",
+        "tags": [
+          "entitlements"
         ]
       }
     },

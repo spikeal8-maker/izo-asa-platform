@@ -1,70 +1,79 @@
 # Фактическое состояние IZO ASA
 
-## SEC-001 — зависимости web, 9 сентября 2026
+## ENTITLEMENT-001 · 9 сентября 2026
 
-База `21621137b51c938251fd35f909dddd2a07d67d21` (CREDIT-001, PR #6).
-Отдельная ветка `security/npm-audit`, PR #8. Main, прежние ветки и рабочий сайт
-не меняются. Ни merge, ни deployment, ни live AI/письма/платежи не выполнялись.
+База fd765c5002250ed0d12f317170323d7c841b9e4b (SEC-001, PR #8).
+Повторная отправка локального пакета через GitHub разрешена; ветка entitlements/server-policy.
+Первая попытка была остановлена инструментом, после запроса владельца запись повторена.
+Архив, патч и все 21 исходных файла сверены с manifest SHA256/Git blob SHA.
+Точный опубликованный commit/PR и завершённый CI фиксируются в Checks/описании PR;
+успех PostgreSQL нельзя переносить с SEC-001. Main и предыдущие ветки не меняются.
+Merge/deploy, реальные AI/SMTP/платежи/GPU и production-данные не входят в этап.
 
-### Найдено и ограниченное исправление
+### Реализованный серверный блок
 
-Реальный npm audit исходного lock подтвердил high2: js-yaml4.3.1 и зависимый
-@redocly/openapi-core1.34.19. Один исходный GHSA-2883-xcg3-v3hh / CVE-2026-84375,
-не две независимые CVE. Цепочка — build/codegen через openapi-typescript7.10.1,
-не обнаруженная ошибка Python-ledger. Подробности — apps/web/security/README.md.
+Новая миграция0005_entitlements (parent0004_credits): plan revisions, default pointer,
+account assignments и immutable change history. Publish/set-default/assign/clear —
+внутренние команды с active plans.write, expectedVersion, идемпотентной receipt и audit.
+Пустой default означает configured=false, не unlimited бесплатный доступ.
+GET /api/v1/entitlements читает только свой план через существующую session в одной
+транзакции; чужой owner/query, revoked session и публичные mutations запрещены.
 
-Обновление родителя внутри разрешённого диапазона не дало исправления. Выбран
-узкий override только для @redocly/openapi-core@1.34.19 на upstream js-yaml4.3.2.
-Ни прямые версии web-пакетов, ни backend, ни миграции не изменены. Lock сгенерирован
-npm на runner; сохранение старого формата записей не меняет его JSON-дерево.
+Начало/истечение назначения выбираются на сервере. Истечение возвращает текущий basic,
+не меняя баллы/permissions/старые snapshots. Strict finite quota/capability/executor/
+image-size/input/budget policy. Неизвестный usage отвергается. Цена и значения реальных
+тарифов не назначены; тестовые значения не объявляются production defaults.
 
-Добавлен независимый read-only `Dependency Security / npm-audit`. Он не меняет
-lock/исходники, не запускает package lifecycle scripts и не скрывает dev dependencies.
-High/critical либо ошибка audit дают отказ; сохраняются отчёт и идентификация версии.
-Четыре Node-regression tests проверяют actual parser, bounded merge budget,
-обычный YAML и исходный OpenAPI. Четыре Python tests защищают свойства workflow.
-Существующий Foundation CI с PG/restart сохранён без изменений.
+assess_image использует реальный Credits available, но является preflight:
+admission_reserved=false. JOBS/MEDIA ещё не считают/резервируют настоящие ресурсы,
+поэтому это НЕ законченный механизм конкурентного допуска AI-заданий. Положительный
+preflight не разрешает worker dispatch. Следующие домены обязаны повторно проверить
+свежий server-owned usage под owner lock и атомарно создать allocations/credit hold/job.
 
-### Доказательства и ограничения
+Подробная граница/команды — apps/api/izo/entitlements/README.md, короткая карта — AGENTS.md
+рядом. Нет новой авторизации, второго ledger, generic settings engine и UI планов.
 
-На исходном lock audit-gate сработал отрицательно (run34292712936, high2).
-Изолированный кандидат npm (run34292981711/artifact10082049192) дал audit total0,
-маленький probe показал false→true для ограничения пустых merge sources на
-4.3.1→4.3.2, обычный merge сохранился. Исходный диагностический run при этом
-FAILURE: кандидат не подменял проверяемый checkout и не публиковался автоматически.
+### Проверки и scope
 
-Локально выполнены четыре Python-проверки нового workflow и Node syntax check.
-Полного checkout/Node24/npm registry/Docker в локальной среде нет; приёмка
-окончательного source, build/browser/PostgreSQL выполняется в GitHub. Точный
-итоговый SHA и все завершённые Checks фиксируются в PR #8, не переносятся с
-изолированного candidate или предыдущего PR. Наличие тестов не равно их успеху.
+Локально прошли 80 новых SQLite/ASGI/schema/architecture checks. Совместно с
+103 существующими CREDIT-001 checks — 183 PASS. Это только восстановленный
+профильный набор предыдущей подготовки, не новый полный suite репозитория.
+PostgreSQL/HTTP/race/restart и полный набор новой опубликованной версии проверяются
+в GitHub; итог подтверждается по завершённым Checks, не наличию сценария.
+Полного git clone/Docker в локальной среде нет; исходные импорты
+получены через connector и сверены по Git blob SHA, новые HTTP tests используют
+настоящий AuthService. Локальные FastAPI/Alembic отличаются от lock.
 
-Scope: до8 путей — manifest/lock, новый workflow, regression tests, предметный
-security README, task scope и этот STATUS. Temporary candidate-generator удалён
-из окончательного workflow. Нет переписывания приложения или общего master plan.
-Самопроверка не независимое security review. Main protection остаётся отдельным gate.
+OpenAPI генерируется штатным tools/export_contracts.py. После удаления нового endpoint
+и трёх DTO старая часть совпала с blob bbf03e6e3196cf095fabf5479c3b0ca86e8265a7.
+Не выполненные тесты не объявляются прошедшими. PG acceptance проверяет version races,
+один эффект replay, immutable history, собственный HTTP, persistence и expiry с
+управляемыми часами после настоящего restart; не реальный час ожидания.
 
-## Ранее реализовано
+Scope: 21 путь при пределе24. Existing app получает attach route; новая migration,
+сервис/политика/facade/тесты/docs/schema. Workflow добавляет before/after и private
+cleanup вокруг прежнего restart; все старые функциональные и npm security gates
+сохраняются. Auth/Credits internals, UI, зависимости, Docker, LICENSE не меняются.
+Нет полного checkout — локальный check_change не объявлен выполненным; remote compare
+должен подтвердить пути. Самопроверка не независимый security review.
 
-Foundation: FastAPI/PostgreSQL/S3/Compose, schema readiness, OpenAPI, ограничения
-кода и UI-прототип. AUTH-001: аккаунты, пароли, серверные сессии. Почтовая часть
-AUTH-002: подтверждение/reset/change password с TEST-mail, без настоящей доставки.
-CREDIT-001: wallet/ledger/reservations, grant/reserve/settle/release и owner-only
-GET /api/v1/credits. PR #6/run34289604222:336 Python,220 browser и реальные PG/HTTP/
-restart проверки прошли; найденный npm-сигнал стал отдельным SEC-001, не был скрыт.
+## Ранее реализовано и ограничения продукта
 
-Нет entitlements, рабочей admin-формы начисления, UI серверного баланса, durable jobs,
-owner-scoped cloud gallery, live providers/credential resolver/local agent. Студия,
-её баланс/галерея пока DEMO. Нынешний дизайн не принят. AUTH-002 не закрыт целиком:
-смена email и linking/unlinking identities ещё впереди; настоящие Mini Apps/SMTP,
-MFA/нагрузка/production secrets/backup restore также не объявляются выполненными.
+Foundation/FastAPI/PostgreSQL/S3/Compose; AUTH-001 и почтовая часть AUTH-002 с TEST-mail;
+CREDIT-001: ledger/hold/grant/reserve/settle/release и owner-only read API.
+SEC-001: scoped js-yaml patch и независимый npm audit gate. Source fd765c5 был проверен
+run34293879081 (340 Python,220 browser,PG/HTTP/restart) и run34293879085 (audit и4 Node
+regressions). Ноль известных advisories не является полной оценкой безопасности.
 
-## Продолжение
+Нет рабочей admin-формы начисления, UI серверного баланса/планов, Jobs/Media allocation,
+облачной пользовательской галереи, live adapters/credential resolver/GPU agent.
+Студия и её баланс/галерея — DEMO; дизайн не принят. AUTH-002 не закрыт целиком:
+смена email/linking, настоящие Telegram/MAX/SMTP, MFA/нагрузка/backup restore и
+production secrets ещё впереди. Branch protection/обязательный независимый review
+не настроены этим пакетом. Старый сайт и данные не затронуты.
 
-После успешного окончательного SEC-001 CI — ENTITLEMENT-001, затем ADMIN-001 по NEXT:
-разрешённые модели/квоты и минимальная компенсация через авторизованную админку.
-Не повторять foundation или переписывать существующую auth/credits без нового дефекта.
-Ноль известных advisories не доказывает полной безопасности и не разрешает deploy.
-
-NEXT — единственный план. IMPLEMENTED/TESTED/REVIEWED/PUSHED/MERGED/DEPLOYED
-различаются; фактические coding-token расходы недоступны, процент экономии не заявлен.
+Следующий ограниченный шаг после технической приёмки — ADMIN-001: пользователь,
+серверный баланс и одно начисление компенсации с правами/audit на существующем ядре.
+NEXT — единственный план; никаких новых master plans. IMPLEMENTED/TESTED/REVIEWED/
+PUSHED/MERGED/DEPLOYED различаются. Фактических coding-token расходов нет, процент
+экономии не заявляется.

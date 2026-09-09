@@ -14,6 +14,7 @@ from .contracts import Modality
 from .health import dependencies_ready
 from .accounts.routes import attach_accounts
 from .credits.routes import attach_credits
+from .entitlements.routes import attach_entitlements
 
 logger = logging.getLogger("izo.http")
 
@@ -37,6 +38,7 @@ def create_app(config: Settings | None = None,
     app = FastAPI(title="IZO ASA Platform", version="0.1.0", docs_url=None, redoc_url=None)
     accounts_service = attach_accounts(app, config)
     attach_credits(app, accounts_service)
+    attach_entitlements(app, accounts_service)
 
     @app.middleware("http")
     async def request_context(request: Request, call_next):
