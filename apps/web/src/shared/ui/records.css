@@ -1,0 +1,23 @@
+.admin-page,.credits-page{max-width:1440px;margin-inline:auto;min-width:0}
+.admin-panel{padding:clamp(16px,2vw,32px);border:1px solid var(--border,#dce1e9);border-radius:18px;background:var(--surface,#fff);margin-block:20px;min-width:0}
+.admin-links{display:flex;gap:18px;flex-wrap:wrap;align-items:center;margin-block:20px}
+.admin-search{display:flex;gap:16px;align-items:end;flex-wrap:wrap}
+.admin-search label{flex:1;min-width:0}
+.admin-form{display:grid;gap:16px;max-width:600px}
+.admin-form label,.admin-search label{display:grid;gap:7px;font-weight:600}
+.admin-form input,.admin-search input{box-sizing:border-box;width:100%;min-width:0;border:1px solid var(--border,#cbd2de);border-radius:10px;padding:12px;background:var(--surface,#fff);color:inherit;font:inherit}
+.admin-form small{font-weight:400;line-height:1.5}
+.admin-page button,.credits-page button{min-height:44px;white-space:normal}
+.admin-grant{margin-top:28px;border-top:1px solid var(--border,#ddd);padding-top:16px}
+.admin-table-wrap{max-width:100%;overflow:auto;margin-block:20px}
+.admin-table-wrap table{width:100%;border-collapse:collapse;min-width:490px;text-align:left}
+.admin-table-wrap th,.admin-table-wrap td{padding:14px 12px;border-bottom:1px solid var(--border,#ddd);overflow-wrap:anywhere}
+.admin-table-wrap td:first-child{max-width:25ch}
+.admin-history{list-style:none;padding:0;display:grid;gap:12px}
+.admin-history li{display:flex;gap:16px;justify-content:space-between;border-bottom:1px solid var(--border,#ddd);padding:12px 0;overflow-wrap:anywhere}
+.admin-history p{margin:6px 0;font-size:.9rem}
+.admin-history a{flex-shrink:0}
+.admin-receipt{margin-top:20px;padding:18px;border:2px solid var(--accent,#305cec);border-radius:12px;overflow-wrap:anywhere}
+.admin-page .summary-list dd,.credits-page .summary-list dd{overflow-wrap:anywhere}
+[data-theme="dark"] .admin-panel,[data-theme="dark"] .admin-form input,[data-theme="dark"] .admin-search input{background:#18212e;border-color:#475367}
+@media(max-width:600px){.admin-search{display:grid;grid-template-columns:minmax(0,1fr)}.admin-history li{display:block}.admin-history a{display:inline-block;margin-top:8px}.admin-links{gap:12px}.admin-form{max-width:100%}}
