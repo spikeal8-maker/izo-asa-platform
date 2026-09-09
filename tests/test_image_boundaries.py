@@ -37,7 +37,8 @@ def test_media_read_uses_fresh_ticket_and_bounded_authenticated_transport():
     preview = (WEB / 'src/features/gallery/PrivateImage.tsx').read_text()
     assert 'URL.revokeObjectURL' in preview and 'controller.abort()' in preview
     detail = (WEB / 'src/features/gallery/AssetPage.tsx').read_text()
-    assert 'await downloadTicket(asset, auth)' in detail
+    assert 'await imageBlob(asset, auth, resource.controller.signal)' in detail
+    assert 'link.download' in detail and 'release(current.current)' in detail
     gallery = (WEB / 'src/features/gallery/Gallery.tsx').read_text()
     assert 'imageBlob(' not in gallery and 'downloadTicket(' not in gallery
 

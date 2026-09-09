@@ -1,27 +1,48 @@
-import { useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { Link } from '../../shell/router'
 import { Icon } from '../../shared/ui/Icon'
 import type { AuthView } from '../../shared/api'
 import { WorkspaceGate, ResourceState, useResource } from '../../shared/workspace'
-import { type Asset, isId, downloadTicket, problem } from '../../shared/workspace-api'
+import { type Asset, isId, imageBlob, problem } from '../../shared/workspace-api'
 import { PrivateImage } from './PrivateImage'
 import './gallery.css'
 
+type DownloadResource = { controller: AbortController; url: string; timer?: ReturnType<typeof setTimeout> }
+function release(resource: DownloadResource | null) {
+  if (!resource) return
+  resource.controller.abort()
+  clearTimeout(resource.timer)
+  if (resource.url) URL.revokeObjectURL(resource.url)
+}
 function Work({ id, auth }: { id: string; auth: AuthView }) {
   const { data: asset, error, loading, refresh } = useResource<Asset>(`/api/v1/media/assets/${id}`)
   const [busy, setBusy] = useState(false)
   const [downloadError, setDownloadError] = useState('')
+  const current = useRef<DownloadResource | null>(null)
+  const submitting = useRef(false)
+  useEffect(() => () => release(current.current), [])
   async function download() {
-    if (!asset || busy) return
+    if (!asset || submitting.current) return
+    submitting.current = true
+    release(current.current)
+    const resource: DownloadResource = { controller: new AbortController(), url: '' }
+    current.current = resource
     setBusy(true); setDownloadError('')
     try {
-      // Always obtain a new session-bound ticket. Do not download the old preview blob.
-      const url = await downloadTicket(asset, auth)
+      // Reauthorize and read fresh, bounded, hash-checked bytes. Never reuse the preview.
+      const blob = await imageBlob(asset, auth, resource.controller.signal)
+      if (resource.controller.signal.aborted) return
+      resource.url = URL.createObjectURL(blob)
       const link = document.createElement('a')
-      link.href = url; link.download = `${asset.id}.png`; link.referrerPolicy = 'no-referrer'
+      link.href = resource.url; link.download = `${asset.id}.png`
       document.body.append(link); link.click(); link.remove()
-    } catch (reason) { setDownloadError(problem(reason)) }
-    finally { setBusy(false) }
+      resource.timer = setTimeout(() => release(resource), 60000)
+    } catch (reason) {
+      if (!resource.controller.signal.aborted) setDownloadError(problem(reason))
+    } finally {
+      submitting.current = false
+      if (!resource.controller.signal.aborted) setBusy(false)
+    }
   }
   return <><ResourceState loading={loading} error={error} retry={refresh} />{asset && <div className="asset-detail">
     <PrivateImage asset={asset} auth={auth} />

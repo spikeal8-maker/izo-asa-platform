@@ -23,6 +23,7 @@ test('IMAGE-001 own list, page search, protected preview and server download', a
   await page.locator('.asset-card').click()
   await expect(page.getByTestId('private-image')).toBeVisible()
   const previewTicketCount = app.tickets
+  const previewContentReads = app.contentReads
   const waiting = page.waitForEvent('download')
   await page.getByRole('button', { name: 'Скачать PNG' }).click()
   const download = await waiting
@@ -32,6 +33,7 @@ test('IMAGE-001 own list, page search, protected preview and server download', a
   for await (const chunk of stream!) digest.update(chunk)
   expect(digest.digest('hex')).toBe(hash)
   expect(app.tickets).toBe(previewTicketCount + 1)
+  expect(app.contentReads).toBe(previewContentReads + 1)
   await noOverflow(page)
   await page.screenshot({ path: info.outputPath('server-asset.png'), fullPage: true })
   await page.reload()
@@ -121,4 +123,18 @@ test('IMAGE-001 zero balance still reads own files and theme persists', async ({
   await expect(page.locator('html')).toHaveAttribute('data-theme', 'dark')
   await expect(page.locator('.asset-card')).toHaveCount(1)
   expect(app.requests.filter(r => r.path === '/api/v1/credits')).toHaveLength(0)
+})
+
+
+test('IMAGE-001 download rechecks bytes and refuses a damaged file even with a loaded preview', async ({ page }) => {
+  const app = await workspace(page); const item = asset(); app.assets.push(item)
+  await page.goto(`/gallery/${item.id}`)
+  await expect(page.getByTestId('private-image')).toBeVisible()
+  app.badImage = true
+  const downloads: string[] = []
+  page.on('download', file => downloads.push(file.url()))
+  await page.getByRole('button', { name: 'Скачать PNG' }).click()
+  await expect(page.locator('.asset-information').getByRole('alert')).toBeVisible()
+  expect(app.contentReads).toBe(2)
+  expect(downloads).toHaveLength(0)
 })
