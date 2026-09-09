@@ -81,7 +81,7 @@ def test_migration_is_static_and_live_acceptance_is_wired():
 def test_incremental_media_pr_keeps_both_ci_gates():
     for name in ("ci.yml", "dependency-audit.yml"):
         text = (ROOT / ".github/workflows" / name).read_text()
-        assert "  pull_request:\n    branches: [main, admin/users-compensation]" in text
+        assert "  pull_request: {}" in text  # All bases include the original media stack.
         assert "contents: read" in text and "persist-credentials: false" in text
         assert "pull_request_target" not in text and "self-hosted" not in text
         assert "continue-on-error" not in text and "secrets." not in text

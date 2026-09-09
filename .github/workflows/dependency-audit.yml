@@ -2,8 +2,7 @@ name: Dependency Security
 on:
   push:
     branches: [main]
-  pull_request:
-    branches: [main, admin/users-compensation]
+  pull_request: {}
 permissions:
   contents: read
 concurrency:

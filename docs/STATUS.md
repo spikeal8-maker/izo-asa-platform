@@ -1,66 +1,86 @@
 # Фактическое состояние IZO ASA
 
-Срез: 9 сентября 2026. Source base нового пакета MEDIA-001 —
-`16aba52bb5ea811423237915a38d4ec013b92ba6`, `admin/users-compensation`, PR #10.
-Main не изменена; слияние и развёртывание не выполнялись.
+Срез JOBS-001: 9 сентября 2026. База — `f9cfe80508416d8ab1a22ca1c15c56ec2aa43d80`,
+ветка `media/private-images`, PR #11. Код новой задачи не считается опубликованным
+по наличию этого файла: конечный SHA и результаты находятся в Checks/описании PR.
+Main, предыдущие ветки и действующий сайт этим пакетом не изменяются.
 
-## Подтверждённый ADMIN-001
+## Подтверждённое основание
 
-Foundation run34327811372/job102389047577 завершён успешно. Предыдущие 495 Python
-и270 viewport cases плюс ADMIN_BEFORE_OK/ADMIN_BROWSER_OK/ADMIN_AFTER_OK относятся
-именно к admin-base. Реальный браузер прошёл login → поиск → компенсация → баланс;
-после Compose down/up проверены сохранность, отсутствие дубля и отзыв permission.
-Это не приёмка будущих media endpoints.
+MEDIA-001: Foundation CI34374607745 и Dependency Security34374607921 прошли.
+Проверены real PostgreSQL/S3 HTTP, одновременные квоты, сохранённый объект с потерянным
+ответом и восстановление после Compose down/up. Ранее реализованы Accounts, email
+proofs с тестовой доставкой, Credits, Entitlements и минимальная админка с одним
+настоящим browser→API→PostgreSQL сценарием. Студия и галерея в UI остаются DEMO.
 
-## MEDIA-001: реализуемый объём
+## Что добавляет JOBS-001
 
-Подготовлены9 API endpoints: private upload intent/content/status/complete/cancel,
-список/metadata assets и короткоживущий session-bound download. Миграция0007_media
-добавляет reservations/assets/tickets, не переписывает прежние migrations.
-AuthService и EntitlementService общие; Credits не изменяется. Публичных uploads,
-user-supplied owner/object URL или admin bypass нет. Квота считает ready bytes и
-активные reservations под owner-lock; S3/codec не держат DB transaction.
+Серверный путь quote → job → attempt → сохранённый PNG → списание. Цена и capability
+принадлежат серверу, caller передаёт только разрешённые параметры и operation ID.
+Исполнитель `test.image.v1` создаёт диагностическое изображение, **не AI-результат**.
+Реальных ключей/платежей/SMTP/GPU нет. Функция по умолчанию выключена.
 
-PNG/JPEG/WebP до16MiB и16,777,216px декодируются отдельным ограниченным процессом
-с Pillow12.3.0 и сохраняются очищенным RGBA PNG. Оригинал, EXIF/ICC не сохраняются;
-это не архивная копия. Нет animation/SVG/HTML, thumbnails, удаления ready-assets,
-cloud-gallery UI, video/audio/3D и generator output. Child limits не полный sandbox.
+Единая транзакция admission под Accounts-lock: актуальные plan/usage → резерв Media
+и Credits → durable Job + outbox. Повтор не создаёт новый резерв. Одноразовая quote
+действует120s. Неизвестный owner/price/executor не принимается из HTTP.
 
-Неизвестный исход записи удерживает reservation и sealed metadata; complete
-сверяет сохранённый объект. Поздняя validation не завершает cancelled upload.
-Download требует первоначальной session и ограниченного ticket, проверяется до
-и после S3; истечение/revoke не делает файл публичным.
+Новый standalone worker, explicit dev/test и opt-in Compose profile. БД не открывается
+при импорте API, поток обработки в web-процессе не запускается. Claim/heartbeat/finish
+проверяют lease/fence; повтор после crash разрешён только для чистого тестового
+исполнителя. До seal отмена освобождает оба резерва, после seal — отдельное намерение.
+Сначала фиксируются metadata результата, затем выполняется S3; SQL-транзакция не
+держится во время обработки/записи. Неизвестная запись сверяется без новой генерации.
+После пяти неудачных чтений требуется операторский разбор, обязательства сохраняются.
 
-## Проверки и публикация
+Forward migration0008 создаёт jobs/quotes/attempts/outbox/output allocations и явное
+происхождение media_assets. Существующие upload IDs/keys/hash сохраняются; generated
+result использует тот же Media API, не фиктивную загрузку и не вторую галерею.
 
-Исторические локальные80 новых tests прошли на SQLite/ASGI/in-memory store и
-настоящем codec subprocess. Исходный пакет повторно проверен по29 hashes.
-В этом продолжении добавлена проверка сохранения обоих CI при incremental PR.
-Результаты повторного прогона и окончательного GitHub CI относятся только к
-реально выполненной команде и фиксируются в exact-head Checks/описании PR.
-Наличие acceptance script не означает его успешный запуск.
+## Локальная проверка и границы
 
-Прямой network checkout в локальной среде недоступен (DNS github.com). Частичная
-материализация и тесты не объявляются полным checkout/lock environment. Полная
-проверка должна включать export/typecheck/browser, PostgreSQL/S3 concurrency и
-before/after media_acceptance через настоящий Compose down/up. Синтетические
-cookies/fixture state только RUNNER_TEMP, не artifacts/логи. Main и production
-не затрагиваются. Не переносить зелёный результат предыдущего SHA на новый.
+На частичной восстановленной копии исходных файлов совместно прошли259 проверок:
+новые67 Jobs и192 существующих Credits/Entitlements/Media. После трёх дополнительных
+регрессий точечно повторены40 Jobs execution/recovery cases — PASS. Все локальные
+проверки используют SQLite и реальный AuthService, но не доказывают PostgreSQL locks.
+Обработка test PNG проходит отдельный ограниченный subprocess только в соответствующих
+codec-тестах; в большинстве unit она заменена синхронным тестовым адаптером.
 
-## Ограниченная область и следующий шаг
+Локально Python3.13.5/FastAPI0.128.2/Pillow12.3.0; GitHub lock отличается. Полного checkout,
+локального Docker и итогового GitHub CI до публикации нет. Первая попытка общего запуска
+оборвалась по лимиту инструмента; повторный завершённый verbose run и JUnit подтверждают
+259 PASS. Незавершённый запуск не считается отдельным PASS.
 
-Пакет30 путей при пределе30: прежние29 + dependency-audit trigger для конкретной
-базы admin/users-compensation. PR на эту базу показывает только приращение MEDIA.
-Оба workflow продолжают запускаться и для main; permissions read-only, audit
-high/critical и прежние tests сохранены. Отдельного обхода защиты или force-push нет.
-Визуал, Accounts/Credits business rules, старые migrations, LICENSE не меняются.
-Причина прошлой блокировки создания Git tree не установлена; корректность архива
-не считается объяснением отказа. PUSHED/TESTED подтверждаются только ответом API.
+OpenAPI: сохранена точная прежняя схема blob3e7f2b0…, новые пять endpoints сгенерированы
+из router. Совпадение целевого exporter обязательно проверяется CI. Нельзя отключать
+этот gate из-за различия локальных библиотек.
 
-После подтверждённой media-приёмки — JOBS-001: durable jobs/attempts и атомарная
-admission с reservations Credits/Media. Нельзя dispatch по одним лишь разрешениям
-Entitlements (admission_reserved=false). Полное независимое review, branch
-protection, production secrets/egress, backup restore и реальная почта остаются
-открытыми; не заявлять готовность рабочего сервиса или AI-генератора.
+## Проверка на полном стенде
 
-INDEX — карта; NEXT — порядок. IMPLEMENTED/TESTED/PUSHED/MERGED/DEPLOYED независимы.
+Написан `tools/jobs_acceptance.py before/after`: настоящие HTTP/PostgreSQL/S3,
+конкурентные submit/claim и upload/job quota, отдельный worker-process, bad-job isolation,
+восстановление заранее записанного S3 объекта и просроченной попытки после Compose
+restart, отказ старому fence и сверка ledger. До прочтения успешного журнала это
+**написанная проверка, не её успешное выполнение**. Прежние acceptance и270 viewport
+cases сохраняются. Нового live-browser задания пока нет.
+
+## Область и экономность
+
+34 изменённых пути при лимите36, новые зависимости отсутствуют. Старые миграции,
+LICENSE, UI и предыдущие ветки не меняются. Ближайшие инструкции — jobs/AGENTS.md и
+README. Оба workflow теперь проверяют PR в любую базовую ветку, а не требуют добавлять
+новое имя базы на каждом этапе; push main, read-only tokens, tests/audit сохранены.
+PR должен быть направлен в непосредственную media-базу, не показывать весь проект.
+Изменение ожидания trigger в старом boundary-test соответствует расширению проверки,
+не отключает существующие отрицательные assertions.
+
+## Не завершено и следующий результат
+
+Нет настоящего AI/local executor, сохранения input references, operator job UI,
+доставки outbox, готового orphan purge/ручного разрешения неопределённого outcome,
+нагрузочного доказательства fairness, полного security review, production hardening,
+принятого дизайна и branch protection. Хранение томов не backup restore.
+
+После успешной технической приёмки Jobs следующий пользовательский результат —
+IMAGE-001: соединить студию, задания и общую галерею с настоящим backend на тестовом
+renderer. Потом один согласованный live API. Не писать ещё один общий master plan.
+MERGED и DEPLOYED остаются NO до отдельного разрешения.

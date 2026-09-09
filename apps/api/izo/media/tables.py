@@ -31,6 +31,22 @@ uploads = sa.Table("media_uploads", metadata,
     sa.CheckConstraint("status IN ('pending','validating','storing','ready','rejected','expired','cancelled')", name="media_upload_state"),
     sa.CheckConstraint("status NOT IN ('storing','ready') OR (object_key IS NOT NULL AND stored_hash IS NOT NULL AND stored_size > 0 AND width > 0 AND height > 0)", name="media_sealed_candidate"))
 sa.Index("ix_media_upload_owner", uploads.c.account_id, uploads.c.status)
+outputs = sa.Table("media_output_allocations", metadata,
+    sa.Column("id", sa.Uuid, primary_key=True),
+    sa.Column("account_id", sa.Uuid, sa.ForeignKey("accounts.id"), nullable=False),
+    sa.Column("reserved_bytes", sa.BigInteger, nullable=False),
+    sa.Column("state", sa.String(16), nullable=False),
+    sa.Column("width", sa.Integer, nullable=False),
+    sa.Column("height", sa.Integer, nullable=False),
+    sa.Column("object_key", sa.String(200)),
+    sa.Column("sha256", sa.String(64)),
+    sa.Column("byte_size", sa.BigInteger),
+    sa.Column("created_at", sa.BigInteger, nullable=False),
+    sa.UniqueConstraint("id", "account_id", name="media_output_owner"),
+    sa.CheckConstraint("reserved_bytes >= 0 AND width > 0 AND height > 0", name="media_output_bounds"),
+    sa.CheckConstraint("state IN ('reserved','storing','ready','released')", name="media_output_state"),
+    sa.CheckConstraint("state NOT IN ('storing','ready') OR (object_key IS NOT NULL AND sha256 IS NOT NULL AND byte_size > 0)", name="media_output_sealed"))
+sa.Index("ix_media_output_owner", outputs.c.account_id, outputs.c.state)
 assets = sa.Table("media_assets", metadata,
     sa.Column("id", sa.Uuid, primary_key=True),
     sa.Column("account_id", sa.Uuid, sa.ForeignKey("accounts.id"), nullable=False),
@@ -40,7 +56,11 @@ assets = sa.Table("media_assets", metadata,
     sa.Column("width", sa.Integer, nullable=False),
     sa.Column("height", sa.Integer, nullable=False),
     sa.Column("created_at", sa.BigInteger, nullable=False),
-    sa.ForeignKeyConstraint(["id", "account_id"], ["media_uploads.id", "media_uploads.account_id"]),
+    sa.Column("upload_id", sa.Uuid),
+    sa.Column("output_id", sa.Uuid),
+    sa.ForeignKeyConstraint(["upload_id", "account_id"], ["media_uploads.id", "media_uploads.account_id"], name="media_asset_upload_owner"),
+    sa.ForeignKeyConstraint(["output_id", "account_id"], ["media_output_allocations.id", "media_output_allocations.account_id"], name="media_asset_output_owner"),
+    sa.CheckConstraint("(upload_id IS NOT NULL AND output_id IS NULL AND id = upload_id) OR (output_id IS NOT NULL AND upload_id IS NULL AND id = output_id)", name="media_asset_source"),
     sa.CheckConstraint("byte_size > 0 AND width > 0 AND height > 0", name="media_asset_bounds"))
 sa.Index("ix_media_asset_owner", assets.c.account_id, assets.c.created_at, assets.c.id)
 tickets = sa.Table("media_download_tickets", metadata,
@@ -49,4 +69,4 @@ tickets = sa.Table("media_download_tickets", metadata,
     sa.Column("session_id", sa.Uuid, sa.ForeignKey("account_sessions.id", ondelete="CASCADE"), nullable=False),
     sa.Column("expires_at", sa.BigInteger, nullable=False))
 sa.Index("ix_media_ticket_session", tickets.c.session_id, tickets.c.expires_at)
-TABLES = (uploads, assets, tickets)
+TABLES = (uploads, outputs, assets, tickets)

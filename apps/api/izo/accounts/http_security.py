@@ -9,7 +9,7 @@ class AuthBodyLimit:
         self.app = app
 
     async def __call__(self, scope, receive, send):
-        if (scope["type"] != "http" or not scope["path"].startswith(("/api/v1/auth/", "/api/v1/admin/"))
+        if (scope["type"] != "http" or not scope["path"].startswith(("/api/v1/auth/", "/api/v1/admin/", "/api/v1/jobs"))
                 or scope["method"] not in {"POST", "PUT", "PATCH", "DELETE"}):
             return await self.app(scope, receive, send)
         chunks, size = [], 0
