@@ -12,6 +12,8 @@ import { Gallery } from '../features/gallery/Gallery'
 import { AssetPage } from '../features/gallery/AssetPage'
 import { AccountPage } from '../features/accounts/AccountPage'
 import { SecurityPage, securityPages } from '../features/accounts/SecurityPage'
+import { AdminPage, AdminLink } from '../features/admin/AdminPage'
+import { CreditsPage } from '../features/credits/CreditsPage'
 import './layout.css'
 
 function initialTheme(): 'light' | 'dark' {
@@ -36,6 +38,9 @@ function AppContent() {
   const gallery = path === '/gallery'
   const security = securityPages[path]
   const account = !!security || ['/account', '/account/sessions', '/login', '/register'].includes(path)
+  const credits = path === '/account/credits'
+  const admin = path === '/admin' || path.startsWith('/admin/')
+  const serverPage = account || credits || admin
   const detail = path.startsWith('/gallery/')
   const jobs = path === '/jobs' || path.startsWith('/jobs/')
   const activeJob = state.job?.state === 'running'
@@ -80,19 +85,21 @@ function AppContent() {
           <p>Изображения, видео, звук, 3D и чат — в общей системе.</p>
           <span>ПРОТОТИП / 01</span>
         </div>
-        <Link href="/admin" className="staff-link"><Icon name="sliders" /> Пример админки</Link>
+        <Link href="/account/credits" className="staff-link"><Icon name="spark" /> Серверные баллы</Link>
+        {serverPage && <AdminLink path={path} />}
       </div>
     </aside>
     <div className="app-body">
       <header className="topbar">
         <Link className="mobile-brand" href="/"><Icon name="spark" /> ИЗО АСА</Link>
         <div className="breadcrumb">Рабочее пространство <span>/</span>
-          <strong>{account ? 'Аккаунт' : studio ? 'Студия' : gallery || detail ? 'Мои работы' : jobs ? 'Задания' : 'Обзор'}</strong>
+          <strong>{admin ? 'Администрирование' : serverPage ? 'Аккаунт' : studio ? 'Студия' : gallery || detail ? 'Мои работы' : jobs ? 'Задания' : 'Обзор'}</strong>
         </div>
         <div className="header-actions">
-          <button className="balance-button" onClick={() => setAbout(true)} aria-label={`Демо-баланс: ${balance} баллов`}>
-            <Icon name="spark" />{balance}<span>демо-баллов</span>
-          </button>
+          {serverPage ? <Link className="balance-button" href="/account/credits">Серверные баллы</Link>
+            : <button className="balance-button" onClick={() => setAbout(true)} aria-label={`Демо-баланс: ${balance} баллов`}>
+              <Icon name="spark" />{balance}<span>демо-баллов</span>
+            </button>}
           <button className="icon-button" aria-label="Переключить тему"
             onClick={() => setTheme(value => value === 'light' ? 'dark' : 'light')}><Icon name="sun" /></button>
           <Link className="avatar" href="/account" aria-label="Аккаунт"><Icon name="user" /></Link>
@@ -100,14 +107,16 @@ function AppContent() {
       </header>
       <div className="content">
         <div className="demo-notice" role="note">
-          <span><i />{account ? 'Серверный аккаунт' : 'Интерактивный прототип'} <span className="notice-detail">· без реальных генераций и платежей</span></span>
+          <span><i />{serverPage ? 'Серверный аккаунт' : 'Интерактивный прототип'} <span className="notice-detail">· без реальных генераций и платежей</span></span>
           <button onClick={() => setAbout(true)}>О состоянии <Icon name="info" /></button>
         </div>
-        {!storageAvailable && !account && <p className="field-error" role="alert">
+        {!storageAvailable && !serverPage && <p className="field-error" role="alert">
           Хранение в этой вкладке недоступно. После обновления демо-данные не сохранятся.
         </p>}
         <main id="main" tabIndex={-1}>
-          {security ? <SecurityPage key={path} mode={security} />
+          {admin ? <AdminPage key={path} path={path} />
+            : credits ? <CreditsPage />
+            : security ? <SecurityPage key={path} mode={security} />
             : account ? <AccountPage key={path} mode={path === '/register' ? 'register' : path === '/login' ? 'login' : 'account'} />
             : studio ? <Studio />
             : gallery ? <Gallery />
@@ -121,25 +130,14 @@ function AppContent() {
                 : <div className="gallery-empty"><h2>Задание не найдено</h2>
                   <Link className="primary" href="/image">Открыть студию</Link>
                 </div>}
-            </> : <>
-              <SectionPage path={path} />
-              {path === '/admin' && <section className="admin-sample">
-                <h2>Карточка пользователя · образец</h2>
-                <p>Вымышленные сведения для оценки таблицы. Административных API и прав пока нет.</p>
-                <dl className="summary-list">
-                  <div><dt>Пользователь</dt><dd>Демо-пользователь 01</dd></div>
-                  <div><dt>Статус</dt><dd>Тестовый</dd></div>
-                  <div><dt>Баланс макета</dt><dd>{balance} демо-баллов</dd></div>
-                </dl>
-              </section>}
-            </>}
+            </> : <SectionPage path={path} />}
         </main>
-        <footer><span>ИЗО АСА · AUTH-002 / UX-001</span><ApiStatus /></footer>
+        <footer><span>ИЗО АСА · ADMIN-001 / UX-001</span><ApiStatus /></footer>
       </div>
     </div>
     <Dialog open={about} title="Что работает сейчас" onClose={() => setAbout(false)}>
       <p>Студия, локальный предпросмотр исходника, тестовая задача, её отмена/ошибка, просмотр и скачивание SVG-примера. Это макет, не AI-сервис.</p>
-      <p>Аккаунт и сессии работают через сервер. Генерация, баланс студии и её работы остаются демо этой вкладки. Подтверждение и восстановление используют тестовые письма. Реальная почта и Telegram/MAX ещё не подключены.</p>
+      <p>Аккаунт, сессии, серверные баллы и минимальная админка работают через сервер. Генерация, баланс студии и её работы остаются демо этой вкладки. Подтверждение и восстановление используют тестовые письма. Реальная почта и Telegram/MAX ещё не подключены.</p>
       <label className="demo-checkbox">
         <input type="checkbox" checked={state.balance === 0} disabled={activeJob}
           onChange={event => setEmptyBalance(event.target.checked)} /> Нулевой демо-баланс

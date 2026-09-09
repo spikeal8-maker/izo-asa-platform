@@ -61,6 +61,8 @@ jobs:
           docker compose run --rm -T -e IZO_ENVIRONMENT=test -e IZO_AUTH_ACCEPTANCE=isolated api python tools/email_acceptance.py before > "$RUNNER_TEMP/izo-email-proof.json"
           docker compose run --rm -T -e IZO_ENVIRONMENT=test -e IZO_CREDIT_ACCEPTANCE=isolated api python tools/credit_acceptance.py before > "$RUNNER_TEMP/izo-credit-state.json"
           docker compose run --rm -T -e IZO_ENVIRONMENT=test -e IZO_ENTITLEMENT_ACCEPTANCE=isolated api python tools/entitlement_acceptance.py before > "$RUNNER_TEMP/izo-entitlement-state.json"
+          docker compose run --rm -T -e IZO_ENVIRONMENT=test -e IZO_ADMIN_ACCEPTANCE=isolated api python tools/admin_acceptance.py before > "$RUNNER_TEMP/izo-admin-state.json"
+          IZO_ADMIN_ACCEPTANCE=isolated node apps/web/acceptance/admin-live.mjs "$RUNNER_TEMP/izo-admin-state.json"
           docker compose run --rm api python tools/persistence.py write
           docker compose down
           docker compose up --wait --wait-timeout 180
@@ -70,6 +72,8 @@ jobs:
           docker compose run --rm -T -e IZO_ENVIRONMENT=test -e IZO_AUTH_ACCEPTANCE=isolated api python tools/email_acceptance.py after < "$RUNNER_TEMP/izo-email-proof.json"
           docker compose run --rm -T -e IZO_ENVIRONMENT=test -e IZO_CREDIT_ACCEPTANCE=isolated api python tools/credit_acceptance.py after < "$RUNNER_TEMP/izo-credit-state.json"
           docker compose run --rm -T -e IZO_ENVIRONMENT=test -e IZO_ENTITLEMENT_ACCEPTANCE=isolated api python tools/entitlement_acceptance.py after < "$RUNNER_TEMP/izo-entitlement-state.json"
+          docker compose run --rm -T -e IZO_ENVIRONMENT=test -e IZO_ADMIN_ACCEPTANCE=isolated api python tools/admin_acceptance.py after < "$RUNNER_TEMP/izo-admin-state.json"
+          rm -f "$RUNNER_TEMP/izo-admin-state.json"
           rm -f "$RUNNER_TEMP/izo-entitlement-state.json"
           rm -f "$RUNNER_TEMP/izo-credit-state.json"
           rm -f "$RUNNER_TEMP/izo-auth-session.json"
@@ -93,6 +97,7 @@ jobs:
       - name: Remove isolated CI stack
         if: always()
         run: |
+          rm -f "$RUNNER_TEMP/izo-admin-state.json"
           rm -f "$RUNNER_TEMP/izo-entitlement-state.json"
           rm -f "$RUNNER_TEMP/izo-credit-state.json"
           rm -f "$RUNNER_TEMP/izo-auth-session.json"
