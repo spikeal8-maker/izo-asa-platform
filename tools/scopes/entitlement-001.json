@@ -1,0 +1,34 @@
+{
+  "base": "fd765c5002250ed0d12f317170323d7c841b9e4b",
+  "max_files": 24,
+  "allowed": [
+    ".github/workflows/ci.yml",
+    "apps/api/izo/app.py",
+    "apps/api/izo/accounts/entitlement_access.py",
+    "apps/api/izo/entitlements/__init__.py",
+    "apps/api/izo/entitlements/schemas.py",
+    "apps/api/izo/entitlements/policy.py",
+    "apps/api/izo/entitlements/tables.py",
+    "apps/api/izo/entitlements/repository.py",
+    "apps/api/izo/entitlements/service.py",
+    "apps/api/izo/entitlements/routes.py",
+    "apps/api/izo/entitlements/README.md",
+    "apps/api/izo/entitlements/AGENTS.md",
+    "apps/api/migrations/versions/0005_entitlements.py",
+    "docs/STATUS.md",
+    "packages/contracts/openapi.json",
+    "tests/test_entitlements.py",
+    "tests/test_entitlements_http.py",
+    "tests/test_entitlement_migration.py",
+    "tests/test_entitlement_boundaries.py",
+    "tools/entitlement_acceptance.py",
+    "tools/scopes/entitlement-001.json"
+  ],
+  "sensitive_approved": [
+    ".github/workflows/ci.yml",
+    "apps/api/migrations/versions/0005_entitlements.py",
+    "apps/api/izo/entitlements/AGENTS.md",
+    "tools/entitlement_acceptance.py",
+    "tools/scopes/entitlement-001.json"
+  ]
+}
