@@ -1,0 +1,20 @@
+{
+  "base": "f5ec5b40c28214e15de830175fba45374665c3e6",
+  "max_files": 12,
+  "allowed": [
+    "apps/web/src/features/admin/AdminPage.tsx",
+    "apps/web/src/features/admin/CatalogPage.tsx",
+    "apps/web/src/features/admin/CatalogModelPage.tsx",
+    "apps/web/src/features/admin/CatalogConnectionPage.tsx",
+    "apps/web/src/features/admin/CatalogCredentialPage.tsx",
+    "apps/web/src/features/admin/catalog-shared.tsx",
+    "apps/web/src/features/admin/catalog.css",
+    "apps/web/src/features/admin/CATALOG.md",
+    "apps/web/e2e/catalog-admin.spec.ts",
+    "tests/test_catalog_ui_boundaries.py",
+    "tools/scopes/catalog-ui-001.json"
+  ],
+  "sensitive_approved": [
+    "tools/scopes/catalog-ui-001.json"
+  ]
+}
