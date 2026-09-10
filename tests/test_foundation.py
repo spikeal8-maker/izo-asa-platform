@@ -1,3 +1,4 @@
+import gzip
 import itertools
 import json
 from pathlib import Path
@@ -146,6 +147,6 @@ def test_bootstrap_preserves_existing_credentials(tmp_path):
 
 
 def test_openapi_response_matches_generated_artifact():
-    exported = json.loads(Path("packages/contracts/openapi.json").read_text())
+    exported = json.loads(gzip.decompress(Path("packages/contracts/openapi.json.gz").read_bytes()))
     actual = create_app(Settings()).openapi()
     assert exported == actual
