@@ -1,4 +1,5 @@
 """Deterministic compressed OpenAPI snapshot consumed by openapi-typescript."""
+import base64
 import gzip
 import json
 import sys
@@ -20,7 +21,10 @@ def main() -> None:
     expected = content()
     if "--check" in sys.argv:
         if not target.exists() or target.read_bytes() != expected:
-            raise SystemExit("OpenAPI changed: run python tools/export_contracts.py")
+            # Temporary API-001 diagnostic: the pinned CI runtime is the canonical
+            # generator. This contains public OpenAPI only, no secrets or data.
+            print("OPENAPI_GZIP_BASE64=" + base64.b64encode(expected).decode("ascii"))
+            raise SystemExit("OpenAPI changed: canonical pinned snapshot printed above")
     else:
         target.parent.mkdir(parents=True, exist_ok=True)
         target.write_bytes(expected)
