@@ -1,6 +1,5 @@
 """Deterministic compressed OpenAPI snapshot consumed by openapi-typescript."""
 import gzip
-import hashlib
 import json
 import sys
 from pathlib import Path
@@ -21,13 +20,7 @@ def main() -> None:
     expected = content()
     if "--check" in sys.argv:
         if not target.exists() or target.read_bytes() != expected:
-            # Temporary API-001 diagnostic. Existing CI uploads test-results on
-            # failure; the file is public OpenAPI only, never secrets or user data.
-            evidence = ROOT / "apps/web/test-results/openapi-canonical.json.gz"
-            evidence.parent.mkdir(parents=True, exist_ok=True)
-            evidence.write_bytes(expected)
-            print("OPENAPI_CANONICAL_SHA256=" + hashlib.sha256(expected).hexdigest())
-            raise SystemExit("OpenAPI changed: pinned snapshot saved to failure evidence")
+            raise SystemExit("OpenAPI changed: run python tools/export_contracts.py")
     else:
         target.parent.mkdir(parents=True, exist_ok=True)
         target.write_bytes(expected)
