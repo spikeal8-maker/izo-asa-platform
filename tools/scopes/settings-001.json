@@ -1,0 +1,19 @@
+{
+  "base": "ba35c76a059351bbe698ac69cd58851dc803d0a5",
+  "max_files": 12,
+  "allowed": [
+    "apps/api/izo/settings/__init__.py",
+    "apps/api/izo/settings/schemas.py",
+    "apps/api/izo/settings/service.py",
+    "apps/api/izo/settings/routes.py",
+    "apps/api/izo/settings/README.md",
+    "apps/api/izo/settings/AGENTS.md",
+    "apps/api/izo/app.py",
+    "tests/test_settings.py",
+    "tools/scopes/settings-001.json",
+    "docs/STATUS.md",
+    "packages/contracts/openapi.json.gz",
+    "apps/web/src/shared/api.generated.ts"
+  ],
+  "sensitive_approved": ["tools/scopes/settings-001.json"]
+}
