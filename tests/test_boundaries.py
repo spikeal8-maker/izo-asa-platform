@@ -74,3 +74,18 @@ def test_dependency_lock_is_required_not_bootstrapped_in_ci():
     assert "RUN npm ci" in dockerfile
     assert "-r requirements-dev.txt" in ci
     assert "-r requirements.lock" in (ROOT / "infra/api.Dockerfile").read_text()
+
+
+def test_provider_secret_is_worker_only_and_live_provider_is_opt_in():
+    compose = (ROOT / "compose.yaml").read_text()
+    shared, services = compose.split("services:", 1)
+    assert "IZO_OPENROUTER_API_KEY" not in shared
+    assert "IZO_OPENROUTER_MODEL" in shared and "IZO_OPENROUTER_PRICE_CREDITS" in shared
+    assert "IZO_OPENROUTER_RESOLUTIONS" in shared and "IZO_OPENROUTER_ENABLED" in shared
+    worker = services.split("  openrouter-worker:", 1)[1].split("  web:", 1)[0]
+    assert "IZO_OPENROUTER_API_KEY" in worker
+    assert "<<: *api-environment" in worker
+    assert "${IZO_OPENROUTER_ENABLED:-false}" in shared
+    assert "networks: [private, edge]" in worker
+    api = services.split("  api:", 1)[1].split("  job-worker:", 1)[0]
+    assert "OPENROUTER_API_KEY" not in api

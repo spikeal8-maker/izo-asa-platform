@@ -51,7 +51,7 @@ def reconcile_one(runner):
     auth, now = runner.auth, runner.auth.now()
     with auth.engine.connect() as conn:
         candidates = conn.execute(sa.select(t.jobs.c.id, t.jobs.c.account_id).where(
-            t.jobs.c.pool == catalog.POOL, t.jobs.c.status == "reconciling",
+            t.jobs.c.pool == runner.pool, t.jobs.c.status == "reconciling",
             t.jobs.c.reconcile_count < 5, t.jobs.c.next_poll_at <= now,
             sa.or_(t.jobs.c.lease_until.is_(None), t.jobs.c.lease_until <= now))
             .order_by(t.jobs.c.next_poll_at, t.jobs.c.id).limit(64)).all()
