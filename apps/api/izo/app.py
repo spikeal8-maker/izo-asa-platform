@@ -18,6 +18,7 @@ from .entitlements.routes import attach_entitlements
 from .admin.routes import attach_admin
 from .media.routes import attach_media
 from .jobs.routes import attach_jobs
+from .catalog.routes import attach_catalog
 from .settings.routes import attach_settings
 
 logger = logging.getLogger("izo.http")
@@ -45,6 +46,7 @@ def create_app(config: Settings | None = None,
     attach_entitlements(app, accounts_service)
     attach_admin(app, accounts_service)
     attach_settings(app, accounts_service)
+    attach_catalog(app, accounts_service)
     attach_media(app, accounts_service, config)
     attach_jobs(app, accounts_service)
 

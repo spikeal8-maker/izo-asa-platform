@@ -11,26 +11,29 @@ from ..entitlements.policy import ImageDemand, ImageSize, RuntimeState, UsageSna
 from ..media import repository as media_repo, outputs
 from . import catalog, repository as repo, tables as t
 from .schemas import QuoteInput, QuoteView, CreateJob, JobError, JobList, ACTIVE, TERMINAL
-from ..providers.openrouter.config import OpenRouterSettings
+from ..catalog.runtime import resolve_execution
+from ..catalog.schemas import CatalogError
 
 
 class JobService:
     def __init__(self, auth, policy=None, openrouter=None):
         self.auth = auth
         self.policy = policy if policy is not None else catalog.JobSettings()
-        self.openrouter = openrouter if openrouter is not None else OpenRouterSettings()
+        # Explicit settings are worker/test-only. HTTP admission resolves provider
+        # metadata from the database catalog so shared env cannot bypass disable.
+        self.openrouter = openrouter
 
     def require_pool_enabled(self, pool):
         if pool == catalog.POOL:
             self.policy.require_enabled()
             return
         if pool == catalog.OPENROUTER_POOL:
-            if not self.openrouter.enabled:
+            if self.openrouter is None or not self.openrouter.enabled:
                 raise JobError(503, "provider_unavailable")
             return
         raise JobError(409, "capability_unsupported")
 
-    def _execution(self, draft):
+    def _execution(self, conn, draft):
         if draft.capability_id == catalog.CAPABILITY:
             if not self.policy.enabled:
                 raise JobError(503, "jobs_disabled")
@@ -40,9 +43,13 @@ class JobService:
                     "price_credits": catalog.PRICE}
         if draft.capability_id == catalog.OPENROUTER_CAPABILITY:
             try:
-                return self.openrouter.execution_snapshot(draft.width, draft.height)
-            except ValueError:
-                raise JobError(409, "provider_unavailable") from None
+                if self.openrouter is not None:
+                    return self.openrouter.execution_snapshot(draft.width, draft.height)
+                return resolve_execution(conn, draft.capability_id, draft.width, draft.height)
+            except (ValueError, CatalogError) as exc:
+                status = exc.status if isinstance(exc, CatalogError) else 409
+                code = exc.code if isinstance(exc, CatalogError) else "provider_unavailable"
+                raise JobError(status, code) from None
         raise JobError(409, "capability_unsupported")
 
     def _assess(self, conn, owner, draft, now, execution):
@@ -64,7 +71,7 @@ class JobService:
             window_seconds=plan.policy.window_seconds, active_jobs=active, submissions=submissions,
             committed_bytes=used, reserved_bytes=held)
         balance = CreditService(clock=lambda: now).overview(conn, owner, limit=1).balance
-        feature_enabled = self.policy.enabled if draft.capability_id == catalog.CAPABILITY else self.openrouter.enabled
+        feature_enabled = self.policy.enabled if draft.capability_id == catalog.CAPABILITY else True
         decision = evaluate(plan, demand, RuntimeState(feature_enabled=feature_enabled,
             capability_supported=True, provider_available=True), usage, balance.available)
         if not decision.allowed:
@@ -73,9 +80,9 @@ class JobService:
 
     def quote(self, raw, csrf, draft: QuoteInput):
         draft = QuoteInput.model_validate(draft)
-        execution = self._execution(draft)
         with self.auth.engine.begin() as conn:
             p = access.context(self.auth, conn, raw, csrf, mutation=True, write=True)
+            execution = self._execution(conn, draft)
             self._assess(conn, p.account_id, draft, p.now, execution)
             recent = conn.execute(sa.select(sa.func.count()).select_from(t.quotes).where(
                 t.quotes.c.account_id == p.account_id, t.quotes.c.created_at > p.now - 3600)).scalar_one()
@@ -113,8 +120,8 @@ class JobService:
             if conn.execute(sa.select(t.jobs.c.id).where(t.jobs.c.quote_id == quote["id"])).first():
                 raise JobError(409, "quote_already_used")
             draft = QuoteInput.model_validate_json(quote["request_json"])
-            execution = json.loads(quote["execution_json"]) if quote["execution_json"] else self._execution(draft)
-            current = self._execution(draft)
+            execution = json.loads(quote["execution_json"]) if quote["execution_json"] else self._execution(conn, draft)
+            current = self._execution(conn, draft)
             if execution != current or quote["credits"] != execution["price_credits"]:
                 raise JobError(409, "quote_expired")
             plan = self._assess(conn, p.account_id, draft, p.now, execution)
