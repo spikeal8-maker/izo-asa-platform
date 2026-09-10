@@ -3,6 +3,7 @@ import type { components } from '../../shared/api.generated'
 import { apiRequest, ApiError, type AuthView } from '../../shared/api'
 import { Link } from '../../shell/router'
 import { GrantForm } from './GrantForm'
+import { CatalogPage, isCatalogPath } from './CatalogPage'
 import '../../shared/ui/records.css'
 
 type Access = components['schemas']['AdminAccess']
@@ -23,19 +24,38 @@ function errorText(error: unknown) {
 }
 
 export function AdminLink({ path }: { path: string }) {
-  const [allowed, setAllowed] = useState(false)
+  const [target, setTarget] = useState('')
   useEffect(() => {
     const controller = new AbortController()
-    setAllowed(false)
+    setTarget('')
     apiRequest<AuthView>('/api/v1/auth/me', { signal: controller.signal })
-      .then(value => { if (!controller.signal.aborted) setAllowed(value.account.permissions.includes('users.read_limited')) })
-      .catch(() => { if (!controller.signal.aborted) setAllowed(false) })
+      .then(value => {
+        if (controller.signal.aborted) return
+        const permissions = value.account.permissions
+        setTarget(permissions.includes('users.read_limited') ? '/admin/users'
+          : permissions.includes('catalog.read') ? '/admin/models'
+          : permissions.includes('connections.read') ? '/admin/providers' : '')
+      }).catch(() => { if (!controller.signal.aborted) setTarget('') })
     return () => controller.abort()
   }, [path])
-  return allowed ? <Link href="/admin/users" className="staff-link">Администрирование</Link> : null
+  return target ? <Link href={target} className="staff-link">Администрирование</Link> : null
 }
 
-export function AdminPage({ path }: { path: string }) {
+function AdminCatalogLinks() {
+  const [permissions, setPermissions] = useState<string[]>([])
+  useEffect(() => {
+    const controller = new AbortController()
+    apiRequest<AuthView>('/api/v1/auth/me', { signal: controller.signal })
+      .then(value => { if (!controller.signal.aborted) setPermissions(value.account.permissions) })
+      .catch(() => { if (!controller.signal.aborted) setPermissions([]) })
+    return () => controller.abort()
+  }, [])
+  return <>{permissions.includes('catalog.read') && <Link href="/admin/models">Модели</Link>}
+    {permissions.includes('connections.read') && <Link href="/admin/providers">Провайдеры</Link>}
+    {permissions.includes('connections.read') && permissions.includes('secrets.bind') && <Link href="/admin/credentials">Привязки секретов</Link>}</>
+}
+
+function CoreAdminPage({ path }: { path: string }) {
   const [access, setAccess] = useState<Access | null>(null)
   const [user, setUser] = useState<User | null>(null)
   const [credits, setCredits] = useState<Credits | null>(null)
@@ -107,6 +127,7 @@ export function AdminPage({ path }: { path: string }) {
       {access && <>
         <nav className="admin-links" aria-label="Административные страницы">
           <Link href="/admin/users">Пользователи</Link>
+          <AdminCatalogLinks />
           {access.permissions.includes('audit.read') && <Link href="/admin/audit">Журнал действий</Link>}
           <Link href="/account/credits">Мои баллы</Link>
         </nav>
@@ -146,4 +167,8 @@ export function AdminPage({ path }: { path: string }) {
       </>}
     </>}
   </section>
+}
+
+export function AdminPage({ path }: { path: string }) {
+  return isCatalogPath(path) ? <CatalogPage path={path} /> : <CoreAdminPage path={path} />
 }
