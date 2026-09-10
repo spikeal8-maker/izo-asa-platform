@@ -35,7 +35,9 @@ jobs:
         run: |
           if ! .venv/bin/python tools/export_contracts.py --check; then
             .venv/bin/python tools/export_contracts.py
-            git --no-pager diff -- packages/contracts/openapi.json
+            mkdir -p apps/web/test-results/catalog-openapi
+            cp packages/contracts/openapi.json.gz apps/web/test-results/catalog-openapi/openapi.json.gz
+            sha256sum apps/web/test-results/catalog-openapi/openapi.json.gz
             exit 1
           fi
           .venv/bin/python -m pytest
