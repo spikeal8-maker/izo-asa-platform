@@ -1,5 +1,11 @@
 # Фактическое состояние IZO ASA
 
+SETTINGS-001, 10 сентября 2026. Base `ba35c76a059351bbe698ac69cd58851dc803d0a5` / API-001 adapter technical pass; ветка `settings/typed-plan-lifecycle`, PR #19. Реализован ограниченный A-27/AD-08 lifecycle только для уже используемого basic PlanPolicy: typed preview, publish, history и rollback через существующие immutable `entitlement_revisions/default/changes`. Новая таблица настроек и миграция не создавались; Credits/Jobs/Media/provider business-code не переписывались. Zero/empty остаются deny, а включённая generation требует конечных обязательных лимитов. Точный финальный source SHA и результаты полного CI фиксируются в PR/Checks; MERGED/DEPLOYED — NO.
+
+Текущая проверка исправляет два выявленных acceptance-дефекта без ослабления tests: временные base64-parts OpenAPI удаляются в пользу одного canonical `openapi.json.gz`, полученного из pinned FastAPI CI; `test_settings.py` регистрирует требуемый fixture явно. До зелёного exact-head Foundation CI SETTINGS-001 не считается технически принятым.
+
+---
+
 API-001 (подготовка), 10 сентября 2026. Base `8dd49ba1b5168ed5b9e363672497cca3e308d296` / CHANGE-001.
 Добавлен первый внешний provider-adapter OpenRouter Images, но **live-вызов не выполнялся и не разрешён**: в репозитории нет реального ключа, выбранного владельцем model/budget и production-release. Точный опубликованный SHA/CI фиксируются в PR после push.
 

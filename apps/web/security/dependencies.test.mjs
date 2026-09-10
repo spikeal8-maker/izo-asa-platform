@@ -5,7 +5,6 @@ import { gunzipSync } from 'node:zlib';
 import { fileURLToPath } from 'node:url';
 import test from 'node:test';
 
-// Resolve the parser actually used by the code generator, not an unrelated root copy.
 const project = createRequire(new URL('../package.json', import.meta.url));
 const generator = createRequire(project.resolve('openapi-typescript'));
 const redocly = createRequire(generator.resolve('@redocly/openapi-core'));
@@ -44,4 +43,5 @@ test('SEC-001 the real generated OpenAPI snapshot remains readable by the parser
   const parsed = yaml.load(text);
   assert.deepEqual(parsed, JSON.parse(text));
   assert.ok(parsed.paths['/api/v1/credits'], 'Credits API must remain in the source schema');
+  assert.ok(parsed.paths['/api/v1/admin/settings/basic'], 'Settings API must remain in the source schema');
 });

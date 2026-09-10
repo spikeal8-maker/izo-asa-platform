@@ -18,6 +18,7 @@ from .entitlements.routes import attach_entitlements
 from .admin.routes import attach_admin
 from .media.routes import attach_media
 from .jobs.routes import attach_jobs
+from .settings.routes import attach_settings
 
 logger = logging.getLogger("izo.http")
 
@@ -43,6 +44,7 @@ def create_app(config: Settings | None = None,
     attach_credits(app, accounts_service)
     attach_entitlements(app, accounts_service)
     attach_admin(app, accounts_service)
+    attach_settings(app, accounts_service)
     attach_media(app, accounts_service, config)
     attach_jobs(app, accounts_service)
 
@@ -53,9 +55,6 @@ def create_app(config: Settings | None = None,
         try:
             response = await call_next(request)
         except Exception:
-            # Never log raw exceptions: provider/config errors can contain secrets.
-            # This handles errors before a response starts; streaming needs its
-            # own lifecycle/error handling when that feature is implemented.
             response = JSONResponse(
                 {"error": {"code": "internal_error", "request_id": request_id}},
                 status_code=500,
