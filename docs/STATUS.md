@@ -1,5 +1,25 @@
 # Фактическое состояние IZO ASA
 
+API-001 (подготовка), 10 сентября 2026. Base `8dd49ba1b5168ed5b9e363672497cca3e308d296` / CHANGE-001.
+Добавлен первый внешний provider-adapter OpenRouter Images, но **live-вызов не выполнялся и не разрешён**: в репозитории нет реального ключа, выбранного владельцем model/budget и production-release. Точный опубликованный SHA/CI фиксируются в PR после push.
+
+## API-001: что реализуется этим пакетом
+
+- отдельный `providers/openrouter` с фиксированным HTTPS endpoint dedicated Images API; ответ только bounded base64 PNG/JPEG/WebP; response body/secret не логируются;
+- provider credential передаётся только `openrouter-worker`; API/shared environment получает только не секретные model/price/resolution/connection параметры; provider выключен по умолчанию;
+- quote/job сохраняют execution snapshot: adapter, connection, model, resolution, output format и продуктовую цену; изменение конфигурации делает ещё не принятую quote устаревшей;
+- внешний job идёт в отдельный pool и не зависит от переключателя тестового renderer. Test worker его не claim-ит. Неоднозначный исход после network dispatch сохраняет резерв и переводит job в reconciliation без автоматического paid retry; сохранённый S3 result может быть финализирован без второго provider call;
+- успешный fake-provider test проходит через общие Job/Credits/Media и сохраняет диагностические provider reference/usage cost. `usage.cost` не является биллингом IZO и не заменяет будущий USD spend-cap/reconciliation;
+- новая migration `0009_provider_execution` добавляет только provider snapshot/receipt metadata. Старые миграции не переписываются.
+
+Локально provider-contract и все предметные backend-наборы пройдены по отдельным группам; полный единовременный `pytest` в этой среде ограничен временем инструмента, поэтому окончательный общий статус берётся только из GitHub CI. OpenAPI snapshot обновлён из backend и хранится детерминированно в gzip (~5KB вместо прежних ~92KB JSON); web-скрипт распаковывает его только во временный node_modules cache при генерации TypeScript и удаляет после запуска. Это уменьшает diff/контекст coding-агентов без изменения схемы. Реальный OpenRouter запрос намеренно отсутствует из unit/CI.
+
+## Граница API-001
+
+Текущий пакет доказывает безопасный контракт и интеграцию без денег. Он **не закрывает требование NEXT о разрешённом real result** до выбора владельцем model/key/budget и отдельного live acceptance. Hard USD budget/каталог endpoint pricing и административное управление connections относятся к следующей части API-001/CATALOG-001; нельзя включать provider только потому, что env содержит ключ. Перед live acceptance нужен отдельный OpenRouter key с server-side spending limit и явно разрешённый малый бюджет владельца.
+
+---
+
 CHANGE-001, 10 сентября 2026. База — `f2e6f3a29410363412b22ee632e8e1d2e3921ac7`,
 ветка image/server-workspace, PR #13. Новый пакет — change/targeted-maintenance.
 Точный опубликованный head и окончательные результаты — Checks/комментарий PR.

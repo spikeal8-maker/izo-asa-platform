@@ -12,10 +12,10 @@ from .schemas import Claim, JobError, QuoteInput, TERMINAL
 
 
 class JobRunner:
-    def __init__(self, service, store, worker_id="test-worker"):
+    def __init__(self, service, store, worker_id="test-worker", pool=catalog.POOL):
         if not re.fullmatch(r"[a-zA-Z0-9_.:-]{1,80}", worker_id):
             raise ValueError("Invalid worker ID")
-        self.service, self.auth, self.store, self.worker_id = service, service.auth, store, worker_id
+        self.service, self.auth, self.store, self.worker_id, self.pool = service, service.auth, store, worker_id, pool
 
     def _locked(self, conn, claim, *, lease=True):
         lock_worker_owner(conn, claim.account_id)
@@ -36,10 +36,10 @@ class JobRunner:
         return Claim(row["id"], row["account_id"], attempt_id, fence)
 
     def claim(self):
-        self.service.policy.require_enabled()
+        self.service.require_pool_enabled(self.pool)
         with self.auth.engine.connect() as conn:
             candidates = conn.execute(sa.select(t.jobs.c.id, t.jobs.c.account_id).where(
-                t.jobs.c.status == "queued", t.jobs.c.pool == catalog.POOL)
+                t.jobs.c.status == "queued", t.jobs.c.pool == self.pool)
                 .order_by(t.jobs.c.created_at, t.jobs.c.id).limit(64)).all()
         for job_id, owner in candidates:
             with self.auth.engine.begin() as conn:
@@ -71,6 +71,13 @@ class JobRunner:
             conn.execute(sa.update(t.attempts).where(t.attempts.c.id == claim.attempt_id).values(state="running"))
             return QuoteInput.model_validate_json(row["request_json"])
 
+    def execution_snapshot(self, claim):
+        with self.auth.engine.begin() as conn:
+            row = self._locked(conn, claim)
+            if not row["execution_json"]:
+                return None
+            return row["execution_json"]
+
     def heartbeat(self, claim):
         with self.auth.engine.begin() as conn:
             row = self._locked(conn, claim)
@@ -94,7 +101,20 @@ class JobRunner:
             repo.change(conn, row["id"], self.auth.now(), status="uploading")
             return key
 
-    def finish(self, claim, data):
+    def record_provider_result(self, claim, *, provider_ref=None, provider_cost_usd=None):
+        with self.auth.engine.begin() as conn:
+            row = self._locked(conn, claim)
+            if row["status"] != "running":
+                raise JobError(409, "invalid_transition")
+            values = {}
+            if provider_ref is not None:
+                values["provider_ref"] = provider_ref
+            if provider_cost_usd is not None:
+                values["provider_cost_usd"] = provider_cost_usd
+            if values:
+                repo.change(conn, row["id"], self.auth.now(), **values)
+
+    def finish(self, claim, data, *, provider_ref=None, provider_cost_usd=None):
         with self.auth.engine.begin() as conn:
             row = self._locked(conn, claim, lease=False)
             if row["status"] == "succeeded":
@@ -109,8 +129,13 @@ class JobRunner:
                 operation_id=uuid5(row["id"], "settle"), reservation_id=row["reservation_id"],
                 amount=row["reserve_credits"]))
             repo.close_attempt(conn, row, "succeeded", now)
-            repo.change(conn, row["id"], now, status="succeeded", charged_credits=row["reserve_credits"],
-                        error_code=None, lease_until=None)
+            values = dict(status="succeeded", charged_credits=row["reserve_credits"],
+                          error_code=None, lease_until=None)
+            if provider_ref is not None:
+                values["provider_ref"] = provider_ref
+            if provider_cost_usd is not None:
+                values["provider_cost_usd"] = provider_cost_usd
+            repo.change(conn, row["id"], now, **values)
             repo.event(conn, row["id"], "succeeded", now)
             return repo.view(repo.load(conn, claim.account_id, claim.job_id))
 
@@ -121,6 +146,17 @@ class JobRunner:
                 return
             repo.change(conn, row["id"], self.auth.now(), status="reconciling", lease_until=0,
                         error_code="storage_uncertain", next_poll_at=self.auth.now())
+
+    def provider_uncertain(self, claim, code="provider_outcome_unknown"):
+        with self.auth.engine.begin() as conn:
+            row = self._locked(conn, claim, lease=False)
+            if row["status"] not in {"claimed", "running"}:
+                raise JobError(409, "invalid_transition")
+            now = self.auth.now()
+            repo.close_attempt(conn, row, "failed", now)
+            repo.change(conn, row["id"], now, status="reconciling", lease_until=0,
+                        next_poll_at=now, error_code=code)
+            repo.event(conn, row["id"], "provider_reconciliation_required", now)
 
     def fail_before_output(self, claim):
         with self.auth.engine.begin() as conn:
@@ -143,7 +179,7 @@ class JobRunner:
             try:
                 self.fail_before_output(claim)
             except JobError:
-                pass  # Cancel/recovery already owns the newer state.
+                pass
             return
         try:
             self.store.put(key, image.data, "image/png")
@@ -152,4 +188,4 @@ class JobRunner:
             try:
                 self.uncertain(claim)
             except JobError:
-                pass  # A newer fencing token owns reconciliation.
+                pass

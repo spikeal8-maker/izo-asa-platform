@@ -34,8 +34,6 @@ def recover(runner, limit=20):
                   or row["fence"] >= runner.service.policy.max_attempts):
                 runner.service.release_terminal(conn, row, "failed", "executor_deadline")
             elif row["status"] != "queued":
-                # This release only accepts the local, pure test-image adapter.
-                # Never reuse this retry path for a network/paid provider.
                 draft = QuoteInput.model_validate_json(row["request_json"])
                 if draft.capability_id != catalog.CAPABILITY:
                     raise JobError(409, "reconciliation_required")
@@ -51,7 +49,7 @@ def reconcile_one(runner):
     auth, now = runner.auth, runner.auth.now()
     with auth.engine.connect() as conn:
         candidates = conn.execute(sa.select(t.jobs.c.id, t.jobs.c.account_id).where(
-            t.jobs.c.pool == catalog.POOL, t.jobs.c.status == "reconciling",
+            t.jobs.c.pool == runner.pool, t.jobs.c.status == "reconciling",
             t.jobs.c.reconcile_count < 5, t.jobs.c.next_poll_at <= now,
             sa.or_(t.jobs.c.lease_until.is_(None), t.jobs.c.lease_until <= now))
             .order_by(t.jobs.c.next_poll_at, t.jobs.c.id).limit(64)).all()
