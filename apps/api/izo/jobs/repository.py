@@ -33,8 +33,10 @@ def close_attempt(conn, row, state, now):
 
 def view(row):
     request = json.loads(row["request_json"])
+    execution = json.loads(row["execution_json"]) if row.get("execution_json") else {}
     return JobView(id=row["id"], status=row["status"], **request,
         reserved_credits=row["reserve_credits"] if row["status"] not in {"succeeded", "failed", "cancelled"} else 0,
         charged_credits=row["charged_credits"], asset_id=row["output_id"] if row["status"] == "succeeded" else None,
         error_code=row["error_code"], cancel_requested=row["cancel_requested"],
-        created_at=row["created_at"], updated_at=row["updated_at"], attempt_count=row["fence"])
+        created_at=row["created_at"], updated_at=row["updated_at"], attempt_count=row["fence"],
+        test_only=execution.get("adapter") != "openrouter.images.v1")

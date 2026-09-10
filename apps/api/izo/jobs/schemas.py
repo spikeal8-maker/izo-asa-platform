@@ -2,7 +2,7 @@
 from dataclasses import dataclass
 from typing import Literal
 from uuid import UUID
-from pydantic import BaseModel, ConfigDict, Field, field_validator
+from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
 State = Literal["queued", "claimed", "running", "uploading", "reconciling", "succeeded", "failed", "cancelled"]
 ACTIVE = ("queued", "claimed", "running", "uploading", "reconciling")
@@ -15,10 +15,10 @@ class JobInput(BaseModel):
 
 
 class QuoteInput(JobInput):
-    capability_id: Literal["test.image.v1"]
+    capability_id: Literal["test.image.v1", "openrouter.image.v1"]
     prompt: str = Field(min_length=1, max_length=2000)
-    width: int = Field(strict=True, ge=32, le=512)
-    height: int = Field(strict=True, ge=32, le=512)
+    width: int = Field(strict=True, ge=32, le=4096)
+    height: int = Field(strict=True, ge=32, le=4096)
 
     @field_validator("prompt")
     @classmethod
@@ -26,6 +26,14 @@ class QuoteInput(JobInput):
         if not value.strip() or any(ord(c) < 32 and c not in "\n\t" for c in value):
             raise ValueError("Invalid prompt")
         return value
+
+    @model_validator(mode="after")
+    def capability_size(self):
+        if self.capability_id == "test.image.v1" and (self.width > 512 or self.height > 512):
+            raise ValueError("Test image size exceeded")
+        if self.capability_id == "openrouter.image.v1" and (self.width != self.height or self.width not in {512,1024,2048,4096}):
+            raise ValueError("Unsupported OpenRouter resolution")
+        return self
 
 
 class CreateJob(JobInput):
@@ -52,8 +60,8 @@ class QuoteView(BaseModel):
     height: int
     credits: int
     expires_at: int
-    test_only: Literal[True] = True
-    notice: str = "Тестовый исполнитель, не AI-модель. Расходуются тестовые баллы."
+    test_only: bool = True
+    notice: str = "Серверная оценка стоимости."
 
 
 class JobView(BaseModel):
@@ -71,7 +79,7 @@ class JobView(BaseModel):
     created_at: int
     updated_at: int
     attempt_count: int
-    test_only: Literal[True] = True
+    test_only: bool = True
 
 
 class JobList(BaseModel):

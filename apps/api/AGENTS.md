@@ -26,3 +26,11 @@ client role, initDataUnsafe или неподтверждённому email. П�
 После малой правки — профильный test; полный CI перед приёмкой. Не ослаблять tests,
 не обновлять зависимости и не расширять область ради скрытия ошибок. Изменённый API
 экспортировать из кода. Самопроверка не независимый security review.
+
+API-001 / внешние AI: `izo/providers/<provider>/` владеет сетевым протоколом и worker-only
+секретами; `jobs/` владеет admission/lease/receipt, `media/` — файлами, `credits/` — баллами.
+API/UI не получают provider key. Любой live provider по умолчанию выключен; model/price/
+capabilities задаются оператором и снимаются в execution snapshot до job. Сетевой timeout
+после dispatch не означает «не выполнено»: не делать автоматический платный retry и не
+освобождать резерв без reconciliation. Ближайший OpenRouter test —
+`tests/test_openrouter_provider.py`; реальный ключ запрещён в unit/CI/artifacts.
