@@ -1,6 +1,6 @@
 {
   "base": "ba35c76a059351bbe698ac69cd58851dc803d0a5",
-  "max_files": 12,
+  "max_files": 18,
   "allowed": [
     "apps/api/izo/settings/__init__.py",
     "apps/api/izo/settings/schemas.py",
@@ -12,8 +12,14 @@
     "tests/test_settings.py",
     "tools/scopes/settings-001.json",
     "docs/STATUS.md",
+    "tools/export_contracts.py",
     "packages/contracts/openapi.json.gz",
-    "apps/web/src/shared/api.generated.ts"
+    "packages/contracts/openapi.json.gz.b64.part0",
+    "packages/contracts/openapi.json.gz.b64.part1",
+    "packages/contracts/openapi.json.gz.b64.part2",
+    "packages/contracts/openapi.json.gz.b64.part3",
+    "apps/web/scripts/contracts.mjs",
+    "apps/web/security/dependencies.test.mjs"
   ],
   "sensitive_approved": ["tools/scopes/settings-001.json"]
 }

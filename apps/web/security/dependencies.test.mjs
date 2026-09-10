@@ -5,7 +5,6 @@ import { gunzipSync } from 'node:zlib';
 import { fileURLToPath } from 'node:url';
 import test from 'node:test';
 
-// Resolve the parser actually used by the code generator, not an unrelated root copy.
 const project = createRequire(new URL('../package.json', import.meta.url));
 const generator = createRequire(project.resolve('openapi-typescript'));
 const redocly = createRequire(generator.resolve('@redocly/openapi-core'));
@@ -18,6 +17,14 @@ function patched(version) {
   return (major === 4 && (minor > 3 || (minor === 3 && patch >= 2)))
     || (major === 3 && (minor > 15 || (minor === 15 && patch >= 2)))
     || major >= 5;
+}
+
+function openApiText() {
+  const encoded = [0, 1, 2, 3].map(index => {
+    const path = fileURLToPath(new URL(`../../../packages/contracts/openapi.json.gz.b64.part${index}`, import.meta.url));
+    return readFileSync(path, 'ascii');
+  }).join('');
+  return gunzipSync(Buffer.from(encoded, 'base64')).toString('utf8');
 }
 
 test('SEC-001 resolved js-yaml and every locked copy exclude the affected v3/v4 range', () => {
@@ -39,9 +46,9 @@ test('SEC-001 ordinary YAML merge remains compatible', () => {
 });
 
 test('SEC-001 the real generated OpenAPI snapshot remains readable by the parser', () => {
-  const path = fileURLToPath(new URL('../../../packages/contracts/openapi.json.gz', import.meta.url));
-  const text = gunzipSync(readFileSync(path)).toString('utf8');
+  const text = openApiText();
   const parsed = yaml.load(text);
   assert.deepEqual(parsed, JSON.parse(text));
   assert.ok(parsed.paths['/api/v1/credits'], 'Credits API must remain in the source schema');
+  assert.ok(parsed.paths['/api/v1/admin/settings/basic'], 'Settings API must remain in the source schema');
 });
