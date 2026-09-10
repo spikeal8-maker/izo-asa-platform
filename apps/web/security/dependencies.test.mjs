@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import { createRequire } from 'node:module';
 import { readFileSync } from 'node:fs';
+import { gunzipSync } from 'node:zlib';
 import { fileURLToPath } from 'node:url';
 import test from 'node:test';
 
@@ -28,7 +29,6 @@ test('SEC-001 resolved js-yaml and every locked copy exclude the affected v3/v4 
 });
 
 test('SEC-001 empty merge sources consume the explicit work budget', () => {
-  // Tiny local input, four mappings: demonstrates the bug without a load/DoS test.
   const source = 'base: &empty [{}, {}, {}, {}]\nvalue: { <<: *empty }\n';
   assert.throws(() => yaml.load(source, { maxTotalMergeKeys: 2 }), /maxTotalMergeKeys/);
 });
@@ -38,9 +38,9 @@ test('SEC-001 ordinary YAML merge remains compatible', () => {
   assert.deepEqual(yaml.load(source, { maxTotalMergeKeys: 8 }).job, { kind: 'image', count: 1 });
 });
 
-test('SEC-001 the real generated OpenAPI JSON remains readable by the parser', () => {
-  const path = fileURLToPath(new URL('../../../packages/contracts/openapi.json', import.meta.url));
-  const text = readFileSync(path, 'utf8');
+test('SEC-001 the real generated OpenAPI snapshot remains readable by the parser', () => {
+  const path = fileURLToPath(new URL('../../../packages/contracts/openapi.json.gz', import.meta.url));
+  const text = gunzipSync(readFileSync(path)).toString('utf8');
   const parsed = yaml.load(text);
   assert.deepEqual(parsed, JSON.parse(text));
   assert.ok(parsed.paths['/api/v1/credits'], 'Credits API must remain in the source schema');
