@@ -27,7 +27,7 @@
     "tools/scopes/api-001.json",
     "tools/export_contracts.py",
     "packages/contracts/openapi.json",
-    "packages/contracts/openapi.json.gz.b64",
+    "packages/contracts/openapi.json.gz",
     "apps/web/scripts/contracts.mjs",
     "apps/web/package.json",
     "apps/web/security/dependencies.test.mjs"

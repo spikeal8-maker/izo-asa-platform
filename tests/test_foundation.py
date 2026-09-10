@@ -1,4 +1,3 @@
-import base64
 import gzip
 import itertools
 import json
@@ -148,8 +147,6 @@ def test_bootstrap_preserves_existing_credentials(tmp_path):
 
 
 def test_openapi_response_matches_generated_artifact():
-    encoded = Path("packages/contracts/openapi.json.gz.b64").read_text(encoding="ascii")
-    compressed = base64.b64decode("".join(encoded.split()), validate=True)
-    exported = json.loads(gzip.decompress(compressed))
+    exported = json.loads(gzip.decompress(Path("packages/contracts/openapi.json.gz").read_bytes()))
     actual = create_app(Settings()).openapi()
     assert exported == actual
