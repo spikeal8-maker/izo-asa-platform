@@ -10,7 +10,7 @@ from izo.entitlements import tables as ent
 from izo.entitlements.schemas import ImageSize, PlanPolicy
 from izo.settings.schemas import PreviewInput, PublishInput, RollbackInput, SettingsError
 from izo.settings.service import SettingsService
-from test_admin import admin_env
+from test_admin import admin_env, password_hash
 
 
 def valid_policy(**changes):
