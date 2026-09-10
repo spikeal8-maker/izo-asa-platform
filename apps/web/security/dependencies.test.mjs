@@ -20,6 +20,16 @@ function patched(version) {
     || major >= 5;
 }
 
+function snapshotBytes() {
+  const path = fileURLToPath(new URL('../../../packages/contracts/openapi.json.gz.b64', import.meta.url));
+  const encoded = readFileSync(path, 'ascii').replace(/\s+/g, '');
+  assert.match(encoded, /^[A-Za-z0-9+/]+={0,2}$/);
+  assert.equal(encoded.length % 4, 0);
+  const compressed = Buffer.from(encoded, 'base64');
+  assert.equal(compressed.toString('base64'), encoded);
+  return compressed;
+}
+
 test('SEC-001 resolved js-yaml and every locked copy exclude the affected v3/v4 range', () => {
   assert.ok(patched(redocly('js-yaml/package.json').version));
   const lock = JSON.parse(readFileSync(new URL('../package-lock.json', import.meta.url), 'utf8'));
@@ -29,7 +39,6 @@ test('SEC-001 resolved js-yaml and every locked copy exclude the affected v3/v4 
 });
 
 test('SEC-001 empty merge sources consume the explicit work budget', () => {
-  // Tiny local input, four mappings: demonstrates the bug without a load/DoS test.
   const source = 'base: &empty [{}, {}, {}, {}]\nvalue: { <<: *empty }\n';
   assert.throws(() => yaml.load(source, { maxTotalMergeKeys: 2 }), /maxTotalMergeKeys/);
 });
@@ -40,8 +49,7 @@ test('SEC-001 ordinary YAML merge remains compatible', () => {
 });
 
 test('SEC-001 the real generated OpenAPI snapshot remains readable by the parser', () => {
-  const path = fileURLToPath(new URL('../../../packages/contracts/openapi.json.gz', import.meta.url));
-  const text = gunzipSync(readFileSync(path)).toString('utf8');
+  const text = gunzipSync(snapshotBytes()).toString('utf8');
   const parsed = yaml.load(text);
   assert.deepEqual(parsed, JSON.parse(text));
   assert.ok(parsed.paths['/api/v1/credits'], 'Credits API must remain in the source schema');
