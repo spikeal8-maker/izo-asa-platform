@@ -1,6 +1,6 @@
 {
   "base": "8dd49ba1b5168ed5b9e363672497cca3e308d296",
-  "max_files": 28,
+  "max_files": 29,
   "allowed": [
     "apps/api/izo/providers/__init__.py",
     "apps/api/izo/providers/openrouter/__init__.py",
@@ -22,6 +22,7 @@
     "tests/test_openrouter_provider.py",
     "tests/test_jobs_migration.py",
     "tests/test_boundaries.py",
+    "tests/test_foundation.py",
     "docs/STATUS.md",
     "tools/scopes/api-001.json",
     "tools/export_contracts.py",
