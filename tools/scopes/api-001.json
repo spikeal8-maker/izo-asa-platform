@@ -1,6 +1,6 @@
 {
   "base": "8dd49ba1b5168ed5b9e363672497cca3e308d296",
-  "max_files": 27,
+  "max_files": 28,
   "allowed": [
     "apps/api/izo/providers/__init__.py",
     "apps/api/izo/providers/openrouter/__init__.py",
@@ -28,7 +28,8 @@
     "packages/contracts/openapi.json",
     "packages/contracts/openapi.json.gz",
     "apps/web/scripts/contracts.mjs",
-    "apps/web/package.json"
+    "apps/web/package.json",
+    "apps/web/security/dependencies.test.mjs"
   ],
   "sensitive_approved": [
     "apps/api/migrations/versions/0009_provider_execution.py",
