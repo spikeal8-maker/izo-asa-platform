@@ -7,6 +7,8 @@ CAPABILITY = "test.image.v1"
 POOL = "api:test.image.v1"
 PRICE = 1
 VERSION = "test-image-1"
+OPENROUTER_CAPABILITY = "openrouter.image.v1"
+OPENROUTER_POOL = "api:openrouter.image.v1"
 
 
 class JobSettings(BaseSettings):
