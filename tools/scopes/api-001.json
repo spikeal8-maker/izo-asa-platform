@@ -1,0 +1,39 @@
+{
+  "base": "8dd49ba1b5168ed5b9e363672497cca3e308d296",
+  "max_files": 28,
+  "allowed": [
+    "apps/api/izo/providers/__init__.py",
+    "apps/api/izo/providers/openrouter/__init__.py",
+    "apps/api/izo/providers/openrouter/config.py",
+    "apps/api/izo/providers/openrouter/client.py",
+    "apps/api/izo/providers/openrouter/worker.py",
+    "apps/api/izo/providers/openrouter/README.md",
+    "apps/api/izo/jobs/catalog.py",
+    "apps/api/izo/jobs/schemas.py",
+    "apps/api/izo/jobs/tables.py",
+    "apps/api/izo/jobs/repository.py",
+    "apps/api/izo/jobs/service.py",
+    "apps/api/izo/jobs/execution.py",
+    "apps/api/izo/jobs/recovery.py",
+    "apps/api/izo/jobs/AGENTS.md",
+    "apps/api/AGENTS.md",
+    "apps/api/migrations/versions/0009_provider_execution.py",
+    "apps/web/security/dependencies.test.mjs",
+    "compose.yaml",
+    "tests/test_openrouter_provider.py",
+    "tests/test_jobs_migration.py",
+    "tests/test_boundaries.py",
+    "docs/STATUS.md",
+    "tools/scopes/api-001.json",
+    "tools/export_contracts.py",
+    "packages/contracts/openapi.json",
+    "packages/contracts/openapi.json.gz",
+    "apps/web/scripts/contracts.mjs",
+    "apps/web/package.json"
+  ],
+  "sensitive_approved": [
+    "apps/api/migrations/versions/0009_provider_execution.py",
+    "compose.yaml",
+    "tools/scopes/api-001.json"
+  ]
+}

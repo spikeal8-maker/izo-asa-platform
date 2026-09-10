@@ -13,13 +13,19 @@ x-api-environment: &api-environment
   IZO_RECOVERY_SECRET: ${IZO_RECOVERY_SECRET:-}
   IZO_RECOVERY_DELIVERY: ${IZO_RECOVERY_DELIVERY:-disabled}
   IZO_JOBS_ENABLED: ${IZO_JOBS_ENABLED:-false}
+  IZO_OPENROUTER_ENABLED: ${IZO_OPENROUTER_ENABLED:-false}
+  IZO_OPENROUTER_MODEL: ${IZO_OPENROUTER_MODEL:-}
+  IZO_OPENROUTER_PRICE_CREDITS: ${IZO_OPENROUTER_PRICE_CREDITS:-0}
+  IZO_OPENROUTER_RESOLUTIONS: '${IZO_OPENROUTER_RESOLUTIONS:-[]}'
+  IZO_OPENROUTER_CONNECTION_ID: ${IZO_OPENROUTER_CONNECTION_ID:-openrouter-primary}
+  IZO_OPENROUTER_ALLOW_FALLBACKS: ${IZO_OPENROUTER_ALLOW_FALLBACKS:-false}
 services:
   postgres:
     image: postgres:17-bookworm
     environment:
       POSTGRES_USER: izo
       POSTGRES_DB: izo
-      POSTGRES_PASSWORD: ${IZO_PG_PASSWORD:?Run bootstrap first}
+      POSTGRES_PASSWORD: ${IZO_PG_PASSWORD:?Run python tools/bootstrap.py first}
     volumes: [postgres-data:/var/lib/postgresql/data]
     networks: [private]
     healthcheck:
@@ -66,6 +72,23 @@ services:
     environment: *api-environment
     command: [python, '-m', izo.jobs.worker]
     networks: [private]
+    read_only: true
+    tmpfs: [/tmp]
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
+    stop_grace_period: 40s
+    depends_on:
+      migrate: {condition: service_completed_successfully}
+      storage: {condition: service_started}
+  openrouter-worker:
+    profiles: [providers]
+    build: {context: ., dockerfile: infra/api.Dockerfile}
+    environment:
+      <<: *api-environment
+      IZO_OPENROUTER_TIMEOUT_SECONDS: ${IZO_OPENROUTER_TIMEOUT_SECONDS:-180}
+      IZO_OPENROUTER_API_KEY: ${IZO_OPENROUTER_API_KEY:-}
+    command: [python, '-m', izo.providers.openrouter.worker]
+    networks: [private, edge]
     read_only: true
     tmpfs: [/tmp]
     cap_drop: [ALL]
