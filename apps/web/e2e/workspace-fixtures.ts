@@ -13,8 +13,9 @@ export async function workspace(page: Page) {
     account: { id: owner, public_code: '1111222233334444', display_name: 'Тестовый пользователь',
       email: 'workspace@example.invalid', email_verified: true, state: 'active', permissions: [] as string[] },
     signedIn: true, configured: true, balance: 100, reserved: 0, cost: 7,
+    capabilities: ['test.image.v1'] as string[],
     quoteError: '', assetError: '', uncertainOnce: false, autoFinish: true, badImage: false, evilTicket: false,
-    requests: [] as { method: string; path: string; body: Record<string, unknown> | null }[],
+    requests: [] as { method: string; path: string; body: Record<string, any> | null }[],
     jobs: [] as Record<string, any>[], assets: [] as ReturnType<typeof asset>[],
     quotes: new Map<string, Record<string, any>>(), operations: new Map<string, string>(),
     contentReads: 0, tickets: 0,
@@ -38,15 +39,16 @@ export async function workspace(page: Page) {
     if (path === '/api/v1/credits') return answer({ account_id: owner,
       balance: { balance: state.balance, available: state.balance - state.reserved, reserved: state.reserved, sequence: 1 }, entries: [], next_before: null })
     if (path === '/api/v1/entitlements') return answer({ account_id: owner, configured: state.configured,
-      policy: { capability_ids: ['test.image.v1'], executors: ['api'], image_sizes: [{ width: 64, height: 64 }, { width: 128, height: 64 }] } })
+      policy: { capability_ids: state.capabilities, executors: ['api'], image_sizes: [{ width: 64, height: 64 }, { width: 128, height: 64 }] } })
     if (req.method() === 'POST') {
       expect(req.headers()['x-csrf-token']).toBe('workspace-csrf')
       expect(req.headers()['x-izo-request']).toBe('web')
     }
     if (path === '/api/v1/jobs/quotes') {
       if (state.quoteError) return denied(state.quoteError)
+      const real = body.capability_id === 'fal.flux2.klein.4b'
       const quote = { ...body, id: randomUUID(), credits: state.cost, expires_at: Math.floor(Date.now() / 1000) + 120,
-        test_only: true, notice: 'Диагностический PNG, не AI. Расходуются тестовые баллы.' }
+        test_only: !real, notice: real ? 'Реальная AI-генерация через fal.ai.' : 'Диагностический PNG, не AI. Расходуются тестовые баллы.' }
       state.quotes.set(quote.id, quote)
       return answer(quote, 201)
     }
@@ -58,7 +60,7 @@ export async function workspace(page: Page) {
       const job = { id: randomUUID(), status: 'queued', capability_id: quote.capability_id,
         prompt: quote.prompt, width: quote.width, height: quote.height, reserved_credits: state.cost, charged_credits: 0,
         asset_id: null, error_code: null, cancel_requested: false, created_at: 1788980000, updated_at: 1788980000,
-        attempt_count: 0, test_only: true }
+        attempt_count: 0, test_only: quote.test_only }
       state.jobs.push(job); state.operations.set(body.operation_id, job.id); state.reserved += state.cost
       if (state.uncertainOnce) { state.uncertainOnce = false; return denied('temporary', 503) }
       return answer(job, 201)

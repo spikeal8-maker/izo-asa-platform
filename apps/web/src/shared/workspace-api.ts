@@ -18,9 +18,9 @@ export const statusName: Record<Job['status'], string> = {
 const explanations: Record<string, string> = {
   auth_required: 'Войдите в аккаунт.', verification_required: 'Подтвердите почту в настройках аккаунта.',
   account_restricted: 'Для аккаунта ограничены новые операции. Обратитесь к оператору.',
-  plan_unconfigured: 'Оператор ещё не назначил доступные модели и лимиты.',
-  plan_restricted: 'Тестовый исполнитель не входит в ваш план.', feature_unavailable: 'Задания на этом стенде выключены.',
-  jobs_disabled: 'Задания на этом стенде выключены.', image_size_restricted: 'Этот размер не разрешён вашим планом.',
+  plan_unconfigured: 'Оператор ещё не назначил доступные модели и лимиты.', plan_restricted: 'Эта модель не входит в ваш план.',
+  feature_unavailable: 'Задания на этом стенде выключены.', jobs_disabled: 'Задания на этом стенде выключены.',
+  image_size_restricted: 'Этот размер не разрешён вашим планом.',
   provider_unavailable: 'Исполнитель сейчас недоступен. Сервер не принял новое задание; повторите расчёт позднее.',
   capability_unsupported: 'Этот режим не поддерживается исполнителем. Выберите доступную модель.',
   action_budget_exceeded: 'Стоимость превышает лимит одной операции в вашем плане. Задание не принято.',
@@ -37,6 +37,13 @@ const explanations: Record<string, string> = {
   csrf_rejected: 'Сессия изменилась. Обновите страницу.',
   reconciliation_required: 'Автоматическая проверка исчерпана. Нужен разбор оператором; резерв пока сохранён.',
   storage_uncertain: 'Сервер уточняет запись файла. Не запускайте повторную генерацию.',
+  provider_submission_unknown: 'Неизвестно, принял ли внешний провайдер запрос. Новый платный запрос автоматически не запускается.',
+  provider_auth_required: 'Подключение AI-провайдера требует проверки оператором. Новый запрос автоматически не запускается.',
+  provider_deadline: 'Провайдер не дал окончательный результат в установленный срок. Нужна проверка существующего запроса.',
+  provider_rejected: 'AI-провайдер отклонил запрос до подтверждённого запуска.',
+  provider_failed: 'AI-провайдер завершил запрос с ошибкой.',
+  provider_invalid_result: 'Провайдер вернул неподдерживаемый результат.',
+  provider_request_missing: 'Сервер не может подтвердить состояние существующего запроса провайдера.',
 }
 export function problem(reason: unknown): string {
   if (reason instanceof ApiError) return explanations[reason.code]

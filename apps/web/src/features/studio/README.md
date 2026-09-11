@@ -1,63 +1,46 @@
-# IMAGE-001 · серверное рабочее пространство
+# IMAGE-001 / API-001 · серверное рабочее пространство
 
-U-09/U-10 — Studio; U-17/U-18 — ResultPanel (list/detail jobs); U-19/U-20 — Gallery/AssetPage.
-Один серверный Account/Credits/Jobs/Media. Реальный AI не подключён: только test.image.v1,
-диагностический PNG и тестовые баллы. Функция backend выключена по умолчанию.
+U-09/U-10 — Studio; U-17/U-18 — ResultPanel; U-19/U-20 — Gallery/AssetPage.
+Один серверный Account/Credits/Jobs/Media для test и real provider. `test.image.v1` остаётся
+диагностическим исполнителем; API-001 добавляет `fal.flux2.klein.4b` через тот же transport.
+Provider capability и jobs выключены серверными настройками/планом по умолчанию.
 
-## Контракт
+## Контракт Studio
 
-Studio читает auth/me, entitlements и credits. Доступные размеры — пересечение policy
-и текущего test-контракта32…512px. Quote содержит серверные prompt/размер/цену/expiry;
-submit после явного подтверждения отправляет только quote_id/operation_id с CSRF.
-Параметры owner/цены/key/executor не передаются клиентом.
+Studio читает `auth/me`, entitlements и credits. UI показывает только известные image capabilities,
+разрешённые policy; сам не выбирает provider URL, key, connection, executor или цену. Quote содержит
+серверные prompt/размер/reserve/expiry и `test_only`. Submit после явного подтверждения отправляет
+только `quote_id/operation_id` с CSRF. Для fal в подтверждении явно показано, что вызов реальный.
 
-До отправки IDs сохраняются в sessionStorage под account-specific key. Пароли, CSRF,
-prompt, баланс и bytes там не хранятся. Потерянный ответ и refresh не меняют operation ID;
-повтор только по действию пользователя. Неподтверждённый исход не делает новый job.
-Сбой записи или повреждённый pending record блокирует submit. Известный отказ до
-admission позволяет запросить новую quote; неизвестная ошибка сохраняет старый ID.
-Классификатор `rejectedBeforeAdmission` находится в shared/submission.ts и сопоставляет
-**код и HTTP-статус**. Для image_size_restricted/action_budget_exceeded/provider_unavailable
-409 — подтверждённый отказ до приёма. Тот же код в500/503, незнакомая ошибка,
-idempotency_conflict и quote_already_used не разрешают удалить pending ID. У нового
-provider это правило сначала доказывается его контрактом, не расширяется общим «все4xx».
-403 авторизации,422 валидации и429 внешнего ограничения могут возникать до поиска
-прежнего receipt. Они также сохраняют pending ID: отказ повтору не означает, что
-исходное задание не было принято. Для rate_limited после проверки receipt допустим409.
-Кнопка подтверждения показывает резерв именно из текущей quote, не локальный price.
-На телефоне подпись и сумма располагаются в две строки, touch-height не меньше48px;
-имя кнопки стабильно, цена связана через aria-describedby. Смена цены не выполняется UI.
-Это не обещание exactly-once внешнего провайдера и не постоянное межустройственное хранилище черновика.
+Доступные размеры — пересечение policy и текущего image-контракта 32…512px. API-001 намеренно не
+расширяет разрешения до 2K/4K: сначала проверяется provider lifecycle и cost cap. Product Credits и
+provider cost — разные величины; UI не вычисляет ни одну из них самостоятельно.
 
-Задания читаются последовательно каждые2s, без параллельных poll; terminal/error/
-reconciliation_required останавливают автоматический опрос. Отмена использует серверную
-команду и не изменяет UI-баланс самостоятельно. Время progress не придумывается.
+До отправки IDs сохраняются в sessionStorage под account-specific key. Пароли, CSRF, prompt, баланс
+и bytes там не хранятся. Потерянный submit-response браузера повторяет тот же operation ID. Серверный
+unknown provider-submit — другой уровень: backend никогда не создаёт новый paid provider request без
+доказанного pre-acceptance rejection.
 
-Gallery читает только собственную страницу metadata. Поиск локален текущей странице,
-не объявлен глобальным. До открытия работы оригиналы не загружаются. Thumbnail pipeline
-не добавлен. Detail получает session-bound ticket120s и проверяет PNG MIME/размер/hash.
-Preview Object URL живёт до unmount/смены сессии. Download каждый раз получает новую
-серверную ссылку и заново читает/проверяет PNG, не отдаёт ранее закешированный preview.
-Файл скачивается только после проверки MIME, длины и SHA256. Отдельный временный
-Object URL удаляется через60s, при следующем скачивании или unmount. Истёкшая/отозванная сессия не даёт
-новых файлов. Уже скачанные человеком копии отозвать нельзя.
+`rejectedBeforeAdmission` по-прежнему требует точную пару HTTP status/code. Знакомый текст ошибки,
+403/422/429 или server/network failure не являются доказательством, что исходный Job не принят.
 
-WorkspaceGate перепроверяет сессию при возврате на вкладку и очищает private UI при401;
-запросы предыдущей страницы отменяются. Серверные guards остаются обязательными.
+Задания poll-ятся последовательно. `provider_submission_unknown`, `provider_auth_required`,
+`provider_deadline` и исчерпанный storage reconciliation останавливают автоматический UI poll и
+показывают, что нужен разбор существующей операции. Отмена меняет только серверное состояние;
+после внешнего submit UI не обещает refund, пока provider outcome не подтверждён.
 
-## Что не реализовано
+Gallery остаётся provider-neutral: результат становится обычным private Media asset. Detail получает
+session-bound ticket и проверяет PNG MIME/размер/hash. Browser никогда не скачивает fal URL напрямую.
 
-Нет генерации нейросетью, input references, публикации/удаления asset, thumbnails,
-сохранения prompt draft между входами, webhook-доставки или production hardening.
-Старый browser DemoState, fake ledger и SVG-результат удалены; их tests заменены
-проверками реального протокола. Исторические прототипы остаются в Git, не в runtime.
+## Что не реализовано этим пакетом
+
+Нет image-to-image, references/masks, webhook callbacks, нескольких provider connections, key-balancer,
+автоматического provider failover, production release или коммерческого pricing engine. Настоящий fal
+live call не является частью бесплатного CI и требует отдельного ключа/бюджета/разрешения владельца.
 
 ## Проверки
 
-`npm run build`; `npx playwright test e2e/studio.spec.ts e2e/gallery.spec.ts --project=phone --project=laptop`.
-Подставные API fixtures явно находятся в e2e/workspace-fixtures.ts; они не подтверждают backend.
-Настоящий путь — tools/image_acceptance.py и acceptance/image-live.mjs в изолированном CI:
-browser grant → login → quote → submit → separate worker → stored PNG/download → ledger,
-затем настоящий Compose restart, повторное скачивание с тем же hash и чужой аккаунт denied.
-Секретные synthetic fixtures только RUNNER_TEMP; screenshots не содержат cookies/password.
-Последний SHA/проверки — PR/Checks; наличие сценария не означает его выполнения.
+`npm run build`; `npx playwright test e2e/studio.spec.ts e2e/provider.spec.ts e2e/gallery.spec.ts`.
+Browser fixtures mock только product API. Backend provider contract/restart/cancel/unknown-submit
+проверяются Python tests с fake transport; сеть default pytest запрещена. PostgreSQL/S3/restart и
+существующий test-image browser path остаются обязательными общими CI gates.

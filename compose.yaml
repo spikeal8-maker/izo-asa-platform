@@ -13,13 +13,16 @@ x-api-environment: &api-environment
   IZO_RECOVERY_SECRET: ${IZO_RECOVERY_SECRET:-}
   IZO_RECOVERY_DELIVERY: ${IZO_RECOVERY_DELIVERY:-disabled}
   IZO_JOBS_ENABLED: ${IZO_JOBS_ENABLED:-false}
+  IZO_FAL_ENABLED: ${IZO_FAL_ENABLED:-false}
+  IZO_FAL_PRICE_MICROUSD_PER_MP: ${IZO_FAL_PRICE_MICROUSD_PER_MP:-0}
+  IZO_FAL_MAX_COST_MICROUSD: ${IZO_FAL_MAX_COST_MICROUSD:-0}
 services:
   postgres:
     image: postgres:17-bookworm
     environment:
       POSTGRES_USER: izo
       POSTGRES_DB: izo
-      POSTGRES_PASSWORD: ${IZO_PG_PASSWORD:?Run bootstrap first}
+      POSTGRES_PASSWORD: ${IZO_PG_PASSWORD:?Run python tools/bootstrap.py first}
     volumes: [postgres-data:/var/lib/postgresql/data]
     networks: [private]
     healthcheck:
@@ -74,6 +77,24 @@ services:
     depends_on:
       migrate: {condition: service_completed_successfully}
       storage: {condition: service_started}
+  fal-worker:
+    profiles: [fal]
+    build: {context: ., dockerfile: infra/api.Dockerfile}
+    environment:
+      <<: *api-environment
+      IZO_JOBS_LEASE_SECONDS: ${IZO_FAL_LEASE_SECONDS:-120}
+      IZO_FAL_KEY: ${IZO_FAL_KEY:-}
+      IZO_FAL_CREDENTIAL_VERSION: ${IZO_FAL_CREDENTIAL_VERSION:-v1}
+    command: [python, '-m', izo.jobs.fal_worker]
+    networks: [private, provider-egress]
+    read_only: true
+    tmpfs: [/tmp]
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
+    stop_grace_period: 40s
+    depends_on:
+      migrate: {condition: service_completed_successfully}
+      storage: {condition: service_started}
   web:
     build: {context: ., dockerfile: infra/web.Dockerfile}
     ports: ['127.0.0.1:${IZO_HTTP_PORT:-8080}:8080']
@@ -90,4 +111,5 @@ volumes:
   objects:
 networks:
   private: {internal: true}
+  provider-egress: {}
   edge:

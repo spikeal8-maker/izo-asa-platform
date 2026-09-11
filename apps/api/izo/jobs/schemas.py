@@ -1,4 +1,4 @@
-"""Public intents cannot supply price, owner, executor, output key or lease."""
+"""Public image job contracts. Internal provider/price/owner fields never come from clients."""
 from dataclasses import dataclass
 from typing import Literal
 from uuid import UUID
@@ -15,7 +15,7 @@ class JobInput(BaseModel):
 
 
 class QuoteInput(JobInput):
-    capability_id: Literal["test.image.v1"]
+    capability_id: str = Field(pattern=r"^[a-z0-9][a-z0-9._-]{0,79}$")
     prompt: str = Field(min_length=1, max_length=2000)
     width: int = Field(strict=True, ge=32, le=512)
     height: int = Field(strict=True, ge=32, le=512)
@@ -52,8 +52,8 @@ class QuoteView(BaseModel):
     height: int
     credits: int
     expires_at: int
-    test_only: Literal[True] = True
-    notice: str = "Тестовый исполнитель, не AI-модель. Расходуются тестовые баллы."
+    test_only: bool
+    notice: str
 
 
 class JobView(BaseModel):
@@ -71,7 +71,7 @@ class JobView(BaseModel):
     created_at: int
     updated_at: int
     attempt_count: int
-    test_only: Literal[True] = True
+    test_only: bool
 
 
 class JobList(BaseModel):

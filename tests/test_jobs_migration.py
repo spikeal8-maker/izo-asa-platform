@@ -26,8 +26,11 @@ def test_upgrade_preserves_legacy_asset_and_checks_current_schema(tmp_path):
     engine = sa.create_engine('sqlite:///' + str(tmp_path/'migration.sqlite'))
     a.metadata.create_all(engine)
     owner, asset_id = uuid4(), uuid4()
-    old, new = migration('0007_media.py'), migration('0008_jobs.py')
-    assert new.revision == '0008_jobs' and new.down_revision == '0007_media'
+    old = migration('0007_media.py')
+    jobs = migration('0008_jobs.py')
+    current = migration('0009_provider_calls.py')
+    assert jobs.revision == '0008_jobs' and jobs.down_revision == '0007_media'
+    assert current.revision == '0009_provider_calls' and current.down_revision == '0008_jobs'
     with engine.begin() as conn:
         with Operations.context(MigrationContext.configure(conn)):
             old.upgrade()
@@ -44,7 +47,8 @@ def test_upgrade_preserves_legacy_asset_and_checks_current_schema(tmp_path):
                 stored_size=10, width=8, height=6))
             conn.execute(sa.insert(asset).values(id=asset_id.hex, account_id=owner.hex, object_key=key,
                 sha256='b'*64, byte_size=10, width=8, height=6, created_at=100))
-            new.upgrade()
+            jobs.upgrade()
+            current.upgrade()
         row = conn.execute(sa.select(m.assets)).mappings().one()
         assert row['id'] == row['upload_id'] == asset_id and row['output_id'] is None
         assert row['object_key'] == key and row['sha256'] == 'b'*64
@@ -53,7 +57,9 @@ def test_upgrade_preserves_legacy_asset_and_checks_current_schema(tmp_path):
             assert {c['name'] for c in inspector.get_columns(table.name)} == set(table.c.keys())
             assert {i['name'] for i in inspector.get_indexes(table.name)} == {i.name for i in table.indexes}
     with pytest.raises(RuntimeError):
-        new.downgrade()
+        current.downgrade()
+    with pytest.raises(RuntimeError):
+        jobs.downgrade()
     engine.dispose()
 
 

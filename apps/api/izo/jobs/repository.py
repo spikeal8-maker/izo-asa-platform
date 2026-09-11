@@ -2,7 +2,7 @@
 import json
 from uuid import uuid4
 import sqlalchemy as sa
-from . import tables as t
+from . import catalog, tables as t
 from .schemas import JobError, JobView
 
 
@@ -19,8 +19,6 @@ def change(conn, job_id, now, **values):
 
 
 def event(conn, job_id, kind, now):
-    # Durable, payload-minimal delivery intent in the same transaction. No broker
-    # or notification call can turn committed generation into a failed job.
     conn.execute(sa.insert(t.outbox).values(id=uuid4(), job_id=job_id, event_type=kind, created_at=now))
 
 
@@ -33,8 +31,10 @@ def close_attempt(conn, row, state, now):
 
 def view(row):
     request = json.loads(row["request_json"])
+    spec = catalog.capability(request["capability_id"])
     return JobView(id=row["id"], status=row["status"], **request,
         reserved_credits=row["reserve_credits"] if row["status"] not in {"succeeded", "failed", "cancelled"} else 0,
         charged_credits=row["charged_credits"], asset_id=row["output_id"] if row["status"] == "succeeded" else None,
         error_code=row["error_code"], cancel_requested=row["cancel_requested"],
-        created_at=row["created_at"], updated_at=row["updated_at"], attempt_count=row["fence"])
+        created_at=row["created_at"], updated_at=row["updated_at"], attempt_count=row["fence"],
+        test_only=spec.test_only)

@@ -1,4 +1,4 @@
-"""Leased test execution. Every mutation uses Account -> Job -> Media/Credits."""
+"""Leased execution. Every mutation uses Account -> Job -> Media/Credits."""
 import re
 from uuid import uuid4, uuid5
 import sqlalchemy as sa
@@ -8,14 +8,17 @@ from ..credits.service import CreditService
 from ..credits.schemas import Settle
 from ..media import outputs, codec
 from . import catalog, repository as repo, tables as t
-from .schemas import Claim, JobError, QuoteInput, TERMINAL
+from .schemas import Claim, JobError, QuoteInput
 
 
 class JobRunner:
-    def __init__(self, service, store, worker_id="test-worker"):
+    def __init__(self, service, store, worker_id="test-worker", pool=catalog.POOL):
         if not re.fullmatch(r"[a-zA-Z0-9_.:-]{1,80}", worker_id):
             raise ValueError("Invalid worker ID")
-        self.service, self.auth, self.store, self.worker_id = service, service.auth, store, worker_id
+        if not re.fullmatch(r"[a-zA-Z0-9_.:-]{1,80}", pool):
+            raise ValueError("Invalid worker pool")
+        self.service, self.auth, self.store = service, service.auth, store
+        self.worker_id, self.pool = worker_id, pool
 
     def _locked(self, conn, claim, *, lease=True):
         lock_worker_owner(conn, claim.account_id)
@@ -35,11 +38,11 @@ class JobRunner:
                     lease_until=now + self.service.policy.lease_seconds)
         return Claim(row["id"], row["account_id"], attempt_id, fence)
 
-    def claim(self):
+    def claim(self, *, resume_external=False):
         self.service.policy.require_enabled()
         with self.auth.engine.connect() as conn:
             candidates = conn.execute(sa.select(t.jobs.c.id, t.jobs.c.account_id).where(
-                t.jobs.c.status == "queued", t.jobs.c.pool == catalog.POOL)
+                t.jobs.c.status == "queued", t.jobs.c.pool == self.pool)
                 .order_by(t.jobs.c.created_at, t.jobs.c.id).limit(64)).all()
         for job_id, owner in candidates:
             with self.auth.engine.begin() as conn:
@@ -47,10 +50,15 @@ class JobRunner:
                 if state is None:
                     continue
                 row = repo.load(conn, owner, job_id)
-                if row["status"] != "queued":
+                if row["status"] != "queued" or row["pool"] != self.pool:
                     continue
+                known_external = False
+                if resume_external:
+                    known_external = conn.execute(sa.select(t.provider_calls.c.id).where(
+                        t.provider_calls.c.job_id == row["id"],
+                        t.provider_calls.c.provider_request_id.is_not(None))).first() is not None
                 now = self.auth.now()
-                if state != "active" or row["deadline_at"] <= now:
+                if (state != "active" or row["deadline_at"] <= now) and not known_external:
                     self.service.release_terminal(conn, row, "failed", "admission_expired")
                     continue
                 claim = self._lease(conn, row, now)
@@ -58,36 +66,39 @@ class JobRunner:
                 return claim
         return None
 
-    def start(self, claim):
+    def start(self, claim, *, allow_expired=False, allow_restricted=False):
         with self.auth.engine.begin() as conn:
             row = self._locked(conn, claim)
             if row["status"] != "claimed":
                 raise JobError(409, "invalid_transition")
             state = lock_worker_owner(conn, claim.account_id)
-            if state != "active" or row["deadline_at"] <= self.auth.now():
+            if ((state != "active" and not allow_restricted)
+                    or (row["deadline_at"] <= self.auth.now() and not allow_expired)):
                 self.service.release_terminal(conn, row, "failed", "admission_expired")
                 return None
             repo.change(conn, row["id"], self.auth.now(), status="running")
             conn.execute(sa.update(t.attempts).where(t.attempts.c.id == claim.attempt_id).values(state="running"))
             return QuoteInput.model_validate_json(row["request_json"])
 
-    def heartbeat(self, claim):
+    def heartbeat(self, claim, *, allow_expired=False):
         with self.auth.engine.begin() as conn:
             row = self._locked(conn, claim)
             if row["status"] not in {"claimed", "running", "uploading"}:
                 raise JobError(409, "invalid_transition")
             now = self.auth.now()
-            if row["deadline_at"] <= now:
+            if row["deadline_at"] <= now and not allow_expired:
                 raise JobError(409, "executor_deadline")
-            repo.change(conn, row["id"], now,
-                        lease_until=min(row["deadline_at"], now + self.service.policy.lease_seconds))
+            lease_until = now + self.service.policy.lease_seconds
+            if not allow_expired:
+                lease_until = min(row["deadline_at"], lease_until)
+            repo.change(conn, row["id"], now, lease_until=lease_until)
 
-    def seal(self, claim, image):
+    def seal(self, claim, image, *, allow_restricted=False):
         with self.auth.engine.begin() as conn:
             row = self._locked(conn, claim)
             if row["status"] != "running":
                 raise JobError(409, "invalid_transition")
-            if lock_worker_owner(conn, claim.account_id) != "active":
+            if lock_worker_owner(conn, claim.account_id) != "active" and not allow_restricted:
                 self.service.release_terminal(conn, row, "cancelled", "account_restricted")
                 return None
             key = outputs.seal(conn, claim.account_id, row["output_id"], image.data)
@@ -122,11 +133,36 @@ class JobRunner:
             repo.change(conn, row["id"], self.auth.now(), status="reconciling", lease_until=0,
                         error_code="storage_uncertain", next_poll_at=self.auth.now())
 
-    def fail_before_output(self, claim):
+    def reconcile_before_output(self, claim, code, *, retryable=False):
+        """External work may exist; keep reservations and never resubmit blindly."""
+        with self.auth.engine.begin() as conn:
+            row = self._locked(conn, claim, lease=False)
+            if row["status"] not in {"claimed", "running"}:
+                return
+            now = self.auth.now()
+            count = row["reconcile_count"] + (1 if retryable else 0)
+            final = retryable and count >= 5
+            error = "reconciliation_required" if final else code
+            delay = min(300, 10 * 2 ** max(0, count - 1)) if retryable and not final else 0
+            repo.close_attempt(conn, row, "failed", now)
+            repo.change(conn, row["id"], now, status="reconciling", lease_until=0,
+                        reconcile_count=count, error_code=error, next_poll_at=now + delay)
+            exists = conn.execute(sa.select(t.outbox.c.id).where(
+                t.outbox.c.job_id == row["id"], t.outbox.c.event_type == error)).first()
+            if exists is None:
+                repo.event(conn, row["id"], error, now)
+
+    def fail_before_output(self, claim, code="test_executor_failed"):
         with self.auth.engine.begin() as conn:
             row = self._locked(conn, claim, lease=False)
             if row["status"] in {"claimed", "running"}:
-                self.service.release_terminal(conn, row, "failed", "test_executor_failed")
+                self.service.release_terminal(conn, row, "failed", code)
+
+    def cancel_before_output(self, claim, code=None):
+        with self.auth.engine.begin() as conn:
+            row = self._locked(conn, claim, lease=False)
+            if row["status"] in {"claimed", "running"}:
+                self.service.release_terminal(conn, row, "cancelled", code)
 
     def execute(self, claim, render):
         try:

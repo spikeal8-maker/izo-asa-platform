@@ -987,8 +987,6 @@
             "type": "string"
           },
           "test_only": {
-            "const": true,
-            "default": true,
             "title": "Test Only",
             "type": "boolean"
           },
@@ -1015,7 +1013,8 @@
           "cancel_requested",
           "created_at",
           "updated_at",
-          "attempt_count"
+          "attempt_count",
+          "test_only"
         ],
         "title": "JobView",
         "type": "object"
@@ -1224,7 +1223,7 @@
         "additionalProperties": false,
         "properties": {
           "capability_id": {
-            "const": "test.image.v1",
+            "pattern": "^[a-z0-9][a-z0-9._-]{0,79}$",
             "title": "Capability Id",
             "type": "string"
           },
@@ -1280,7 +1279,6 @@
             "type": "string"
           },
           "notice": {
-            "default": "Тестовый исполнитель, не AI-модель. Расходуются тестовые баллы.",
             "title": "Notice",
             "type": "string"
           },
@@ -1289,8 +1287,6 @@
             "type": "string"
           },
           "test_only": {
-            "const": true,
-            "default": true,
             "title": "Test Only",
             "type": "boolean"
           },
@@ -1306,7 +1302,9 @@
           "width",
           "height",
           "credits",
-          "expires_at"
+          "expires_at",
+          "test_only",
+          "notice"
         ],
         "title": "QuoteView",
         "type": "object"
