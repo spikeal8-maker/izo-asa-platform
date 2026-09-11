@@ -51,7 +51,7 @@ def test_plan_has_one_canonical_line_and_blocks_parallel_continuation():
 
 
 def test_stable_entry_documents_do_not_embed_current_project_head():
-    for raw in ('AGENTS.md', 'docs/INDEX.md', 'docs/DEVELOPMENT.md', 'docs/DOCS_SYSTEM.md'):
+    for raw in ('AGENTS.md', 'README.md', 'docs/INDEX.md', 'docs/DEVELOPMENT.md', 'docs/DOCS_SYSTEM.md'):
         text = (ROOT/raw).read_text(encoding='utf-8')
         assert 'faec39d6ae0b4f035ef0f86114494789acde3b46' not in text
         assert 'Следующий шаг — UX-001' not in text

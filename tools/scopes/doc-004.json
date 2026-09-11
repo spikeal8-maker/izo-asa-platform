@@ -1,8 +1,9 @@
 {
   "base": "faec39d6ae0b4f035ef0f86114494789acde3b46",
-  "max_files": 30,
+  "max_files": 32,
   "allowed": [
     "AGENTS.md",
+    "README.md",
     "apps/api/AGENTS.md",
     "apps/api/izo/providers/AGENTS.md",
     "apps/api/izo/providers/README.md",
@@ -19,6 +20,7 @@
     "docs/DOCS_SYSTEM.md",
     "docs/history/DEVELOPMENT-v0.2-before-DOC-004.md",
     "docs/history/NEXT-v0.2-before-DOC-004.md",
+    "docs/history/README-before-DOC-004.md",
     "docs/history/STATUS-before-DOC-004.md",
     "docs/INDEX.md",
     "docs/NEXT.md",

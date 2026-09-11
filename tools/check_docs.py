@@ -115,7 +115,7 @@ def check_encoding(errors: list[str]) -> None:
 
 
 def check_stable_docs(errors: list[str]) -> None:
-    stable = [ROOT / "AGENTS.md", DOCS / "INDEX.md", DOCS / "DOCS_SYSTEM.md", DOCS / "DEVELOPMENT.md"]
+    stable = [ROOT / "AGENTS.md", ROOT / "README.md", DOCS / "INDEX.md", DOCS / "DOCS_SYSTEM.md", DOCS / "DEVELOPMENT.md"]
     sha = re.compile(r"\b[0-9a-f]{40}\b")
     pr = re.compile(r"\bPR\s*#\d+\b", re.IGNORECASE)
     for path in stable:
