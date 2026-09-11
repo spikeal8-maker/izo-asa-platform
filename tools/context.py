@@ -11,8 +11,18 @@ ROOT = Path(__file__).resolve().parents[1]
 MAP_PATH = ROOT / "docs" / "CONTEXT_MAP.json"
 BLOCK_PATH = ROOT / "docs" / "BLOCK_MAP.json"
 UI_HINTS = ("кноп", "цвет", "шир", "отступ", "текст", "надпис", "икон", "css", "layout", "button", "label", "визуал")
-BACKEND_HINTS = ("backend", "api", "сервер", "списан", "резерв", "refund", "retry", "request_id", "permission", "quota", "worker", "provider", "fal")
+BACKEND_HINTS = ("backend", "api", "сервер", "списан", "резерв", "reserve", "settle", "ledger", "refund", "retry", "request_id", "permission", "quota", "worker", "provider", "fal")
 GENERIC_STEMS = ("кноп", "сдел", "измен", "помен", "правк", "текст", "шир", "цвет", "button", "change", "fix", "backend", "api", "job")
+STOP_WORDS = {
+    "в", "во", "на", "из", "к", "ко", "у", "с", "со", "для", "по", "под", "над", "при",
+    "и", "или", "а", "но", "это", "этот", "эта", "эту", "этом", "той", "там", "тут", "просто",
+    "мне", "чуть", "еще", "ещё", "the", "a", "an", "in", "on", "for", "to", "of", "and", "or",
+}
+CANONICAL_STEMS = (
+    "галер", "скач", "предпросмотр", "превью", "провайдер", "provider", "генерац", "отмен",
+    "задан", "начисл", "баланс", "кредит", "сесси", "тариф", "лимит", "рестарт", "ошиб",
+    "модел", "изображ", "картин", "доступ", "резерв", "списан", "возврат", "вход", "логин",
+)
 
 
 def load_json(path: Path) -> dict:
@@ -26,22 +36,33 @@ def words(value: str) -> set[str]:
     return set(re.findall(r"[\w.-]+", value.casefold(), flags=re.UNICODE))
 
 
+def canonical_word(word: str) -> str:
+    if word in STOP_WORDS or any(word.startswith(stem) for stem in GENERIC_STEMS):
+        return ""
+    for stem in CANONICAL_STEMS:
+        if word.startswith(stem):
+            return stem
+    return word
+
+
 def content_words(value: str) -> set[str]:
-    return {word for word in words(value) if not any(word.startswith(stem) for stem in GENERIC_STEMS)}
+    return {normalized for word in words(value) if (normalized := canonical_word(word))}
 
 
 def phrase_score(task: str, phrases: list[str]) -> int:
     folded, task_words = task.casefold(), content_words(task)
-    total = 0
+    best = 0
     for raw in phrases:
         phrase = raw.casefold().strip()
         if not phrase:
             continue
         if phrase in folded:
-            total += 12 + 2 * len(words(phrase))
+            score = 12 + 2 * len(content_words(phrase))
         else:
-            total += len(task_words & content_words(phrase))
-    return total
+            overlap = task_words & content_words(phrase)
+            score = sum(3 if word in CANONICAL_STEMS else 1 for word in overlap)
+        best = max(best, score)
+    return best
 
 
 def intent_bonus(task: str, kind_or_key: str) -> int:
@@ -62,6 +83,22 @@ def intent_bonus(task: str, kind_or_key: str) -> int:
     return bonus
 
 
+def cross_boundary_ambiguity(task: str) -> str | None:
+    folded = task.casefold()
+    explicit_ui = any(token in folded for token in ("кноп", "css", "layout", "интерфейс", "ui"))
+    explicit_backend = any(token in folded for token in ("backend", "api", "сервер", "provider", "fal"))
+    if not explicit_ui and not explicit_backend:
+        if "403" in folded and any(token in folded for token in ("скач", "download")):
+            return "403 during download spans Gallery UI, Media ownership/ticket and auth boundaries"
+        if any(token in folded for token in ("цен", "стоим", "price")) and any(token in folded for token in ("генерац", "generation")):
+            return "generation price spans web.studio and server pricing/admission"
+        if "отмен" in folded and ("возврат" in folded or "балл" in folded or "refund" in folded):
+            return "refund after cancellation spans Jobs outcome and Credits settlement"
+        if "отмен" in folded and "задан" in folded:
+            return "job cancellation spans UI, JobService and possibly provider execution"
+    return None
+
+
 def rank(task: str, items: dict, phrase_field: str) -> list[tuple[int, str, dict]]:
     ranked = []
     for key, item in items.items():
@@ -77,12 +114,12 @@ def choose(ranked: list[tuple[int, str, dict]], *, min_confident: int = 1) -> tu
         raise LookupError("No documented context matches this request")
     top = ranked[0]
     second_score = ranked[1][0] if len(ranked) > 1 else 0
+    if top[0] < min_confident:
+        raise LookupError("No high-confidence context matches this request")
     ambiguous = second_score > 0 and (top[0] - second_score <= 2 or second_score / top[0] >= 0.82)
     if ambiguous:
         names = ", ".join(f"{key}={score}" for score, key, _ in ranked[:3] if score > 0)
         raise RuntimeError(f"AMBIGUOUS: {names}")
-    if top[0] < min_confident:
-        raise LookupError("No high-confidence block matches this request")
     return top[1], top[2], top[0], second_score
 
 
@@ -140,6 +177,9 @@ def render_route(key: str, route: dict, score: int, second: int) -> str:
 
 
 def resolve_task(task: str) -> tuple[str, str, dict, dict, int, int]:
+    reason = cross_boundary_ambiguity(task)
+    if reason:
+        raise RuntimeError(f"AMBIGUOUS: {reason}")
     context = load_json(MAP_PATH)
     blocks = load_json(BLOCK_PATH)
     block_ranked = rank(task, blocks.get("blocks", {}), "aliases")

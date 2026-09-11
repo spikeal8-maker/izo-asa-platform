@@ -7,7 +7,7 @@
 ## 1. Пять уровней контекста
 
 1. `AGENTS.md` — долговечные правила процесса и безопасности. Не содержит текущих SHA, PR и «следующего шага».
-2. `CURRENT.md` + `PLAN.json` — runtime base, точный `branch_from`, working branch, active/next package.
+2. `CURRENT.md` + `PLAN.json` — runtime base, `current_package_base`, working branch, active/next package и правило `next_branch_source=verified_working_head`.
 3. `BLOCK_MAP.json` → конкретный UI/API блок по owner/symbol/anchor; `CONTEXT_MAP.json` → fallback до feature/domain.
 4. Локальные `AGENTS.md`/`README.md` и затем PRODUCT/ADMIN/UX/ARCHITECTURE/AI_RUNTIME/OPERATIONS — расширение только по необходимости.
 5. `reviews/` и `history/` — доказательства и прошлое; они никогда не являются стартовым контекстом обычной правки.
@@ -16,7 +16,7 @@
 
 | Факт | Владелец |
 |---|---|
-| Runtime base, `branch_from`, working branch, active/next package, parallel lineage | `PLAN.json` |
+| Runtime base, current-package base, working branch, next-branch policy, active/next package, parallel lineage | `PLAN.json` |
 | Короткое объяснение текущего состояния | `CURRENT.md` (генерируется из PLAN) |
 | Конкретный UI/API блок: owner/symbol/anchor/test | `BLOCK_MAP.json` |
 | Feature/domain fallback-контекст | `CONTEXT_MAP.json` |
@@ -60,13 +60,14 @@ README не превращается в журнал изменений и не 
 
 ## 5. План, ветки и frozen checkpoints
 
-`PLAN.json` различает `runtime_base`, точный `branch_from` и `working_branch`. Runtime base может быть старше
-последнего development checkpoint; новую ветку всегда создают от `branch_from`, а не «самой новой на вид» ветки.
-Ровно один package имеет статус `active`, следующий — `planned_next`. Parallel lineage fail-closed.
+`PLAN.json` различает `runtime_base`, `current_package_base` и `working_branch`. Первый — runtime-основа,
+второй — замороженный родитель текущего package, третий — единственная ветка активной разработки. Следующий base
+никогда не выбирается вручную из этих полей: `next_branch_source=verified_working_head`.
 
-После успешного exact-head CI checkpoint **замораживается без дополнительного status commit**. Следующий package
-создаёт новую ветку точно от frozen SHA и уже в новой ветке переводит предыдущий package в `technical_pass` через
-`tools/project_state.py start`. Так зелёный SHA никогда не становится устаревшим из-за «последней правки статуса».
+После успешных required PR workflows current working head **замораживается без status commit**. Для PR workflow
+evidence тип — `pr_merge_tree`: source head связывается с PR, зелёными workflow и synthetic merge tree, содержащим
+этот source head. `project_state.py begin-next` проверяет evidence/dependencies, создаёт новую ветку точно от frozen
+working head и только затем переводит предыдущий package в `technical_pass`.
 
 Если появляются две реализации одного package ID, feature work останавливается до reconciliation package.
 ## 6. Документ — часть Definition of Done
@@ -85,7 +86,7 @@ README не превращается в журнал изменений и не 
 
 - Создавать ещё один `MASTER_PLAN`, `ROADMAP_FINAL`, `NOW2` или аналогичный второй source of truth.
 - Хранить текущий SHA/PR/next package в `AGENTS.md`, INDEX или локальном README.
-- Писать в STATUS «готово», пока exact-head проверки ещё идут.
+- Писать в STATUS «готово», пока required CI evidence ещё не завершено и не связано с source head.
 - Использовать review/history как инструкцию текущей разработки.
 - Делать documentation-only PR поводом для скрытого изменения runtime/CI/security policy.
 - Увеличивать context/scope лимит автоматически после ошибки вместо новой диагностической гипотезы.
@@ -93,9 +94,10 @@ README не превращается в журнал изменений и не 
 ## 8. Автоматические предохранители
 
 `tools/context.py` сначала ищет block-level locator и только затем feature/domain route; близкие кандидаты дают
-`AMBIGUOUS`, а не случайный выбор. `tools/project_state.py` различает runtime base / branch_from / working branch.
-`tools/check_docs.py` проверяет PLAN/CURRENT, block owner+anchor, route paths, local-map coverage, stable docs и UTF-8.
-Routing regression corpus содержит нормальные, голосовые, неоднозначные и unsupported запросы.
+`AMBIGUOUS`, а не случайный выбор. `tools/project_state.py` различает runtime base / current-package base / working head,
+машинно связывает PR CI evidence с source SHA и сам создаёт next branch. `tools/check_docs.py` проверяет PLAN/CURRENT,
+block owner+anchor, route paths, local-map coverage, запрет mutable SHA/PR в ownership maps, stable docs и UTF-8.
+Routing regression corpus содержит реальные русские словоформы, UI/backend, неоднозначные и unsupported запросы.
 
 Эти проверки не заменяют смысловой review. Они делают рассинхронизацию заметной раньше, чем следующий
 бот начнёт разработку не от той ветки или прочитает половину репозитория.
