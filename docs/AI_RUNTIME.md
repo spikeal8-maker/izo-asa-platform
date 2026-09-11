@@ -1,6 +1,6 @@
 # Выполнение AI-запросов в IZO ASA · спецификация 0.1
 
-Это целевой runtime-контракт. В Foundation реализованы только базовые DTO и чистые правила переходов/выбора исполнителя. Persistent jobs, adapters, ledger и local agent ещё не реализованы. Процесс работы coding-агента описан отдельно в [DEVELOPMENT](DEVELOPMENT.md).
+Это целевой runtime-контракт. На канонической линии уже реализованы общие Credits/Entitlements/Media/Jobs, deterministic test executor и серверный fal.ai adapter/lifecycle для `fal.flux2.klein.4b`. Live fal request/provider billing остаются отдельной непроведённой приёмкой; local GPU-agent, универсальный provider catalog/credential registry и остальные modality runtimes ещё не реализованы. Процесс coding-агента описан отдельно в [DEVELOPMENT](DEVELOPMENT.md).
 
 ## 1. Разделение понятий
 
@@ -30,7 +30,7 @@ Modality — тип результата: image/video/audio/3d/chat. Capability 
 
 ## 4. Состояния и отмена
 
-Базовый enum Foundation: queued, claimed, running, uploading, succeeded, failed, cancelled, reconciling. Точный расширенный граф появится в JOBS-001 с таблицей допустимых переходов и тестами. Cancel request лучше хранить как отдельное намерение/timestamp, чем преждевременно считать операцию cancelled.
+Общий Jobs runtime уже использует durable состояния queued/claimed/running/uploading/succeeded/failed/cancelled/reconciling и дополнительные provider-reconciliation reason codes. Актуальный исполняемый граф принадлежит `apps/api/izo/jobs/` и его тестам; этот документ фиксирует общую семантику. Cancel request хранится как отдельное намерение и не считается гарантированным provider cancellation.
 
 `queued` — принята и зарезервирована. `claimed` — выдан attempt. `running` — выполняется. `uploading` — результат готовится к сохранению. `reconciling` — известен сбой, но внешний outcome/финализация ещё не определены. Успех требует сохранённого доступного результата, не HTTP 200 provider.
 
@@ -90,19 +90,19 @@ Prompt версии хранится и тестируется отдельно 
 
 Считать queue wait отдельно от provider time, upload time и total time. Cost модели/провайдера, продуктовые баллы и coding-agent tokens — три разные метрики. У fake providers есть явная маркировка test/demo.
 
-Обязательные tests в будущих пакетах: concurrency double submit/reserve, expired lease, stale completion, exception isolation, cancel race, unknown provider outcome, callback replay, cost cap, private asset access, restart и delivery failure. Один bad job не прекращает consumer; health не считает worker живым только по старому флагу started.
+Обязательные regression-классы runtime: concurrency double submit/reserve, expired lease, stale completion, exception isolation, cancel race, unknown provider outcome, callback replay, cost cap, private asset access, restart и delivery failure. Image/Jobs/fal canonical line уже покрывает значительную часть этих сценариев; новые capability/provider обязаны сохранять соответствующие инварианты, а не считать старые тесты достаточными автоматически.
 
-Первый реальный provider подключается только после fake E2E. Реальная приёмка выполняется на тестовом аккаунте с отдельным ключом/лимитом по разрешению владельца; бесплатный CI не использует настоящий AI. Каждая новая модель не обязана пройти все мыслимые сценарии, но обязана пройти все публично заявленные для неё capabilities.
+Первый внешний provider adapter уже реализован для fal.ai после deterministic fake E2E, но реальный вызов с ключом и provider billing ещё не проходил owner-approved live acceptance. Бесплатный CI не использует настоящий AI. Каждая новая модель обязана пройти все публично заявленные для неё capabilities и failure contracts.
 
 Источники защитных требований, проверены 2026-09-07:
 - OWASP LLM Prompt Injection Prevention: https://cheatsheetseries.owasp.org/cheatsheets/LLM_Prompt_Injection_Prevention_Cheat_Sheet.html
 - OWASP Session Management: https://cheatsheetseries.owasp.org/cheatsheets/Session_Management_Cheat_Sheet.html
 
-Конкретная AI API-документация привязывается к выбранному provider/version в PR адаптера. Ни OpenRouter, ни иная модель не объявлены здесь единственным окончательно выбранным провайдером.
+Каноническое текущее provider-направление задаёт PLAN: fal.ai / `fal-ai/flux-2/klein/4b`. Этот документ остаётся provider-neutral контрактом и не превращает одну модель в универсальный runtime; параллельная OpenRouter-линия не является continuation base до LINEAGE-001.
 
 ## 9. Источники ключей и единое подключение — уточнение DOC-002
 
-Статус: проектное требование для API-001/CATALOG-001 и последующих расширений; credential resolver/registry ещё не реализованы. Существующие rules не означают, что достаточно вставить любой ключ и всё заработает. Без поддержанного протокола adapter новый provider не подключается.
+Статус: текущий fal worker получает explicit `IZO_FAL_KEY` и несекретную credential version только в provider worker; durable job state хранит provider/credential references без значения секрета. Универсальный credential resolver/registry и multi-connection catalog ещё не реализованы. Наличие ключа само по себе не включает live acceptance и не разрешает новый provider без поддержанного adapter contract.
 
 ### 9.1. Что необходимо разделить
 

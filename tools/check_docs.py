@@ -6,7 +6,7 @@ from pathlib import Path
 import re
 import sys
 
-from project_state import render_current
+from project_state import READY_DEPENDENCY_STATUSES, render_current
 
 ROOT = Path(__file__).resolve().parents[1]
 DOCS = ROOT / "docs"
@@ -31,23 +31,30 @@ def check_plan(errors: list[str], plan: dict) -> None:
     if plan.get("schema_version") != 1:
         errors.append("PLAN schema_version must be 1")
     packages = plan.get("packages", {})
+    active_id = plan.get("active_package")
     active = [key for key, item in packages.items() if item.get("status") == "active"]
-    if active != [plan.get("active_package")]:
+    if active != [active_id]:
         errors.append(f"exactly one active package must match active_package: {active}")
     next_id = plan.get("next_package")
-    active_id = plan.get("active_package")
     if next_id is None:
         if not packages.get(active_id, {}).get("decides_next"):
             errors.append("next_package may be null only when active package has decides_next=true")
     elif next_id not in packages or packages.get(next_id, {}).get("status") != "planned_next":
         errors.append("PLAN next_package must exist with status planned_next")
+    elif active_id not in packages[next_id].get("depends_on", []):
+        errors.append("planned_next package must depend on the active package")
     for key, item in packages.items():
         deps = item.get("depends_on", [])
         if not isinstance(deps, list) or any(dep not in packages or dep == key for dep in deps):
             errors.append(f"invalid dependencies for {key}: {deps}")
+    for dep in packages.get(active_id, {}).get("depends_on", []):
+        if packages.get(dep, {}).get("status") not in READY_DEPENDENCY_STATUSES:
+            errors.append(f"active package dependency is not ready: {dep}={packages.get(dep, {}).get('status')}")
     lineage = plan.get("canonical_lineage", {})
     check_ref(errors, "canonical_lineage.runtime_base", lineage.get("runtime_base", {}))
-    check_ref(errors, "canonical_lineage.branch_from", lineage.get("branch_from", {}))
+    check_ref(errors, "canonical_lineage.current_package_base", lineage.get("current_package_base", {}))
+    if lineage.get("next_branch_source") != "verified_working_head":
+        errors.append("canonical_lineage.next_branch_source must be verified_working_head")
     if not lineage.get("working_branch"):
         errors.append("canonical_lineage.working_branch is required")
     for item in plan.get("parallel_lineages", []):
@@ -110,15 +117,31 @@ def check_coverage(errors: list[str], context: dict) -> None:
                 errors.append(f"local ownership README missing: {raw}")
             elif raw not in route_paths:
                 errors.append(f"local ownership README is not covered by a context route: {raw}")
+    ownership = {ROOT / raw for raw in route_paths if raw.endswith("README.md")}
+    ownership.add(ROOT / "apps/web/security/README.md")
+    mutable_sha = re.compile(r"\b[0-9a-f]{40}\b")
+    mutable_pr = re.compile(r"\bPR\s*#\d+\b", re.I)
+    next_package = re.compile(r"следующ(?:ий|ая|ее).{0,40}пакет", re.I)
+    for path in ownership:
+        if not path.is_file():
+            continue
+        text = path.read_text(encoding="utf-8")
+        if mutable_sha.search(text) or mutable_pr.search(text) or next_package.search(text):
+            errors.append(f"local ownership map contains mutable history/roadmap: {path.relative_to(ROOT)}")
+        if len(text.encode("utf-8")) > 10000:
+            errors.append(f"local ownership map exceeds 10KB context budget: {path.relative_to(ROOT)}")
 
 
 def check_encoding_and_stable(errors: list[str]) -> None:
-    markers = ("РЎ", "Рџ", "Р°", "вЂ", "В·")
-    for path in ROOT.rglob("*.md"):
+    markers = ("РЎ", "Рџ", "Р°", "РЅ", "Рµ", "Рє", "Рё", "Р»", "Рѕ", "СЃ", "С‚", "СЂ", "вЂ", "В·")
+    candidates = list(ROOT.rglob("*.md")) + [
+        DOCS/"PLAN.json", DOCS/"CONTEXT_MAP.json", DOCS/"BLOCK_MAP.json", ROOT/"tests/context_cases.json",
+    ]
+    for path in candidates:
         if ".git" in path.parts or "node_modules" in path.parts:
             continue
         text = path.read_text(encoding="utf-8")
-        if sum(text.count(marker) for marker in markers) >= 8:
+        if sum(text.count(marker) for marker in markers) >= 4:
             errors.append(f"possible UTF-8 mojibake: {path.relative_to(ROOT)}")
     stable = [ROOT/"AGENTS.md", ROOT/"README.md", DOCS/"INDEX.md", DOCS/"NEXT.md", DOCS/"DOCS_SYSTEM.md", DOCS/"DEVELOPMENT.md"]
     for path in stable:

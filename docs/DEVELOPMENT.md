@@ -77,22 +77,23 @@ Independent reviewer получает не весь чат, а task card, diff, 
 ## 7. Общий CI и публикация
 
 После профильного PASS и self-review: `check_docs`, scope-check, generated contracts, diff/secret sanity,
-затем один PR. Общий CI не заменяется локальными тестами. Проверять exact source SHA и реальные steps;
-скipped stage не считать проверкой, synthetic merge не называть фактическим merge.
+затем один PR. Общий CI не заменяется локальными тестами. Evidence обязан быть машинно связан с source head.
+Pull-request workflow обычно checkout-ит synthetic merge tree: такой gate называется `pr_merge_tree`, а не
+exact-source execution. Skipped stage не считается проверкой.
 
 Merge/deploy/live provider call — отдельные действия. Наличие зелёного PR не является разрешением.
 
-После успешного exact-head CI checkpoint замораживается. Никаких status/docs «доводок» на этом SHA.
-CI outcome можно обновить в PR metadata/comment — это не меняет source SHA. Source-of-truth текущего развития
-остаётся PLAN следующей ветки, а PR body считается snapshot/evidence, не machine state.
-Следующий package начинает новая ветка от frozen head; `tools/project_state.py start` уже в новой ветке
-фиксирует evidence прошлого package и переводит новый package в `active`.
+После успешных required workflows current working head замораживается; source/status больше не меняются.
+PR metadata/comment можно обновить как evidence snapshot. Следующий package не выбирает base вручную:
+`python tools/project_state.py begin-next --branch <new> --activate <ID> --verified-pr <PR>` проверяет, что PR head
+совпадает с frozen working head, required workflows зелёные, merge-tree действительно содержит source head,
+dependencies готовы; затем создаёт новую ветку от source head и только там обновляет PLAN/CURRENT.
 
 ## 8. Обновление документации
 
 - Изменился только локальный элемент → обычно локальный README менять не нужно, если ownership прежний.
 - Изменилась граница/owner/test → обновить `BLOCK_MAP.json`/локальный README/route по фактическому ownership.
-- Новый package стартует → `project_state.py start` обновляет PLAN/CURRENT в новой ветке; после freeze их не трогать.
+- Новый package стартует только через `project_state.py begin-next`; команда создаёт новую ветку и там обновляет PLAN/CURRENT.
 - Изменился предметный контракт → обновить единственный PRODUCT/ADMIN/UX/ARCHITECTURE/AI_RUNTIME owner.
 - Подробный технический отчёт → `reviews/<ID>.md`, а не копия во все документы.
 

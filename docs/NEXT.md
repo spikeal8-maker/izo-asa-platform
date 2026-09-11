@@ -1,8 +1,8 @@
 # IZO ASA · человеческая карта плана
 
-Текущий active/next package и точный `branch_from` находятся только в [`PLAN.json`](PLAN.json) и
-сгенерированном [`CURRENT.md`](CURRENT.md). Этот файл **не повторяет mutable статусы**, чтобы не становиться
-вторым roadmap.
+Текущий active/next package, `current_package_base`, working branch и next-branch policy находятся только в
+[`PLAN.json`](PLAN.json) и сгенерированном [`CURRENT.md`](CURRENT.md). Этот файл **не повторяет mutable статусы**,
+чтобы не становиться вторым roadmap.
 
 ## Как читать план
 
@@ -16,8 +16,9 @@
 Пакеты выполняются последовательно по зависимостям PLAN. Параллельная lineage не становится canonical по
 номеру PR или дате. Если две реализации расходятся, сначала отдельный reconciliation package, затем feature work.
 
-После зелёного exact-head CI checkpoint замораживается. Следующий package стартует новой веткой от frozen SHA;
-переход active state происходит уже в новой ветке через `tools/project_state.py start`.
+После зелёных required PR workflows current working head замораживается как source checkpoint; PR evidence
+фиксируется как `pr_merge_tree`, если workflow реально checkout-ил synthetic merge. Следующий package запускает
+`tools/project_state.py begin-next`, который сам проверяет evidence/dependencies и создаёт ветку от frozen source head.
 
 Предметные acceptance старых пакетов при необходимости читать в историческом NEXT только для конкретного ID,
 а не загружать весь прежний roadmap.

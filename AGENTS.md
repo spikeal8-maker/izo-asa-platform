@@ -10,7 +10,7 @@
 2. Выполнить `python tools/context.py --task "<запрос пользователя>"` либо выбрать точный block/route через `--key`.
 3. Если найден `CONTEXT BLOCK`, искать только указанный OWNER/SYMBOL/ANCHOR и читать окружающий блок; весь файл заранее не читать.
 4. Если router вернул `AMBIGUOUS`/`NOT RESOLVED`, искать точный visible text/symbol/API path, а не выбирать направление наугад.
-5. Зафиксировать ожидаемое `до → после`, non-goals, `branch_from`, scope и профильную проверку.
+5. Зафиксировать ожидаемое `до → после`, non-goals, `current_package_base`/working branch, scope и профильную проверку.
 6. Если запрос ведёт в parallel/superseded lineage — остановить feature work и разрулить lineage.
 
 Расширять чтение можно только из-за конкретной недостающей зависимости. После двух одинаковых неудач
@@ -38,9 +38,10 @@ Machine scope конечен. Если он стал недостаточен, �
 автоматически. Один пишущий агент на пересекающиеся файлы. Не reset --hard, force-push, cleanup чужого WIP,
 auto-merge или auto-deploy.
 
-**Frozen checkpoint:** после успешного exact-head CI этот SHA больше не редактируется. Нельзя делать
-«ещё одну маленькую правку статуса» поверх проверенного head. Следующий пакет создаёт новую ветку ровно от
-frozen SHA и переводит состояние в этой новой ветке через `tools/project_state.py start`.
+**Frozen checkpoint:** после успешного требуемого CI current working head больше не редактируется. Для PR CI
+доказательство называется `pr_merge_tree`, а не exact-source execution. Следующий package запускается только
+`tools/project_state.py begin-next`: команда сама связывает PR/workflows с source head, создаёт новую ветку от
+этого head и меняет state уже в новой ветке.
 
 ## 4. Обязательный SELF_REVIEW
 
@@ -60,7 +61,7 @@ secrets/release изменения требуют отдельного review-п
 ## 5. Публикация и отчёт
 
 Перед push: `python tools/check_docs.py`, scope-check, профильные tests, diff/secret sanity и необходимые
-generated contracts. CI проверять по exact source SHA/steps; synthetic merge не выдавать за фактический merge.
+generated contracts. CI evidence обязан быть связан с source head. PR workflow проверяет synthetic merge tree и так и называется; exact-source execution заявляется только когда workflow действительно checkout-ил source commit.
 
 Статусы независимы: IMPLEMENTED / SELF_REVIEWED / TESTED / PUSHED / INDEPENDENTLY_REVIEWED / MERGED /
 DEPLOYED / OPERATIONALLY_VERIFIED. Не склеивать их словом «готово».

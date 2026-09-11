@@ -7,7 +7,7 @@ README содержит **стабильные команды**, а не тек�
 ## С чего начать разработчику или coding-агенту
 
 1. Прочитать `AGENTS.md` и `docs/CURRENT.md`.
-2. Выполнить `python tools/project_state.py verify` — checkout должен быть потомком точного `branch_from`.
+2. Выполнить `python tools/project_state.py verify` — checkout должен быть текущим `working_branch` и потомком `current_package_base`.
 3. Для конкретной правки выполнить `python tools/context.py --task "<задача>"`.
 4. При `CONTEXT BLOCK` читать только owner вокруг symbol/anchor + local map/test; route — fallback, не повод сканировать весь feature.
 

@@ -43,3 +43,11 @@ Exact head `001edb9953d642f4d06453505809c20512f4b2b3` (`docs/agent-development-s
 
 Этот SHA считается frozen development checkpoint. Он не редактируется после PASS; следующие изменения идут
 отдельной веткой от этого exact head. Merge/deploy/independent review по-прежнему не выполнены.
+
+## DOC-004B · verified PR merge-tree checkpoint
+
+Source head `fe47e208809b5950b08c7133ba922d7be5742d24` в PR #24 связан с успешными workflows:
+Foundation CI `34647714472`, Dependency Security `34647714532`, Review Source `34647714613`.
+Foundation проверил synthetic PR merge tree `b1c941966ea4fd53fd00322808e90adabbc28077`, где source head — один из родителей;
+это **pr_merge_tree evidence**, не exact-source execution. В нём прошли 720 Python tests, 420 Playwright и
+PostgreSQL/S3/Compose restart acceptance. Source head после этого не изменялся.

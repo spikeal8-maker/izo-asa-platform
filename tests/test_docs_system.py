@@ -41,15 +41,17 @@ def test_routing_corpus_prefers_correct_or_safe_failure():
             assert 'NOT RESOLVED' in result.stderr
 
 
-def test_plan_separates_runtime_base_branch_from_and_working_branch():
+def test_plan_separates_runtime_parent_working_and_next_branch_policy():
     plan = json.loads((ROOT/'docs/PLAN.json').read_text(encoding='utf-8'))
     lineage = plan['canonical_lineage']
     assert lineage['runtime_base']['branch'] == 'api/fal-klein-001'
-    assert lineage['branch_from']['sha'] == '001edb9953d642f4d06453505809c20512f4b2b3'
-    assert lineage['working_branch'] == 'docs/maintenance-precision'
-    assert plan['active_package'] == 'DOC-004B'
+    assert lineage['current_package_base']['sha'] == 'fe47e208809b5950b08c7133ba922d7be5742d24'
+    assert lineage['working_branch'] == 'docs/continuation-safety'
+    assert lineage['next_branch_source'] == 'verified_working_head'
+    assert plan['active_package'] == 'DOC-004C'
     assert plan['next_package'] == 'LINEAGE-001'
-    assert plan['rules']['verified_checkpoint_is_immutable'] is True
+    assert 'DOC-004C' in plan['packages']['LINEAGE-001']['depends_on']
+    assert plan['rules']['ci_evidence_must_bind_source_head'] is True
     parallel = next(item for item in plan['parallel_lineages'] if item['id'] == 'OPENROUTER-LINEAGE')
     assert parallel['do_not_continue_automatically'] is True
 
