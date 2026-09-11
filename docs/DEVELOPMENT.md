@@ -13,16 +13,17 @@ Implementer локализует задачу, пишет минимальный
 
 ## 2. LOCATE — найти минимальный контекст
 
-Начало: `AGENTS.md → CURRENT.md → tools/context.py`.
+Начало: `AGENTS.md → CURRENT.md → tools/project_state.py verify → tools/context.py`.
 
 ```sh
 python tools/context.py --task "сделай кнопку Скачать в галерее шире на телефоне"
 python tools/context.py --key web.gallery
 ```
 
-Читать только `read_first` выбранного route. `expand_if_needed` открывается, когда есть конкретный вопрос,
-на который первый набор не отвечает. Если route не найден, открыть INDEX и искать точный visible text,
-route, symbol, error code или API path. Не начинать с полного tree/repository scan.
+Если router вернул `CONTEXT BLOCK`, искать OWNER по SYMBOL/ANCHOR и читать только окружающий блок + local README/test.
+`support` открывается только при конкретной зависимости. Если block не найден, использовать feature/domain route.
+`AMBIGUOUS` и `NOT RESOLVED` — безопасная остановка: искать точный visible text/symbol/API path, а не угадывать.
+Не начинать с полного tree/repository scan.
 
 ## 3. SCOPE — карточка изменения
 
@@ -81,11 +82,17 @@ Independent reviewer получает не весь чат, а task card, diff, 
 
 Merge/deploy/live provider call — отдельные действия. Наличие зелёного PR не является разрешением.
 
+После успешного exact-head CI checkpoint замораживается. Никаких status/docs «доводок» на этом SHA.
+CI outcome можно обновить в PR metadata/comment — это не меняет source SHA. Source-of-truth текущего развития
+остаётся PLAN следующей ветки, а PR body считается snapshot/evidence, не machine state.
+Следующий package начинает новая ветка от frozen head; `tools/project_state.py start` уже в новой ветке
+фиксирует evidence прошлого package и переводит новый package в `active`.
+
 ## 8. Обновление документации
 
 - Изменился только локальный элемент → обычно локальный README менять не нужно, если ownership прежний.
-- Изменилась граница/owner/test → обновить локальный README и `CONTEXT_MAP.json`.
-- Изменился package/lineage status → обновить `PLAN.json`, `CURRENT.md`, затем `STATUS.md` фактами.
+- Изменилась граница/owner/test → обновить `BLOCK_MAP.json`/локальный README/route по фактическому ownership.
+- Новый package стартует → `project_state.py start` обновляет PLAN/CURRENT в новой ветке; после freeze их не трогать.
 - Изменился предметный контракт → обновить единственный PRODUCT/ADMIN/UX/ARCHITECTURE/AI_RUNTIME owner.
 - Подробный технический отчёт → `reviews/<ID>.md`, а не копия во все документы.
 

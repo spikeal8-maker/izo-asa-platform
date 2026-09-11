@@ -32,8 +32,14 @@ SETTINGS-001 (#19) и CATALOG-001 (#20/#21). Она не является кан
 
 Это расхождение и устаревшие mutable фразы в INDEX/NEXT/AGENTS стали причиной DOC-004.
 
-## DOC-004
+## DOC-004 · verified checkpoint
 
-Статус: **IN PROGRESS** в ветке `docs/agent-development-system`, база — канонический API-001 head.
-Цель — canonical plan/current, context routing, локальные ownership docs, docs validator и обязательный self-review.
-Ни один результат DOC-004 не считается принятым до его собственных tests/diff/CI.
+Exact head `001edb9953d642f4d06453505809c20512f4b2b3` (`docs/agent-development-system`, PR #23) прошёл:
+
+- Foundation CI `34637203126` — SUCCESS; 715 Python tests и 420 Playwright cases;
+- PostgreSQL/S3/Compose restart и существующие browser acceptance markers — PASS;
+- Dependency Security `34637203194` — SUCCESS;
+- Review Source `34637203153` — SUCCESS.
+
+Этот SHA считается frozen development checkpoint. Он не редактируется после PASS; следующие изменения идут
+отдельной веткой от этого exact head. Merge/deploy/independent review по-прежнему не выполнены.

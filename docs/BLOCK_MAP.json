@@ -1,0 +1,166 @@
+{
+  "schema_version": 1,
+  "purpose": "Stable block-level locators. Use owner+anchor, never line numbers.",
+  "blocks": {
+    "web.shell.theme_toggle": {
+      "kind": "ui_element",
+      "route": "web.shell",
+      "aliases": ["переключить тему", "кнопка темы", "тёмная тема", "theme toggle"],
+      "owner": "apps/web/src/shell/App.tsx",
+      "symbol": "App / theme toggle button",
+      "anchor": "aria-label=\"Переключить тему\"",
+      "support": ["apps/web/src/shell/theme.css", "apps/web/src/shell/layout.css"],
+      "tests": ["apps/web/e2e/shell.spec.ts"]
+    },
+    "web.studio.quote_action": {
+      "kind": "ui_action",
+      "route": "web.studio",
+      "aliases": ["кнопка генерировать", "оценить генерацию", "получить цену", "создать quote"],
+      "owner": "apps/web/src/features/studio/Studio.tsx",
+      "symbol": "Composer.estimate",
+      "anchor": "async function estimate()",
+      "support": ["apps/web/src/features/studio/studio.css"],
+      "tests": ["apps/web/e2e/studio.spec.ts"]
+    },
+    "web.studio.confirm_submit": {
+      "kind": "ui_action",
+      "route": "web.studio",
+      "aliases": ["подтвердить создание", "кнопка подтверждения генерации", "запустить генерацию", "submit generation"],
+      "owner": "apps/web/src/features/studio/Studio.tsx",
+      "symbol": "Composer.submit",
+      "anchor": "async function submit()",
+      "support": ["apps/web/src/features/studio/studio.css", "apps/web/src/shared/submission.ts"],
+      "tests": ["apps/web/e2e/studio.spec.ts", "apps/web/e2e/provider.spec.ts"]
+    },
+    "web.jobs.cancel_action": {
+      "kind": "ui_action",
+      "route": "web.studio",
+      "aliases": ["отменить задание", "кнопка отмены задания", "cancel job"],
+      "owner": "apps/web/src/features/studio/ResultPanel.tsx",
+      "symbol": "JobDetail.cancel",
+      "anchor": "async function cancel()",
+      "support": ["apps/web/src/features/studio/studio.css"],
+      "tests": ["apps/web/e2e/studio.spec.ts", "apps/web/e2e/provider.spec.ts"]
+    },
+    "web.gallery.download_action": {
+      "kind": "ui_action",
+      "route": "web.gallery",
+      "aliases": ["кнопка скачать", "скачать работу", "скачать изображение", "download image"],
+      "owner": "apps/web/src/features/gallery/AssetPage.tsx",
+      "symbol": "Work.download",
+      "anchor": "async function download()",
+      "support": ["apps/web/src/features/gallery/gallery.css"],
+      "tests": ["apps/web/e2e/gallery.spec.ts"]
+    },
+    "web.gallery.preview_retry": {
+      "kind": "ui_action",
+      "route": "web.gallery",
+      "aliases": ["повторить предпросмотр", "кнопка превью", "retry preview"],
+      "owner": "apps/web/src/features/gallery/PrivateImage.tsx",
+      "symbol": "PrivateImage preview retry",
+      "anchor": "setVersion(v => v + 1)",
+      "support": ["apps/web/src/features/gallery/gallery.css"],
+      "tests": ["apps/web/e2e/gallery.spec.ts"]
+    },
+    "web.accounts.login_submit": {
+      "kind": "ui_action",
+      "route": "web.accounts",
+      "aliases": ["кнопка входа", "войти", "форма входа", "login button"],
+      "owner": "apps/web/src/features/accounts/AccountPage.tsx",
+      "symbol": "AccountPage.submit",
+      "anchor": "async function submit(event: FormEvent<HTMLFormElement>)",
+      "support": ["apps/web/src/features/accounts/accounts.css"],
+      "tests": ["apps/web/e2e/accounts.spec.ts"]
+    },
+    "web.accounts.session_revoke": {
+      "kind": "ui_action",
+      "route": "web.accounts",
+      "aliases": ["завершить сессию", "отозвать сессию", "выйти со всех устройств", "revoke session"],
+      "owner": "apps/web/src/features/accounts/AccountPage.tsx",
+      "symbol": "AccountPage.revoke",
+      "anchor": "async function revoke(path: string, endsCurrent = false)",
+      "support": [],
+      "tests": ["apps/web/e2e/accounts.spec.ts"]
+    },
+    "web.admin.grant_action": {
+      "kind": "ui_action",
+      "route": "web.admin",
+      "aliases": ["начислить баллы", "компенсация", "кнопка начисления", "grant credits"],
+      "owner": "apps/web/src/features/admin/GrantForm.tsx",
+      "symbol": "GrantForm command",
+      "anchor": "export function GrantForm",
+      "support": [],
+      "tests": ["apps/web/e2e/admin.spec.ts"]
+    },
+    "web.jobs.provider_error_message": {
+      "kind": "ui_element",
+      "route": "web.studio",
+      "aliases": ["текст ошибки провайдера", "ошибка провайдера", "provider error message", "ошибка fal в интерфейсе"],
+      "owner": "apps/web/src/features/studio/ResultPanel.tsx",
+      "symbol": "JobDetail provider error status",
+      "anchor": "job.error_code === 'provider_submission_unknown'",
+      "support": [],
+      "tests": ["apps/web/e2e/provider.spec.ts", "apps/web/e2e/studio.spec.ts"]
+    },
+    "api.jobs.quote": {
+      "kind": "backend_operation",
+      "route": "api.jobs",
+      "aliases": ["создать quote", "расчёт задания", "jobs quote", "цена задания backend"],
+      "owner": "apps/api/izo/jobs/service.py",
+      "symbol": "JobService.quote",
+      "anchor": "def quote(self, raw, csrf, draft: QuoteInput):",
+      "support": ["apps/api/izo/jobs/catalog.py", "apps/api/izo/jobs/schemas.py"],
+      "tests": ["tests/test_jobs.py", "tests/test_jobs_http.py"]
+    },
+    "api.jobs.submit": {
+      "kind": "backend_operation",
+      "route": "api.jobs",
+      "aliases": ["submit job", "создать задание backend", "operation id job", "admission job"],
+      "owner": "apps/api/izo/jobs/service.py",
+      "symbol": "JobService.submit",
+      "anchor": "def submit(self, raw, csrf, command: CreateJob):",
+      "support": ["apps/api/izo/jobs/tables.py", "apps/api/izo/jobs/execution.py"],
+      "tests": ["tests/test_jobs.py", "tests/test_jobs_boundaries.py"]
+    },
+    "api.jobs.cancel": {
+      "kind": "backend_operation",
+      "route": "api.jobs",
+      "aliases": ["отмена задания backend", "cancel job backend", "возврат после отмены", "job cancel semantics"],
+      "owner": "apps/api/izo/jobs/service.py",
+      "symbol": "JobService.cancel",
+      "anchor": "def cancel(self, raw, csrf, job_id):",
+      "support": ["apps/api/izo/jobs/provider_execution.py"],
+      "tests": ["tests/test_jobs.py", "tests/test_provider_jobs.py"]
+    },
+    "api.provider.execute": {
+      "kind": "backend_operation",
+      "route": "api.provider_execution",
+      "aliases": ["fal request", "provider request", "request_id", "paid retry", "provider cancel", "вызов fal"],
+      "owner": "apps/api/izo/jobs/provider_execution.py",
+      "symbol": "FalJobExecutor.execute",
+      "anchor": "def execute(self, claim, *, stopping=None):",
+      "support": ["apps/api/izo/providers/fal.py"],
+      "tests": ["tests/test_fal_provider.py", "tests/test_provider_jobs.py"]
+    },
+    "api.provider.recover": {
+      "kind": "backend_operation",
+      "route": "api.provider_execution",
+      "aliases": ["восстановить fal", "recover provider", "provider restart", "resume request id"],
+      "owner": "apps/api/izo/jobs/provider_execution.py",
+      "symbol": "recover_fal",
+      "anchor": "def recover_fal(runner, limit=20):",
+      "support": ["apps/api/izo/jobs/execution.py"],
+      "tests": ["tests/test_provider_jobs.py", "tests/test_jobs_recovery.py"]
+    },
+    "api.entitlements.evaluate": {
+      "kind": "backend_policy",
+      "route": "api.entitlements",
+      "aliases": ["доступ к модели", "тарифный лимит", "capability access", "проверка плана", "quota policy"],
+      "owner": "apps/api/izo/entitlements/policy.py",
+      "symbol": "evaluate",
+      "anchor": "def evaluate(view:",
+      "support": ["apps/api/izo/entitlements/service.py"],
+      "tests": ["tests/test_entitlements.py", "tests/test_entitlement_boundaries.py"]
+    }
+  }
+}
