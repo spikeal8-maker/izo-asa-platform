@@ -1,5 +1,46 @@
 # Фактическое состояние IZO ASA
 
+## API-001 — рабочее состояние до remote CI, 11 сентября 2026
+
+Base — `8dd49ba1b5168ed5b9e363672497cca3e308d296` (`change/targeted-maintenance`),
+рабочая ветка — `api/fal-klein-001`. В текущем рабочем дереве добавлен первый внешний
+provider: fal.ai / `fal-ai/flux-2/klein/4b`, capability `fal.flux2.klein.4b`.
+Пакет ещё не объявлен принятым: commit/push/PR и Linux/PostgreSQL GitHub CI должны быть
+проверены отдельно. Live fal call, настоящий key и реальные расходы — **NO**.
+
+Существующий Account/Credits/Jobs/Media/Gallery не дублируется. `test.image.v1` сохранён
+как deterministic regression-provider. Для fal добавлен durable provider-call lifecycle:
+до network submit фиксируется provider intent; после получения сохраняется `request_id`;
+restart продолжает тот же request. Потерянный submit response без request ID остаётся
+`provider_submission_unknown` и не получает автоматического второго POST. Поздно пришедший
+request ID сохраняется даже после истечения старого lease и безопасно возвращает тот же job
+в очередь на polling.
+
+External cancel не даёт ложный refund: HTTP202 означает только запрос отмены. Даже локальный
+`queued` после recovery не считается доказательством отсутствия provider work, если durable
+provider-call уже существует. Terminal release возможен только до provider intent либо после
+подтверждённой отмены/определённого failure. Accepted provider request можно сверять после
+выключения новых admissions; несовместимая credential version закрывается fail-closed.
+
+Fal key передаётся только отдельному `fal-worker`; API/test-worker его не получают. Unit/browser
+network заблокирован. Submit отправляет `X-Fal-Store-IO: 0`; provider media получает ограниченный
+TTL, остаётся публичным только на стороне fal в пределах этого TTL, скачивается bounded HTTPS
+`fal.media` без redirects и затем переписывается существующим `media.codec` перед private S3.
+Это техническая минимизация хранения, не production/privacy approval для пользовательских или
+детских данных.
+
+Локально после последних правок: профильные provider/Jobs/recovery/boundary + migration-workflow
+**77/77 PASS** на Python3.11.9; `compileall`, OpenAPI consistency, `git diff --check` и scope PASS.
+`npm run build` PASS; `provider.spec.ts + studio.spec.ts` — **160/160 PASS** на полной текущей
+Playwright viewport-матрице. Scope — **25/26 путей** до этой записи STATUS, после неё ожидается
+26/26. Попытка отдельного Linux/Python3.13 запуска через Docker не дошла до тестов из-за зависшей
+внешней загрузки образа; процесс остановлен без изменения чужих контейнеров. Поэтому полный
+Linux/Python3.13/PostgreSQL/S3/restart gate не считается пройденным до GitHub Actions.
+
+Подробный контракт и ограничения: [API-001](reviews/API-001.md).
+
+---
+
 CHANGE-001, 10 сентября 2026. База — `f2e6f3a29410363412b22ee632e8e1d2e3921ac7`,
 ветка image/server-workspace, PR #13. Новый пакет — change/targeted-maintenance.
 Точный опубликованный head и окончательные результаты — Checks/комментарий PR.

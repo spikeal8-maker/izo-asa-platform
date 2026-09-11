@@ -1,5 +1,4 @@
 """Atomic admission: trusted session -> policy -> quota -> credit hold -> job/outbox."""
-import json
 from uuid import uuid4, uuid5
 import sqlalchemy as sa
 
@@ -9,16 +8,24 @@ from ..credits.schemas import Reserve, Release
 from ..entitlements.service import EntitlementService
 from ..entitlements.policy import ImageDemand, ImageSize, RuntimeState, UsageSnapshot, evaluate
 from ..media import repository as media_repo, outputs
+from ..providers.fal import FalSettings
 from . import catalog, repository as repo, tables as t
 from .schemas import QuoteInput, QuoteView, CreateJob, JobError, JobList, ACTIVE, TERMINAL
 
 
 class JobService:
-    def __init__(self, auth, policy=None):
+    def __init__(self, auth, policy=None, fal=None):
         self.auth = auth
         self.policy = policy if policy is not None else catalog.JobSettings()
+        self.fal = fal if fal is not None else FalSettings()
+
+    def _provider_available(self, spec, draft):
+        if spec.id == catalog.FAL_CAPABILITY:
+            return self.fal.admission_available(draft.width, draft.height)
+        return True
 
     def _assess(self, conn, owner, draft, now):
+        spec = catalog.capability(draft.capability_id)
         plans = EntitlementService(clock=lambda: now)
         plan = plans.resolve(conn, owner)
         if not plan.configured or plan.policy is None:
@@ -32,37 +39,38 @@ class JobService:
         demand = ImageDemand(capability_id=draft.capability_id, executor="api",
             size=ImageSize(width=draft.width, height=draft.height), input_count=0,
             largest_input_bytes=0, output_bytes_bound=catalog.output_bound(draft.width, draft.height),
-            reserve_credits=catalog.PRICE)
+            reserve_credits=spec.credits)
         usage = UsageSnapshot(account_id=owner, as_of=plan.as_of,
             window_seconds=plan.policy.window_seconds, active_jobs=active, submissions=submissions,
             committed_bytes=used, reserved_bytes=held)
         balance = CreditService(clock=lambda: now).overview(conn, owner, limit=1).balance
         decision = evaluate(plan, demand, RuntimeState(feature_enabled=self.policy.enabled,
-            capability_supported=True, provider_available=True), usage, balance.available)
+            capability_supported=True, provider_available=self._provider_available(spec, draft)),
+            usage, balance.available)
         if not decision.allowed:
             raise JobError(409, decision.code)
-        return plan
+        return plan, spec
 
     def quote(self, raw, csrf, draft: QuoteInput):
         draft = QuoteInput.model_validate(draft)
         self.policy.require_enabled()
         with self.auth.engine.begin() as conn:
             p = access.context(self.auth, conn, raw, csrf, mutation=True, write=True)
-            self._assess(conn, p.account_id, draft, p.now)
+            _, spec = self._assess(conn, p.account_id, draft, p.now)
             recent = conn.execute(sa.select(sa.func.count()).select_from(t.quotes).where(
                 t.quotes.c.account_id == p.account_id, t.quotes.c.created_at > p.now - 3600)).scalar_one()
             if recent >= 100:
                 raise JobError(429, "quote_rate_limited")
             quote_id = uuid4()
             conn.execute(sa.insert(t.quotes).values(id=quote_id, account_id=p.account_id,
-                request_json=draft.model_dump_json(), catalog_version=catalog.VERSION,
-                credits=catalog.PRICE, created_at=p.now, expires_at=p.now + 120))
-            return QuoteView(id=quote_id, **draft.model_dump(), credits=catalog.PRICE, expires_at=p.now + 120)
+                request_json=draft.model_dump_json(), catalog_version=spec.version,
+                credits=spec.credits, created_at=p.now, expires_at=p.now + 120))
+            return QuoteView(id=quote_id, **draft.model_dump(), credits=spec.credits,
+                expires_at=p.now + 120, test_only=spec.test_only, notice=spec.notice)
 
     def submit(self, raw, csrf, command: CreateJob):
         command = CreateJob.model_validate(command)
         with self.auth.engine.begin() as conn:
-            # A replay is a read of an existing receipt, not another admission.
             p = access.context(self.auth, conn, raw, csrf, mutation=True)
             old = conn.execute(sa.select(t.jobs).where(t.jobs.c.account_id == p.account_id,
                 t.jobs.c.operation_id == command.operation_id)).mappings().first()
@@ -75,23 +83,24 @@ class JobService:
                 t.quotes.c.account_id == p.account_id)).mappings().first()
             if quote is None:
                 raise JobError(404, "not_found")
-            if (quote["expires_at"] <= p.now or quote["catalog_version"] != catalog.VERSION
-                    or quote["credits"] != catalog.PRICE):
+            draft = QuoteInput.model_validate_json(quote["request_json"])
+            spec = catalog.capability(draft.capability_id)
+            if (quote["expires_at"] <= p.now or quote["catalog_version"] != spec.version
+                    or quote["credits"] != spec.credits):
                 raise JobError(409, "quote_expired")
             if conn.execute(sa.select(t.jobs.c.id).where(t.jobs.c.quote_id == quote["id"])).first():
                 raise JobError(409, "quote_already_used")
-            draft = QuoteInput.model_validate_json(quote["request_json"])
-            plan = self._assess(conn, p.account_id, draft, p.now)
+            plan, spec = self._assess(conn, p.account_id, draft, p.now)
             job_id, output_id, reservation_id = uuid4(), uuid4(), uuid4()
             outputs.reserve(conn, p.account_id, output_id,
                 catalog.output_bound(draft.width, draft.height), draft.width, draft.height, p.now)
             CreditService(clock=lambda: p.now).reserve(conn, p.account_id, Reserve(
                 operation_id=uuid5(job_id, "reserve"), reservation_id=reservation_id,
-                request_id=job_id, amount=quote["credits"]))
+                request_id=job_id, amount=spec.credits))
             conn.execute(sa.insert(t.jobs).values(id=job_id, account_id=p.account_id,
                 operation_id=command.operation_id, quote_id=quote["id"], request_json=quote["request_json"],
-                plan_snapshot=plan.model_dump_json(), pool=catalog.POOL, status="queued",
-                reservation_id=reservation_id, output_id=output_id, reserve_credits=quote["credits"],
+                plan_snapshot=plan.model_dump_json(), pool=spec.pool, status="queued",
+                reservation_id=reservation_id, output_id=output_id, reserve_credits=spec.credits,
                 charged_credits=0, fence=0, next_poll_at=p.now, reconcile_count=0,
                 cancel_requested=False, created_at=p.now, updated_at=p.now,
                 deadline_at=p.now + self.policy.deadline_seconds))
@@ -115,7 +124,7 @@ class JobService:
                            next_offset=offset + limit if len(rows) > limit else None)
 
     def release_terminal(self, conn, row, state, code=None):
-        """Only before any external write. Caller holds Account and Job locks."""
+        """Only before a definitely absent external write or after confirmed provider cancellation."""
         if state not in {"failed", "cancelled"} or row["status"] in TERMINAL:
             raise JobError(409, "invalid_transition")
         now = self.auth.now()
@@ -135,8 +144,19 @@ class JobService:
             if not row["cancel_requested"]:
                 repo.change(conn, job_id, p.now, cancel_requested=True)
                 repo.event(conn, job_id, "cancel_requested", p.now)
+            draft = QuoteInput.model_validate_json(row["request_json"])
+            spec = catalog.capability(draft.capability_id)
             if row["status"] in {"queued", "claimed", "running"}:
-                self.release_terminal(conn, row, "cancelled")
-            # Once sealed, an S3 write may exist. Do NOT free space or credits;
-            # accepted completion/reconciliation owns the final outcome.
+                if not spec.external:
+                    self.release_terminal(conn, row, "cancelled")
+                else:
+                    call = conn.execute(sa.select(t.provider_calls.c.id).where(
+                        t.provider_calls.c.job_id == row["id"])).first()
+                    # A recovered provider request may temporarily be queued locally.
+                    # Presence of durable provider intent therefore outranks local state:
+                    # only a definitely not-submitted external job can refund here.
+                    if call is None:
+                        self.release_terminal(conn, row, "cancelled")
+            # Once an external provider intent or sealed S3 output exists, cancellation is
+            # only a request. Provider/storage reconciliation owns the final outcome.
             return repo.view(repo.load(conn, p.account_id, job_id))

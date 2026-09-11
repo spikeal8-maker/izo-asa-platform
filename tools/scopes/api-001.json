@@ -1,0 +1,38 @@
+{
+  "base": "8dd49ba1b5168ed5b9e363672497cca3e308d296",
+  "max_files": 26,
+  "allowed": [
+    "apps/api/izo/jobs/catalog.py",
+    "apps/api/izo/jobs/schemas.py",
+    "apps/api/izo/jobs/tables.py",
+    "apps/api/izo/jobs/service.py",
+    "apps/api/izo/jobs/execution.py",
+    "apps/api/izo/jobs/recovery.py",
+    "apps/api/izo/jobs/repository.py",
+    "apps/api/izo/jobs/provider_execution.py",
+    "apps/api/izo/jobs/fal_worker.py",
+    "apps/api/izo/jobs/AGENTS.md",
+    "apps/api/izo/providers/__init__.py",
+    "apps/api/izo/providers/fal.py",
+    "apps/api/migrations/versions/0009_provider_calls.py",
+    "compose.yaml",
+    "apps/web/src/features/studio/Studio.tsx",
+    "apps/web/src/features/studio/ResultPanel.tsx",
+    "apps/web/src/features/studio/README.md",
+    "apps/web/src/shared/workspace-api.ts",
+    "apps/web/e2e/workspace-fixtures.ts",
+    "apps/web/e2e/provider.spec.ts",
+    "tests/test_fal_provider.py",
+    "tests/test_provider_jobs.py",
+    "packages/contracts/openapi.json",
+    "docs/reviews/API-001.md",
+    "docs/STATUS.md",
+    "tools/scopes/api-001.json"
+  ],
+  "sensitive_approved": [
+    "apps/api/izo/jobs/AGENTS.md",
+    "apps/api/migrations/versions/0009_provider_calls.py",
+    "compose.yaml",
+    "tools/scopes/api-001.json"
+  ]
+}

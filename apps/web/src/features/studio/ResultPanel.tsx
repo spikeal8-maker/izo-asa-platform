@@ -7,8 +7,10 @@ import { WorkspaceGate, ResourceState, useResource } from '../../shared/workspac
 import { type Job, type Jobs, activeJob, statusName, isId, problem } from '../../shared/workspace-api'
 import './studio.css'
 
-const pollJob = (job: Job) => activeJob(job) && job.error_code !== 'reconciliation_required'
+const pollJob = (job: Job) => activeJob(job) && !['reconciliation_required', 'provider_submission_unknown', 'provider_auth_required', 'provider_deadline'].includes(job.error_code ?? '')
 const pollJobs = (value: Jobs) => value.jobs.some(pollJob)
+const executorName = (job: Job) => job.test_only ? 'Тестовый исполнитель · не AI-генерация.'
+  : job.capability_id === 'fal.flux2.klein.4b' ? 'FLUX.2 [klein] 4B · fal.ai.' : 'Внешний AI-исполнитель.'
 function JobList() {
   const [offset, setOffset] = useState(0)
   const { data, error, loading, refresh } = useResource<Jobs>(`/api/v1/jobs?limit=20&offset=${offset}`, pollJobs)
@@ -41,16 +43,19 @@ function JobDetail({ id, auth }: { id: string; auth: AuthView }) {
   return <><Link className="back-link" href="/jobs"><Icon name="back" /> Все задания</Link>
     <ResourceState error={result.error} loading={result.loading} retry={result.refresh} />
     {job && <section className="composer job-record"><h2 data-testid="job-status">{statusName[job.status]}</h2>
-      <p className="job-prompt">{job.prompt}</p><p>Тестовый исполнитель · не AI-генерация.</p>
+      <p className="job-prompt">{job.prompt}</p><p>{executorName(job)}</p>
       <dl className="summary-list"><div><dt>Размер</dt><dd>{job.width} × {job.height}</dd></div>
         <div><dt>Резерв</dt><dd>{job.reserved_credits}</dd></div><div><dt>Списано</dt><dd data-testid="job-charged">{job.charged_credits}</dd></div>
         <div><dt>Попыток</dt><dd>{job.attempt_count}</dd></div></dl>
       {activeJob(job) && <p>Страница может быть закрыта: состояние хранится на сервере. Процент выполнения не выдумывается.</p>}
       {job.error_code && <p role="status">{job.error_code === 'reconciliation_required'
         ? 'Нужен разбор оператором. Резерв сохранён.'
-        : job.status === 'reconciling' ? 'Проверяем уже записанный файл. Новое задание не требуется.'
+        : job.error_code === 'provider_submission_unknown' ? 'Неизвестно, принял ли провайдер запрос. Автоматический повтор запрещён; резерв сохранён для разбора.'
+        : job.error_code === 'provider_auth_required' ? 'Провайдер требует проверки подключения. Новый платный запрос не запускается; резерв сохранён.'
+        : job.error_code === 'provider_deadline' ? 'Провайдер не дал окончательный результат в срок. Автоматический повтор запрещён; нужен разбор.'
+        : job.status === 'reconciling' ? 'Сервер уточняет уже начатую операцию. Новое задание не требуется.'
         : 'Задание не завершено успешно. Проверьте баланс перед новым запуском.'}</p>}
-      {job.cancel_requested && <p>Запрос отмены принят. Окончательный результат определяется сервером.</p>}
+      {job.cancel_requested && <p>Запрос отмены принят. Окончательный результат определяется сервером и исполнителем.</p>}
       <div className="workspace-actions">{job.status === 'succeeded' && job.asset_id && <Link className="primary" href={`/gallery/${job.asset_id}`}>Открыть работу</Link>}
         {activeJob(job) && !job.cancel_requested && <button className="secondary" onClick={() => setConfirm(true)}>Отменить задание</button>}
         <button onClick={result.refresh} disabled={busy}>Обновить задание</button>
@@ -58,7 +63,7 @@ function JobDetail({ id, auth }: { id: string; auth: AuthView }) {
     </section>}
     {error && <p className="field-error" role="alert">{error}</p>}
     <Dialog open={confirm} title="Отменить задание?" onClose={() => { if (!busy) setConfirm(false) }}>
-      <p>До сохранения результата сервер может освободить резерв. Если запись уже началась, отмена — запрос, а не обещание возврата.</p>
+      <p>До отправки внешнему исполнителю сервер может освободить резерв. После отправки отмена — запрос: провайдер может успеть завершить работу, поэтому возврат определяется только подтверждённым итогом.</p>
       <button className="primary" disabled={busy} onClick={() => void cancel()}>Подтвердить отмену</button>
     </Dialog></>
 }
