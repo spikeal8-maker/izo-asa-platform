@@ -1,6 +1,6 @@
 {
   "base": "8dd49ba1b5168ed5b9e363672497cca3e308d296",
-  "max_files": 26,
+  "max_files": 27,
   "allowed": [
     "apps/api/izo/jobs/catalog.py",
     "apps/api/izo/jobs/schemas.py",
@@ -24,6 +24,7 @@
     "apps/web/e2e/provider.spec.ts",
     "tests/test_fal_provider.py",
     "tests/test_provider_jobs.py",
+    "tests/test_jobs_migration.py",
     "packages/contracts/openapi.json",
     "docs/reviews/API-001.md",
     "docs/STATUS.md",
