@@ -6,10 +6,10 @@ README содержит **стабильные команды**, а не тек�
 
 ## С чего начать разработчику или coding-агенту
 
-1. Прочитать `AGENTS.md`.
-2. Прочитать `docs/CURRENT.md` и убедиться, что checkout относится к canonical lineage.
+1. Прочитать `AGENTS.md` и `docs/CURRENT.md`.
+2. Выполнить `python tools/project_state.py verify` — checkout должен быть потомком точного `branch_from`.
 3. Для конкретной правки выполнить `python tools/context.py --task "<задача>"`.
-4. Читать только выданный локальный context и ближайший test; не сканировать весь repository заранее.
+4. При `CONTEXT BLOCK` читать только owner вокруг symbol/anchor + local map/test; route — fallback, не повод сканировать весь feature.
 
 Документация: [INDEX](docs/INDEX.md) — карта; [DOCS_SYSTEM](docs/DOCS_SYSTEM.md) — правила владельцев фактов;
 [STATUS](docs/STATUS.md) — доказанные факты; [NEXT](docs/NEXT.md) — человеческое представление PLAN.

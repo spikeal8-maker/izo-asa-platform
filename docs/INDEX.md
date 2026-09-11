@@ -7,8 +7,9 @@ INDEX — **стабильная карта**, а не статус и не road
 
 | Нужно понять | Читать |
 |---|---|
-| Где проект сейчас / откуда продолжать | [CURRENT.md](CURRENT.md) → [PLAN.json](PLAN.json) |
-| Какие файлы нужны для конкретной правки | [CONTEXT_MAP.json](CONTEXT_MAP.json) или `python tools/context.py` |
+| Где проект сейчас / откуда продолжать | [CURRENT.md](CURRENT.md) → [PLAN.json](PLAN.json) → `python tools/project_state.py verify` |
+| Где живёт конкретная кнопка/операция | [BLOCK_MAP.json](BLOCK_MAP.json) или `python tools/context.py --task ...` |
+| Какой feature/domain читать, если block неизвестен | [CONTEXT_MAP.json](CONTEXT_MAP.json) |
 | Как coding-агент должен работать | [DEVELOPMENT.md](DEVELOPMENT.md), кратко — корневой `AGENTS.md` |
 | Как устроена сама документация | [DOCS_SYSTEM.md](DOCS_SYSTEM.md) |
 | Почему выбрана текущая архитектурная линия | `adr/` (сначала ADR-001) |
@@ -24,8 +25,6 @@ INDEX — **стабильная карта**, а не статус и не road
 
 ## Правило для маленькой правки
 
-Не открывать PRODUCT/ADMIN/AI_RUNTIME целиком автоматически. Сначала context route и локальный README
-рядом с кодом. Большой документ нужен только при пересечении предметной границы.
-
-Пример: UI Studio → `apps/web/AGENTS.md` → `features/studio/README.md` → component/CSS/spec.
-Backend Jobs → `apps/api/izo/jobs/AGENTS.md` → `jobs/README.md` → конкретный service/execution/test.
+Не открывать PRODUCT/ADMIN/AI_RUNTIME целиком автоматически. Сначала block locator: owner/symbol/anchor и
+окружающий source block. Если block неизвестен — feature/domain route и локальный README. Большой документ
+нужен только при пересечении предметной границы. `AMBIGUOUS` безопаснее случайного выбора.

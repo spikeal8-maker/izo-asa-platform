@@ -3,90 +3,87 @@
   "project": "IZO ASA / OneNode Image Studio",
   "updated": "2026-09-11",
   "canonical_lineage": {
-    "baseline_branch": "api/fal-klein-001",
-    "baseline_sha": "faec39d6ae0b4f035ef0f86114494789acde3b46",
-    "baseline_pr": 22,
-    "baseline_state": "technical_ci_pass_draft",
+    "runtime_base": {
+      "branch": "api/fal-klein-001",
+      "sha": "faec39d6ae0b4f035ef0f86114494789acde3b46",
+      "pr": 22,
+      "state": "technical_ci_pass_draft"
+    },
+    "branch_from": {
+      "branch": "docs/agent-development-system",
+      "sha": "001edb9953d642f4d06453505809c20512f4b2b3",
+      "pr": 23,
+      "state": "verified_checkpoint"
+    },
+    "working_branch": "docs/maintenance-precision",
     "provider_direction": "fal.ai / fal-ai/flux-2/klein/4b",
     "merge_deployed": false
   },
-  "active_package": "DOC-004",
+  "active_package": "DOC-004B",
   "next_package": "LINEAGE-001",
   "rules": {
     "one_active_package": true,
     "one_canonical_lineage": true,
     "branch_from_parallel_lineage_without_reconciliation": false,
     "live_external_spend_requires_owner_approval": true,
-    "merge_or_deploy_requires_separate_owner_action": true
+    "merge_or_deploy_requires_separate_owner_action": true,
+    "verified_checkpoint_is_immutable": true,
+    "state_transition_must_be_atomic": true
   },
   "parallel_lineages": [
     {
       "id": "OPENROUTER-LINEAGE",
       "status": "hold_for_reconciliation",
       "do_not_continue_automatically": true,
-      "prs": [15, 16, 17, 19, 20, 21],
+      "prs": [
+        15,
+        16,
+        17,
+        19,
+        20,
+        21
+      ],
       "summary": "OpenRouter API-001 plus SETTINGS/CATALOG descendants; useful work may be salvaged only through LINEAGE-001 onto the canonical fal line."
     }
-  ],  "packages": {
-    "DOC-001": {"status": "historical_complete", "depends_on": []},
-    "DOC-002": {"status": "historical_complete", "depends_on": ["DOC-001"]},
-    "DOC-003": {"status": "historical_complete", "depends_on": ["DOC-002"]},
-    "F0-ACCEPT": {"status": "historical_technical_pass", "depends_on": ["DOC-003"]},
-    "UX-001": {"status": "historical_implemented_design_unapproved", "depends_on": ["F0-ACCEPT"]},
-    "AUTH-001": {"status": "technical_pass", "depends_on": ["F0-ACCEPT"]},
-    "AUTH-002": {"status": "technical_pass", "depends_on": ["AUTH-001"]},
-    "CREDIT-001": {"status": "technical_pass", "depends_on": ["AUTH-001"]},
-    "ENTITLEMENT-001": {"status": "technical_pass", "depends_on": ["AUTH-001", "CREDIT-001"]},
-    "ADMIN-001": {"status": "technical_pass", "depends_on": ["AUTH-001", "CREDIT-001"]},
-    "MEDIA-001": {"status": "technical_pass", "depends_on": ["AUTH-001", "ENTITLEMENT-001"]},
-    "PROFILE-001": {"status": "planned", "depends_on": ["AUTH-001", "MEDIA-001", "UX-001"]},
-    "JOBS-001": {"status": "technical_pass", "depends_on": ["CREDIT-001", "ENTITLEMENT-001", "MEDIA-001"]},
-    "IMAGE-001": {"status": "technical_pass", "depends_on": ["UX-001", "AUTH-002", "ADMIN-001", "JOBS-001"]},
-    "CHANGE-001": {"status": "technical_pass", "depends_on": ["IMAGE-001"]},
-    "API-001": {
-      "status": "technical_ci_pass_live_acceptance_pending",
-      "depends_on": ["IMAGE-001"],
-      "canonical_pr": 22,
-      "canonical_branch": "api/fal-klein-001",
-      "provider": "fal.ai",
-      "model": "fal-ai/flux-2/klein/4b"
-    },
-    "DOC-004": {
-      "status": "active",
-      "depends_on": ["API-001"],
-      "goal": "Canonical project state, token-efficient context routing, local ownership docs, documentation validation and mandatory self-review."
-    },    "LINEAGE-001": {
-      "status": "planned_next",
-      "depends_on": ["DOC-004", "API-001"],
-      "goal": "Compare OpenRouter-derived SETTINGS/CATALOG work with the canonical fal line, salvage provider-neutral pieces, rebase deliberately, and retire superseded branches."
-    },
-    "SETTINGS-001": {
-      "status": "parallel_lineage_only",
-      "depends_on": ["API-001"],
-      "source_pr": 19,
-      "note": "Do not continue from PR #19 automatically; LINEAGE-001 decides what is salvaged onto canonical."
-    },
-    "CATALOG-001": {
-      "status": "parallel_lineage_only",
-      "depends_on": ["API-001", "SETTINGS-001"],
-      "source_prs": [20, 21],
-      "note": "Do not treat OpenRouter-specific catalog metadata as canonical until LINEAGE-001."
-    },
-    "ACCESS-001": {"status": "planned", "depends_on": ["AUTH-002", "ADMIN-001"]},
-    "LOCAL-001": {"status": "planned", "depends_on": ["JOBS-001", "API-001", "CATALOG-001"]},
-    "PLATFORM-001": {"status": "planned", "depends_on": ["AUTH-002", "IMAGE-001"]},
-    "PLATFORM-002": {"status": "planned", "depends_on": ["AUTH-002", "IMAGE-001"]},
-    "FEED-001": {"status": "planned", "depends_on": ["MEDIA-001", "ADMIN-001", "IMAGE-001"]},
-    "CHAT-001": {"status": "planned", "depends_on": ["AUTH-002", "CREDIT-001", "ENTITLEMENT-001", "IMAGE-001", "API-001"]},
-    "IMAGE-002": {"status": "planned", "depends_on": ["IMAGE-001", "MEDIA-001", "API-001"]},
-    "VIDEO-001": {"status": "planned", "depends_on": ["JOBS-001", "MEDIA-001", "API-001"]},
-    "AUDIO-001": {"status": "planned", "depends_on": ["JOBS-001", "MEDIA-001", "API-001"]},
-    "THREE-D-001": {"status": "planned", "depends_on": ["JOBS-001", "MEDIA-001", "API-001"]},    "SUPPORT-001": {"status": "planned", "depends_on": ["AUTH-002", "ADMIN-001", "MEDIA-001"]},
-    "ACCOUNT-DATA-001": {"status": "planned", "depends_on": ["AUTH-002", "MEDIA-001", "CREDIT-001", "JOBS-001"]},
-    "NOTIFY-001": {"status": "planned", "depends_on": ["AUTH-002", "JOBS-001"]},
-    "BILLING-001": {"status": "planned", "depends_on": ["CREDIT-001", "ENTITLEMENT-001", "ADMIN-001", "API-001", "OPS-001"]},
-    "OPS-001": {"status": "planned", "depends_on": ["IMAGE-001", "API-001"]},
-    "LAUNCH-001": {"status": "planned", "depends_on": ["F0-ACCEPT", "AUTH-002", "SUPPORT-001", "ACCOUNT-DATA-001", "OPS-001"]}
+  ],
+  "packages": {
+    "DOC-001": {"status": "historical_complete","depends_on": []},
+    "DOC-002": {"status": "historical_complete","depends_on": ["DOC-001"]},
+    "DOC-003": {"status": "historical_complete","depends_on": ["DOC-002"]},
+    "F0-ACCEPT": {"status": "historical_technical_pass","depends_on": ["DOC-003"]},
+    "UX-001": {"status": "historical_implemented_design_unapproved","depends_on": ["F0-ACCEPT"]},
+    "AUTH-001": {"status": "technical_pass","depends_on": ["F0-ACCEPT"]},
+    "AUTH-002": {"status": "technical_pass","depends_on": ["AUTH-001"]},
+    "CREDIT-001": {"status": "technical_pass","depends_on": ["AUTH-001"]},
+    "ENTITLEMENT-001": {"status": "technical_pass","depends_on": ["AUTH-001","CREDIT-001"]},
+    "ADMIN-001": {"status": "technical_pass","depends_on": ["AUTH-001","CREDIT-001"]},
+    "MEDIA-001": {"status": "technical_pass","depends_on": ["AUTH-001","ENTITLEMENT-001"]},
+    "PROFILE-001": {"status": "planned","depends_on": ["AUTH-001","MEDIA-001","UX-001"]},
+    "JOBS-001": {"status": "technical_pass","depends_on": ["CREDIT-001","ENTITLEMENT-001","MEDIA-001"]},
+    "IMAGE-001": {"status": "technical_pass","depends_on": ["UX-001","AUTH-002","ADMIN-001","JOBS-001"]},
+    "CHANGE-001": {"status": "technical_pass","depends_on": ["IMAGE-001"]},
+    "API-001": {"status": "technical_ci_pass_live_acceptance_pending","depends_on": ["IMAGE-001"],"canonical_pr": 22,"canonical_branch": "api/fal-klein-001","provider": "fal.ai","model": "fal-ai/flux-2/klein/4b"},
+    "DOC-004": {"status": "technical_pass","depends_on": ["API-001"],"goal": "Canonical project state, token-efficient context routing, local ownership docs, documentation validation and mandatory self-review.","evidence": {"foundation_ci": 34637203126,"dependency_security": 34637203194,"review_source": 34637203153,"head": "001edb9953d642f4d06453505809c20512f4b2b3"}},
+    "LINEAGE-001": {"status": "planned_next","depends_on": ["DOC-004","API-001"],"goal": "Compare OpenRouter-derived SETTINGS/CATALOG work with the canonical fal line, salvage provider-neutral pieces, rebase deliberately, and retire superseded branches.","decides_next": true},
+    "SETTINGS-001": {"status": "parallel_lineage_only","depends_on": ["API-001"],"source_pr": 19,"note": "Do not continue from PR #19 automatically; LINEAGE-001 decides what is salvaged onto canonical."},
+    "CATALOG-001": {"status": "parallel_lineage_only","depends_on": ["API-001","SETTINGS-001"],"source_prs": [20,21],"note": "Do not treat OpenRouter-specific catalog metadata as canonical until LINEAGE-001."},
+    "ACCESS-001": {"status": "planned","depends_on": ["AUTH-002","ADMIN-001"]},
+    "LOCAL-001": {"status": "planned","depends_on": ["JOBS-001","API-001","CATALOG-001"]},
+    "PLATFORM-001": {"status": "planned","depends_on": ["AUTH-002","IMAGE-001"]},
+    "PLATFORM-002": {"status": "planned","depends_on": ["AUTH-002","IMAGE-001"]},
+    "FEED-001": {"status": "planned","depends_on": ["MEDIA-001","ADMIN-001","IMAGE-001"]},
+    "CHAT-001": {"status": "planned","depends_on": ["AUTH-002","CREDIT-001","ENTITLEMENT-001","IMAGE-001","API-001"]},
+    "IMAGE-002": {"status": "planned","depends_on": ["IMAGE-001","MEDIA-001","API-001"]},
+    "VIDEO-001": {"status": "planned","depends_on": ["JOBS-001","MEDIA-001","API-001"]},
+    "AUDIO-001": {"status": "planned","depends_on": ["JOBS-001","MEDIA-001","API-001"]},
+    "THREE-D-001": {"status": "planned","depends_on": ["JOBS-001","MEDIA-001","API-001"]},
+    "SUPPORT-001": {"status": "planned","depends_on": ["AUTH-002","ADMIN-001","MEDIA-001"]},
+    "ACCOUNT-DATA-001": {"status": "planned","depends_on": ["AUTH-002","MEDIA-001","CREDIT-001","JOBS-001"]},
+    "NOTIFY-001": {"status": "planned","depends_on": ["AUTH-002","JOBS-001"]},
+    "BILLING-001": {"status": "planned","depends_on": ["CREDIT-001","ENTITLEMENT-001","ADMIN-001","API-001","OPS-001"]},
+    "OPS-001": {"status": "planned","depends_on": ["IMAGE-001","API-001"]},
+    "LAUNCH-001": {"status": "planned","depends_on": ["F0-ACCEPT","AUTH-002","SUPPORT-001","ACCOUNT-DATA-001","OPS-001"]},
+    "DOC-004B": {"status": "active","depends_on": ["DOC-004"],"goal": "Maintenance precision: explicit branch_from, block-level routing, ambiguity-safe locator, frozen checkpoints, atomic state transitions and semantic local-doc repair."}
   },
   "status_meaning": {
     "active": "The only package a new coding agent may continue by default.",

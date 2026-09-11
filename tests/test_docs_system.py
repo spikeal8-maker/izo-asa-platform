@@ -1,66 +1,73 @@
-"""DOC-004: documentation is executable routing, not a second stale roadmap."""
+"""Documentation/navigation regression tests for low-token maintenance."""
 from __future__ import annotations
 
 import json
 from pathlib import Path
+import re
 import subprocess
 import sys
 
 ROOT = Path(__file__).resolve().parents[1]
 
 
-def run_context(*args: str) -> str:
-    result = subprocess.run([sys.executable, str(ROOT/'tools/context.py'), *args],
-                            cwd=ROOT, capture_output=True, text=True, timeout=10)
-    assert result.returncode == 0, result.stderr
-    return result.stdout
+def run_context(task: str):
+    return subprocess.run(
+        [sys.executable, str(ROOT/'tools/context.py'), '--task', task, '--json'],
+        cwd=ROOT, capture_output=True, text=True, timeout=10,
+    )
 
 
 def test_documentation_validator_passes():
-    result = subprocess.run([sys.executable, str(ROOT/'tools/check_docs.py')],
-                            cwd=ROOT, capture_output=True, text=True, timeout=10)
+    result = subprocess.run([sys.executable, str(ROOT/'tools/check_docs.py')], cwd=ROOT,
+                            capture_output=True, text=True, timeout=10)
     assert result.returncode == 0, result.stdout + result.stderr
     assert 'DOCS CHECK OK' in result.stdout
 
 
-def test_context_router_localizes_typical_small_changes():
-    cases = {
-        'сделай кнопку Скачать в галерее шире на телефоне': 'web.gallery',
-        'поменяй текст подтверждения генерации в студии': 'web.studio',
-        'исправь пароль и сессии на странице аккаунта': 'web.accounts',
-        'изменить тарифный лимит доступа к модели': 'api.entitlements',
-        'fal уже принял запрос, исправь отмену provider request': 'api.provider_execution',
-        'проверь docker compose и egress worker': 'ops.runtime',
-    }
-    for task, route in cases.items():
-        output = run_context('--task', task)
-        assert f'CONTEXT ROUTE: {route}' in output
+def test_routing_corpus_prefers_correct_or_safe_failure():
+    cases = json.loads((ROOT/'tests/context_cases.json').read_text(encoding='utf-8'))
+    for case in cases:
+        result = run_context(case['task'])
+        if case['status'] == 'resolved':
+            assert result.returncode == 0, (case, result.stderr)
+            data = json.loads(result.stdout)
+            assert data['kind'] == case['kind'], case
+            assert data['key'] == case['key'], case
+        elif case['status'] == 'ambiguous':
+            assert result.returncode == 3, (case, result.stdout, result.stderr)
+            assert 'AMBIGUOUS' in result.stderr
+        else:
+            assert result.returncode == 2, (case, result.stdout, result.stderr)
+            assert 'NOT RESOLVED' in result.stderr
 
-def test_plan_has_one_canonical_line_and_blocks_parallel_continuation():
+
+def test_plan_separates_runtime_base_branch_from_and_working_branch():
     plan = json.loads((ROOT/'docs/PLAN.json').read_text(encoding='utf-8'))
-    assert plan['active_package'] == 'DOC-004'
+    lineage = plan['canonical_lineage']
+    assert lineage['runtime_base']['branch'] == 'api/fal-klein-001'
+    assert lineage['branch_from']['sha'] == '001edb9953d642f4d06453505809c20512f4b2b3'
+    assert lineage['working_branch'] == 'docs/maintenance-precision'
+    assert plan['active_package'] == 'DOC-004B'
     assert plan['next_package'] == 'LINEAGE-001'
-    assert plan['canonical_lineage']['baseline_branch'] == 'api/fal-klein-001'
-    active = [key for key, value in plan['packages'].items() if value['status'] == 'active']
-    assert active == ['DOC-004']
-    lineage = next(item for item in plan['parallel_lineages'] if item['id'] == 'OPENROUTER-LINEAGE')
-    assert lineage['do_not_continue_automatically'] is True
-    assert {19, 20, 21}.issubset(set(lineage['prs']))
-    assert plan['packages']['SETTINGS-001']['status'] == 'parallel_lineage_only'
-    assert plan['packages']['CATALOG-001']['status'] == 'parallel_lineage_only'
+    assert plan['rules']['verified_checkpoint_is_immutable'] is True
+    parallel = next(item for item in plan['parallel_lineages'] if item['id'] == 'OPENROUTER-LINEAGE')
+    assert parallel['do_not_continue_automatically'] is True
 
 
-def test_stable_entry_documents_do_not_embed_current_project_head():
-    for raw in ('AGENTS.md', 'README.md', 'docs/INDEX.md', 'docs/DEVELOPMENT.md', 'docs/DOCS_SYSTEM.md'):
+def test_stable_docs_do_not_embed_mutable_sha_or_pr():
+    sha = re.compile(r'\b[0-9a-f]{40}\b')
+    pr = re.compile(r'\bPR\s*#\d+\b', re.I)
+    for raw in ('AGENTS.md','README.md','docs/INDEX.md','docs/NEXT.md','docs/DEVELOPMENT.md','docs/DOCS_SYSTEM.md'):
         text = (ROOT/raw).read_text(encoding='utf-8')
-        assert 'faec39d6ae0b4f035ef0f86114494789acde3b46' not in text
-        assert 'Следующий шаг — UX-001' not in text
-        assert 'tools/scopes/ux-001.json' not in text
+        assert not sha.search(text), raw
+        assert not pr.search(text), raw
 
 
-def test_context_map_uses_existing_paths_only():
-    context = json.loads((ROOT/'docs/CONTEXT_MAP.json').read_text(encoding='utf-8'))
-    for route in context['routes'].values():
-        for field in ('read_first', 'tests', 'expand_if_needed', 'do_not_read_by_default'):
-            for raw in route.get(field, []):
-                assert (ROOT/raw).exists(), (field, raw)
+def test_block_level_gallery_context_is_materially_smaller_than_old_feature_bundle():
+    result = subprocess.run([sys.executable, str(ROOT/'tools/context.py'), '--task', 'сделай кнопку Скачать шире'],
+                            cwd=ROOT, capture_output=True, text=True, timeout=10)
+    assert result.returncode == 0, result.stderr
+    assert 'CONTEXT BLOCK: web.gallery.download_action' in result.stdout
+    match = re.search(r'INITIAL DOCUMENT BYTES: (\d+)', result.stdout)
+    assert match and int(match.group(1)) < 16000, result.stdout
+    assert 'AssetPage.tsx' in result.stdout and 'Work.download' in result.stdout

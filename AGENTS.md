@@ -6,11 +6,12 @@
 
 ## 1. Старт любого задания
 
-1. Прочитать `docs/CURRENT.md`; убедиться, что работа ведётся от canonical lineage.
-2. Выполнить `python tools/context.py --task "<запрос пользователя>"` либо выбрать точный `--key`.
-3. Прочитать только `read_first` выбранного route и ближайший test. Не делать полный scan заранее.
-4. Зафиксировать ожидаемое `до → после`, non-goals, base, scope и профильную проверку.
-5. Если запрос конфликтует с PLAN/CURRENT или ведёт в parallel/superseded lineage — остановить feature work и разрулить lineage.
+1. Прочитать `docs/CURRENT.md` и выполнить `python tools/project_state.py verify`.
+2. Выполнить `python tools/context.py --task "<запрос пользователя>"` либо выбрать точный block/route через `--key`.
+3. Если найден `CONTEXT BLOCK`, искать только указанный OWNER/SYMBOL/ANCHOR и читать окружающий блок; весь файл заранее не читать.
+4. Если router вернул `AMBIGUOUS`/`NOT RESOLVED`, искать точный visible text/symbol/API path, а не выбирать направление наугад.
+5. Зафиксировать ожидаемое `до → после`, non-goals, `branch_from`, scope и профильную проверку.
+6. Если запрос ведёт в parallel/superseded lineage — остановить feature work и разрулить lineage.
 
 Расширять чтение можно только из-за конкретной недостающей зависимости. После двух одинаковых неудач
 не повторять широкий поиск: сформулировать новую диагностическую гипотезу.
@@ -36,6 +37,10 @@ CI, LICENSE, secret/network/release policy являются чувствител
 Machine scope конечен. Если он стал недостаточен, сначала объяснить новую зависимость; не повышать лимит
 автоматически. Один пишущий агент на пересекающиеся файлы. Не reset --hard, force-push, cleanup чужого WIP,
 auto-merge или auto-deploy.
+
+**Frozen checkpoint:** после успешного exact-head CI этот SHA больше не редактируется. Нельзя делать
+«ещё одну маленькую правку статуса» поверх проверенного head. Следующий пакет создаёт новую ветку ровно от
+frozen SHA и переводит состояние в этой новой ветке через `tools/project_state.py start`.
 
 ## 4. Обязательный SELF_REVIEW
 
