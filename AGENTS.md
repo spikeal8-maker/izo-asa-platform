@@ -1,41 +1,70 @@
-# IZO ASA · правила разработки
+# IZO ASA · обязательные правила coding-агента
 
-Один продукт: Account / Credits / Jobs / Media общие для всех провайдеров и клиентов. Правила ниже обязательны; ближайший AGENTS.md уточняет область, но не отменяет безопасность. Команды — README, карта — docs/INDEX.md.
+Цель: безопасная правка должна требовать минимального достаточного контекста. Этот файл содержит
+только долговечные правила. Текущая ветка/пакет/следующий шаг находятся в `docs/CURRENT.md` и
+`docs/PLAN.json`; не записывать mutable project state сюда.
 
-## Начать с малого
+## 1. Старт любого задания
 
-Этот файл → краткий STATUS → один пакет NEXT → только нужные U/D/A/AD/S из PRODUCT/ADMIN/UX/AI_RUNTIME → соответствующий source/test. Сначала поиск путей/символов, затем нужные диапазоны. Не читать lockfiles/generated/binary/history/старую IZO_ASA без конкретной причины. Не прикладывать весь каталог страниц к задаче кнопки.
+1. Прочитать `docs/CURRENT.md`; убедиться, что работа ведётся от canonical lineage.
+2. Выполнить `python tools/context.py --task "<запрос пользователя>"` либо выбрать точный `--key`.
+3. Прочитать только `read_first` выбранного route и ближайший test. Не делать полный scan заранее.
+4. Зафиксировать ожидаемое `до → после`, non-goals, base, scope и профильную проверку.
+5. Если запрос конфликтует с PLAN/CURRENT или ведёт в parallel/superseded lineage — остановить feature work и разрулить lineage.
 
-До правки назвать repository, согласованный base SHA/ветку, git status/чужой WIP, ожидаемое поведение, инварианты, допустимые файлы и проверки. Одна задача — одна ветка/PR; один пишущий агент на пересекающиеся файлы. Не reset --hard, force push, cleanup чужих данных, автоматический merge/deploy.
+Расширять чтение можно только из-за конкретной недостающей зависимости. После двух одинаковых неудач
+не повторять широкий поиск: сформулировать новую диагностическую гипотезу.
 
-## Неизменяемые границы
+## 2. Неизменяемые границы продукта
 
-- Один responsive UI; Telegram/MAX — адаптеры, не копии. JS hint/initDataUnsafe/client user_id не даёт identity. QHD/4K/HiDPI не заменяют проверку настоящих OS scaling/Mini Apps.
-- UI не содержит keys, отдельный ledger или прямой provider fetch. Чистые contracts/generation не импортируют инфраструктуру. Новый provider/connection/credential source — по AI_RUNTIME §9–10, без второго ядра.
-- Роль, состояние аккаунта, план и баланс независимы. Ownership/permissions проверяются backend. Известный URL не делает private file публичным; пустой /admin не является защитой.
-- API/local pools разделены. GPU-worker — outbound HTTPS, без БД/shell/arbitrary workflows и роли GitHub runner. Unknown outcome сначала reconcile, не слепой paid retry. Local→paid без согласия запрещён.
-- Unit/UI используют fake/blocked network, без production/paid API/GPU. Integration — изолированные DB/S3. Реальные ключи, платежи, письма, боты, DNS и выпуск требуют отдельного разрешения/бюджета. Product AI не получает GitHub/shell/Docker-доступ coding-агента.
+- Account / Credits / Jobs / Media общие для всех providers и клиентов; не создавать второй ledger/auth/gallery.
+- Browser не владеет identity, ценой, provider key, connection, executor, object key, attempt или fence.
+- Ownership/permissions проверяет backend. Известный URL не делает private asset публичным.
+- API/local/provider pools разделяются по контракту; unknown paid outcome сначала reconcile, не blind retry.
+- Local→paid, реальные ключи, платежи, почта, боты, DNS, production release требуют отдельного разрешения.
+- Unit/UI не используют production сеть/секреты. Integration работает на изолированных DB/S3.
+- Coding-agent и пользовательский AI — разные trust domains; продуктовый AI не получает GitHub/shell/Docker права.
+## 3. Экономный цикл изменения
 
-## Экономный цикл
+Сначала failing/acceptance case, затем минимальное связное изменение, затем ближайший test. Полный suite
+не запускается после каждой строки, но общий CI перед технической приёмкой не урезается.
 
-Сначала воспроизвести bug/определить acceptance. После правки — ближайший тест, не Full после каждой строки. Перед приёмкой общий CI сохраняется. Не переустанавливать зависимости без нового checkout/изменённого lock/runtime, не обновлять библиотеки ради UI.
+Не переустанавливать зависимости без нового checkout/изменённого lock/runtime. Не обновлять библиотеки
+ради локальной UI-правки. Не менять tests/snapshots/limits, чтобы скрыть дефект. Общий contract, migration,
+CI, LICENSE, secret/network/release policy являются чувствительными областями и требуют явного scope.
 
-После двух одинаковых неудач прекратить повтор: конкретная ошибка → новая диагностическая гипотеза → ограниченное чтение зависимости. Не переписывать всё приложение, не ослаблять tests/snapshots/limits. Изменение общего контракта, CI, migrations, LICENSE и правил требует отдельного явно согласованного scope; не менять спецификацию задним числом.
+Machine scope конечен. Если он стал недостаточен, сначала объяснить новую зависимость; не повышать лимит
+автоматически. Один пишущий агент на пересекающиеся файлы. Не reset --hard, force-push, cleanup чужого WIP,
+auto-merge или auto-deploy.
 
-Для UI ориентир первоначального чтения — до 6 релевантных файлов; обоснованное расширение разрешено и объясняется. Machine scope содержит конечный лимит файлов. Превышение требует разделения/пересмотра задачи, не автоматического повышения лимита. Не сжимать строки или дробить бессмысленные куски ради file limits.
+## 4. Обязательный SELF_REVIEW
 
-Перед публикацией проверить scope. Для текущего UX-001 в полном checkout:
+После законченного атомарного изменения агент **перестаёт добавлять функции** и выполняет отдельный проход:
 
-```sh
-python tools/check_change.py --base 077bfdb8862a5bbf783b2e483f22b91ca10db3df --scope tools/scopes/ux-001.json
-```
+- выполнено ли исходное acceptance, а не соседняя задача;
+- какой фактический diff и нет ли изменений вне scope;
+- нарушены ли ownership/security/idempotency/retry/cost/privacy invariants;
+- какие реальные failure/race/refresh/restart случаи не покрыты;
+- не стал ли тест зелёным из-за ослабления проверки;
+- соответствует ли локальная документация фактическому коду;
+- verdict: `PASS`, `FIX_REQUIRED` или `ESCALATE`.
 
-Следующая задача задаёт свой рассмотренный base/scope. Инструмент проверяет пути, sensitive files, размер и неизменность исходного base; только печатает рекомендуемые проверки, не исполняет их. Unknown область не разрешает пропуск тестов. Нет полного checkout — указать невозможность локального запуска и проверить remote compare, а не заявлять PASS по наличию файла.
+`FIX_REQUIRED` означает исправить найденное и повторить SELF_REVIEW. Это самопроверка, не независимый review.
+Шаблон: `docs/templates/SELF_REVIEW.md`. Высокорисковые auth/credits/permissions/migrations/provider-cost/
+secrets/release изменения требуют отдельного review-прохода после self-review.
+## 5. Публикация и отчёт
 
-## Передача результата
+Перед push: `python tools/check_docs.py`, scope-check, профильные tests, diff/secret sanity и необходимые
+generated contracts. CI проверять по exact source SHA/steps; synthetic merge не выдавать за фактический merge.
 
-PR: задача/ID, base/head, поведение, области, команды/результаты, ограничения, один следующий шаг. Краткий diagnostic summary вместо огромных логов. Фактические tokens/стоимость при наличии telemetry; иначе «нет данных», не выдуманная экономия.
+Статусы независимы: IMPLEMENTED / SELF_REVIEWED / TESTED / PUSHED / INDEPENDENTLY_REVIEWED / MERGED /
+DEPLOYED / OPERATIONALLY_VERIFIED. Не склеивать их словом «готово».
 
-IMPLEMENTED / TESTED / REVIEWED / PUSHED / MERGED / DEPLOYED независимы. Самопроверка не независимое review. CI проверяется по SHA/steps. AGENTS/CODEOWNERS/check_change не защищают main от широкого token; branch protection/review отдельно. Внешний вид принимает владелец.
+Handoff содержит: branch/base, package ID, изменённое поведение, scope, выполненные проверки/ошибки,
+неизвестные риски и **один** следующий шаг. Не переносить всю историю чата.
 
-NEXT — порядок, STATUS — факты, предметная страница — поведение. Новая U/D/A/AD/S получает карточку у своего владельца. Handoff: branch/SHA, scope, выполненные проверки/ошибки и один следующий шаг, без production keys и всей истории чата. Scoped инструкция инструмента — указатель, не копия всех правил.
+## 6. Документация
+
+`docs/DOCS_SYSTEM.md` определяет владельца каждого типа факта. `INDEX.md` — стабильная карта, не roadmap.
+`PLAN.json` — единственный machine-readable план. `STATUS.md` — доказанные факты. `reviews/` и `history/`
+не являются входом обычной задачи. Новый MASTER_PLAN/NOW/ROADMAP создавать запрещено.
