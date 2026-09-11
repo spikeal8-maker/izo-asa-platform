@@ -1,28 +1,25 @@
-# Backend: ограниченная разработка
+# Backend · правила ограниченной разработки
 
-Наследует корневой AGENTS. Не читать все UI/документы для серверной команды.
+Наследует корневой `AGENTS.md`. Сначала выбери context route; затем локальный AGENTS/README домена,
+конкретный service/table/route и профильный test. Не читать весь web/docs для серверной команды.
 
-Accounts: `izo/accounts/schemas.py` — вход/выход; `service.py` — правила;
-`repository.py` и `tables.py` — SQL; `routes.py` — cookie/origin/CSRF;
-`security.py` — пароль/случайные токены; `settings.py` — политика.
-Команды: `python -m pytest tests/test_accounts.py tests/test_auth_boundaries.py`,
-затем `python tools/export_contracts.py --check`.
+| Домен | Локальная карта | Ближайшие tests |
+|---|---|---|
+| Accounts/Auth | `izo/accounts/README.md` | `test_accounts.py`, `test_auth_boundaries.py` |
+| Admin | `izo/admin/AGENTS.md`, `izo/admin/README.md` | `test_admin*.py` |
+| Credits | `izo/credits/AGENTS.md`, `izo/credits/README.md` | `test_credits.py`, `test_credit_boundaries.py` |
+| Entitlements | `izo/entitlements/AGENTS.md`, `README.md` | `test_entitlements.py`, `test_entitlement_boundaries.py` |
+| Media | `izo/media/AGENTS.md`, `README.md` | `test_media*.py` |
+| Jobs | `izo/jobs/AGENTS.md`, `README.md` | `test_jobs*.py` |
+| Providers | `izo/providers/AGENTS.md`, `README.md` | `test_fal_provider.py`, `test_provider_jobs.py` |
 
-AUTH-002: `accounts/EMAIL.md` — контракт; `challenge_schema/policy/tables.py` — DTO/политика/SQL;
-`challenges.py` — транзакции; `challenge_routes.py` — HTTP; `test_mail.py` — только
-операторский тестовый просмотр. Ближайшие tests: `test_email_proofs.py` и
-`test_email_boundaries.py`; PG races/restart — `tools/email_acceptance.py` в CI.
-Для правки формы не читать весь runtime и каталог провайдеров.
+## Backend invariants
 
-Пароль/приглашение/bearer/proof не публикуются в JSON ошибок, logs или artifacts.
-Публичного test mailbox API нет. Новая ссылка не меняет пароль, GET не потребляет proof;
-успешный reset отзывает sessions/proofs в одной транзакции. Не выдавать права по
-client role, initDataUnsafe или неподтверждённому email. Последний способ входа
-и identity linking нельзя добавлять через «просто поменять subject» в таблице.
+Migrations — только новые forward revisions; не `create_all` production startup и не правка старой migration.
+Account/ownership/permission/credits invariants проверяются сервером под ожидаемыми locks/transactions.
+SQLite unit не доказывает PostgreSQL locking/restart; risk-bearing path должен иметь соответствующий CI/integration gate.
 
-Миграции — новые файлы, не create_all на startup. Credentials после row lock читаются
-свежим SQL snapshot, не старым JOIN. Unit SQLite не доказывает PostgreSQL locking.
-Реальные SMTP/API calls, production, роли и ключи не входят в AUTH-002 email-scope.
-После малой правки — профильный test; полный CI перед приёмкой. Не ослаблять tests,
-не обновлять зависимости и не расширять область ради скрытия ошибок. Изменённый API
-экспортировать из кода. Самопроверка не независимый security review.
+Изменённый public API экспортируется из кода и проверяется canonical OpenAPI. Secret/token/password/proof не попадает
+в JSON ошибок/log/artifacts. External network в unit запрещён. Не ослаблять tests/rate/size/retry bounds ради PASS.
+
+После изменения: профильный test → boundary/HTTP/migration test по риску → SELF_REVIEW → общий CI.

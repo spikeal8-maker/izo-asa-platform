@@ -1,41 +1,31 @@
-# IZO ASA: документация продукта и разработки
+# IZO ASA · карта документации
 
-Спецификация **0.2 · DOC-003 · 8 сентября 2026**. Владелец: Александр Аликин. Новый продукт без переноса старых аккаунтов/БД. Страница документации не означает готовой функции.
+INDEX — **стабильная карта**, а не статус и не roadmap. Здесь не должно быть текущих SHA, PR или фразы
+«следующий шаг». Текущая точка всегда в [CURRENT](CURRENT.md), machine-plan — в [PLAN.json](PLAN.json).
 
 ## Быстрый вход
 
-Владельцу: PRODUCT §11 — экраны, §12 — уровни доступа; ADMIN §3 — админские страницы, §10 — настройки; NEXT — порядок; STATUS — фактический результат. UX — визуальная приёмка. Читать каждую техническую страницу целиком не требуется.
-
-Разработчику: AGENTS → STATUS → один пакет NEXT → только относящиеся к нему U/D/A/AD/S-карточки и source/tests. Для кнопки не загружать весь каталог и старую IZO_ASA.
-
-| Владелец темы | Единственное назначение |
+| Нужно понять | Читать |
 |---|---|
-| [PRODUCT.md](PRODUCT.md) | P-01…P-12, 45 U-экранов, 14 D-диалогов; состояние аккаунта, планы/entitlements, матрица доступа и пользовательская приёмка |
-| [ADMIN.md](ADMIN.md) | Permissions/scopes персонала, 30 A-экранов, 10 AD-диалогов, 66 S-групп настроек; default/validation/apply/audit |
-| [UX.md](UX.md) | Визуальные требования, устройства/QHD/4K/HiDPI, состояния/доступность; реестр маршрутов находится в PRODUCT, не дублируется здесь |
-| [ARCHITECTURE.md](ARCHITECTURE.md) | Границы доменов и данных, общий Account/Credits/Jobs/Media, техническая целевая модель |
-| [AI_RUNTIME.md](AI_RUNTIME.md) | Provider/connection/credential/secret source, lifecycle/повторы/отмена и contract tests; продуктовый AI |
-| [DEVELOPMENT.md](DEVELOPMENT.md) | Постановка scope, профильные tests, handoff/review и измерение стоимости изменений coding-агента |
-| [OPERATIONS.md](OPERATIONS.md) | Dev/staging/production, секреты/сеть, immutable release, backup/restore; не готовый deploy сценарий |
-| [NEXT.md](NEXT.md) | Единственный план, зависимости и привязка U/A/S к пакетам |
-| [STATUS.md](STATUS.md) | Единственный агрегатор фактов, SHA/CI, ограничения и незакрытые gates |
-| [AGENTS.md](../AGENTS.md) | Короткие общие обязательные правила агента |
-| [README.md](../README.md) | Реальные команды существующего foundation-стенда |
+| Где проект сейчас / откуда продолжать | [CURRENT.md](CURRENT.md) → [PLAN.json](PLAN.json) |
+| Какие файлы нужны для конкретной правки | [CONTEXT_MAP.json](CONTEXT_MAP.json) или `python tools/context.py` |
+| Как coding-агент должен работать | [DEVELOPMENT.md](DEVELOPMENT.md), кратко — корневой `AGENTS.md` |
+| Как устроена сама документация | [DOCS_SYSTEM.md](DOCS_SYSTEM.md) |
+| Почему выбрана текущая архитектурная линия | `adr/` (сначала ADR-001) |
+| Что пользователь должен видеть/уметь | [PRODUCT.md](PRODUCT.md) |
+| Админка, permissions, settings | [ADMIN.md](ADMIN.md) |
+| Визуал/responsive/accessibility | [UX.md](UX.md) |
+| Домены, ownership и data boundaries | [ARCHITECTURE.md](ARCHITECTURE.md) |
+| Provider/AI runtime/credentials/retry | [AI_RUNTIME.md](AI_RUNTIME.md) |
+| Docker/network/release/backup | [OPERATIONS.md](OPERATIONS.md) |
+| Последние доказанные технические факты | [STATUS.md](STATUS.md) |
+| Подробные package reports | `reviews/` |
+| Старые планы/статусы | `history/` — только по явной необходимости |
 
-## Статусы требований
+## Правило для маленькой правки
 
-**Решено владельцем:** перезапуск/новые аккаунты и компенсации; web/phone/tablet/desktop/Telegram/MAX; image/video/audio/3D/chat, gallery/feed/admin; local/API; QHD/4K; управляемые небольшие изменения. Нынешний визуал отклонён.
+Не открывать PRODUCT/ADMIN/AI_RUNTIME целиком автоматически. Сначала context route и локальный README
+рядом с кодом. Большой документ нужен только при пересечении предметной границы.
 
-**Предложено в v0.2:** точные маршруты/страничная модель, permission bundles, безопасная семантика планов/ограничений/настроек, технические DRAFT defaults. Это контракт на review, не утверждение согласия владельца со всеми числами и не разрешение live-трат.
-
-**Не выбрано:** коммерческие названия/цены/квоты, первый AI-provider/model и budget, сроки retention/grace/обязательного хранения, окончательная лицензия, утверждённый дизайн и публичный scope. REQ в ADMIN блокирует включение соответствующей production-функции без явного значения, не UX/fake development.
-
-**Реализовано:** только подтверждённое в STATUS. **Отложено:** E-экраны и отдельно названные функции не включаются в публичные обещания до приёмки. Реестр v0.2 охватывает заявленный сейчас объём, а не любые будущие идеи.
-
-## Правило изменения документации
-
-U/D добавляются в PRODUCT, A/AD/S — в ADMIN; новый пакет/зависимость — в NEXT. Не создавать дублирующие MASTER_PLAN/NOW/ROADMAP. Не копировать 66 настроек в AGENTS. Каждый PR связывает затронутые IDs и tests; generated API/migrations вводятся вместе с реализацией конкретного пакета.
-
-Принять техническую основу, принять продуктовые правила, утвердить визуал и разрешить выпуск — разные решения. CI проверяет код/настройки существующего scaffold, не художественное качество, смысл всей спецификации и будущие endpoint permissions. Coding-агент не равен пользовательскому AI: последнему не выдаются GitHub/shell/Docker права.
-
-Следующий результат после DOC-003 и F0-ACCEPT — UX-001: один интерактивный прототип студии/результата/галереи. Не размножать отклонённый shell и не строить заранее всю админку.
+Пример: UI Studio → `apps/web/AGENTS.md` → `features/studio/README.md` → component/CSS/spec.
+Backend Jobs → `apps/api/izo/jobs/AGENTS.md` → `jobs/README.md` → конкретный service/execution/test.

@@ -1,23 +1,26 @@
-# Web · точечные изменения
+# Web · правила точечных изменений
 
-Наследует корневой AGENTS. Реальная identity, цена, лимиты, задания и баланс принадлежат backend.
+Наследует корневой `AGENTS.md`. Сначала выбери route через `python tools/context.py`; для feature читай его
+локальный README, component/CSS и ближайший E2E. Не открывай весь backend или PRODUCT ради кнопки.
 
-| Что меняется | Читать сначала | Ближайшая проверка |
+| Область | Локальная карта | Основной test |
 |---|---|---|
-| Навигация и общая тема | src/shell/App.tsx, layout.css, theme.css | shell.spec.ts |
-| Студия, quote, подтверждение | features/studio/Studio.tsx, studio/README.md | studio.spec.ts |
-| Повтор потерянного submit | shared/submission.ts, Studio.tsx | lost response / damaged storage |
-| Список/карточка задания, отмена | studio/ResultPanel.tsx, shared/workspace.tsx | studio.spec.ts |
-| Список работ и просмотр | gallery/Gallery.tsx, AssetPage.tsx, PrivateImage.tsx | gallery.spec.ts |
-| Сессия/общий transport | shared/workspace.tsx, api.ts, workspace-api.ts | все затронутые account/admin/studio/gallery specs |
-| Телефон/QHD/4K | CSS затронутой области | тот же spec с нужным viewport |
+| Shell/navigation/theme | `src/shell/App.tsx`, `layout.css`, `theme.css` | `e2e/shell.spec.ts` |
+| Studio/result/provider selection | `src/features/studio/README.md` | `e2e/studio.spec.ts`, `provider.spec.ts` |
+| Gallery/private asset UI | `src/features/gallery/README.md` | `e2e/gallery.spec.ts` |
+| Account/security | `src/features/accounts/README.md` | `e2e/accounts.spec.ts`, `email-security.spec.ts` |
+| Admin | `src/features/admin/README.md` | `e2e/admin.spec.ts` |
+| Credits | `src/features/credits/README.md` | affected account/studio spec |
+| Общий session/API transport | `src/shared/workspace.tsx`, `api.ts`, `workspace-api.ts` | все реально зависимые specs |
 
-Начать с компонента и ближайшего теста; не читать всю админку, старую IZO_ASA или весь generated API ради кнопки. В UI нет отдельного кошелька, fallback-галереи или provider SDK. Прототип удалён; не возвращать DemoState, имитацию успешной генерации и локальное списание.
+## Web invariants
 
-Профильный цикл: `npm run build`, затем `npx playwright test e2e/studio.spec.ts --project=phone --project=laptop` для студии. Gallery — свой spec. Общий transport требует всех зависимых экранов. npm ci только для нового checkout или изменённого lock/runtime. Полный CI и 10 viewport перед приёмкой сохраняются; тесты реального PostgreSQL/S3 отдельно от mocked viewport.
+Backend владеет identity, permissions, price, Credits, provider config, Job state и Media ownership. UI не создаёт
+fallback-wallet/gallery/success. Unknown mutation response сохраняет тот же operation ID до server evidence.
+Private data effect имеет abort/cleanup; Object URL освобождается. 401 очищает private state.
 
-У каждого эффекта с частными данными — abort/cleanup; Object URL освобождается. Номер незавершённого submit привязан к account, содержит только IDs. Не менять operation ID после сетевого сбоя. Цена берётся только из quote. Ошибка auth/хранилища не превращается в успешный локальный результат.
+Studio/Gallery/Accounts/Admin — sibling features; feature не импортирует внутренности соседа. Общие primitives идут
+через `shared/`. Неподдержанная server action не изображается работающей кнопкой.
 
-Studio и Gallery — соседние features; не импортировать их друг из друга. shared/ui не знает features. Новые API-клиенты используют общий transport. Неподдержанные delete/publish/input-reference не изображать работающими кнопками.
-
-`Review Source` выдаёт проверяемый архив tracked source с tree/blob manifest. Это не архив .git/окружения и не доказательство прохождения тестов; сравнить tree с точным SHA PR. Приватные runtime fixtures/пароли и содержимое RUNNER_TEMP в артефакты не добавлять.
+Для локальной UI-правки: `npm run build` + affected spec на нужных viewport. Общий transport требует зависимых specs.
+Полная viewport matrix/CI перед технической приёмкой сохраняется. После изменения обязателен SELF_REVIEW.
