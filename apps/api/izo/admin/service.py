@@ -12,7 +12,7 @@ from . import tables as t
 from .schemas import (AdminAccess, AdminUsers, AdminUser, AdminEvent, AdminEvents,
                       CompensationInput, CompensationReceipt)
 
-STAFF = ("users.read_limited", "credits.read", "credits.grant", "audit.read")
+STAFF = ("users.read_limited", "credits.read", "credits.grant", "audit.read", "access.read")
 
 
 class AdminService:

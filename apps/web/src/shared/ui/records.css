@@ -21,3 +21,7 @@
 .admin-page .summary-list dd,.credits-page .summary-list dd{overflow-wrap:anywhere}
 [data-theme="dark"] .admin-panel,[data-theme="dark"] .admin-form input,[data-theme="dark"] .admin-search input{background:#18212e;border-color:#475367}
 @media(max-width:600px){.admin-search{display:grid;grid-template-columns:minmax(0,1fr)}.admin-history li{display:block}.admin-history a{display:inline-block;margin-top:8px}.admin-links{gap:12px}.admin-form{max-width:100%}}
+
+.admin-form fieldset{display:grid;gap:16px;border:0;padding:0;margin:0;min-width:0}
+.admin-form select{box-sizing:border-box;width:100%;min-width:0;border:1px solid var(--border,#cbd2de);border-radius:10px;padding:12px;background:var(--surface,#fff);color:inherit;font:inherit}
+[data-theme="dark"] .admin-form select{background:#18212e;border-color:#475367}

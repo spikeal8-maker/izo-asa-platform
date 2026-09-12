@@ -45,15 +45,15 @@ def test_plan_separates_runtime_parent_working_and_next_branch_policy():
     plan = json.loads((ROOT/'docs/PLAN.json').read_text(encoding='utf-8'))
     lineage = plan['canonical_lineage']
     assert lineage['runtime_base']['branch'] == 'api/fal-klein-001'
-    assert lineage['current_package_base']['sha'] == 'b53328d5e9e9111196d49062424cd7e386ac1eaa'
-    assert lineage['working_branch'] == 'lineage/reconcile-openrouter'
+    assert lineage['current_package_base']['sha'] == 'a1de4b8fc551ba9b5ce3d1d88da7f1eaf378cd0e'
+    assert lineage['working_branch'] == 'access/staff-delegation'
     assert lineage['next_branch_source'] == 'verified_working_head'
-    assert plan['active_package'] == 'LINEAGE-001'
-    assert plan['next_package'] == 'ACCESS-001'
+    assert plan['active_package'] == 'ACCESS-001'
+    assert plan['next_package'] == 'SETTINGS-002'
     assert 'LINEAGE-001' in plan['packages']['ACCESS-001']['depends_on']
     assert plan['packages']['SETTINGS-001']['status'] == 'superseded_reference'
     assert plan['packages']['CATALOG-001']['status'] == 'superseded_reference'
-    assert plan['packages']['SETTINGS-002']['status'] == 'planned'
+    assert plan['packages']['SETTINGS-002']['status'] == 'planned_next'
     assert plan['packages']['CATALOG-002']['status'] == 'planned'
     assert plan['packages']['CATALOG-UI-002']['status'] == 'planned'
     assert plan['packages']['LOCAL-001']['depends_on'][-1] == 'CATALOG-002'

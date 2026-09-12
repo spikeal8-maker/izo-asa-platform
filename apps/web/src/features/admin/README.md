@@ -6,15 +6,18 @@
 |---|---|---|
 | Admin route/list/detail shell | `AdminPage.tsx` | `e2e/admin.spec.ts` |
 | Начисление/компенсация | `GrantForm.tsx` | `e2e/admin.spec.ts` |
-| Общий transport/CSRF | `../../shared/workspace-api.ts` | affected admin spec |
+| A-28 доступ персонала | `AccessPage.tsx` | `e2e/access.spec.ts` |
+| Общий transport/CSRF | `../../shared/api.ts` | affected admin/access spec |
 
 ## Инварианты
 
 - backend проверяет permission/scope/ownership на каждой операции;
 - UI hint о роли не считается авторизацией;
-- amount/reason/case semantics не вычисляются альтернативным client ledger;
-- неизвестный mutation outcome не повторяется с новым operation ID;
+- access-only сотруднику не показываются unrelated Users/Audit links;
+- ACCESS mutation использует только server allowlist, `scope=global`, finite TTL и fresh password;
+- неизвестный mutation outcome повторяется с тем же operation ID; при изменении payload создаётся новый ID;
+- password очищается после каждой попытки и не хранится в receipt/local storage;
 - raw provider secrets не должны появляться в generic admin form.
 
-Для локального текста/layout не читать весь `docs/ADMIN.md`. Если меняется permission, grant command,
-settings/catalog semantics — перейти в `api.admin` и только затем открыть соответствующий раздел ADMIN.
+Для локального текста/layout не читать весь `docs/ADMIN.md`. Если меняется permission, delegation ceiling,
+settings/catalog semantics — перейти в `api.access`/`api.admin` и только затем открыть соответствующий раздел ADMIN.

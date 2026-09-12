@@ -1,6 +1,164 @@
 {
   "components": {
     "schemas": {
+      "AccessMe": {
+        "properties": {
+          "csrf_token": {
+            "title": "Csrf Token",
+            "type": "string"
+          },
+          "delegation_ceiling": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Delegation Ceiling",
+            "type": "array"
+          },
+          "permissions": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Permissions",
+            "type": "array"
+          }
+        },
+        "required": [
+          "permissions",
+          "delegation_ceiling",
+          "csrf_token"
+        ],
+        "title": "AccessMe",
+        "type": "object"
+      },
+      "AccessPermission": {
+        "properties": {
+          "expires_at": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Expires At"
+          },
+          "managed": {
+            "title": "Managed",
+            "type": "boolean"
+          },
+          "permission": {
+            "title": "Permission",
+            "type": "string"
+          }
+        },
+        "required": [
+          "permission",
+          "expires_at",
+          "managed"
+        ],
+        "title": "AccessPermission",
+        "type": "object"
+      },
+      "AccessReceipt": {
+        "properties": {
+          "action": {
+            "enum": [
+              "grant",
+              "revoke"
+            ],
+            "title": "Action",
+            "type": "string"
+          },
+          "case_reference": {
+            "title": "Case Reference",
+            "type": "string"
+          },
+          "expires_at": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Expires At"
+          },
+          "operation_id": {
+            "format": "uuid",
+            "title": "Operation Id",
+            "type": "string"
+          },
+          "permission": {
+            "title": "Permission",
+            "type": "string"
+          },
+          "scope": {
+            "const": "global",
+            "title": "Scope",
+            "type": "string"
+          },
+          "target_id": {
+            "format": "uuid",
+            "title": "Target Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "operation_id",
+          "target_id",
+          "action",
+          "permission",
+          "scope",
+          "expires_at",
+          "case_reference"
+        ],
+        "title": "AccessReceipt",
+        "type": "object"
+      },
+      "AccessSubject": {
+        "properties": {
+          "display_name": {
+            "title": "Display Name",
+            "type": "string"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "permissions": {
+            "items": {
+              "$ref": "#/components/schemas/AccessPermission"
+            },
+            "title": "Permissions",
+            "type": "array"
+          },
+          "public_code": {
+            "title": "Public Code",
+            "type": "string"
+          },
+          "state": {
+            "title": "State",
+            "type": "string"
+          },
+          "verified": {
+            "title": "Verified",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "id",
+          "public_code",
+          "display_name",
+          "state",
+          "verified",
+          "permissions"
+        ],
+        "title": "AccessSubject",
+        "type": "object"
+      },
       "AccountView": {
         "properties": {
           "display_name": {
@@ -859,6 +1017,57 @@
         "title": "FoundationStatus",
         "type": "object"
       },
+      "GrantAccessInput": {
+        "additionalProperties": false,
+        "properties": {
+          "case_reference": {
+            "maxLength": 64,
+            "minLength": 3,
+            "title": "Case Reference",
+            "type": "string"
+          },
+          "current_password": {
+            "format": "password",
+            "maxLength": 128,
+            "minLength": 1,
+            "title": "Current Password",
+            "type": "string",
+            "writeOnly": true
+          },
+          "operation_id": {
+            "format": "uuid",
+            "title": "Operation Id",
+            "type": "string"
+          },
+          "permission": {
+            "maxLength": 80,
+            "minLength": 3,
+            "title": "Permission",
+            "type": "string"
+          },
+          "scope": {
+            "const": "global",
+            "default": "global",
+            "title": "Scope",
+            "type": "string"
+          },
+          "ttl_seconds": {
+            "maximum": 2592000.0,
+            "minimum": 300.0,
+            "title": "Ttl Seconds",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "operation_id",
+          "permission",
+          "case_reference",
+          "current_password",
+          "ttl_seconds"
+        ],
+        "title": "GrantAccessInput",
+        "type": "object"
+      },
       "ImageSize": {
         "additionalProperties": false,
         "properties": {
@@ -1385,6 +1594,50 @@
         "title": "ResetInput",
         "type": "object"
       },
+      "RevokeAccessInput": {
+        "additionalProperties": false,
+        "properties": {
+          "case_reference": {
+            "maxLength": 64,
+            "minLength": 3,
+            "title": "Case Reference",
+            "type": "string"
+          },
+          "current_password": {
+            "format": "password",
+            "maxLength": 128,
+            "minLength": 1,
+            "title": "Current Password",
+            "type": "string",
+            "writeOnly": true
+          },
+          "operation_id": {
+            "format": "uuid",
+            "title": "Operation Id",
+            "type": "string"
+          },
+          "permission": {
+            "maxLength": 80,
+            "minLength": 3,
+            "title": "Permission",
+            "type": "string"
+          },
+          "scope": {
+            "const": "global",
+            "default": "global",
+            "title": "Scope",
+            "type": "string"
+          }
+        },
+        "required": [
+          "operation_id",
+          "permission",
+          "case_reference",
+          "current_password"
+        ],
+        "title": "RevokeAccessInput",
+        "type": "object"
+      },
       "SessionList": {
         "properties": {
           "sessions": {
@@ -1570,6 +1823,266 @@
           }
         },
         "summary": "Live"
+      }
+    },
+    "/api/v1/admin/access/me": {
+      "get": {
+        "operationId": "me_api_v1_admin_access_me_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AccessMe"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AuthErrorView"
+                }
+              }
+            },
+            "description": "Safe access-management error"
+          },
+          "4XX": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AuthErrorView"
+                }
+              }
+            },
+            "description": "Safe access-management error"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AuthErrorView"
+                }
+              }
+            },
+            "description": "Safe access-management error"
+          }
+        },
+        "summary": "Me",
+        "tags": [
+          "admin-access"
+        ]
+      }
+    },
+    "/api/v1/admin/access/subjects/{account_id}": {
+      "get": {
+        "operationId": "subject_api_v1_admin_access_subjects__account_id__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "account_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Account Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AccessSubject"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AuthErrorView"
+                }
+              }
+            },
+            "description": "Safe access-management error"
+          },
+          "4XX": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AuthErrorView"
+                }
+              }
+            },
+            "description": "Safe access-management error"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AuthErrorView"
+                }
+              }
+            },
+            "description": "Safe access-management error"
+          }
+        },
+        "summary": "Subject",
+        "tags": [
+          "admin-access"
+        ]
+      }
+    },
+    "/api/v1/admin/access/subjects/{account_id}/grants": {
+      "post": {
+        "operationId": "grant_api_v1_admin_access_subjects__account_id__grants_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "account_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Account Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/GrantAccessInput"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AccessReceipt"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AuthErrorView"
+                }
+              }
+            },
+            "description": "Safe access-management error"
+          },
+          "4XX": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AuthErrorView"
+                }
+              }
+            },
+            "description": "Safe access-management error"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AuthErrorView"
+                }
+              }
+            },
+            "description": "Safe access-management error"
+          }
+        },
+        "summary": "Grant",
+        "tags": [
+          "admin-access"
+        ]
+      }
+    },
+    "/api/v1/admin/access/subjects/{account_id}/revocations": {
+      "post": {
+        "operationId": "revoke_api_v1_admin_access_subjects__account_id__revocations_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "account_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Account Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RevokeAccessInput"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AccessReceipt"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AuthErrorView"
+                }
+              }
+            },
+            "description": "Safe access-management error"
+          },
+          "4XX": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AuthErrorView"
+                }
+              }
+            },
+            "description": "Safe access-management error"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AuthErrorView"
+                }
+              }
+            },
+            "description": "Safe access-management error"
+          }
+        },
+        "summary": "Revoke",
+        "tags": [
+          "admin-access"
+        ]
       }
     },
     "/api/v1/admin/audit": {

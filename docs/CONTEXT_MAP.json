@@ -126,6 +126,18 @@
       "expand_if_needed": ["docs/ADMIN.md", "apps/api/izo/credits/README.md"],
       "do_not_read_by_default": ["docs/UX.md", "apps/api/izo/providers"]
     },
+    "api.access": {
+      "keywords": ["выдать право сотруднику","отозвать право сотрудника","управление доступом","access manage","staff access","delegation","permission grant","access revoke"],
+      "read_first": [
+        "apps/api/AGENTS.md",
+        "apps/api/izo/access/README.md",
+        "apps/api/izo/access/service.py",
+        "apps/api/izo/access/routes.py"
+      ],
+      "tests": ["tests/test_access.py","tests/test_access_http.py","tests/test_access_boundaries.py"],
+      "expand_if_needed": ["apps/api/izo/access/permissions.py","apps/api/izo/access/tables.py","docs/ADMIN.md"],
+      "do_not_read_by_default": ["docs/AI_RUNTIME.md","apps/api/izo/providers","apps/web/src/features/gallery"]
+    },
     "api.media": {
       "keywords": ["s3", "файл", "медиа", "upload", "download ticket", "asset", "storage", "изображение хранение"],
       "read_first": [
