@@ -12,6 +12,7 @@ import { AssetPage } from '../features/gallery/AssetPage'
 import { AccountPage } from '../features/accounts/AccountPage'
 import { SecurityPage, securityPages } from '../features/accounts/SecurityPage'
 import { AdminPage, AdminLink } from '../features/admin/AdminPage'
+import { AccessPage } from '../features/admin/AccessPage'
 import { CreditsPage } from '../features/credits/CreditsPage'
 import './layout.css'
 
@@ -36,6 +37,7 @@ export function App() {
   const account = !!security || ['/account', '/account/sessions', '/login', '/register'].includes(path)
   const credits = path === '/account/credits'
   const admin = path === '/admin' || path.startsWith('/admin/')
+  const accessAdmin = path === '/admin/access'
   const detail = path.startsWith('/gallery/')
   const jobs = path === '/jobs' || path.startsWith('/jobs/')
   useEffect(() => {
@@ -73,7 +75,7 @@ export function App() {
       <span><i />Тестовая платформа <span className="notice-detail">· серверное хранение, без AI-инференса и платежей</span></span>
       <button onClick={() => setAbout(true)}>О состоянии <Icon name="info" /></button></div>
       <main id="main" tabIndex={-1}>
-        {admin ? <AdminPage key={path} path={path} /> : credits ? <CreditsPage />
+        {accessAdmin ? <AccessPage key={path} /> : admin ? <AdminPage key={path} path={path} /> : credits ? <CreditsPage />
           : security ? <SecurityPage key={path} mode={security} />
           : account ? <AccountPage key={path} mode={path === '/register' ? 'register' : path === '/login' ? 'login' : 'account'} />
           : studio ? <Studio key={path} /> : gallery ? <Gallery key={path} />

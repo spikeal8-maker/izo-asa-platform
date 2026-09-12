@@ -18,7 +18,7 @@
   {"task":"галерея карточка изображения","status":"resolved","kind":"route","key":"web.gallery"},
   {"task":"csrf login backend","status":"resolved","kind":"route","key":"api.accounts"},
   {"task":"reserve settle ledger credits","status":"resolved","kind":"route","key":"api.credits"},
-  {"task":"admin api permission staff","status":"resolved","kind":"route","key":"api.admin"},
+  {"task":"admin api permission staff","status":"ambiguous"},
   {"task":"media s3 storage ticket","status":"resolved","kind":"route","key":"api.media"},
   {"task":"job queue lease fence worker","status":"resolved","kind":"route","key":"api.jobs"},
   {"task":"docker compose deploy backup","status":"resolved","kind":"route","key":"ops.runtime"},
@@ -54,5 +54,9 @@
   {"task":"сделай поле пароля шире","status":"resolved","kind":"block","key":"web.accounts.security_submit"},
   {"task":"поменяй подпись кнопки поиска пользователя","status":"resolved","kind":"block","key":"web.admin.search_action"},
   {"task":"сломался список работ","status":"resolved","kind":"block","key":"web.gallery.list_controls"},
-  {"task":"в галерее кнопка обновления ничего не делает","status":"resolved","kind":"block","key":"web.gallery.list_controls"}
+  {"task":"в галерее кнопка обновления ничего не делает","status":"resolved","kind":"block","key":"web.gallery.list_controls"},
+  {"task":"выдать право сотруднику backend","status":"resolved","kind":"block","key":"api.access.grant"},
+  {"task":"отозвать право сотрудника backend","status":"resolved","kind":"block","key":"api.access.revoke"},
+  {"task":"форма прав сотрудника","status":"resolved","kind":"block","key":"web.admin.access_mutation"},
+  {"task":"карточка прав сотрудника","status":"resolved","kind":"block","key":"web.admin.access_subject"}
 ]

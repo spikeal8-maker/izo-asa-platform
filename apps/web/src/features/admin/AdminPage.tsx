@@ -23,16 +23,21 @@ function errorText(error: unknown) {
 }
 
 export function AdminLink({ path }: { path: string }) {
-  const [allowed, setAllowed] = useState(false)
+  const [href, setHref] = useState('')
   useEffect(() => {
     const controller = new AbortController()
-    setAllowed(false)
+    setHref('')
     apiRequest<AuthView>('/api/v1/auth/me', { signal: controller.signal })
-      .then(value => { if (!controller.signal.aborted) setAllowed(value.account.permissions.includes('users.read_limited')) })
-      .catch(() => { if (!controller.signal.aborted) setAllowed(false) })
+      .then(value => {
+        if (controller.signal.aborted) return
+        const permissions = value.account.permissions
+        setHref(permissions.includes('users.read_limited') ? '/admin/users'
+          : permissions.includes('access.read') ? '/admin/access' : '')
+      })
+      .catch(() => { if (!controller.signal.aborted) setHref('') })
     return () => controller.abort()
   }, [path])
-  return allowed ? <Link href="/admin/users" className="staff-link">Администрирование</Link> : null
+  return href ? <Link href={href} className="staff-link">Администрирование</Link> : null
 }
 
 export function AdminPage({ path }: { path: string }) {
@@ -108,6 +113,7 @@ export function AdminPage({ path }: { path: string }) {
         <nav className="admin-links" aria-label="Административные страницы">
           <Link href="/admin/users">Пользователи</Link>
           {access.permissions.includes('audit.read') && <Link href="/admin/audit">Журнал действий</Link>}
+          {access.permissions.includes('access.read') && <Link href="/admin/access">Доступ</Link>}
           <Link href="/account/credits">Мои баллы</Link>
         </nav>
         {!target && !auditing && <div className="admin-panel">

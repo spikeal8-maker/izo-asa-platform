@@ -32,10 +32,10 @@ def evidence(head='a'*40):
 def test_current_uses_parent_base_and_verified_working_head_policy():
     text = render_current(plan())
     assert 'runtime_base=api/fal-klein-001@faec39d6' in text
-    assert 'current_package_base=docs/final-guardrails@b53328d' in text
-    assert 'working_branch=lineage/reconcile-openrouter' in text
-    assert 'active_package=LINEAGE-001' in text
-    assert 'next_package=ACCESS-001' in text
+    assert 'current_package_base=lineage/reconcile-openrouter@a1de4b8' in text
+    assert 'working_branch=access/staff-delegation' in text
+    assert 'active_package=ACCESS-001' in text
+    assert 'next_package=SETTINGS-002' in text
     assert 'не выбирать его вручную как base следующего package' in text
 
 
@@ -91,25 +91,25 @@ def test_pr_evidence_rejects_stale_merge_tree():
 def test_transition_advances_from_verified_working_head_and_checks_dependencies():
     source = plan()
     head = 'a' * 40
-    assert dependency_problems(source, 'ACCESS-001', finishing='LINEAGE-001') == []
+    assert dependency_problems(source, 'SETTINGS-002', finishing='ACCESS-001') == []
     updated = transition(
-        source, activate='ACCESS-001', next_id='SETTINGS-002', new_branch='access/staff-delegation',
+        source, activate='SETTINGS-002', next_id='CATALOG-002', new_branch='settings/plan-policy',
         source_head=head, evidence=evidence(head),
     )
-    assert source['active_package'] == 'LINEAGE-001'
-    assert updated['packages']['LINEAGE-001']['status'] == 'technical_pass'
-    assert updated['packages']['LINEAGE-001']['evidence']['source_head'] == head
-    assert updated['active_package'] == 'ACCESS-001'
-    assert updated['next_package'] == 'SETTINGS-002'
-    assert updated['packages']['SETTINGS-002']['status'] == 'planned_next'
+    assert source['active_package'] == 'ACCESS-001'
+    assert updated['packages']['ACCESS-001']['status'] == 'technical_pass'
+    assert updated['packages']['ACCESS-001']['evidence']['source_head'] == head
+    assert updated['active_package'] == 'SETTINGS-002'
+    assert updated['next_package'] == 'CATALOG-002'
+    assert updated['packages']['CATALOG-002']['status'] == 'planned_next'
 
 
 def test_transition_rejects_unready_dependency():
     source = plan()
-    source['packages']['ADMIN-001']['status'] = 'planned'
-    with pytest.raises(ValueError, match='ADMIN-001'):
+    source['packages']['ENTITLEMENT-001']['status'] = 'planned'
+    with pytest.raises(ValueError, match='ENTITLEMENT-001'):
         transition(
-            source, activate='ACCESS-001', next_id='SETTINGS-002', new_branch='access/staff-delegation',
+            source, activate='SETTINGS-002', next_id='CATALOG-002', new_branch='settings/plan-policy',
             source_head='a'*40, evidence=evidence(),
         )
 
@@ -129,10 +129,10 @@ def test_begin_next_rolls_back_branch_and_state_on_write_failure(tmp_path, monke
     calls=[]
     def fake_git(*args, root=tmp_path):
         if args == ('status','--porcelain'): return ''
-        if args == ('branch','--show-current'): return 'lineage/reconcile-openrouter'
+        if args == ('branch','--show-current'): return 'access/staff-delegation'
         if args == ('rev-parse','HEAD'): return 'a'*40
         if args[:2] == ('switch','-c'): calls.append('create'); return ''
-        if args == ('switch','lineage/reconcile-openrouter'): calls.append('rollback'); return ''
+        if args == ('switch','access/staff-delegation'): calls.append('rollback'); return ''
         if args[:2] == ('branch','-D'): calls.append('delete'); return ''
         raise AssertionError(args)
     monkeypatch.setattr(state, 'git', fake_git)
@@ -142,8 +142,8 @@ def test_begin_next_rolls_back_branch_and_state_on_write_failure(tmp_path, monke
         raise OSError('disk failure')
     monkeypatch.setattr(state, 'write_state', broken_write)
     with pytest.raises(OSError, match='disk failure'):
-        state.begin_next(source, branch='access/staff-delegation', activate='ACCESS-001',
-                         next_id='SETTINGS-002', verified_pr=26, root=tmp_path)
+        state.begin_next(source, branch='settings/plan-policy', activate='SETTINGS-002',
+                         next_id='CATALOG-002', verified_pr=29, root=tmp_path)
     assert (docs/'PLAN.json').read_bytes() == b'old-plan'
     assert (docs/'CURRENT.md').read_bytes() == b'old-current'
     assert calls == ['create','rollback','delete']
@@ -151,25 +151,25 @@ def test_begin_next_rolls_back_branch_and_state_on_write_failure(tmp_path, monke
 
 def test_transition_requires_direct_dependency_on_finishing_package():
     source = plan()
-    source["packages"]["ACCESS-001"]["depends_on"] = ["AUTH-002", "ADMIN-001"]
+    source["packages"]["SETTINGS-002"]["depends_on"] = ["ENTITLEMENT-001", "ADMIN-001"]
     with pytest.raises(ValueError, match="next_package must directly depend on the active package"):
-        transition(source, activate="ACCESS-001", next_id="SETTINGS-002", new_branch="access/staff-delegation",
+        transition(source, activate="SETTINGS-002", next_id="CATALOG-002", new_branch="settings/plan-policy",
                    source_head="a"*40, evidence=evidence())
 
 
 def test_transition_rejects_completed_or_unrelated_next_package():
     source = plan()
     with pytest.raises(ValueError, match="not eligible from status technical_pass"):
-        transition(source, activate="ACCESS-001", next_id="AUTH-001", new_branch="access/staff-delegation",
+        transition(source, activate="SETTINGS-002", next_id="AUTH-001", new_branch="settings/plan-policy",
                    source_head="a"*40, evidence=evidence())
-    with pytest.raises(ValueError, match="must directly depend on activating package ACCESS-001"):
-        transition(source, activate="ACCESS-001", next_id="PROFILE-001", new_branch="access/staff-delegation",
+    with pytest.raises(ValueError, match="must directly depend on activating package SETTINGS-002"):
+        transition(source, activate="SETTINGS-002", next_id="PROFILE-001", new_branch="settings/plan-policy",
                    source_head="a"*40, evidence=evidence())
 
 
 def test_validate_plan_requires_planned_next_to_depend_on_active():
     import project_state as state
     source = plan()
-    source["packages"]["ACCESS-001"]["depends_on"] = ["AUTH-002", "ADMIN-001"]
+    source["packages"]["SETTINGS-002"]["depends_on"] = ["ENTITLEMENT-001", "ADMIN-001"]
     with pytest.raises(ValueError, match="next_package must directly depend on the active package"):
         state.validate_plan(source)
