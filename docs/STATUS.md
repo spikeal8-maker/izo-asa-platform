@@ -24,13 +24,15 @@ API-001 на этом head технически проверен GitHub Actions:
 Это доказывает технический contract fal-adapter и существующего server flow. Реального `IZO_FAL_KEY`,
 real fal request/provider billing, production data, independent review, merge или deploy не было.
 
-## Обнаруженная process-проблема
+## LINEAGE-001 · reconciliation facts
 
-В репозитории существует параллельная OpenRouter-линия API-001 (#15/#16/#17), поверх которой созданы
-SETTINGS-001 (#19) и CATALOG-001 (#20/#21). Она не является канонической после выбора fal.ai, но содержит
-потенциально полезный provider-neutral код. Автоматически продолжать её запрещено до LINEAGE-001.
+OpenRouter API-001 PR #15/#16/#17 и его descendants #19/#20/#21 разобраны как параллельная lineage.
+Канонический runtime остаётся fal.ai. Provider-specific OpenRouter client/worker/runtime не переносится.
+PR #19 сохраняется как typed Settings reference; PR #20 — как revision/audit/opaque-credential design reference;
+PR #21 не принят как UI implementation из-за Foundation CI failure в catalog-only navigation tests.
 
-Это расхождение и устаревшие mutable фразы в INDEX/NEXT/AGENTS стали причиной DOC-004.
+Общий найденный gap — новые staff permissions без lifecycle их выдачи. Поэтому следующий canonical package —
+ACCESS-001; затем re-author SETTINGS-002, CATALOG-002 и CATALOG-UI-002. Старые PR остаются reference-only.
 
 ## DOC-004 · verified checkpoint
 

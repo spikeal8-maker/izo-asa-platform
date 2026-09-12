@@ -45,15 +45,27 @@ def test_plan_separates_runtime_parent_working_and_next_branch_policy():
     plan = json.loads((ROOT/'docs/PLAN.json').read_text(encoding='utf-8'))
     lineage = plan['canonical_lineage']
     assert lineage['runtime_base']['branch'] == 'api/fal-klein-001'
-    assert lineage['current_package_base']['sha'] == 'e676be04d52dc998072a7779e83b6a78ddd5f601'
-    assert lineage['working_branch'] == 'docs/final-guardrails'
+    assert lineage['current_package_base']['sha'] == 'b53328d5e9e9111196d49062424cd7e386ac1eaa'
+    assert lineage['working_branch'] == 'lineage/reconcile-openrouter'
     assert lineage['next_branch_source'] == 'verified_working_head'
-    assert plan['active_package'] == 'DOC-004D'
-    assert plan['next_package'] == 'LINEAGE-001'
-    assert 'DOC-004D' in plan['packages']['LINEAGE-001']['depends_on']
-    assert plan['rules']['ci_evidence_must_bind_source_head'] is True
+    assert plan['active_package'] == 'LINEAGE-001'
+    assert plan['next_package'] == 'ACCESS-001'
+    assert 'LINEAGE-001' in plan['packages']['ACCESS-001']['depends_on']
+    assert plan['packages']['SETTINGS-001']['status'] == 'superseded_reference'
+    assert plan['packages']['CATALOG-001']['status'] == 'superseded_reference'
+    assert plan['packages']['SETTINGS-002']['status'] == 'planned'
+    assert plan['packages']['CATALOG-002']['status'] == 'planned'
+    assert plan['packages']['CATALOG-UI-002']['status'] == 'planned'
+    assert plan['packages']['LOCAL-001']['depends_on'][-1] == 'CATALOG-002'
     parallel = next(item for item in plan['parallel_lineages'] if item['id'] == 'OPENROUTER-LINEAGE')
+    assert parallel['status'] == 'reconciled_reference_only'
     assert parallel['do_not_continue_automatically'] is True
+
+
+def test_live_admin_docs_use_post_reconciliation_package_ids():
+    text = (ROOT/'docs/ADMIN.md').read_text(encoding='utf-8')
+    assert 'SETTINGS-001' not in text and 'CATALOG-001' not in text
+    assert 'SETTINGS-002' in text and 'CATALOG-UI-002' in text
 
 
 def test_stable_docs_do_not_embed_mutable_sha_or_pr():
