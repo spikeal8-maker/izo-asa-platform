@@ -9,18 +9,18 @@
       "pr": 22,
       "state": "technical_ci_pass_draft"
     },
-    "working_branch": "access/staff-delegation",
+    "working_branch": "settings/plan-policy",
     "provider_direction": "fal.ai / fal-ai/flux-2/klein/4b",
     "merge_deployed": false,
     "current_package_base": {
-      "branch": "lineage/reconcile-openrouter",
-      "sha": "a1de4b8fc551ba9b5ce3d1d88da7f1eaf378cd0e",
+      "branch": "access/staff-delegation",
+      "sha": "fbb3ba01232c0b31682db0f37a070300d95335ed",
       "state": "verified_pr_merge_tree_checkpoint"
     },
     "next_branch_source": "verified_working_head"
   },
-  "active_package": "ACCESS-001",
-  "next_package": "SETTINGS-002",
+  "active_package": "SETTINGS-002",
+  "next_package": "CATALOG-002",
   "rules": {
     "one_active_package": true,
     "one_canonical_lineage": true,
@@ -65,10 +65,10 @@
     "CHANGE-001": {"status": "technical_pass","depends_on": ["IMAGE-001"]},
     "API-001": {"status": "technical_ci_pass_live_acceptance_pending","depends_on": ["IMAGE-001"],"canonical_pr": 22,"canonical_branch": "api/fal-klein-001","provider": "fal.ai","model": "fal-ai/flux-2/klein/4b"},
     "DOC-004": {"status": "technical_pass","depends_on": ["API-001"],"goal": "Canonical project state, token-efficient context routing, local ownership docs, documentation validation and mandatory self-review.","evidence": {"foundation_ci": 34637203126,"dependency_security": 34637203194,"review_source": 34637203153,"head": "001edb9953d642f4d06453505809c20512f4b2b3"}},
-    "LINEAGE-001": {"status": "technical_pass","depends_on": ["DOC-004D","API-001"],"goal": "Compare OpenRouter-derived SETTINGS/CATALOG work with the canonical fal line, salvage provider-neutral pieces, rebase deliberately, and retire superseded branches.","decides_next": true,"evidence": {"type": "pr_merge_tree","source_head": "a1de4b8fc551ba9b5ce3d1d88da7f1eaf378cd0e","verified_pr": 28,"base_head": "b53328d5e9e9111196d49062424cd7e386ac1eaa","tested_merge_tree": "72cbdccf1b6b7b0954e3124fc97faef2908a1ac6","workflows": {"Foundation CI": 34687805633,"Dependency Security": 34687805585,"Review Source": 34687805595}}},
-    "SETTINGS-001": {"status": "superseded_reference","depends_on": ["API-001"],"source_pr": 19,"note": "PR #19 is provider-neutral design/test reference, not a canonical continuation package; re-author as SETTINGS-002 after ACCESS-001."},
-    "CATALOG-001": {"status": "superseded_reference","depends_on": ["API-001","SETTINGS-001"],"source_prs": [20,21],"note": "PR #20 backend supplies design patterns only; PR #21 UI failed Foundation CI. Re-author provider-neutral catalog for fal as CATALOG-002/CATALOG-UI-002."},
-    "ACCESS-001": {"status": "active","depends_on": ["LINEAGE-001","AUTH-002","ADMIN-001"],"goal": "A-28/AD-09 staff delegation: global scope, finite expiry, fresh auth, audit, self/last-owner guards; permission base for Settings/Catalog."},
+    "LINEAGE-001": {"status": "technical_pass","depends_on": ["DOC-004D","API-001"],"goal": "Reconcile OpenRouter SETTINGS/CATALOG with canonical fal; keep provider-neutral references and retire superseded continuation paths.","decides_next": true,"evidence": {"type": "pr_merge_tree","source_head": "a1de4b8fc551ba9b5ce3d1d88da7f1eaf378cd0e","verified_pr": 28,"base_head": "b53328d5e9e9111196d49062424cd7e386ac1eaa","tested_merge_tree": "72cbdccf1b6b7b0954e3124fc97faef2908a1ac6","workflows": {"Foundation CI": 34687805633,"Dependency Security": 34687805585,"Review Source": 34687805595}}},
+    "SETTINGS-001": {"status": "superseded_reference","depends_on": ["API-001"],"source_pr": 19,"note": "PR #19 is reference-only; re-author as SETTINGS-002 after ACCESS-001."},
+    "CATALOG-001": {"status": "superseded_reference","depends_on": ["API-001","SETTINGS-001"],"source_prs": [20,21],"note": "PR #20/#21 are reference-only; re-author canonical CATALOG-002/CATALOG-UI-002."},
+    "ACCESS-001": {"status": "technical_pass","depends_on": ["LINEAGE-001","AUTH-002","ADMIN-001"],"goal": "A-28/AD-09 staff delegation: global scope, finite expiry, fresh auth, audit, self/last-owner guards; permission base for Settings/Catalog.","evidence": {"type": "pr_merge_tree","source_head": "fbb3ba01232c0b31682db0f37a070300d95335ed","verified_pr": 29,"base_head": "a1de4b8fc551ba9b5ce3d1d88da7f1eaf378cd0e","tested_merge_tree": "436512463e85a0dd44dfe449ad154065d027cbab","workflows": {"Foundation CI": 34710133930,"Dependency Security": 34710133920,"Review Source": 34710133922}}},
     "LOCAL-001": {"status": "planned","depends_on": ["JOBS-001","API-001","CATALOG-002"]},
     "PLATFORM-001": {"status": "planned","depends_on": ["AUTH-002","IMAGE-001"]},
     "PLATFORM-002": {"status": "planned","depends_on": ["AUTH-002","IMAGE-001"]},
@@ -84,12 +84,12 @@
     "BILLING-001": {"status": "planned","depends_on": ["CREDIT-001","ENTITLEMENT-001","ADMIN-001","API-001","OPS-001"]},
     "OPS-001": {"status": "planned","depends_on": ["IMAGE-001","API-001"]},
     "LAUNCH-001": {"status": "planned","depends_on": ["F0-ACCEPT","AUTH-002","SUPPORT-001","ACCOUNT-DATA-001","OPS-001"]},
-    "DOC-004B": {"status": "technical_pass","depends_on": ["DOC-004"],"goal": "Maintenance precision: explicit development base, block-level routing, ambiguity-safe locator, frozen checkpoints, atomic state transitions and semantic local-doc repair.","evidence": {"type": "pr_merge_tree","source_head": "fe47e208809b5950b08c7133ba922d7be5742d24","verified_pr": 24,"base_head": "001edb9953d642f4d06453505809c20512f4b2b3","tested_merge_tree": "b1c941966ea4fd53fd00322808e90adabbc28077","workflows": {"Foundation CI": 34647714472,"Dependency Security": 34647714532,"Review Source": 34647714613}}},
-    "DOC-004C": {"status": "technical_pass","depends_on": ["DOC-004B"],"goal": "Continuation safety: machine-verified next-package branching, CI-to-source evidence binding, dependency gates, stale local-doc cleanup, robust natural-language routing and broader block coverage.","evidence": {"type": "pr_merge_tree","source_head": "e676be04d52dc998072a7779e83b6a78ddd5f601","verified_pr": 25,"base_head": "fe47e208809b5950b08c7133ba922d7be5742d24","tested_merge_tree": "63e4d16b181f6e95836cb67f5986245aca166d69","workflows": {"Foundation CI": 34657886305,"Dependency Security": 34657886265,"Review Source": 34657886205}}},
+    "DOC-004B": {"status": "technical_pass","depends_on": ["DOC-004"],"goal": "Low-token maintenance: block routing, ambiguity fail-closed, frozen checkpoints, atomic state transitions and local-doc repair.","evidence": {"type": "pr_merge_tree","source_head": "fe47e208809b5950b08c7133ba922d7be5742d24","verified_pr": 24,"base_head": "001edb9953d642f4d06453505809c20512f4b2b3","tested_merge_tree": "b1c941966ea4fd53fd00322808e90adabbc28077","workflows": {"Foundation CI": 34647714472,"Dependency Security": 34647714532,"Review Source": 34647714613}}},
+    "DOC-004C": {"status": "technical_pass","depends_on": ["DOC-004B"],"goal": "Continuation safety: verified branch/CI binding, dependency gates, stale-doc cleanup and robust routing/block coverage.","evidence": {"type": "pr_merge_tree","source_head": "e676be04d52dc998072a7779e83b6a78ddd5f601","verified_pr": 25,"base_head": "fe47e208809b5950b08c7133ba922d7be5742d24","tested_merge_tree": "63e4d16b181f6e95836cb67f5986245aca166d69","workflows": {"Foundation CI": 34657886305,"Dependency Security": 34657886265,"Review Source": 34657886205}}},
     "DOC-004D": {"status": "technical_pass","depends_on": ["DOC-004C"],"goal": "Final guardrails: strict next-package state transitions, current Accounts map, UTF-8 boundary tests, and routing edge cases.","evidence": {"type": "pr_merge_tree","source_head": "b53328d5e9e9111196d49062424cd7e386ac1eaa","verified_pr": 26,"base_head": "e676be04d52dc998072a7779e83b6a78ddd5f601","tested_merge_tree": "062516b1f4fc22374728780044cb3d603cf0760b","workflows": {"Foundation CI": 34676568698,"Dependency Security": 34676568660,"Review Source": 34676568713}}},
-    "SETTINGS-002": {"status": "planned_next","depends_on": ["ACCESS-001","ENTITLEMENT-001","ADMIN-001"],"goal": "Re-author the typed basic PlanPolicy preview/publish/history/rollback lifecycle from PR #19 on the canonical fal line, with explicit permission provisioning and no generic key/value or provider settings."},
-    "CATALOG-002": {"status": "planned","depends_on": ["SETTINGS-002","ACCESS-001","API-001","ADMIN-001"],"goal": "Provider-neutral versioned capability/connection/credential metadata for canonical fal and future adapters; reuse safe revision/audit/opaque-secret patterns from PR #20 without OpenRouter literals or replacing the proven Jobs/Fal runtime."},
-    "CATALOG-UI-002": {"status": "planned","depends_on": ["CATALOG-002","UX-001","ADMIN-001"],"goal": "Permission-correct admin UI for models/providers/connections/credential metadata; re-author from PR #21 patterns and fix catalog-only navigation/access semantics."}
+    "SETTINGS-002": {"status": "active","depends_on": ["ACCESS-001","ENTITLEMENT-001","ADMIN-001"],"goal": "Typed basic PlanPolicy current/preview/publish/history/rollback on canonical fal; permissions via ACCESS-001; no generic key/value/provider settings."},
+    "CATALOG-002": {"status": "planned_next","depends_on": ["SETTINGS-002","ACCESS-001","API-001","ADMIN-001"],"goal": "Provider-neutral versioned catalog for fal/future adapters; reuse safe revision/audit/opaque-secret patterns without OpenRouter literals or replacing Jobs/Fal runtime."},
+    "CATALOG-UI-002": {"status": "planned","depends_on": ["CATALOG-002","UX-001","ADMIN-001"],"goal": "Permission-correct admin catalog UI re-authored from PR #21 patterns without its navigation/access defects."}
   },
   "status_meaning": {
     "active": "The only package a new coding agent may continue by default.",

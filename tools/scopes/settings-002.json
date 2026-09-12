@@ -1,0 +1,31 @@
+{
+  "base": "fbb3ba01232c0b31682db0f37a070300d95335ed",
+  "max_files": 21,
+  "allowed": [
+    ".github/workflows/ci.yml",
+    "apps/api/izo/app.py",
+    "apps/api/izo/settings/__init__.py",
+    "apps/api/izo/settings/README.md",
+    "apps/api/izo/settings/routes.py",
+    "apps/api/izo/settings/schemas.py",
+    "apps/api/izo/settings/service.py",
+    "docs/BLOCK_MAP.json",
+    "docs/CONTEXT_MAP.json",
+    "docs/CURRENT.md",
+    "docs/PLAN.json",
+    "docs/reviews/SETTINGS-002.md",
+    "packages/contracts/openapi.json",
+    "tests/context_cases.json",
+    "tests/test_docs_system.py",
+    "tests/test_project_state.py",
+    "tests/test_settings.py",
+    "tests/test_settings_boundaries.py",
+    "tests/test_settings_http.py",
+    "tools/settings_acceptance.py",
+    "tools/scopes/settings-002.json"
+  ],  "sensitive_approved": [
+    ".github/workflows/ci.yml",
+    "tools/settings_acceptance.py",
+    "tools/scopes/settings-002.json"
+  ]
+}
