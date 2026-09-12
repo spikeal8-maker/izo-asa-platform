@@ -9,18 +9,18 @@
       "pr": 22,
       "state": "technical_ci_pass_draft"
     },
-    "working_branch": "docs/continuation-safety",
+    "working_branch": "docs/final-guardrails",
     "provider_direction": "fal.ai / fal-ai/flux-2/klein/4b",
     "merge_deployed": false,
     "current_package_base": {
-      "branch": "docs/maintenance-precision",
-      "sha": "fe47e208809b5950b08c7133ba922d7be5742d24",
-      "pr": 24,
+      "branch": "docs/continuation-safety",
+      "sha": "e676be04d52dc998072a7779e83b6a78ddd5f601",
+      "pr": 25,
       "state": "verified_pr_merge_tree_checkpoint"
     },
     "next_branch_source": "verified_working_head"
   },
-  "active_package": "DOC-004C",
+  "active_package": "DOC-004D",
   "next_package": "LINEAGE-001",
   "rules": {
     "one_active_package": true,
@@ -66,7 +66,7 @@
     "CHANGE-001": {"status": "technical_pass","depends_on": ["IMAGE-001"]},
     "API-001": {"status": "technical_ci_pass_live_acceptance_pending","depends_on": ["IMAGE-001"],"canonical_pr": 22,"canonical_branch": "api/fal-klein-001","provider": "fal.ai","model": "fal-ai/flux-2/klein/4b"},
     "DOC-004": {"status": "technical_pass","depends_on": ["API-001"],"goal": "Canonical project state, token-efficient context routing, local ownership docs, documentation validation and mandatory self-review.","evidence": {"foundation_ci": 34637203126,"dependency_security": 34637203194,"review_source": 34637203153,"head": "001edb9953d642f4d06453505809c20512f4b2b3"}},
-    "LINEAGE-001": {"status": "planned_next","depends_on": ["DOC-004C","API-001"],"goal": "Compare OpenRouter-derived SETTINGS/CATALOG work with the canonical fal line, salvage provider-neutral pieces, rebase deliberately, and retire superseded branches.","decides_next": true},
+    "LINEAGE-001": {"status": "planned_next","depends_on": ["DOC-004D","API-001"],"goal": "Compare OpenRouter-derived SETTINGS/CATALOG work with the canonical fal line, salvage provider-neutral pieces, rebase deliberately, and retire superseded branches.","decides_next": true},
     "SETTINGS-001": {"status": "parallel_lineage_only","depends_on": ["API-001"],"source_pr": 19,"note": "Do not continue from PR #19 automatically; LINEAGE-001 decides what is salvaged onto canonical."},
     "CATALOG-001": {"status": "parallel_lineage_only","depends_on": ["API-001","SETTINGS-001"],"source_prs": [20,21],"note": "Do not treat OpenRouter-specific catalog metadata as canonical until LINEAGE-001."},
     "ACCESS-001": {"status": "planned","depends_on": ["AUTH-002","ADMIN-001"]},
@@ -86,7 +86,8 @@
     "OPS-001": {"status": "planned","depends_on": ["IMAGE-001","API-001"]},
     "LAUNCH-001": {"status": "planned","depends_on": ["F0-ACCEPT","AUTH-002","SUPPORT-001","ACCOUNT-DATA-001","OPS-001"]},
     "DOC-004B": {"status": "technical_pass","depends_on": ["DOC-004"],"goal": "Maintenance precision: explicit development base, block-level routing, ambiguity-safe locator, frozen checkpoints, atomic state transitions and semantic local-doc repair.","evidence": {"type": "pr_merge_tree","source_head": "fe47e208809b5950b08c7133ba922d7be5742d24","verified_pr": 24,"base_head": "001edb9953d642f4d06453505809c20512f4b2b3","tested_merge_tree": "b1c941966ea4fd53fd00322808e90adabbc28077","workflows": {"Foundation CI": 34647714472,"Dependency Security": 34647714532,"Review Source": 34647714613}}},
-    "DOC-004C": {"status": "active","depends_on": ["DOC-004B"],"goal": "Continuation safety: machine-verified next-package branching, CI-to-source evidence binding, dependency gates, stale local-doc cleanup, robust natural-language routing and broader block coverage."}
+    "DOC-004C": {"status": "technical_pass","depends_on": ["DOC-004B"],"goal": "Continuation safety: machine-verified next-package branching, CI-to-source evidence binding, dependency gates, stale local-doc cleanup, robust natural-language routing and broader block coverage.","evidence": {"type": "pr_merge_tree","source_head": "e676be04d52dc998072a7779e83b6a78ddd5f601","verified_pr": 25,"base_head": "fe47e208809b5950b08c7133ba922d7be5742d24","tested_merge_tree": "63e4d16b181f6e95836cb67f5986245aca166d69","workflows": {"Foundation CI": 34657886305,"Dependency Security": 34657886265,"Review Source": 34657886205}}},
+    "DOC-004D": {"status": "active","depends_on": ["DOC-004C"],"goal": "Final guardrails: strict next-package state transitions, current Accounts map, UTF-8 boundary tests, and routing edge cases."}
   },
   "status_meaning": {
     "active": "The only package a new coding agent may continue by default.",

@@ -54,7 +54,7 @@ def test_s3_adapter_rejects_untrusted_key():
 def test_media_never_mutates_credits_or_implements_another_identity():
     root = ROOT/'apps/api/izo/media'
     for path in root.glob('*.py'):
-        source = path.read_text()
+        source = path.read_text(encoding="utf-8")
         tree = ast.parse(source)
         for node in ast.walk(tree):
             if isinstance(node, ast.ImportFrom):
@@ -64,23 +64,23 @@ def test_media_never_mutates_credits_or_implements_another_identity():
 
 
 def test_migration_is_static_and_live_acceptance_is_wired():
-    source = (ROOT/'apps/api/migrations/versions/0007_media.py').read_text()
+    source = (ROOT/'apps/api/migrations/versions/0007_media.py').read_text(encoding="utf-8")
     assert 'izo.media' not in source and '0006_admin' in source
-    workflow = (ROOT/'.github/workflows/ci.yml').read_text()
+    workflow = (ROOT/'.github/workflows/ci.yml').read_text(encoding="utf-8")
     assert workflow.index('tools/media_acceptance.py before') < workflow.index('docker compose down\n')
     assert workflow.index('tools/media_acceptance.py after') > workflow.index('docker compose up --wait')
     assert 'IZO_MEDIA_ACCEPTANCE=isolated' in workflow and 'umask 077' in workflow
     assert workflow.count('rm -f "$RUNNER_TEMP/izo-media-state.json"') == 2
-    assert 'Pillow==12.3.0' in (ROOT/'requirements.in').read_text()
-    assert 'Pillow==12.3.0' in (ROOT/'requirements.lock').read_text()
-    script = (ROOT/'tools/media_acceptance.py').read_text()
+    assert 'Pillow==12.3.0' in (ROOT/'requirements.in').read_text(encoding="utf-8")
+    assert 'Pillow==12.3.0' in (ROOT/'requirements.lock').read_text(encoding="utf-8")
+    script = (ROOT/'tools/media_acceptance.py').read_text(encoding="utf-8")
     assert 'set_default(' not in script  # Fixtures cannot alter the existing baseline plan.
     assert 'DISABLE TRIGGER' not in script and 'TRUNCATE' not in script
 
 
 def test_incremental_media_pr_keeps_both_ci_gates():
     for name in ("ci.yml", "dependency-audit.yml"):
-        text = (ROOT / ".github/workflows" / name).read_text()
+        text = (ROOT / ".github/workflows" / name).read_text(encoding="utf-8")
         assert "  pull_request: {}" in text  # All bases include the original media stack.
         assert "contents: read" in text and "persist-credentials: false" in text
         assert "pull_request_target" not in text and "self-hosted" not in text
