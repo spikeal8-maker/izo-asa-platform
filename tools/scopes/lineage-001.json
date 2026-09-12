@@ -1,0 +1,21 @@
+{
+  "base": "b53328d5e9e9111196d49062424cd7e386ac1eaa",
+  "max_files": 12,
+  "allowed": [
+    "docs/ADMIN.md",
+    "docs/AI_RUNTIME.md",
+    "docs/CURRENT.md",
+    "docs/INDEX.md",
+    "docs/PLAN.json",
+    "docs/STATUS.md",
+    "docs/adr/ADR-001-canonical-provider-lineage.md",
+    "docs/adr/ADR-002-openrouter-reconciliation.md",
+    "docs/reviews/LINEAGE-001.md",
+    "tests/test_docs_system.py",
+    "tests/test_project_state.py",
+    "tools/scopes/lineage-001.json"
+  ],
+  "sensitive_approved": [
+    "tools/scopes/lineage-001.json"
+  ]
+}

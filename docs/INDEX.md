@@ -12,7 +12,7 @@ INDEX — **стабильная карта**, а не статус и не road
 | Какой feature/domain читать, если block неизвестен | [CONTEXT_MAP.json](CONTEXT_MAP.json) |
 | Как coding-агент должен работать | [DEVELOPMENT.md](DEVELOPMENT.md), кратко — корневой `AGENTS.md` |
 | Как устроена сама документация | [DOCS_SYSTEM.md](DOCS_SYSTEM.md) |
-| Почему выбрана текущая архитектурная линия | `adr/` (сначала ADR-001) |
+| Почему выбрана текущая архитектурная линия | `adr/` (текущее решение ADR-002; ADR-001 — pre-reconciliation history) |
 | Что пользователь должен видеть/уметь | [PRODUCT.md](PRODUCT.md) |
 | Админка, permissions, settings | [ADMIN.md](ADMIN.md) |
 | Визуал/responsive/accessibility | [UX.md](UX.md) |

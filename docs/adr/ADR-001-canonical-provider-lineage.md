@@ -1,6 +1,6 @@
 # ADR-001 · Каноническая provider-линия
 
-**Статус:** accepted for development routing
+**Статус:** superseded for post-reconciliation routing by ADR-002
 **Дата:** 2026-09-11
 **Решение относится к:** API-001 и всем пакетам, зависящим от provider/catalog/settings runtime.
 

@@ -39,11 +39,11 @@ A — экран/route с вкладками, AD — диалог. Маршру�
 | A-05 `/admin/compensations/{caseId}` · case/account | credits.grant + limit, support scope | Основание/история → AD-01 | Один grant на business case; не только UUID клика | ADMIN-001 |
 | A-06 `/admin/plans` · nav | plans.read; draft/published versions | plans.write → A-07 | Новые планы выключены; тариф не staff-role | ENTITLEMENT-001 |
 | A-07 `/admin/plans/{planId}` · список | plans.write/pricing.write отдельно; поля S-09…S-23 | Редактировать draft → AD-08 publish | Diff прав/квот, effectiveAt, влияние на действующие планы | ENTITLEMENT-001, BILLING-001 |
-| A-08 `/admin/models` · nav | catalog.read | Import candidates/filter → A-09 | Discover не публикует платные модели | CATALOG-001 |
-| A-09 `/admin/models/{capabilityId}` · список | catalog.write; schema/inputs/outputs/provider/pricing отдельно | AD-03 publish/disable, разрешённый probe | Immutable snapshot у jobs; поддержанные modes подтверждены | CATALOG-001 |
-| A-10 `/admin/providers` · nav | connections.read | Список provider adapters/connections → A-11 | Adapter не создаётся вводом JS/Python в UI | CATALOG-001 |
-| A-11 `/admin/providers/{providerId}/connections/{connectionId}` · provider | connections.write; account/project, endpoint, limits, credential metadata | Настроить draft, AD-04, enable/drain/probe | Другой account/key source не перехватывает старый job | CATALOG-001 |
-| A-12 `/admin/credentials` · connection | secrets.bind отдельный scope | Metadata, input/rotate/revoke AD-04 | Write-only; не raw env/browser-localStorage/log | CATALOG-001 |
+| A-08 `/admin/models` · nav | catalog.read | Import candidates/filter → A-09 | Discover не публикует платные модели | CATALOG-UI-002 |
+| A-09 `/admin/models/{capabilityId}` · список | catalog.write; schema/inputs/outputs/provider/pricing отдельно | AD-03 publish/disable, разрешённый probe | Immutable snapshot у jobs; поддержанные modes подтверждены | CATALOG-UI-002 |
+| A-10 `/admin/providers` · nav | connections.read | Список provider adapters/connections → A-11 | Adapter не создаётся вводом JS/Python в UI | CATALOG-UI-002 |
+| A-11 `/admin/providers/{providerId}/connections/{connectionId}` · provider | connections.write; account/project, endpoint, limits, credential metadata | Настроить draft, AD-04, enable/drain/probe | Другой account/key source не перехватывает старый job | CATALOG-UI-002 |
+| A-12 `/admin/credentials` · connection | secrets.bind отдельный scope | Metadata, input/rotate/revoke AD-04 | Write-only; не raw env/browser-localStorage/log | CATALOG-UI-002 |
 | A-13 `/admin/workers` · nav | workers.read | Pools/version/last heartbeat → A-14 | Off-line GPU не ломает API status | LOCAL-001 |
 | A-14 `/admin/workers/{workerId}` · список | workers.manage; capabilities/lease/занятость | AD-05 register/revoke/drain | Token scope ограничен; никаких arbitrary remote commands | LOCAL-001 |
 | A-15 `/admin/jobs` · nav/account | jobs.read_technical | Filter state/age/provider → A-16 | Redacted prompt/error; scope пользователя/case где нужен payload | JOBS-001 |
@@ -58,7 +58,7 @@ A — экран/route с вкладками, AD — диалог. Маршру�
 | A-24 `/admin/notifications` · integrations | delivery.manage; outbox attempts | Pause/retry delivery существующего события | Retry не повторяет grant/generation; consent сохраняется | NOTIFY-001 |
 | A-25 `/admin/payments` · nav | payments.read | Orders/events/reconciliation filters → A-26 | Не live до разрешённой интеграции | BILLING-001 |
 | A-26 `/admin/payments/{paymentId}` · список | payments.refund/pricing отдельно | Сверить/AD-10 refund | Проверенный provider event; двукратный refund исключён | BILLING-001 |
-| A-27 `/admin/settings` · nav | policy.read/write по группе | Brand/features/security/storage/support/privacy → AD-08 | Runtime policy ≠ Docker/env-console; секреты в A-12 | SETTINGS-001 |
+| A-27 `/admin/settings` · nav | policy.read/write по группе | Brand/features/security/storage/support/privacy → AD-08 | Runtime policy ≠ Docker/env-console; секреты в A-12 | SETTINGS-002 |
 | A-28 `/admin/access` · nav | access.manage | Staff sets/scopes/limits, AD-09 | Запрет self-escalation/последнего owner; fresh auth/audit | ACCESS-001 |
 | A-29 `/admin/audit` · nav/receipt | audit.read/export по scope | Фильтр actor/command/target/time/request; разрешённый export | Нельзя менять/стирать event; redaction PII/secrets | ADMIN-001, OPS-001 |
 | A-30 `/admin/system` · nav/alert | system.read | Versions/schema/health/pools/backup receipt, ссылки runbook | Без shell, release/restart buttons в первом объёме | OPS-001 |
@@ -217,7 +217,7 @@ DB/S3 root credentials, Docker socket, container image tags/digests, network/egr
 
 Для каждой реализованной S-группы нужен SV-01 allowed/forbidden actor/scope; SV-02 valid/boundary/invalid type и cross-field cases; SV-03 default/null/0 и запрет publish с REQ; SV-04 expectedRevision conflict/race; SV-05 audit/redaction; SV-06 применимость V/I/SESSION/DELIVERY и snapshot действующего job; SV-07 rollback новой revision без отмены ledger; SV-08 secret не попадает в UI/log/test artifact где применимо.
 
-Нельзя считать общую таблицу формальным разрешением создать 66 экранов сразу. SETTINGS-001 вводит только типизированный lifecycle и настройки ближайшей функции; поле появляется вместе с его consumer/test. Иначе админка снова станет огромным неиспользуемым конфигуратором.
+Нельзя считать общую таблицу формальным разрешением создать 66 экранов сразу. SETTINGS-002 вводит только типизированный lifecycle и настройки ближайшей функции; поле появляется вместе с его consumer/test. Иначе админка снова станет огромным неиспользуемым конфигуратором.
 
 Новая A/AD/S добавляется сначала в этот реестр с permission, apply semantics и пакетом NEXT. Существующая страница без своей карточки или новая настройка с неописанным default не считается завершённой. Документационный review проверяет ссылки/ID/полноту, runtime tests вводятся только вместе с кодом. Независимый security review не подменяется самопроверкой автора.
 

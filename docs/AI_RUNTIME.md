@@ -98,7 +98,7 @@ Prompt версии хранится и тестируется отдельно 
 - OWASP LLM Prompt Injection Prevention: https://cheatsheetseries.owasp.org/cheatsheets/LLM_Prompt_Injection_Prevention_Cheat_Sheet.html
 - OWASP Session Management: https://cheatsheetseries.owasp.org/cheatsheets/Session_Management_Cheat_Sheet.html
 
-Каноническое текущее provider-направление задаёт PLAN: fal.ai / `fal-ai/flux-2/klein/4b`. Этот документ остаётся provider-neutral контрактом и не превращает одну модель в универсальный runtime; параллельная OpenRouter-линия не является continuation base до LINEAGE-001.
+Каноническое текущее provider-направление задаёт PLAN: fal.ai / `fal-ai/flux-2/klein/4b`. Этот документ остаётся provider-neutral контрактом и не превращает одну модель в универсальный runtime; OpenRouter-линия reconciled в ADR-002 и остаётся reference-only: она не является continuation base.
 
 ## 9. Источники ключей и единое подключение — уточнение DOC-002
 
