@@ -26,7 +26,7 @@ def test_browser_demo_is_retired_not_a_fallback_for_missing_server_data():
     assert not list((WEB / "features/prototype").glob("*.ts*"))
     for path in (WEB / "features").rglob("*.ts*"):
         assert not any("prototype" in name for name in imports(path)), path
-    assert 'DemoProvider' not in (WEB / 'shell/App.tsx').read_text()
+    assert 'DemoProvider' not in (WEB / 'shell/App.tsx').read_text(encoding="utf-8")
 
 
 def test_features_do_not_bypass_shared_transport():
@@ -37,7 +37,7 @@ def test_features_do_not_bypass_shared_transport():
 
 
 def test_high_density_profiles_are_explicit():
-    text = (ROOT / "apps/web/playwright.config.ts").read_text()
+    text = (ROOT / "apps/web/playwright.config.ts").read_text(encoding="utf-8")
     for profile in ("qhd", "uhd", "hidpi-150", "hidpi-200"):
         assert f"name: '{profile}'" in text
     assert "width: 3840, height: 2160" in text

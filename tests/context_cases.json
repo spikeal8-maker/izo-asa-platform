@@ -50,5 +50,9 @@
   {"task":"ошибка 401 при входе","status":"resolved","kind":"route","key":"api.accounts"},
   {"task":"изменить лимит модели для тарифа","status":"resolved","kind":"block","key":"api.entitlements.evaluate"},
   {"task":"исправь возврат баллов после отмены","status":"ambiguous"},
-  {"task":"почему 403 при скачивании","status":"ambiguous"}
+  {"task":"почему 403 при скачивании","status":"ambiguous"},
+  {"task":"сделай поле пароля шире","status":"resolved","kind":"block","key":"web.accounts.security_submit"},
+  {"task":"поменяй подпись кнопки поиска пользователя","status":"resolved","kind":"block","key":"web.admin.search_action"},
+  {"task":"сломался список работ","status":"resolved","kind":"block","key":"web.gallery.list_controls"},
+  {"task":"в галерее кнопка обновления ничего не делает","status":"resolved","kind":"block","key":"web.gallery.list_controls"}
 ]

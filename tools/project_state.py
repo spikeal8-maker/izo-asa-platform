@@ -18,6 +18,7 @@ READY_DEPENDENCY_STATUSES = {
     "historical_complete",
     "historical_technical_pass",
 }
+NEXT_PACKAGE_SOURCE_STATUSES = {"planned"}
 
 
 def load_plan(root: Path = ROOT) -> dict:
@@ -179,12 +180,21 @@ def validate_plan(plan: dict) -> None:
     active = [key for key, item in packages.items() if item.get("status") == "active"]
     if active != [active_id]:
         raise ValueError(f"exactly one active package required: {active}")
+    for key, item in packages.items():
+        deps = item.get("depends_on", [])
+        if not isinstance(deps, list) or any(dep not in packages or dep == key for dep in deps):
+            raise ValueError(f"invalid dependencies for {key}: {deps}")
+    for dep in packages.get(active_id, {}).get("depends_on", []):
+        if packages[dep].get("status") not in READY_DEPENDENCY_STATUSES:
+            raise ValueError(f"active package dependency is not ready: {dep}={packages[dep].get('status')}")
     next_id = plan.get("next_package")
     if next_id is None:
         if not packages.get(active_id, {}).get("decides_next"):
             raise ValueError("next_package may be null only for an active decides_next package")
     elif next_id not in packages or packages[next_id].get("status") != "planned_next":
         raise ValueError("next_package must exist with status planned_next")
+    elif active_id not in packages[next_id].get("depends_on", []):
+        raise ValueError("next_package must directly depend on the active package")
 
 
 def verify_checkout(plan: dict, root: Path = ROOT) -> list[str]:
@@ -209,7 +219,10 @@ def dependency_problems(plan: dict, activate: str, *, finishing: str) -> list[st
     if not item:
         return [f"unknown package {activate}"]
     problems = []
-    for dep in item.get("depends_on", []):
+    deps = item.get("depends_on", [])
+    if finishing not in deps:
+        problems.append(f"{activate} must directly depend on finishing package {finishing}")
+    for dep in deps:
         status = "technical_pass" if dep == finishing else packages.get(dep, {}).get("status")
         if status not in READY_DEPENDENCY_STATUSES:
             problems.append(f"dependency {dep} is not ready: {status}")
@@ -225,6 +238,16 @@ def transition(plan: dict, *, activate: str, next_id: str | None,
     problems = dependency_problems(plan, activate, finishing=active)
     if problems:
         raise ValueError("; ".join(problems))
+    if next_id is not None:
+        next_item = plan["packages"].get(next_id)
+        if next_item is None:
+            raise ValueError(f"unknown next package {next_id}")
+        if next_id in {active, activate}:
+            raise ValueError("next package must differ from finishing and activating packages")
+        if next_item.get("status") not in NEXT_PACKAGE_SOURCE_STATUSES:
+            raise ValueError(f"next package {next_id} is not eligible from status {next_item.get('status')}")
+        if activate not in next_item.get("depends_on", []):
+            raise ValueError(f"next package {next_id} must directly depend on activating package {activate}")
     result = json.loads(json.dumps(plan))
     result["packages"][active]["status"] = "technical_pass"
     result["packages"][active]["evidence"] = evidence
@@ -239,8 +262,6 @@ def transition(plan: dict, *, activate: str, next_id: str | None,
     }
     lineage["working_branch"] = new_branch
     if next_id is not None:
-        if next_id not in result["packages"]:
-            raise ValueError(f"unknown next package {next_id}")
         result["packages"][next_id]["status"] = "planned_next"
     validate_plan(result)
     return result

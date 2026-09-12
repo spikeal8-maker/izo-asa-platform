@@ -122,14 +122,15 @@ def check_coverage(errors: list[str], context: dict) -> None:
     mutable_sha = re.compile(r"\b[0-9a-f]{40}\b")
     mutable_pr = re.compile(r"\bPR\s*#\d+\b", re.I)
     next_package = re.compile(r"следующ(?:ий|ая|ее).{0,40}пакет", re.I)
+    lifecycle_drift = re.compile(r"(?:после\s+acceptance\s+продолжать|остаются\s+демо|для\s+этого\s+нужны\s+(?:CREDIT|MEDIA|JOBS))", re.I)
     for path in ownership:
         if not path.is_file():
             continue
         text = path.read_text(encoding="utf-8")
-        if mutable_sha.search(text) or mutable_pr.search(text) or next_package.search(text):
-            errors.append(f"local ownership map contains mutable history/roadmap: {path.relative_to(ROOT)}")
-        if len(text.encode("utf-8")) > 10000:
-            errors.append(f"local ownership map exceeds 10KB context budget: {path.relative_to(ROOT)}")
+        if mutable_sha.search(text) or mutable_pr.search(text) or next_package.search(text) or lifecycle_drift.search(text):
+            errors.append(f"local ownership map contains mutable/history lifecycle language: {path.relative_to(ROOT)}")
+        if len(text.encode("utf-8")) > 5000:
+            errors.append(f"local ownership map exceeds 5KB context budget: {path.relative_to(ROOT)}")
 
 
 def check_encoding_and_stable(errors: list[str]) -> None:

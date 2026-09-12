@@ -1,4 +1,4 @@
-"""Documentation/navigation regression tests for low-token maintenance."""
+﻿"""Documentation/navigation regression tests for low-token maintenance."""
 from __future__ import annotations
 
 import json
@@ -45,12 +45,12 @@ def test_plan_separates_runtime_parent_working_and_next_branch_policy():
     plan = json.loads((ROOT/'docs/PLAN.json').read_text(encoding='utf-8'))
     lineage = plan['canonical_lineage']
     assert lineage['runtime_base']['branch'] == 'api/fal-klein-001'
-    assert lineage['current_package_base']['sha'] == 'fe47e208809b5950b08c7133ba922d7be5742d24'
-    assert lineage['working_branch'] == 'docs/continuation-safety'
+    assert lineage['current_package_base']['sha'] == 'e676be04d52dc998072a7779e83b6a78ddd5f601'
+    assert lineage['working_branch'] == 'docs/final-guardrails'
     assert lineage['next_branch_source'] == 'verified_working_head'
-    assert plan['active_package'] == 'DOC-004C'
+    assert plan['active_package'] == 'DOC-004D'
     assert plan['next_package'] == 'LINEAGE-001'
-    assert 'DOC-004C' in plan['packages']['LINEAGE-001']['depends_on']
+    assert 'DOC-004D' in plan['packages']['LINEAGE-001']['depends_on']
     assert plan['rules']['ci_evidence_must_bind_source_head'] is True
     parallel = next(item for item in plan['parallel_lineages'] if item['id'] == 'OPENROUTER-LINEAGE')
     assert parallel['do_not_continue_automatically'] is True
@@ -73,3 +73,8 @@ def test_block_level_gallery_context_is_materially_smaller_than_old_feature_bund
     match = re.search(r'INITIAL DOCUMENT BYTES: (\d+)', result.stdout)
     assert match and int(match.group(1)) < 16000, result.stdout
     assert 'AssetPage.tsx' in result.stdout and 'Work.download' in result.stdout
+
+def test_boundary_tests_use_explicit_utf8_reads():
+    for path in (ROOT/'tests').glob('*boundaries.py'):
+        text = path.read_text(encoding='utf-8')
+        assert '.read_text()' not in text, path

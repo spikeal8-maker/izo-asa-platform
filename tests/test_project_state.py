@@ -1,4 +1,4 @@
-"""Continuation safety and GitHub evidence binding."""
+﻿"""Continuation safety and GitHub evidence binding."""
 from __future__ import annotations
 
 import json
@@ -32,9 +32,9 @@ def evidence(head='a'*40):
 def test_current_uses_parent_base_and_verified_working_head_policy():
     text = render_current(plan())
     assert 'runtime_base=api/fal-klein-001@faec39d6' in text
-    assert 'current_package_base=docs/maintenance-precision@fe47e20' in text
-    assert 'working_branch=docs/continuation-safety' in text
-    assert 'active_package=DOC-004C' in text
+    assert 'current_package_base=docs/continuation-safety@e676be0' in text
+    assert 'working_branch=docs/final-guardrails' in text
+    assert 'active_package=DOC-004D' in text
     assert 'не выбирать его вручную как base следующего package' in text
 
 
@@ -90,14 +90,14 @@ def test_pr_evidence_rejects_stale_merge_tree():
 def test_transition_advances_from_verified_working_head_and_checks_dependencies():
     source = plan()
     head = 'a' * 40
-    assert dependency_problems(source, 'LINEAGE-001', finishing='DOC-004C') == []
+    assert dependency_problems(source, 'LINEAGE-001', finishing='DOC-004D') == []
     updated = transition(
         source, activate='LINEAGE-001', next_id=None, new_branch='lineage/reconcile',
         source_head=head, evidence=evidence(head),
     )
-    assert source['active_package'] == 'DOC-004C'
-    assert updated['packages']['DOC-004C']['status'] == 'technical_pass'
-    assert updated['packages']['DOC-004C']['evidence']['source_head'] == head
+    assert source['active_package'] == 'DOC-004D'
+    assert updated['packages']['DOC-004D']['status'] == 'technical_pass'
+    assert updated['packages']['DOC-004D']['evidence']['source_head'] == head
     assert updated['active_package'] == 'LINEAGE-001'
     assert updated['next_package'] is None
 
@@ -127,10 +127,10 @@ def test_begin_next_rolls_back_branch_and_state_on_write_failure(tmp_path, monke
     calls=[]
     def fake_git(*args, root=tmp_path):
         if args == ('status','--porcelain'): return ''
-        if args == ('branch','--show-current'): return 'docs/continuation-safety'
+        if args == ('branch','--show-current'): return 'docs/final-guardrails'
         if args == ('rev-parse','HEAD'): return 'a'*40
         if args[:2] == ('switch','-c'): calls.append('create'); return ''
-        if args == ('switch','docs/continuation-safety'): calls.append('rollback'); return ''
+        if args == ('switch','docs/final-guardrails'): calls.append('rollback'); return ''
         if args[:2] == ('branch','-D'): calls.append('delete'); return ''
         raise AssertionError(args)
     monkeypatch.setattr(state, 'git', fake_git)
@@ -145,3 +145,30 @@ def test_begin_next_rolls_back_branch_and_state_on_write_failure(tmp_path, monke
     assert (docs/'PLAN.json').read_bytes() == b'old-plan'
     assert (docs/'CURRENT.md').read_bytes() == b'old-current'
     assert calls == ['create','rollback','delete']
+
+
+def test_transition_requires_direct_dependency_on_finishing_package():
+    source = plan()
+    source["packages"]["LINEAGE-001"]["depends_on"] = ["API-001"]
+    with pytest.raises(ValueError, match="next_package must directly depend on the active package"):
+        transition(source, activate="LINEAGE-001", next_id=None, new_branch="lineage/reconcile",
+                   source_head="a"*40, evidence=evidence())
+
+
+def test_transition_rejects_completed_or_unrelated_next_package():
+    source = plan()
+    with pytest.raises(ValueError, match="not eligible from status technical_pass"):
+        transition(source, activate="LINEAGE-001", next_id="AUTH-001", new_branch="lineage/reconcile",
+                   source_head="a"*40, evidence=evidence())
+    source["packages"]["PROFILE-001"]["depends_on"] = ["AUTH-001"]
+    with pytest.raises(ValueError, match="must directly depend on activating package LINEAGE-001"):
+        transition(source, activate="LINEAGE-001", next_id="PROFILE-001", new_branch="lineage/reconcile",
+                   source_head="a"*40, evidence=evidence())
+
+
+def test_validate_plan_requires_planned_next_to_depend_on_active():
+    import project_state as state
+    source = plan()
+    source["packages"]["LINEAGE-001"]["depends_on"] = ["API-001"]
+    with pytest.raises(ValueError, match="next_package must directly depend on the active package"):
+        state.validate_plan(source)
