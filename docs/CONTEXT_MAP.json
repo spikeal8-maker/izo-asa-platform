@@ -138,6 +138,7 @@
       "expand_if_needed": ["apps/api/izo/access/permissions.py","apps/api/izo/access/tables.py","docs/ADMIN.md"],
       "do_not_read_by_default": ["docs/AI_RUNTIME.md","apps/api/izo/providers","apps/web/src/features/gallery"]
     },
+    "api.settings": {"keywords": ["\u043d\u0430\u0441\u0442\u0440\u043e\u0439\u043a\u0438 \u043f\u043b\u0430\u043d\u0430","\u043f\u043e\u043b\u0438\u0442\u0438\u043a\u0430 basic","plan settings","settings api","plan policy","publish settings","rollback settings"],"read_first": ["apps/api/AGENTS.md","apps/api/izo/settings/README.md","apps/api/izo/settings/service.py","apps/api/izo/settings/routes.py"],"tests": ["tests/test_settings.py","tests/test_settings_http.py","tests/test_settings_boundaries.py"],"expand_if_needed": ["apps/api/izo/entitlements/README.md","apps/api/izo/access/README.md","docs/ADMIN.md"],"do_not_read_by_default": ["apps/api/izo/providers","apps/api/izo/jobs","apps/web/src/features/gallery"]},
     "api.media": {
       "keywords": ["s3", "файл", "медиа", "upload", "download ticket", "asset", "storage", "изображение хранение"],
       "read_first": [

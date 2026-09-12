@@ -58,5 +58,9 @@
   {"task":"выдать право сотруднику backend","status":"resolved","kind":"block","key":"api.access.grant"},
   {"task":"отозвать право сотрудника backend","status":"resolved","kind":"block","key":"api.access.revoke"},
   {"task":"форма прав сотрудника","status":"resolved","kind":"block","key":"web.admin.access_mutation"},
-  {"task":"карточка прав сотрудника","status":"resolved","kind":"block","key":"web.admin.access_subject"}
+  {"task":"карточка прав сотрудника","status":"resolved","kind":"block","key":"web.admin.access_subject"},
+  {"task":"предпросмотр настроек плана","status":"resolved","kind":"block","key":"api.settings.preview"},
+  {"task":"опубликовать настройки плана backend","status":"resolved","kind":"block","key":"api.settings.publish"},
+  {"task":"откатить настройки плана","status":"resolved","kind":"block","key":"api.settings.rollback"},
+  {"task":"история настроек плана","status":"resolved","kind":"block","key":"api.settings.read"}
 ]

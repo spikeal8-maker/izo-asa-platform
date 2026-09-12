@@ -557,6 +557,74 @@
         "title": "Balance",
         "type": "object"
       },
+      "BasicSettingsView": {
+        "additionalProperties": false,
+        "properties": {
+          "default_version": {
+            "title": "Default Version",
+            "type": "integer"
+          },
+          "descriptors": {
+            "items": {
+              "$ref": "#/components/schemas/SettingDescriptor"
+            },
+            "title": "Descriptors",
+            "type": "array"
+          },
+          "generation_enabled": {
+            "title": "Generation Enabled",
+            "type": "boolean"
+          },
+          "policy": {
+            "$ref": "#/components/schemas/PlanPolicy"
+          },
+          "policy_hash": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Policy Hash"
+          },
+          "revision": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Revision"
+          },
+          "revision_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Revision Id"
+          }
+        },
+        "required": [
+          "default_version",
+          "revision_id",
+          "revision",
+          "policy_hash",
+          "policy",
+          "generation_enabled",
+          "descriptors"
+        ],
+        "title": "BasicSettingsView",
+        "type": "object"
+      },
       "CancelJob": {
         "additionalProperties": false,
         "properties": {},
@@ -701,6 +769,28 @@
           "operation_id"
         ],
         "title": "CreateJob",
+        "type": "object"
+      },
+      "DiffItem": {
+        "additionalProperties": false,
+        "properties": {
+          "after": {
+            "title": "After"
+          },
+          "before": {
+            "title": "Before"
+          },
+          "key": {
+            "title": "Key",
+            "type": "string"
+          }
+        },
+        "required": [
+          "key",
+          "before",
+          "after"
+        ],
+        "title": "DiffItem",
         "type": "object"
       },
       "DownloadView": {
@@ -1068,6 +1158,62 @@
         "title": "GrantAccessInput",
         "type": "object"
       },
+      "HistoryItem": {
+        "additionalProperties": false,
+        "properties": {
+          "active": {
+            "title": "Active",
+            "type": "boolean"
+          },
+          "created_at": {
+            "title": "Created At",
+            "type": "integer"
+          },
+          "policy": {
+            "$ref": "#/components/schemas/PlanPolicy"
+          },
+          "policy_hash": {
+            "title": "Policy Hash",
+            "type": "string"
+          },
+          "revision": {
+            "title": "Revision",
+            "type": "integer"
+          },
+          "revision_id": {
+            "format": "uuid",
+            "title": "Revision Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "revision_id",
+          "revision",
+          "policy_hash",
+          "created_at",
+          "active",
+          "policy"
+        ],
+        "title": "HistoryItem",
+        "type": "object"
+      },
+      "HistoryView": {
+        "additionalProperties": false,
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/HistoryItem"
+            },
+            "title": "Items",
+            "type": "array"
+          }
+        },
+        "required": [
+          "items"
+        ],
+        "title": "HistoryView",
+        "type": "object"
+      },
       "ImageSize": {
         "additionalProperties": false,
         "properties": {
@@ -1410,6 +1556,74 @@
         "title": "PlanPolicy",
         "type": "object"
       },
+      "PreviewInput": {
+        "additionalProperties": false,
+        "properties": {
+          "expected_revision": {
+            "maximum": 2000000000.0,
+            "minimum": 0.0,
+            "title": "Expected Revision",
+            "type": "integer"
+          },
+          "policy": {
+            "$ref": "#/components/schemas/PlanPolicy"
+          }
+        },
+        "required": [
+          "expected_revision",
+          "policy"
+        ],
+        "title": "PreviewInput",
+        "type": "object"
+      },
+      "PreviewView": {
+        "additionalProperties": false,
+        "properties": {
+          "current_revision": {
+            "title": "Current Revision",
+            "type": "integer"
+          },
+          "diff": {
+            "items": {
+              "$ref": "#/components/schemas/DiffItem"
+            },
+            "title": "Diff",
+            "type": "array"
+          },
+          "expected_revision": {
+            "title": "Expected Revision",
+            "type": "integer"
+          },
+          "generation_enabled": {
+            "title": "Generation Enabled",
+            "type": "boolean"
+          },
+          "impact": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Impact",
+            "type": "array"
+          },
+          "missing_required": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Missing Required",
+            "type": "array"
+          }
+        },
+        "required": [
+          "expected_revision",
+          "current_revision",
+          "diff",
+          "generation_enabled",
+          "missing_required",
+          "impact"
+        ],
+        "title": "PreviewView",
+        "type": "object"
+      },
       "ProofInput": {
         "additionalProperties": false,
         "properties": {
@@ -1426,6 +1640,84 @@
           "token"
         ],
         "title": "ProofInput",
+        "type": "object"
+      },
+      "PublishInput": {
+        "additionalProperties": false,
+        "properties": {
+          "expected_revision": {
+            "maximum": 2000000000.0,
+            "minimum": 0.0,
+            "title": "Expected Revision",
+            "type": "integer"
+          },
+          "operation_id": {
+            "format": "uuid",
+            "title": "Operation Id",
+            "type": "string"
+          },
+          "policy": {
+            "$ref": "#/components/schemas/PlanPolicy"
+          },
+          "reason": {
+            "maxLength": 500,
+            "minLength": 1,
+            "title": "Reason",
+            "type": "string"
+          }
+        },
+        "required": [
+          "expected_revision",
+          "policy",
+          "operation_id",
+          "reason"
+        ],
+        "title": "PublishInput",
+        "type": "object"
+      },
+      "PublishReceipt": {
+        "additionalProperties": false,
+        "properties": {
+          "action": {
+            "enum": [
+              "publish",
+              "rollback"
+            ],
+            "title": "Action",
+            "type": "string"
+          },
+          "default_version": {
+            "title": "Default Version",
+            "type": "integer"
+          },
+          "operation_id": {
+            "format": "uuid",
+            "title": "Operation Id",
+            "type": "string"
+          },
+          "policy_hash": {
+            "title": "Policy Hash",
+            "type": "string"
+          },
+          "revision": {
+            "title": "Revision",
+            "type": "integer"
+          },
+          "revision_id": {
+            "format": "uuid",
+            "title": "Revision Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "operation_id",
+          "default_version",
+          "revision_id",
+          "revision",
+          "policy_hash",
+          "action"
+        ],
+        "title": "PublishReceipt",
         "type": "object"
       },
       "QuoteInput": {
@@ -1638,6 +1930,42 @@
         "title": "RevokeAccessInput",
         "type": "object"
       },
+      "RollbackInput": {
+        "additionalProperties": false,
+        "properties": {
+          "expected_revision": {
+            "maximum": 2000000000.0,
+            "minimum": 0.0,
+            "title": "Expected Revision",
+            "type": "integer"
+          },
+          "operation_id": {
+            "format": "uuid",
+            "title": "Operation Id",
+            "type": "string"
+          },
+          "reason": {
+            "maxLength": 500,
+            "minLength": 1,
+            "title": "Reason",
+            "type": "string"
+          },
+          "target_revision": {
+            "maximum": 2000000000.0,
+            "minimum": 1.0,
+            "title": "Target Revision",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "operation_id",
+          "expected_revision",
+          "target_revision",
+          "reason"
+        ],
+        "title": "RollbackInput",
+        "type": "object"
+      },
       "SessionList": {
         "properties": {
           "sessions": {
@@ -1691,6 +2019,46 @@
           "current"
         ],
         "title": "SessionView",
+        "type": "object"
+      },
+      "SettingDescriptor": {
+        "additionalProperties": false,
+        "properties": {
+          "apply_mode": {
+            "const": "V",
+            "default": "V",
+            "title": "Apply Mode",
+            "type": "string"
+          },
+          "default_semantics": {
+            "title": "Default Semantics",
+            "type": "string"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "key": {
+            "title": "Key",
+            "type": "string"
+          },
+          "required_when_generation_enabled": {
+            "title": "Required When Generation Enabled",
+            "type": "boolean"
+          },
+          "value_type": {
+            "title": "Value Type",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "key",
+          "value_type",
+          "required_when_generation_enabled",
+          "default_semantics"
+        ],
+        "title": "SettingDescriptor",
         "type": "object"
       },
       "UploadIntent": {
@@ -2184,6 +2552,291 @@
         "summary": "Me",
         "tags": [
           "admin"
+        ]
+      }
+    },
+    "/api/v1/admin/settings/basic": {
+      "get": {
+        "operationId": "current_api_v1_admin_settings_basic_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BasicSettingsView"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AuthErrorView"
+                }
+              }
+            },
+            "description": "Safe settings error"
+          },
+          "4XX": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AuthErrorView"
+                }
+              }
+            },
+            "description": "Safe settings error"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AuthErrorView"
+                }
+              }
+            },
+            "description": "Safe settings error"
+          }
+        },
+        "summary": "Current",
+        "tags": [
+          "admin-settings"
+        ]
+      }
+    },
+    "/api/v1/admin/settings/basic/history": {
+      "get": {
+        "operationId": "history_api_v1_admin_settings_basic_history_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HistoryView"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AuthErrorView"
+                }
+              }
+            },
+            "description": "Safe settings error"
+          },
+          "4XX": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AuthErrorView"
+                }
+              }
+            },
+            "description": "Safe settings error"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AuthErrorView"
+                }
+              }
+            },
+            "description": "Safe settings error"
+          }
+        },
+        "summary": "History",
+        "tags": [
+          "admin-settings"
+        ]
+      }
+    },
+    "/api/v1/admin/settings/basic/preview": {
+      "post": {
+        "operationId": "preview_api_v1_admin_settings_basic_preview_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PreviewInput"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PreviewView"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AuthErrorView"
+                }
+              }
+            },
+            "description": "Safe settings error"
+          },
+          "4XX": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AuthErrorView"
+                }
+              }
+            },
+            "description": "Safe settings error"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AuthErrorView"
+                }
+              }
+            },
+            "description": "Safe settings error"
+          }
+        },
+        "summary": "Preview",
+        "tags": [
+          "admin-settings"
+        ]
+      }
+    },
+    "/api/v1/admin/settings/basic/publish": {
+      "post": {
+        "operationId": "publish_api_v1_admin_settings_basic_publish_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PublishInput"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PublishReceipt"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AuthErrorView"
+                }
+              }
+            },
+            "description": "Safe settings error"
+          },
+          "4XX": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AuthErrorView"
+                }
+              }
+            },
+            "description": "Safe settings error"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AuthErrorView"
+                }
+              }
+            },
+            "description": "Safe settings error"
+          }
+        },
+        "summary": "Publish",
+        "tags": [
+          "admin-settings"
+        ]
+      }
+    },
+    "/api/v1/admin/settings/basic/rollback": {
+      "post": {
+        "operationId": "rollback_api_v1_admin_settings_basic_rollback_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RollbackInput"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PublishReceipt"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AuthErrorView"
+                }
+              }
+            },
+            "description": "Safe settings error"
+          },
+          "4XX": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AuthErrorView"
+                }
+              }
+            },
+            "description": "Safe settings error"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AuthErrorView"
+                }
+              }
+            },
+            "description": "Safe settings error"
+          }
+        },
+        "summary": "Rollback",
+        "tags": [
+          "admin-settings"
         ]
       }
     },
