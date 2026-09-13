@@ -73,6 +73,7 @@ def intent_bonus(task: str, kind_or_key: str) -> int:
     is_backend = kind_or_key.startswith("backend") or kind_or_key.startswith("api.")
     guest_trial = ("без регистрац" in folded or "до регистрац" in folded) and any(
         token in folded for token in ("проб", "попроб", "guest"))
+    guest_backend = backend and any(token in folded for token in ("guest", "гостев", "гость"))
     bonus = 0
     if ui and is_ui:
         bonus += 5
@@ -86,6 +87,10 @@ def intent_bonus(task: str, kind_or_key: str) -> int:
         bonus += 8
     elif guest_trial and kind_or_key in {"web.gallery", "api.media"}:
         bonus -= 3
+    if guest_backend and kind_or_key == "api.guest":
+        bonus += 10
+    elif guest_backend and kind_or_key == "api.accounts":
+        bonus -= 4
     return bonus
 
 
