@@ -6,7 +6,7 @@ test('API-001 studio can select the real fal capability without a provider-speci
   app.capabilities = ['fal.flux2.klein.4b']
   await page.goto('/image')
   await expect(page.getByLabel('Режим')).toHaveValue('fal.flux2.klein.4b')
-  await expect(page.getByText('FLUX.2 [klein] 4B')).toBeVisible()
+  await expect(page.locator('strong').filter({ hasText: 'FLUX.2 [klein] 4B' })).toBeVisible()
   await expect(page.getByText('AI-генерация изображения')).toBeVisible()
   await page.getByLabel('Описание', { exact: true }).fill('Реальная модель через общий серверный job')
   await page.getByRole('button', { name: 'Рассчитать стоимость' }).click()

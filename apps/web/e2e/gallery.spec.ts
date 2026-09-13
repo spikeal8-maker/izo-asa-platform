@@ -84,10 +84,12 @@ test('IMAGE-001 malformed ticket and corrupt bytes never become visible pixels',
   expect(app.contentReads).toBe(0)
   app.evilTicket = false; app.badImage = true
   await page.getByRole('button', { name: 'Повторить предпросмотр' }).click()
+  await expect.poll(() => app.contentReads).toBe(1)
   await expect(page.locator('.private-image').getByRole('alert')).toBeVisible()
   await expect(page.getByTestId('private-image')).toHaveCount(0)
   app.badImage = false
   await page.getByRole('button', { name: 'Повторить предпросмотр' }).click()
+  await expect.poll(() => app.contentReads).toBe(2)
   await expect(page.getByTestId('private-image')).toBeVisible()
 })
 

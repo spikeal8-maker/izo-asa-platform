@@ -17,11 +17,7 @@ export function PrivateImage({ asset, auth }: { asset: Asset; auth: AuthView }) 
     }).catch(reason => { if (!controller.signal.aborted) setError(problem(reason)) })
     return () => { controller.abort(); if (ownedUrl) URL.revokeObjectURL(ownedUrl) }
   }, [asset.id, asset.sha256, asset.byte_size, auth.account.id, auth.csrf_token, version])
-  function retry() {
-    // Defer replacement of the error state until the pointer/click interaction has completed.
-    window.setTimeout(() => setVersion(v => v + 1), 0)
-  }
   return <div className="private-image">{url ? <img data-testid="private-image" src={url} alt="Сохранённое приватное изображение"
     width={asset.width} height={asset.height} /> : error ? <div className="field-error" role="alert">{error}
-      <button onClick={retry}>Повторить предпросмотр</button></div> : <p role="status">Получаем изображение…</p>}</div>
+      <button onClick={() => setVersion(v => v + 1)}>Повторить предпросмотр</button></div> : <p role="status">Получаем изображение…</p>}</div>
 }
