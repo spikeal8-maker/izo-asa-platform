@@ -4,12 +4,13 @@ from .security import AuthError
 
 
 class AuthBodyLimit:
-    """Bound auth/admin request bodies before JSON parsing, including chunked requests."""
+    """Bound auth/admin/guest request bodies before JSON parsing, including chunked requests."""
     def __init__(self, app):
         self.app = app
 
     async def __call__(self, scope, receive, send):
-        if (scope["type"] != "http" or not scope["path"].startswith(("/api/v1/auth/", "/api/v1/admin/", "/api/v1/jobs"))
+        if (scope["type"] != "http" or not scope["path"].startswith(
+                ("/api/v1/auth/", "/api/v1/admin/", "/api/v1/jobs", "/api/v1/guest/"))
                 or scope["method"] not in {"POST", "PUT", "PATCH", "DELETE"}):
             return await self.app(scope, receive, send)
         chunks, size = [], 0
@@ -44,4 +45,3 @@ def same_origin(request, instance, *, content_type="application/json"):
         raise AuthError(403, "origin_rejected")
     if request.headers.get("content-type", "").split(";")[0].strip().lower() != content_type:
         raise AuthError(415, "json_required" if content_type == "application/json" else "content_type_rejected")
-
