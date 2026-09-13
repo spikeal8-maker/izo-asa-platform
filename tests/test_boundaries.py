@@ -1,5 +1,6 @@
 """Small executable architecture checks, not a new governance framework."""
 import ast
+import json
 import re
 from pathlib import Path
 
@@ -24,13 +25,25 @@ def test_generation_has_no_infrastructure_dependencies():
         assert not isinstance(node, ast.Import)
 
 
-def test_no_giant_handwritten_source_files():
-    for root in [ROOT / "apps/api/izo", ROOT / "apps/web/src"]:
-        for path in root.rglob("*"):
-            if path.is_file() and path.suffix in {".py", ".ts", ".tsx", ".css"} and ".generated." not in path.name:
-                text = path.read_text(encoding="utf-8")
-                assert len(text.splitlines()) <= 400, path
-                assert len(text.encode()) <= 20000, path
+def _check_file_budget(root: Path, suffixes: set[str], *, max_lines: int, max_bytes: int):
+    for path in root.rglob("*"):
+        if not path.is_file() or path.suffix not in suffixes or ".generated." in path.name:
+            continue
+        text = path.read_text(encoding="utf-8")
+        assert len(text.splitlines()) <= max_lines, path
+        assert len(text.encode("utf-8")) <= max_bytes, path
+
+
+def test_handwritten_files_stay_modular():
+    # Product code must stay especially small because coding agents read it frequently.
+    _check_file_budget(ROOT / "apps/api/izo", {".py"}, max_lines=300, max_bytes=12_000)
+    _check_file_budget(ROOT / "apps/web/src", {".ts", ".tsx", ".css"}, max_lines=300, max_bytes=12_000)
+    # Tests/tools may carry fixtures, but they still must not become hidden monoliths.
+    _check_file_budget(ROOT / "tests", {".py"}, max_lines=350, max_bytes=16_000)
+    _check_file_budget(ROOT / "tools", {".py"}, max_lines=350, max_bytes=16_000)
+    _check_file_budget(ROOT / "apps/web/e2e", {".ts"}, max_lines=350, max_bytes=16_000)
+    _check_file_budget(ROOT / "apps/web/acceptance", {".mjs"}, max_lines=350, max_bytes=16_000)
+    _check_file_budget(ROOT / "apps/api/migrations", {".py"}, max_lines=350, max_bytes=16_000)
 
 
 def test_frontend_http_is_centralized():
@@ -56,7 +69,6 @@ def test_no_production_deploy_or_self_hosted_ci():
 
 
 def test_dependency_lock_matches_web_manifest():
-    import json
     manifest = json.loads((ROOT / "apps/web/package.json").read_text(encoding="utf-8"))
     lock = json.loads((ROOT / "apps/web/package-lock.json").read_text(encoding="utf-8"))
     assert lock["lockfileVersion"] == 3
