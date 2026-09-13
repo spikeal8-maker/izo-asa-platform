@@ -1825,17 +1825,24 @@
             "type": "string"
           },
           "invite_code": {
-            "format": "password",
-            "maxLength": 43,
-            "minLength": 43,
-            "title": "Invite Code",
-            "type": "string",
-            "writeOnly": true
+            "anyOf": [
+              {
+                "format": "password",
+                "maxLength": 43,
+                "minLength": 43,
+                "type": "string",
+                "writeOnly": true
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Invite Code"
           },
           "password": {
             "format": "password",
             "maxLength": 128,
-            "minLength": 15,
+            "minLength": 8,
             "title": "Password",
             "type": "string",
             "writeOnly": true
@@ -1844,8 +1851,7 @@
         "required": [
           "email",
           "password",
-          "display_name",
-          "invite_code"
+          "display_name"
         ],
         "title": "RegisterInput",
         "type": "object"
