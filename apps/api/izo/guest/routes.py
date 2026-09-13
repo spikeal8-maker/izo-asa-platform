@@ -16,9 +16,11 @@ from ..accounts.schemas import AuthErrorView, AuthView, RegisterInput
 from ..accounts.security import AuthError
 from ..credits.schemas import CreditError
 from ..credits.trial import seed_guest_trial
+from ..entitlements.policy import ImageDemand, ImageSize, RuntimeState, UsageSnapshot
 from ..entitlements.schemas import EntitlementError
+from ..entitlements.service import EntitlementService
 from ..jobs import tables as job_tables
-from ..jobs.catalog import JobSettings
+from ..jobs.catalog import JobSettings, TEST_CAPABILITY, capability, output_bound
 from ..jobs.schemas import ACTIVE, CreateJob, JobError, JobList, JobView, QuoteInput, QuoteView
 from ..jobs.service import JobService
 from ..media.objects import MediaStore
@@ -65,6 +67,38 @@ def attach_guest(app, accounts, config):
         if len(request.headers.getlist("content-type")) != 1:
             raise AuthError(403, "csrf_rejected")
 
+    def require_trial_draft(draft):
+        if draft.capability_id != TEST_CAPABILITY:
+            raise AuthError(403, "guest_capability_restricted")
+        if draft.width != settings.trial_width or draft.height != settings.trial_height:
+            raise AuthError(403, "guest_size_restricted")
+
+    def initialize_trial(auth):
+        def initialize(conn, account_id, now):
+            seed_guest_trial(conn, account_id, settings.trial_credits, now)
+            plans = EntitlementService(clock=lambda: now)
+            try:
+                view = plans.resolve(conn, account_id)
+                if not view.configured or view.policy is None:
+                    raise AuthError(503, "guest_trial_unavailable")
+                spec = capability(TEST_CAPABILITY)
+                demand = ImageDemand(capability_id=TEST_CAPABILITY, executor="api",
+                    size=ImageSize(width=settings.trial_width, height=settings.trial_height),
+                    input_count=0, largest_input_bytes=0,
+                    output_bytes_bound=output_bound(settings.trial_width, settings.trial_height),
+                    reserve_credits=spec.credits)
+                usage = UsageSnapshot(account_id=account_id, as_of=view.as_of,
+                    window_seconds=view.policy.window_seconds, active_jobs=0, submissions=0,
+                    committed_bytes=0, reserved_bytes=0)
+                decision = plans.assess_image(conn, account_id, demand,
+                    RuntimeState(feature_enabled=jobs_policy.enabled,
+                        capability_supported=True, provider_available=True), usage)
+            except EntitlementError as exc:
+                raise AuthError(503, "guest_trial_unavailable") from exc
+            if not decision.allowed:
+                raise AuthError(503, "guest_trial_unavailable")
+        return initialize
+
     def set_guest_cookie(response, auth, receipt):
         response.set_cookie(settings.cookie_name(auth.policy.secure_cookie), receipt.bearer,
             httponly=True, secure=auth.policy.secure_cookie, samesite="lax", path="/",
@@ -90,8 +124,7 @@ def attach_guest(app, accounts, config):
         mutation(request, auth)
         receipt = guest.start(request.client.host if request.client else "unknown",
             request.headers.get("user-agent", ""), raw(request, auth),
-            initializer=lambda conn, account_id, now: seed_guest_trial(
-                conn, account_id, settings.trial_credits, now))
+            initializer=initialize_trial(auth))
         set_guest_cookie(response, auth, receipt)
         return receipt.view
 
@@ -104,8 +137,7 @@ def attach_guest(app, accounts, config):
     def quote(data: QuoteInput, request: Request):
         auth, guest, _ = services(request)
         mutation(request, auth)
-        if data.capability_id != "test.image.v1":
-            raise AuthError(403, "guest_capability_restricted")
+        require_trial_draft(data)
         return JobService(guest, jobs_policy).quote(
             raw(request, auth), request.headers.get("x-csrf-token"), data)
 
@@ -113,7 +145,12 @@ def attach_guest(app, accounts, config):
     def submit(data: CreateJob, request: Request):
         auth, guest, _ = services(request)
         mutation(request, auth)
-        return JobService(guest, jobs_policy, admission_guard=guest.admission_guard).submit(
+
+        def admission_guard(conn, principal, command, draft):
+            require_trial_draft(draft)
+            guest.admission_guard(conn, principal, command, draft)
+
+        return JobService(guest, jobs_policy, admission_guard=admission_guard).submit(
             raw(request, auth), request.headers.get("x-csrf-token"), data)
 
     @router.get("/jobs", response_model=JobList)
