@@ -25,11 +25,15 @@ def test_access_registry_has_no_wildcards_or_role_levels():
 
 
 def test_access_service_uses_accounts_materialization_and_fresh_auth():
-    source=(ROOT/'apps/api/izo/access/service.py').read_text(encoding='utf-8')
+    root=ROOT/'apps/api/izo/access'
+    source='\n'.join((root/name).read_text(encoding='utf-8')
+                     for name in ('base.py','mutations.py','owner.py','reads.py'))
     assert 'accounts.permissions' in source
     assert 'verify_password(' in source and 'access.staff_session(' in source
     assert 'self_delegation_forbidden' in source and 'last_access_owner' in source
     assert 'raw key' not in source.lower()
+    composition=(root/'service.py').read_text(encoding='utf-8')
+    assert 'AccessMutationMixin' in composition and 'AccessReadMixin' in composition
 
 
 def test_access_http_is_attached_and_uses_shared_guards():
@@ -45,7 +49,6 @@ def test_access_http_is_attached_and_uses_shared_guards():
 def test_access_migration_matches_tables(tmp_path):
     engine=sa.create_engine('sqlite:///'+str(tmp_path/'access.sqlite'))
     base=[table for table in accounts.metadata.sorted_tables if table.name not in ACCESS_NAMES]
-    # Only Accounts is required for ACCESS FKs; avoid constructing unrelated domain tables.
     accounts.metadata.create_all(engine, tables=[table for table in base if table.name in {'accounts'}])
     path=ROOT/'apps/api/migrations/versions/0010_access.py'
     spec=importlib.util.spec_from_file_location('access_migration',path)
