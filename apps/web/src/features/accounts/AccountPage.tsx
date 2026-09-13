@@ -1,5 +1,5 @@
 import { useEffect, useState, type FormEvent } from 'react'
-import { apiRequest, ApiError, type AuthView, type SessionList } from '../../shared/api'
+import { apiRequest, ApiError, type AuthView, type GuestView, type SessionList } from '../../shared/api'
 import { Link } from '../../shell/router'
 import './accounts.css'
 
@@ -14,6 +14,8 @@ const messages: Record<string, string> = {
   csrf_rejected: 'Сессия устарела. Обновите страницу и повторите действие.',
   origin_rejected: 'Этот адрес приложения не разрешён сервером.',
   session_limit: 'Достигнут лимит активных сессий. Завершите ненужную сессию на другом устройстве.',
+  guest_job_active: 'Дождитесь завершения пробной работы и затем создайте аккаунт.',
+  guest_required: 'Пробная сессия завершилась. Можно зарегистрироваться как новый пользователь.',
 }
 function explanation(error: unknown) {
   return error instanceof ApiError ? messages[error.code] ?? 'Запрос отклонён сервером.'
@@ -22,6 +24,7 @@ function explanation(error: unknown) {
 
 export function AccountPage({ mode }: { mode: 'account' | 'login' | 'register' }) {
   const [auth, setAuth] = useState<AuthView | null>(null)
+  const [guest, setGuest] = useState<GuestView | null>(null)
   const [sessions, setSessions] = useState<SessionList['sessions']>([])
   const [loading, setLoading] = useState(true)
   const [busy, setBusy] = useState(false)
@@ -44,6 +47,18 @@ export function AccountPage({ mode }: { mode: 'account' | 'login' | 'register' }
     return () => controller.abort()
   }, [mode, reload])
 
+  useEffect(() => {
+    if (!registering) { setGuest(null); return }
+    const controller = new AbortController()
+    apiRequest<GuestView>('/api/v1/guest/me', { signal: controller.signal }).then(value => {
+      if (!controller.signal.aborted) setGuest(value)
+    }).catch(reason => {
+      if (!controller.signal.aborted && !(reason instanceof ApiError && reason.status === 401))
+        setError(explanation(reason))
+    })
+    return () => controller.abort()
+  }, [registering])
+
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
     if (busy) return
@@ -55,10 +70,15 @@ export function AccountPage({ mode }: { mode: 'account' | 'login' | 'register' }
     if (registering) payload.display_name = String(values.get('display_name') ?? '')
     setBusy(true); setError('')
     try {
-      await apiRequest<AuthView>(`/api/v1/auth/${registering ? 'register' : 'login'}`, { method: 'POST', data: payload })
+      const endpoint = registering && guest ? '/api/v1/guest/claim'
+        : `/api/v1/auth/${registering ? 'register' : 'login'}`
+      await apiRequest<AuthView>(endpoint, { method: 'POST', data: payload,
+        csrf: registering && guest ? guest.csrf_token : undefined })
       window.location.assign('/')
-    } catch (reason) { setError(explanation(reason)) }
-    finally {
+    } catch (reason) {
+      if (registering && reason instanceof ApiError && reason.code === 'guest_required') setGuest(null)
+      setError(explanation(reason))
+    } finally {
       const password = form.elements.namedItem('password') as HTMLInputElement | null
       if (password) password.value = ''
       payload.password = ''; setBusy(false)
@@ -83,7 +103,10 @@ export function AccountPage({ mode }: { mode: 'account' | 'login' | 'register' }
     <div className="auth-card">
       <p className="eyebrow">ИЗО АСА</p>
       <h1>{registering ? 'Создать аккаунт' : 'Войти'}</h1>
-      <p>{registering ? 'Сохраняйте работы, историю и баланс между устройствами.' : 'Продолжите работу с вашими проектами и галереей.'}</p>
+      <p>{registering
+        ? guest ? 'Пробная работа останется в этом аккаунте. Укажите данные для продолжения.'
+          : 'Сохраняйте работы, историю и баланс между устройствами.'
+        : 'Продолжите работу с вашими проектами и галереей.'}</p>
       {error && <div className="field-error" role="alert">{error}</div>}
       <form onSubmit={submit} className="account-form">
         {registering && <label>Имя<input name="display_name" autoComplete="nickname" required maxLength={80} /></label>}
