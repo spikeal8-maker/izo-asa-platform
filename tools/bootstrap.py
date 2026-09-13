@@ -10,7 +10,7 @@ def bootstrap(path: Path = Path(".env")) -> bool:
     values = {"IZO_ENVIRONMENT": "development", "IZO_PG_PASSWORD": secrets.token_hex(24),
               "IZO_S3_ACCESS_KEY": "izo" + secrets.token_hex(8),
               "IZO_S3_SECRET_KEY": secrets.token_hex(32), "IZO_HTTP_PORT": "8080",
-              "IZO_AUTH_RATE_SECRET": secrets.token_hex(32), "IZO_AUTH_REGISTRATION": "invite",
+              "IZO_AUTH_RATE_SECRET": secrets.token_hex(32), "IZO_AUTH_REGISTRATION": "open",
               "IZO_RECOVERY_SECRET": secrets.token_hex(32), "IZO_RECOVERY_DELIVERY": "test"}
     try:
         fd = os.open(path, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o600)
@@ -39,7 +39,7 @@ def _append_missing(path: Path, values: dict[str, str]) -> bool:
 
 
 def add_auth_settings(path: Path = Path(".env")) -> bool:
-    return _append_missing(path, {"IZO_AUTH_RATE_SECRET": secrets.token_hex(32), "IZO_AUTH_REGISTRATION": "invite"})
+    return _append_missing(path, {"IZO_AUTH_RATE_SECRET": secrets.token_hex(32), "IZO_AUTH_REGISTRATION": "open"})
 
 
 def add_recovery_settings(path: Path = Path(".env")) -> bool:

@@ -31,16 +31,16 @@ class LoginInput(StrictInput):
 
 
 class RegisterInput(LoginInput):
-    password: SecretStr = Field(min_length=15, max_length=128)
+    password: SecretStr = Field(min_length=8, max_length=128)
     display_name: str = Field(min_length=1, max_length=80)
-    invite_code: SecretStr = Field(min_length=43, max_length=43)
+    invite_code: SecretStr | None = Field(default=None, min_length=43, max_length=43)
 
     @field_validator("password")
     @classmethod
     def password_policy(cls, value: SecretStr) -> SecretStr:
         raw = value.get_secret_value()
-        if len(raw) < 15 or len(raw.encode("utf-8")) > 512 or "\x00" in raw:
-            raise ValueError("Password length must be between 15 and 128 characters")
+        if len(raw) < 8 or len(raw.encode("utf-8")) > 512 or "\x00" in raw:
+            raise ValueError("Password length must be between 8 and 128 characters")
         return value
 
     @field_validator("display_name")

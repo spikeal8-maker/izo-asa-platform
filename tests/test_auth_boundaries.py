@@ -34,39 +34,43 @@ def test_auth_changes_have_a_real_postgres_restart_gate():
 def test_bootstrap_upgrade_is_additive_and_idempotent(tmp_path):
     path = tmp_path / ".env"
     before = "IZO_PG_PASSWORD=keep-existing\nIZO_S3_SECRET_KEY=also-keep"
-    path.write_text(before)
+    path.write_text(before, encoding="utf-8")
     assert add_auth_settings(path)
     after = path.read_text(encoding="utf-8")
     assert after.startswith(before + "\n")
     assert "IZO_AUTH_RATE_SECRET=" in after
-    assert "IZO_AUTH_REGISTRATION=invite" in after
+    assert "IZO_AUTH_REGISTRATION=open" in after
     assert not add_auth_settings(path)
     assert path.read_text(encoding="utf-8") == after
 
 
-def test_bootstrap_never_replaces_auth_secret_or_mode(tmp_path):
-    path = tmp_path / ".env"
-    before = "IZO_AUTH_RATE_SECRET=existing\nIZO_AUTH_REGISTRATION=disabled\n"
-    path.write_text(before)
-    assert not add_auth_settings(path)
-    assert path.read_text(encoding="utf-8") == before
+def test_bootstrap_never_replaces_auth_secret_or_explicit_mode(tmp_path):
+    for mode in ("disabled", "invite"):
+        path = tmp_path / f"{mode}.env"
+        before = f"IZO_AUTH_RATE_SECRET=existing\nIZO_AUTH_REGISTRATION={mode}\n"
+        path.write_text(before, encoding="utf-8")
+        assert not add_auth_settings(path)
+        assert path.read_text(encoding="utf-8") == before
 
 
-def test_new_bootstrap_includes_auth_without_recreating_secrets(tmp_path):
+def test_new_bootstrap_includes_open_auth_without_recreating_secrets(tmp_path):
     path = tmp_path / ".env"
     assert bootstrap(path)
     before = path.read_bytes()
+    assert b"IZO_AUTH_REGISTRATION=open" in before
     assert not bootstrap(path) and not add_auth_settings(path)
     assert path.read_bytes() == before
 
 
-def test_openapi_matches_public_password_and_redacted_error_contract():
+def test_openapi_matches_public_password_and_optional_invite_contract():
     from izo.app import create_app
     from izo.config import Settings
     document = create_app(Settings()).openapi()
-    assert document["components"]["schemas"]["RegisterInput"]["properties"]["password"]["minLength"] == 15
+    schema = document["components"]["schemas"]["RegisterInput"]
+    assert schema["properties"]["password"]["minLength"] == 8
+    assert "invite_code" not in schema.get("required", [])
     for path, operations in document["paths"].items():
         if path.startswith("/api/v1/auth/"):
             for operation in operations.values():
-                schema = operation["responses"]["422"]["content"]["application/json"]["schema"]
-                assert schema == {"$ref": "#/components/schemas/AuthErrorView"}
+                error_schema = operation["responses"]["422"]["content"]["application/json"]["schema"]
+                assert error_schema == {"$ref": "#/components/schemas/AuthErrorView"}

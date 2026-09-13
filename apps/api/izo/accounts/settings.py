@@ -1,4 +1,4 @@
-"""Authentication policy for isolated development/test; no production defaults."""
+"""Authentication policy; public signup can be open while closed invite mode remains explicit."""
 from urllib.parse import urlsplit
 
 from pydantic import Field, SecretStr, model_validator
@@ -7,7 +7,7 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 
 class AuthSettings(BaseSettings):
     model_config = SettingsConfigDict(env_prefix="IZO_AUTH_", extra="ignore", hide_input_in_errors=True)
-    registration: str = Field(default="disabled", pattern="^(disabled|invite)$")
+    registration: str = Field(default="disabled", pattern="^(disabled|open|invite)$")
     origins: tuple[str, ...] = ("http://localhost:8080", "http://127.0.0.1:8080")
     secure_cookie: bool = False
     rate_secret: SecretStr = SecretStr("")
