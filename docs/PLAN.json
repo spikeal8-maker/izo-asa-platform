@@ -4,13 +4,13 @@
   "updated": "2026-09-13",
   "canonical_lineage": {
     "runtime_base": {"branch": "api/fal-klein-001", "sha": "faec39d6ae0b4f035ef0f86114494789acde3b46", "pr": 22, "state": "technical_ci_pass_draft"},
-    "working_branch": "maint/repository-modularity",
+    "working_branch": "feat/guest-trial",
     "provider_direction": "fal.ai / fal-ai/flux-2/klein/4b",
     "merge_deployed": false,
-    "current_package_base": {"branch": "ux/product-shell", "sha": "1ab67632de764ae38842f97888da058d74499c23", "state": "verified_pr_merge_tree_checkpoint"},
+    "current_package_base": {"branch": "maint/repository-modularity", "sha": "731105b1c8d16d9774c987a31b62ee7143383ccc", "state": "verified_pr_merge_tree_checkpoint"},
     "next_branch_source": "verified_working_head"
   },
-  "active_package": "MAINT-SIZE-001",
+  "active_package": "GUEST-001",
   "next_package": null,
   "rules": {
     "one_active_package": true,
@@ -47,8 +47,8 @@
     "ACCESS-001": {"status": "technical_pass", "depends_on": ["LINEAGE-001","AUTH-002","ADMIN-001"], "checkpoint": "ACCESS-001"},
     "SETTINGS-002": {"status": "technical_pass", "depends_on": ["ACCESS-001","ENTITLEMENT-001","ADMIN-001"], "checkpoint": "SETTINGS-002"},
     "UX-002": {"status": "technical_pass", "depends_on": ["SETTINGS-002","AUTH-002","IMAGE-001","ADMIN-001"], "decides_next": true, "goal": "Owner-approved product shell: open signup, feed-first entry, monochrome light/dark design, clear navigation and mobile/QHD/4K/8K responsive behavior.", "checkpoint": "UX-002"},
-    "MAINT-SIZE-001": {"status": "active", "depends_on": ["UX-002"], "decides_next": true, "goal": "Split oversized handwritten modules and enforce strict repository-wide modularity budgets for source, tests, tools and acceptance code."},
-    "GUEST-001": {"status": "planned", "depends_on": ["UX-002","AUTH-002","JOBS-001","IMAGE-001"], "goal": "Finite server-owned guest budget for first chat/image trial before account creation, with abuse controls and explicit result claim semantics."},
+    "MAINT-SIZE-001": {"status": "technical_pass", "depends_on": ["UX-002"], "decides_next": true, "goal": "Split oversized handwritten modules and enforce strict repository-wide modularity budgets for source, tests, tools and acceptance code.", "checkpoint": "MAINT-SIZE-001"},
+    "GUEST-001": {"status": "active", "depends_on": ["MAINT-SIZE-001","UX-002","AUTH-002","JOBS-001","IMAGE-001"], "decides_next": true, "goal": "Finite server-owned guest budget for first image trial before account creation, with abuse controls and same-owner result claim semantics."},
     "CATALOG-002": {"status": "planned", "depends_on": ["SETTINGS-002","ACCESS-001","API-001","ADMIN-001"], "goal": "Provider-neutral versioned catalog for fal/future adapters.", "note": "Draft PR #31 paused after owner reprioritized product UX; resume only after accepted maintenance/product checkpoint."},
     "CATALOG-UI-002": {"status": "planned", "depends_on": ["CATALOG-002","ADMIN-001","ACCESS-001"], "goal": "Permission-correct admin catalog UI."},
     "LOCAL-001": {"status": "planned", "depends_on": ["JOBS-001","API-001","CATALOG-002"]},
