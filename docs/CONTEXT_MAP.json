@@ -16,7 +16,7 @@
       "do_not_read_by_default": ["docs/PRODUCT.md", "docs/ADMIN.md", "docs/AI_RUNTIME.md", "apps/api"]
     },
     "web.feed": {
-      "keywords": ["лента", "feed", "explore", "первый экран", "главная страница", "карточки ленты", "подборка идей"],
+      "keywords": ["лента", "feed", "explore", "первый экран", "главная страница", "публичная лента", "подборка идей"],
       "read_first": ["apps/web/AGENTS.md", "apps/web/src/features/feed/README.md", "apps/web/src/features/feed/FeedPage.tsx", "apps/web/src/features/feed/feed.css"],
       "tests": ["apps/web/e2e/shell.spec.ts"],
       "expand_if_needed": ["apps/web/src/shell/App.tsx", "docs/UX_PRODUCT_SHELL.md"],
