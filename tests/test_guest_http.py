@@ -1,14 +1,11 @@
 """GUEST-001 HTTP boundary: isolated cookie, strict mutation guards and result claim."""
 from uuid import uuid4
 
-import pytest
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
-from izo.accounts.guest_settings import GuestSettings
 from izo.accounts.http_security import AuthBodyLimit
 from izo.guest.routes import attach_guest
-from izo.jobs.catalog import JobSettings
 from test_guest import guest_env
 
 
@@ -41,12 +38,7 @@ def quote(client, **extra):
         'width': 64, 'height': 64, **extra})
 
 
-def test_start_reuses_cookie_and_requires_same_origin(env=guest_env, monkeypatch=None):
-    # Fixture aliases in the signature are replaced below by pytest injection.
-    pass
-
-
-def test_guest_start_quote_submit_and_second_job_limit(guest_env, monkeypatch):
+def test_guest_start_quote_submit_recovery_and_second_job_limit(guest_env, monkeypatch):
     with client_for(guest_env, monkeypatch) as client:
         first = start(client)
         repeated = client.post('/api/v1/guest/start', json={})
@@ -58,6 +50,8 @@ def test_guest_start_quote_submit_and_second_job_limit(guest_env, monkeypatch):
         job = client.post('/api/v1/guest/jobs', json=body)
         assert job.status_code == 201
         assert client.post('/api/v1/guest/jobs', json=body).json()['id'] == job.json()['id']
+        history = client.get('/api/v1/guest/jobs')
+        assert history.status_code == 200 and [item['id'] for item in history.json()['jobs']] == [job.json()['id']]
         next_quote = quote(client)
         blocked = client.post('/api/v1/guest/jobs', json={
             'quote_id': next_quote.json()['id'], 'operation_id': str(uuid4())})
@@ -71,8 +65,8 @@ def test_guest_mutations_fail_closed_and_external_capability_is_forbidden(guest_
         assert client.post('/api/v1/guest/start', content=b'x' * 8193,
             headers={'Content-Type': 'application/json'}).status_code == 413
         start(client)
-        bad_csrf = quote(client, owner_id=str(uuid4()))
-        assert bad_csrf.status_code == 422 and bad_csrf.json() == {'error': {'code': 'invalid_input'}}
+        injected = quote(client, owner_id=str(uuid4()))
+        assert injected.status_code == 422 and injected.json() == {'error': {'code': 'invalid_input'}}
         external = client.post('/api/v1/guest/quotes', json={
             'capability_id': 'fal.flux2.klein.4b', 'prompt': 'no paid guest call',
             'width': 64, 'height': 64})
@@ -111,4 +105,5 @@ def test_terminal_result_can_be_read_then_claimed_by_same_account(guest_env, mon
         assert registered.status_code == 201
         assert registered.json()['account']['id'] == guest['account_id']
         assert client.get('/api/v1/guest/me').status_code == 401
-        assert auth.me(client.cookies.get(auth.policy.cookie_name)).account.id.hex == guest['account_id'].replace('-', '')
+        normal = auth.me(client.cookies.get(auth.policy.cookie_name))
+        assert str(normal.account.id) == guest['account_id']
