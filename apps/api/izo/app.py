@@ -18,6 +18,7 @@ from .entitlements.routes import attach_entitlements
 from .admin.routes import attach_admin
 from .access.routes import attach_access
 from .settings.routes import attach_settings
+from .catalog.routes import attach_catalog
 from .media.routes import attach_media
 from .jobs.routes import attach_jobs
 
@@ -47,6 +48,7 @@ def create_app(config: Settings | None = None,
     attach_admin(app, accounts_service)
     attach_access(app, accounts_service)
     attach_settings(app, accounts_service)
+    attach_catalog(app, accounts_service)
     attach_media(app, accounts_service, config)
     attach_jobs(app, accounts_service)
 

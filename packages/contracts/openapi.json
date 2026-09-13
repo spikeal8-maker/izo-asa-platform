@@ -631,6 +631,118 @@
         "title": "CancelJob",
         "type": "object"
       },
+      "CapabilityContent": {
+        "additionalProperties": false,
+        "properties": {
+          "adapter_id": {
+            "title": "Adapter Id",
+            "type": "string"
+          },
+          "connection_id": {
+            "title": "Connection Id",
+            "type": "string"
+          },
+          "help": {
+            "title": "Help",
+            "type": "string"
+          },
+          "model_id": {
+            "title": "Model Id",
+            "type": "string"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          }
+        },
+        "required": [
+          "name",
+          "help",
+          "adapter_id",
+          "model_id",
+          "connection_id"
+        ],
+        "title": "CapabilityContent",
+        "type": "object"
+      },
+      "CapabilityDraft": {
+        "additionalProperties": false,
+        "properties": {
+          "adapter_id": {
+            "pattern": "^[a-z0-9][a-z0-9_.:-]{0,79}$",
+            "title": "Adapter Id",
+            "type": "string"
+          },
+          "connection_id": {
+            "pattern": "^[a-z0-9][a-z0-9_.:-]{0,79}$",
+            "title": "Connection Id",
+            "type": "string"
+          },
+          "expected_version": {
+            "maximum": 2000000000.0,
+            "minimum": 0.0,
+            "title": "Expected Version",
+            "type": "integer"
+          },
+          "help": {
+            "default": "",
+            "maxLength": 2000,
+            "title": "Help",
+            "type": "string"
+          },
+          "model_id": {
+            "maxLength": 220,
+            "minLength": 1,
+            "title": "Model Id",
+            "type": "string"
+          },
+          "name": {
+            "maxLength": 120,
+            "minLength": 1,
+            "title": "Name",
+            "type": "string"
+          },
+          "operation_id": {
+            "format": "uuid",
+            "title": "Operation Id",
+            "type": "string"
+          },
+          "reason": {
+            "maxLength": 500,
+            "minLength": 1,
+            "title": "Reason",
+            "type": "string"
+          }
+        },
+        "required": [
+          "operation_id",
+          "expected_version",
+          "reason",
+          "name",
+          "adapter_id",
+          "model_id",
+          "connection_id"
+        ],
+        "title": "CapabilityDraft",
+        "type": "object"
+      },
+      "CapabilityList": {
+        "additionalProperties": false,
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/CapabilityView"
+            },
+            "title": "Items",
+            "type": "array"
+          }
+        },
+        "required": [
+          "items"
+        ],
+        "title": "CapabilityList",
+        "type": "object"
+      },
       "CapabilityStatus": {
         "properties": {
           "available": {
@@ -651,6 +763,64 @@
           "reason"
         ],
         "title": "CapabilityStatus",
+        "type": "object"
+      },
+      "CapabilityView": {
+        "additionalProperties": false,
+        "properties": {
+          "capability_id": {
+            "title": "Capability Id",
+            "type": "string"
+          },
+          "content": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/CapabilityContent"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "draft": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/RevisionView"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "published": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/RevisionView"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "runtime_available": {
+            "const": false,
+            "default": false,
+            "title": "Runtime Available",
+            "type": "boolean"
+          },
+          "version": {
+            "title": "Version",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "capability_id",
+          "version",
+          "draft",
+          "published",
+          "content"
+        ],
+        "title": "CapabilityView",
         "type": "object"
       },
       "ChangePasswordInput": {
@@ -687,6 +857,49 @@
           "current_password"
         ],
         "title": "ChangePasswordInput",
+        "type": "object"
+      },
+      "ChangeReceipt": {
+        "additionalProperties": false,
+        "properties": {
+          "action": {
+            "title": "Action",
+            "type": "string"
+          },
+          "operation_id": {
+            "format": "uuid",
+            "title": "Operation Id",
+            "type": "string"
+          },
+          "result_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Result Id"
+          },
+          "result_version": {
+            "title": "Result Version",
+            "type": "integer"
+          },
+          "target": {
+            "title": "Target",
+            "type": "string"
+          }
+        },
+        "required": [
+          "operation_id",
+          "action",
+          "target",
+          "result_version",
+          "result_id"
+        ],
+        "title": "ChangeReceipt",
         "type": "object"
       },
       "CompensationInput": {
@@ -750,6 +963,250 @@
         "title": "CompensationReceipt",
         "type": "object"
       },
+      "ConnectionContent": {
+        "additionalProperties": false,
+        "properties": {
+          "account_ref": {
+            "title": "Account Ref",
+            "type": "string"
+          },
+          "endpoint": {
+            "title": "Endpoint",
+            "type": "string"
+          },
+          "environment": {
+            "enum": [
+              "development",
+              "test"
+            ],
+            "title": "Environment",
+            "type": "string"
+          },
+          "max_concurrency": {
+            "title": "Max Concurrency",
+            "type": "integer"
+          },
+          "project_ref": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Project Ref"
+          },
+          "provider_id": {
+            "title": "Provider Id",
+            "type": "string"
+          },
+          "rate_limit": {
+            "title": "Rate Limit",
+            "type": "integer"
+          },
+          "rate_window_seconds": {
+            "title": "Rate Window Seconds",
+            "type": "integer"
+          },
+          "timeout_seconds": {
+            "title": "Timeout Seconds",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "provider_id",
+          "endpoint",
+          "account_ref",
+          "project_ref",
+          "environment",
+          "max_concurrency",
+          "rate_limit",
+          "rate_window_seconds",
+          "timeout_seconds"
+        ],
+        "title": "ConnectionContent",
+        "type": "object"
+      },
+      "ConnectionDraft": {
+        "additionalProperties": false,
+        "properties": {
+          "account_ref": {
+            "maxLength": 120,
+            "minLength": 1,
+            "pattern": "^[A-Za-z0-9_.:-]+$",
+            "title": "Account Ref",
+            "type": "string"
+          },
+          "environment": {
+            "enum": [
+              "development",
+              "test"
+            ],
+            "title": "Environment",
+            "type": "string"
+          },
+          "expected_version": {
+            "maximum": 2000000000.0,
+            "minimum": 0.0,
+            "title": "Expected Version",
+            "type": "integer"
+          },
+          "max_concurrency": {
+            "default": 0,
+            "maximum": 64.0,
+            "minimum": 0.0,
+            "title": "Max Concurrency",
+            "type": "integer"
+          },
+          "operation_id": {
+            "format": "uuid",
+            "title": "Operation Id",
+            "type": "string"
+          },
+          "project_ref": {
+            "anyOf": [
+              {
+                "maxLength": 120,
+                "pattern": "^[A-Za-z0-9_.:-]+$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Project Ref"
+          },
+          "provider_id": {
+            "pattern": "^[a-z0-9][a-z0-9_.:-]{0,79}$",
+            "title": "Provider Id",
+            "type": "string"
+          },
+          "rate_limit": {
+            "default": 0,
+            "maximum": 1000000.0,
+            "minimum": 0.0,
+            "title": "Rate Limit",
+            "type": "integer"
+          },
+          "rate_window_seconds": {
+            "default": 60,
+            "maximum": 86400.0,
+            "minimum": 1.0,
+            "title": "Rate Window Seconds",
+            "type": "integer"
+          },
+          "reason": {
+            "maxLength": 500,
+            "minLength": 1,
+            "title": "Reason",
+            "type": "string"
+          },
+          "timeout_seconds": {
+            "default": 180,
+            "maximum": 600.0,
+            "minimum": 30.0,
+            "title": "Timeout Seconds",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "operation_id",
+          "expected_version",
+          "reason",
+          "provider_id",
+          "account_ref",
+          "environment"
+        ],
+        "title": "ConnectionDraft",
+        "type": "object"
+      },
+      "ConnectionList": {
+        "additionalProperties": false,
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/ConnectionView"
+            },
+            "title": "Items",
+            "type": "array"
+          }
+        },
+        "required": [
+          "items"
+        ],
+        "title": "ConnectionList",
+        "type": "object"
+      },
+      "ConnectionView": {
+        "additionalProperties": false,
+        "properties": {
+          "connection_id": {
+            "title": "Connection Id",
+            "type": "string"
+          },
+          "content": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ConnectionContent"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "credential": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/CredentialView"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "draft": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/RevisionView"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "published": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/RevisionView"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "runtime_state": {
+            "const": "disabled",
+            "default": "disabled",
+            "title": "Runtime State",
+            "type": "string"
+          },
+          "version": {
+            "title": "Version",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "connection_id",
+          "version",
+          "draft",
+          "published",
+          "content",
+          "credential"
+        ],
+        "title": "ConnectionView",
+        "type": "object"
+      },
       "CreateJob": {
         "additionalProperties": false,
         "properties": {
@@ -769,6 +1226,176 @@
           "operation_id"
         ],
         "title": "CreateJob",
+        "type": "object"
+      },
+      "CredentialBind": {
+        "additionalProperties": false,
+        "properties": {
+          "account_ref": {
+            "maxLength": 120,
+            "minLength": 1,
+            "pattern": "^[A-Za-z0-9_.:-]+$",
+            "title": "Account Ref",
+            "type": "string"
+          },
+          "current_password": {
+            "format": "password",
+            "title": "Current Password",
+            "type": "string",
+            "writeOnly": true
+          },
+          "environment": {
+            "enum": [
+              "development",
+              "test"
+            ],
+            "title": "Environment",
+            "type": "string"
+          },
+          "expected_version": {
+            "maximum": 2000000000.0,
+            "minimum": 0.0,
+            "title": "Expected Version",
+            "type": "integer"
+          },
+          "operation_id": {
+            "format": "uuid",
+            "title": "Operation Id",
+            "type": "string"
+          },
+          "project_ref": {
+            "anyOf": [
+              {
+                "maxLength": 120,
+                "pattern": "^[A-Za-z0-9_.:-]+$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Project Ref"
+          },
+          "reason": {
+            "maxLength": 500,
+            "minLength": 1,
+            "title": "Reason",
+            "type": "string"
+          },
+          "secret_ref": {
+            "maxLength": 200,
+            "minLength": 1,
+            "title": "Secret Ref",
+            "type": "string"
+          },
+          "source_type": {
+            "enum": [
+              "env",
+              "secret_file",
+              "secret_manager"
+            ],
+            "title": "Source Type",
+            "type": "string"
+          }
+        },
+        "required": [
+          "operation_id",
+          "expected_version",
+          "reason",
+          "source_type",
+          "secret_ref",
+          "environment",
+          "account_ref",
+          "current_password"
+        ],
+        "title": "CredentialBind",
+        "type": "object"
+      },
+      "CredentialView": {
+        "additionalProperties": false,
+        "properties": {
+          "account_ref": {
+            "title": "Account Ref",
+            "type": "string"
+          },
+          "binding_id": {
+            "format": "uuid",
+            "title": "Binding Id",
+            "type": "string"
+          },
+          "created_at": {
+            "title": "Created At",
+            "type": "integer"
+          },
+          "environment": {
+            "enum": [
+              "development",
+              "test"
+            ],
+            "title": "Environment",
+            "type": "string"
+          },
+          "project_ref": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Project Ref"
+          },
+          "reference_fingerprint": {
+            "title": "Reference Fingerprint",
+            "type": "string"
+          },
+          "revoked_at": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Revoked At"
+          },
+          "source_type": {
+            "enum": [
+              "env",
+              "secret_file",
+              "secret_manager"
+            ],
+            "title": "Source Type",
+            "type": "string"
+          },
+          "state": {
+            "enum": [
+              "active",
+              "revoked"
+            ],
+            "title": "State",
+            "type": "string"
+          },
+          "version": {
+            "title": "Version",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "binding_id",
+          "version",
+          "source_type",
+          "reference_fingerprint",
+          "environment",
+          "account_ref",
+          "project_ref",
+          "state",
+          "created_at",
+          "revoked_at"
+        ],
+        "title": "CredentialView",
         "type": "object"
       },
       "DiffItem": {
@@ -791,6 +1418,35 @@
           "after"
         ],
         "title": "DiffItem",
+        "type": "object"
+      },
+      "DisableInput": {
+        "additionalProperties": false,
+        "properties": {
+          "expected_version": {
+            "maximum": 2000000000.0,
+            "minimum": 0.0,
+            "title": "Expected Version",
+            "type": "integer"
+          },
+          "operation_id": {
+            "format": "uuid",
+            "title": "Operation Id",
+            "type": "string"
+          },
+          "reason": {
+            "maxLength": 500,
+            "minLength": 1,
+            "title": "Reason",
+            "type": "string"
+          }
+        },
+        "required": [
+          "operation_id",
+          "expected_version",
+          "reason"
+        ],
+        "title": "DisableInput",
         "type": "object"
       },
       "DownloadView": {
@@ -1624,55 +2280,122 @@
         "title": "PreviewView",
         "type": "object"
       },
-      "ProofInput": {
+      "ProofView": {
         "additionalProperties": false,
         "properties": {
-          "token": {
-            "format": "password",
-            "maxLength": 76,
-            "minLength": 76,
-            "title": "Token",
-            "type": "string",
-            "writeOnly": true
-          }
-        },
-        "required": [
-          "token"
-        ],
-        "title": "ProofInput",
-        "type": "object"
-      },
-      "PublishInput": {
-        "additionalProperties": false,
-        "properties": {
-          "expected_revision": {
-            "maximum": 2000000000.0,
-            "minimum": 0.0,
-            "title": "Expected Revision",
+          "capability_hash": {
+            "title": "Capability Hash",
+            "type": "string"
+          },
+          "capability_id": {
+            "title": "Capability Id",
+            "type": "string"
+          },
+          "connection_hash": {
+            "title": "Connection Hash",
+            "type": "string"
+          },
+          "connection_id": {
+            "title": "Connection Id",
+            "type": "string"
+          },
+          "created_at": {
+            "title": "Created At",
             "type": "integer"
           },
-          "operation_id": {
-            "format": "uuid",
-            "title": "Operation Id",
+          "credential_version": {
+            "title": "Credential Version",
+            "type": "integer"
+          },
+          "evidence_hash": {
+            "title": "Evidence Hash",
             "type": "string"
           },
-          "policy": {
-            "$ref": "#/components/schemas/PlanPolicy"
+          "live_ready": {
+            "const": false,
+            "default": false,
+            "title": "Live Ready",
+            "type": "boolean"
           },
-          "reason": {
-            "maxLength": 500,
-            "minLength": 1,
-            "title": "Reason",
+          "network_called": {
+            "const": false,
+            "default": false,
+            "title": "Network Called",
+            "type": "boolean"
+          },
+          "proof_id": {
+            "format": "uuid",
+            "title": "Proof Id",
+            "type": "string"
+          },
+          "proof_kind": {
+            "const": "contract",
+            "default": "contract",
+            "title": "Proof Kind",
             "type": "string"
           }
         },
         "required": [
-          "expected_revision",
-          "policy",
-          "operation_id",
-          "reason"
+          "proof_id",
+          "capability_id",
+          "connection_id",
+          "capability_hash",
+          "connection_hash",
+          "credential_version",
+          "evidence_hash",
+          "created_at"
         ],
-        "title": "PublishInput",
+        "title": "ProofView",
+        "type": "object"
+      },
+      "ProviderList": {
+        "additionalProperties": false,
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/ProviderView"
+            },
+            "title": "Items",
+            "type": "array"
+          }
+        },
+        "required": [
+          "items"
+        ],
+        "title": "ProviderList",
+        "type": "object"
+      },
+      "ProviderView": {
+        "additionalProperties": false,
+        "properties": {
+          "adapters": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Adapters",
+            "type": "array"
+          },
+          "endpoint": {
+            "title": "Endpoint",
+            "type": "string"
+          },
+          "live_enabled": {
+            "const": false,
+            "default": false,
+            "title": "Live Enabled",
+            "type": "boolean"
+          },
+          "provider_id": {
+            "title": "Provider Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "provider_id",
+          "endpoint",
+          "adapters"
+        ],
+        "title": "ProviderView",
         "type": "object"
       },
       "PublishReceipt": {
@@ -1886,6 +2609,36 @@
         "title": "ResetInput",
         "type": "object"
       },
+      "RevisionView": {
+        "additionalProperties": false,
+        "properties": {
+          "content_hash": {
+            "title": "Content Hash",
+            "type": "string"
+          },
+          "created_at": {
+            "title": "Created At",
+            "type": "integer"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "revision": {
+            "title": "Revision",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "id",
+          "revision",
+          "content_hash",
+          "created_at"
+        ],
+        "title": "RevisionView",
+        "type": "object"
+      },
       "RevokeAccessInput": {
         "additionalProperties": false,
         "properties": {
@@ -1928,6 +2681,42 @@
           "current_password"
         ],
         "title": "RevokeAccessInput",
+        "type": "object"
+      },
+      "RevokeCredential": {
+        "additionalProperties": false,
+        "properties": {
+          "current_password": {
+            "format": "password",
+            "title": "Current Password",
+            "type": "string",
+            "writeOnly": true
+          },
+          "expected_version": {
+            "maximum": 2000000000.0,
+            "minimum": 0.0,
+            "title": "Expected Version",
+            "type": "integer"
+          },
+          "operation_id": {
+            "format": "uuid",
+            "title": "Operation Id",
+            "type": "string"
+          },
+          "reason": {
+            "maxLength": 500,
+            "minLength": 1,
+            "title": "Reason",
+            "type": "string"
+          }
+        },
+        "required": [
+          "operation_id",
+          "expected_version",
+          "reason",
+          "current_password"
+        ],
+        "title": "RevokeCredential",
         "type": "object"
       },
       "RollbackInput": {
@@ -2161,6 +2950,134 @@
           "reserved_bytes"
         ],
         "title": "UploadView",
+        "type": "object"
+      },
+      "izo__accounts__challenge_schema__ProofInput": {
+        "additionalProperties": false,
+        "properties": {
+          "token": {
+            "format": "password",
+            "maxLength": 76,
+            "minLength": 76,
+            "title": "Token",
+            "type": "string",
+            "writeOnly": true
+          }
+        },
+        "required": [
+          "token"
+        ],
+        "title": "ProofInput",
+        "type": "object"
+      },
+      "izo__catalog__schemas__ProofInput": {
+        "additionalProperties": false,
+        "properties": {
+          "connection_id": {
+            "pattern": "^[a-z0-9][a-z0-9_.:-]{0,79}$",
+            "title": "Connection Id",
+            "type": "string"
+          },
+          "connection_version": {
+            "maximum": 2000000000.0,
+            "minimum": 0.0,
+            "title": "Connection Version",
+            "type": "integer"
+          },
+          "expected_version": {
+            "maximum": 2000000000.0,
+            "minimum": 0.0,
+            "title": "Expected Version",
+            "type": "integer"
+          },
+          "operation_id": {
+            "format": "uuid",
+            "title": "Operation Id",
+            "type": "string"
+          },
+          "reason": {
+            "maxLength": 500,
+            "minLength": 1,
+            "title": "Reason",
+            "type": "string"
+          }
+        },
+        "required": [
+          "operation_id",
+          "expected_version",
+          "reason",
+          "connection_id",
+          "connection_version"
+        ],
+        "title": "ProofInput",
+        "type": "object"
+      },
+      "izo__catalog__schemas__PublishInput": {
+        "additionalProperties": false,
+        "properties": {
+          "expected_version": {
+            "maximum": 2000000000.0,
+            "minimum": 0.0,
+            "title": "Expected Version",
+            "type": "integer"
+          },
+          "operation_id": {
+            "format": "uuid",
+            "title": "Operation Id",
+            "type": "string"
+          },
+          "proof_id": {
+            "format": "uuid",
+            "title": "Proof Id",
+            "type": "string"
+          },
+          "reason": {
+            "maxLength": 500,
+            "minLength": 1,
+            "title": "Reason",
+            "type": "string"
+          }
+        },
+        "required": [
+          "operation_id",
+          "expected_version",
+          "reason",
+          "proof_id"
+        ],
+        "title": "PublishInput",
+        "type": "object"
+      },
+      "izo__settings__schemas__PublishInput": {
+        "additionalProperties": false,
+        "properties": {
+          "expected_revision": {
+            "maximum": 2000000000.0,
+            "minimum": 0.0,
+            "title": "Expected Revision",
+            "type": "integer"
+          },
+          "operation_id": {
+            "format": "uuid",
+            "title": "Operation Id",
+            "type": "string"
+          },
+          "policy": {
+            "$ref": "#/components/schemas/PlanPolicy"
+          },
+          "reason": {
+            "maxLength": 500,
+            "minLength": 1,
+            "title": "Reason",
+            "type": "string"
+          }
+        },
+        "required": [
+          "expected_revision",
+          "policy",
+          "operation_id",
+          "reason"
+        ],
+        "title": "PublishInput",
         "type": "object"
       }
     }
@@ -2504,6 +3421,921 @@
         ]
       }
     },
+    "/api/v1/admin/catalog/connections": {
+      "get": {
+        "operationId": "connections_api_v1_admin_catalog_connections_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ConnectionList"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AuthErrorView"
+                }
+              }
+            },
+            "description": "Safe catalog error"
+          },
+          "4XX": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AuthErrorView"
+                }
+              }
+            },
+            "description": "Safe catalog error"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AuthErrorView"
+                }
+              }
+            },
+            "description": "Safe catalog error"
+          }
+        },
+        "summary": "Connections",
+        "tags": [
+          "admin-catalog"
+        ]
+      }
+    },
+    "/api/v1/admin/catalog/connections/{connection_id}": {
+      "get": {
+        "operationId": "connection_api_v1_admin_catalog_connections__connection_id__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "connection_id",
+            "required": true,
+            "schema": {
+              "title": "Connection Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ConnectionView"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AuthErrorView"
+                }
+              }
+            },
+            "description": "Safe catalog error"
+          },
+          "4XX": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AuthErrorView"
+                }
+              }
+            },
+            "description": "Safe catalog error"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AuthErrorView"
+                }
+              }
+            },
+            "description": "Safe catalog error"
+          }
+        },
+        "summary": "Connection",
+        "tags": [
+          "admin-catalog"
+        ]
+      }
+    },
+    "/api/v1/admin/catalog/connections/{connection_id}/credential": {
+      "get": {
+        "operationId": "credential_view_api_v1_admin_catalog_connections__connection_id__credential_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "connection_id",
+            "required": true,
+            "schema": {
+              "title": "Connection Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CredentialView"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AuthErrorView"
+                }
+              }
+            },
+            "description": "Safe catalog error"
+          },
+          "4XX": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AuthErrorView"
+                }
+              }
+            },
+            "description": "Safe catalog error"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AuthErrorView"
+                }
+              }
+            },
+            "description": "Safe catalog error"
+          }
+        },
+        "summary": "Credential View",
+        "tags": [
+          "admin-catalog"
+        ]
+      }
+    },
+    "/api/v1/admin/catalog/connections/{connection_id}/credentials": {
+      "post": {
+        "operationId": "credential_api_v1_admin_catalog_connections__connection_id__credentials_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "connection_id",
+            "required": true,
+            "schema": {
+              "title": "Connection Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CredentialBind"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CredentialView"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AuthErrorView"
+                }
+              }
+            },
+            "description": "Safe catalog error"
+          },
+          "4XX": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AuthErrorView"
+                }
+              }
+            },
+            "description": "Safe catalog error"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AuthErrorView"
+                }
+              }
+            },
+            "description": "Safe catalog error"
+          }
+        },
+        "summary": "Credential",
+        "tags": [
+          "admin-catalog"
+        ]
+      }
+    },
+    "/api/v1/admin/catalog/connections/{connection_id}/credentials/revoke": {
+      "post": {
+        "operationId": "revoke_api_v1_admin_catalog_connections__connection_id__credentials_revoke_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "connection_id",
+            "required": true,
+            "schema": {
+              "title": "Connection Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RevokeCredential"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ChangeReceipt"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AuthErrorView"
+                }
+              }
+            },
+            "description": "Safe catalog error"
+          },
+          "4XX": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AuthErrorView"
+                }
+              }
+            },
+            "description": "Safe catalog error"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AuthErrorView"
+                }
+              }
+            },
+            "description": "Safe catalog error"
+          }
+        },
+        "summary": "Revoke",
+        "tags": [
+          "admin-catalog"
+        ]
+      }
+    },
+    "/api/v1/admin/catalog/connections/{connection_id}/draft": {
+      "post": {
+        "operationId": "connection_draft_api_v1_admin_catalog_connections__connection_id__draft_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "connection_id",
+            "required": true,
+            "schema": {
+              "title": "Connection Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ConnectionDraft"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ChangeReceipt"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AuthErrorView"
+                }
+              }
+            },
+            "description": "Safe catalog error"
+          },
+          "4XX": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AuthErrorView"
+                }
+              }
+            },
+            "description": "Safe catalog error"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AuthErrorView"
+                }
+              }
+            },
+            "description": "Safe catalog error"
+          }
+        },
+        "summary": "Connection Draft",
+        "tags": [
+          "admin-catalog"
+        ]
+      }
+    },
+    "/api/v1/admin/catalog/connections/{connection_id}/publish": {
+      "post": {
+        "operationId": "connection_publish_api_v1_admin_catalog_connections__connection_id__publish_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "connection_id",
+            "required": true,
+            "schema": {
+              "title": "Connection Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/izo__catalog__schemas__PublishInput"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ChangeReceipt"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AuthErrorView"
+                }
+              }
+            },
+            "description": "Safe catalog error"
+          },
+          "4XX": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AuthErrorView"
+                }
+              }
+            },
+            "description": "Safe catalog error"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AuthErrorView"
+                }
+              }
+            },
+            "description": "Safe catalog error"
+          }
+        },
+        "summary": "Connection Publish",
+        "tags": [
+          "admin-catalog"
+        ]
+      }
+    },
+    "/api/v1/admin/catalog/models": {
+      "get": {
+        "operationId": "models_api_v1_admin_catalog_models_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CapabilityList"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AuthErrorView"
+                }
+              }
+            },
+            "description": "Safe catalog error"
+          },
+          "4XX": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AuthErrorView"
+                }
+              }
+            },
+            "description": "Safe catalog error"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AuthErrorView"
+                }
+              }
+            },
+            "description": "Safe catalog error"
+          }
+        },
+        "summary": "Models",
+        "tags": [
+          "admin-catalog"
+        ]
+      }
+    },
+    "/api/v1/admin/catalog/models/{capability_id}": {
+      "get": {
+        "operationId": "model_api_v1_admin_catalog_models__capability_id__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "capability_id",
+            "required": true,
+            "schema": {
+              "title": "Capability Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CapabilityView"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AuthErrorView"
+                }
+              }
+            },
+            "description": "Safe catalog error"
+          },
+          "4XX": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AuthErrorView"
+                }
+              }
+            },
+            "description": "Safe catalog error"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AuthErrorView"
+                }
+              }
+            },
+            "description": "Safe catalog error"
+          }
+        },
+        "summary": "Model",
+        "tags": [
+          "admin-catalog"
+        ]
+      }
+    },
+    "/api/v1/admin/catalog/models/{capability_id}/disable": {
+      "post": {
+        "operationId": "model_disable_api_v1_admin_catalog_models__capability_id__disable_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "capability_id",
+            "required": true,
+            "schema": {
+              "title": "Capability Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DisableInput"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ChangeReceipt"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AuthErrorView"
+                }
+              }
+            },
+            "description": "Safe catalog error"
+          },
+          "4XX": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AuthErrorView"
+                }
+              }
+            },
+            "description": "Safe catalog error"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AuthErrorView"
+                }
+              }
+            },
+            "description": "Safe catalog error"
+          }
+        },
+        "summary": "Model Disable",
+        "tags": [
+          "admin-catalog"
+        ]
+      }
+    },
+    "/api/v1/admin/catalog/models/{capability_id}/draft": {
+      "post": {
+        "operationId": "model_draft_api_v1_admin_catalog_models__capability_id__draft_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "capability_id",
+            "required": true,
+            "schema": {
+              "title": "Capability Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CapabilityDraft"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ChangeReceipt"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AuthErrorView"
+                }
+              }
+            },
+            "description": "Safe catalog error"
+          },
+          "4XX": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AuthErrorView"
+                }
+              }
+            },
+            "description": "Safe catalog error"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AuthErrorView"
+                }
+              }
+            },
+            "description": "Safe catalog error"
+          }
+        },
+        "summary": "Model Draft",
+        "tags": [
+          "admin-catalog"
+        ]
+      }
+    },
+    "/api/v1/admin/catalog/models/{capability_id}/proof": {
+      "post": {
+        "operationId": "model_proof_api_v1_admin_catalog_models__capability_id__proof_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "capability_id",
+            "required": true,
+            "schema": {
+              "title": "Capability Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/izo__catalog__schemas__ProofInput"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProofView"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AuthErrorView"
+                }
+              }
+            },
+            "description": "Safe catalog error"
+          },
+          "4XX": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AuthErrorView"
+                }
+              }
+            },
+            "description": "Safe catalog error"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AuthErrorView"
+                }
+              }
+            },
+            "description": "Safe catalog error"
+          }
+        },
+        "summary": "Model Proof",
+        "tags": [
+          "admin-catalog"
+        ]
+      }
+    },
+    "/api/v1/admin/catalog/models/{capability_id}/publish": {
+      "post": {
+        "operationId": "model_publish_api_v1_admin_catalog_models__capability_id__publish_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "capability_id",
+            "required": true,
+            "schema": {
+              "title": "Capability Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/izo__catalog__schemas__PublishInput"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ChangeReceipt"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AuthErrorView"
+                }
+              }
+            },
+            "description": "Safe catalog error"
+          },
+          "4XX": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AuthErrorView"
+                }
+              }
+            },
+            "description": "Safe catalog error"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AuthErrorView"
+                }
+              }
+            },
+            "description": "Safe catalog error"
+          }
+        },
+        "summary": "Model Publish",
+        "tags": [
+          "admin-catalog"
+        ]
+      }
+    },
+    "/api/v1/admin/catalog/providers": {
+      "get": {
+        "operationId": "providers_api_v1_admin_catalog_providers_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProviderList"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AuthErrorView"
+                }
+              }
+            },
+            "description": "Safe catalog error"
+          },
+          "4XX": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AuthErrorView"
+                }
+              }
+            },
+            "description": "Safe catalog error"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AuthErrorView"
+                }
+              }
+            },
+            "description": "Safe catalog error"
+          }
+        },
+        "summary": "Providers",
+        "tags": [
+          "admin-catalog"
+        ]
+      }
+    },
     "/api/v1/admin/me": {
       "get": {
         "operationId": "me_api_v1_admin_me_get",
@@ -2725,7 +4557,7 @@
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/PublishInput"
+                "$ref": "#/components/schemas/izo__settings__schemas__PublishInput"
               }
             }
           },
@@ -3097,7 +4929,7 @@
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/ProofInput"
+                "$ref": "#/components/schemas/izo__accounts__challenge_schema__ProofInput"
               }
             }
           },

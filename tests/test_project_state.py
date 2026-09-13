@@ -23,7 +23,7 @@ def plan():
 
 def evidence(head='a'*40):
     return {
-        'type': 'pr_merge_tree', 'source_head': head, 'verified_pr': 25,
+        'type': 'pr_merge_tree', 'source_head': head, 'verified_pr': 30,
         'base_head': 'b'*40, 'tested_merge_tree': 'c'*40,
         'workflows': {'Foundation CI': 1, 'Dependency Security': 2, 'Review Source': 3},
     }
@@ -32,10 +32,10 @@ def evidence(head='a'*40):
 def test_current_uses_parent_base_and_verified_working_head_policy():
     text = render_current(plan())
     assert 'runtime_base=api/fal-klein-001@faec39d6' in text
-    assert 'current_package_base=access/staff-delegation@fbb3ba0' in text
-    assert 'working_branch=settings/plan-policy' in text
-    assert 'active_package=SETTINGS-002' in text
-    assert 'next_package=CATALOG-002' in text
+    assert 'current_package_base=settings/plan-policy@220d302' in text
+    assert 'working_branch=catalog/versioned-provider' in text
+    assert 'active_package=CATALOG-002' in text
+    assert 'next_package=CATALOG-UI-002' in text
     assert 'не выбирать его вручную как base следующего package' in text
 
 
@@ -49,7 +49,7 @@ def test_pr_merge_tree_evidence_binds_source_head_and_required_workflows():
     result = validate_pr_evidence(
         pr={'headRefOid': head, 'baseRefOid': 'b'*40, 'state': 'OPEN'}, runs=runs,
         merge_sha='c'*40, merge_commit={'parents': [{'sha': 'b'*40}, {'sha': head}]},
-        expected_head=head, pr_number=25, foundation_tree='c'*40,
+        expected_head=head, pr_number=30, foundation_tree='c'*40,
     )
     assert result['type'] == 'pr_merge_tree'
     assert result['source_head'] == head
@@ -62,14 +62,14 @@ def test_pr_evidence_rejects_wrong_sha_or_missing_required_workflow():
         validate_pr_evidence(
             pr={'headRefOid': 'd'*40, 'baseRefOid': 'b'*40, 'state': 'OPEN'}, runs=[],
             merge_sha='c'*40, merge_commit={'parents': [{'sha': head}]},
-            expected_head=head, pr_number=25, foundation_tree='c'*40,
+            expected_head=head, pr_number=30, foundation_tree='c'*40,
         )
     runs = [{'name': 'Foundation CI', 'headSha': head, 'event': 'pull_request', 'conclusion': 'success', 'databaseId': 1}]
     with pytest.raises(ValueError, match='Dependency Security'):
         validate_pr_evidence(
             pr={'headRefOid': head, 'baseRefOid': 'b'*40, 'state': 'OPEN'}, runs=runs,
             merge_sha='c'*40, merge_commit={'parents': [{'sha': head}]},
-            expected_head=head, pr_number=25, foundation_tree='c'*40,
+            expected_head=head, pr_number=30, foundation_tree='c'*40,
         )
 
 
@@ -84,35 +84,28 @@ def test_pr_evidence_rejects_stale_merge_tree():
         validate_pr_evidence(
             pr={'headRefOid': head, 'baseRefOid': 'b'*40, 'state': 'OPEN'}, runs=runs,
             merge_sha='c'*40, merge_commit={'parents': [{'sha': 'b'*40}, {'sha': head}]},
-            expected_head=head, pr_number=25, foundation_tree='d'*40,
+            expected_head=head, pr_number=30, foundation_tree='d'*40,
         )
 
 
 def test_transition_advances_from_verified_working_head_and_checks_dependencies():
     source = plan()
     head = 'a' * 40
-    assert dependency_problems(source, 'CATALOG-002', finishing='SETTINGS-002') == []
-    updated = transition(
-        source, activate='CATALOG-002', next_id='CATALOG-UI-002', new_branch='catalog/versioned-metadata',
-        source_head=head, evidence=evidence(head),
-    )
-    assert source['active_package'] == 'SETTINGS-002'
-    assert updated['packages']['SETTINGS-002']['status'] == 'technical_pass'
-    assert updated['packages']['SETTINGS-002']['evidence']['source_head'] == head
-    assert updated['active_package'] == 'CATALOG-002'
-    assert updated['next_package'] == 'CATALOG-UI-002'
-    assert updated['packages']['CATALOG-UI-002']['status'] == 'planned_next'
-
+    assert dependency_problems(source, 'CATALOG-UI-002', finishing='CATALOG-002') == []
+    updated = transition(source, activate='CATALOG-UI-002', next_id=None,
+        new_branch='catalog/admin-ui', source_head=head, evidence=evidence(head))
+    assert source['active_package'] == 'CATALOG-002'
+    assert updated['packages']['CATALOG-002']['status'] == 'technical_pass'
+    assert updated['packages']['CATALOG-002']['evidence']['source_head'] == head
+    assert updated['active_package'] == 'CATALOG-UI-002'
+    assert updated['next_package'] is None
 
 def test_transition_rejects_unready_dependency():
     source = plan()
-    source['packages']['API-001']['status'] = 'planned'
-    with pytest.raises(ValueError, match='API-001'):
-        transition(
-            source, activate='CATALOG-002', next_id='CATALOG-UI-002', new_branch='catalog/versioned-metadata',
-            source_head='a'*40, evidence=evidence(),
-        )
-
+    source['packages']['ADMIN-001']['status'] = 'planned'
+    with pytest.raises(ValueError, match='ADMIN-001'):
+        transition(source, activate='CATALOG-UI-002', next_id=None,
+            new_branch='catalog/admin-ui', source_head='a'*40, evidence=evidence())
 
 def test_machine_plan_stays_compact_enough_for_agent_context():
     text = (ROOT/'docs/PLAN.json').read_text(encoding='utf-8')
@@ -129,10 +122,10 @@ def test_begin_next_rolls_back_branch_and_state_on_write_failure(tmp_path, monke
     calls=[]
     def fake_git(*args, root=tmp_path):
         if args == ('status','--porcelain'): return ''
-        if args == ('branch','--show-current'): return 'settings/plan-policy'
+        if args == ('branch','--show-current'): return 'catalog/versioned-provider'
         if args == ('rev-parse','HEAD'): return 'a'*40
         if args[:2] == ('switch','-c'): calls.append('create'); return ''
-        if args == ('switch','settings/plan-policy'): calls.append('rollback'); return ''
+        if args == ('switch','catalog/versioned-provider'): calls.append('rollback'); return ''
         if args[:2] == ('branch','-D'): calls.append('delete'); return ''
         raise AssertionError(args)
     monkeypatch.setattr(state, 'git', fake_git)
@@ -142,8 +135,8 @@ def test_begin_next_rolls_back_branch_and_state_on_write_failure(tmp_path, monke
         raise OSError('disk failure')
     monkeypatch.setattr(state, 'write_state', broken_write)
     with pytest.raises(OSError, match='disk failure'):
-        state.begin_next(source, branch='catalog/versioned-metadata', activate='CATALOG-002',
-                         next_id='CATALOG-UI-002', verified_pr=30, root=tmp_path)
+        state.begin_next(source, branch='catalog/admin-ui', activate='CATALOG-UI-002',
+                         next_id=None, verified_pr=31, root=tmp_path)
     assert (docs/'PLAN.json').read_bytes() == b'old-plan'
     assert (docs/'CURRENT.md').read_bytes() == b'old-current'
     assert calls == ['create','rollback','delete']
@@ -151,25 +144,25 @@ def test_begin_next_rolls_back_branch_and_state_on_write_failure(tmp_path, monke
 
 def test_transition_requires_direct_dependency_on_finishing_package():
     source = plan()
-    source["packages"]["CATALOG-002"]["depends_on"] = ["ACCESS-001", "API-001", "ADMIN-001"]
+    source["packages"]["CATALOG-UI-002"]["depends_on"] = ["ADMIN-001", "ACCESS-001"]
     with pytest.raises(ValueError, match="next_package must directly depend on the active package"):
-        transition(source, activate="CATALOG-002", next_id="CATALOG-UI-002", new_branch="catalog/versioned-metadata",
+        transition(source, activate="CATALOG-UI-002", next_id=None, new_branch="catalog/admin-ui",
                    source_head="a"*40, evidence=evidence())
 
 
 def test_transition_rejects_completed_or_unrelated_next_package():
     source = plan()
     with pytest.raises(ValueError, match="not eligible from status technical_pass"):
-        transition(source, activate="CATALOG-002", next_id="AUTH-001", new_branch="catalog/versioned-metadata",
+        transition(source, activate="CATALOG-UI-002", next_id="AUTH-001", new_branch="catalog/admin-ui",
                    source_head="a"*40, evidence=evidence())
-    with pytest.raises(ValueError, match="must directly depend on activating package CATALOG-002"):
-        transition(source, activate="CATALOG-002", next_id="PROFILE-001", new_branch="catalog/versioned-metadata",
+    with pytest.raises(ValueError, match="must directly depend on activating package CATALOG-UI-002"):
+        transition(source, activate="CATALOG-UI-002", next_id="PROFILE-001", new_branch="catalog/admin-ui",
                    source_head="a"*40, evidence=evidence())
 
 
 def test_validate_plan_requires_planned_next_to_depend_on_active():
     import project_state as state
     source = plan()
-    source["packages"]["CATALOG-002"]["depends_on"] = ["ACCESS-001", "API-001", "ADMIN-001"]
+    source["packages"]["CATALOG-UI-002"]["depends_on"] = ["ADMIN-001", "ACCESS-001"]
     with pytest.raises(ValueError, match="next_package must directly depend on the active package"):
         state.validate_plan(source)

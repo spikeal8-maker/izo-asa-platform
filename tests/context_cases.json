@@ -62,5 +62,11 @@
   {"task":"предпросмотр настроек плана","status":"resolved","kind":"block","key":"api.settings.preview"},
   {"task":"опубликовать настройки плана backend","status":"resolved","kind":"block","key":"api.settings.publish"},
   {"task":"откатить настройки плана","status":"resolved","kind":"block","key":"api.settings.rollback"},
-  {"task":"история настроек плана","status":"resolved","kind":"block","key":"api.settings.read"}
+  {"task":"история настроек плана","status":"resolved","kind":"block","key":"api.settings.read"},
+  {"task":"изменить metadata модели в каталоге","status":"resolved","kind":"block","key":"api.catalog.capability_draft"},
+  {"task":"лимиты подключения провайдера catalog","status":"resolved","kind":"block","key":"api.catalog.connection_draft"},
+  {"task":"привязать credential reference","status":"resolved","kind":"block","key":"api.catalog.credential_binding"},
+  {"task":"offline contract proof каталога","status":"resolved","kind":"block","key":"api.catalog.offline_proof"},
+  {"task":"опубликовать capability metadata","status":"resolved","kind":"block","key":"api.catalog.publish"},
+  {"task":"provider catalog revisions backend","status":"resolved","kind":"route","key":"api.catalog"}
 ]
