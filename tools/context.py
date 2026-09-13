@@ -80,6 +80,11 @@ def intent_bonus(task: str, kind_or_key: str) -> int:
         bonus -= 2
     if backend and is_ui:
         bonus -= 2
+    catalog_specific = any(token in folded for token in ("catalog", "каталог", "revision", "metadata", "credential binding", "connection metadata", "offline proof"))
+    if catalog_specific and kind_or_key.startswith("api.catalog"):
+        bonus += 6
+    if catalog_specific and kind_or_key.startswith("api.provider"):
+        bonus -= 3
     return bonus
 
 
@@ -87,6 +92,9 @@ def cross_boundary_ambiguity(task: str) -> str | None:
     folded = task.casefold()
     explicit_ui = any(token in folded for token in ("кноп", "css", "layout", "интерфейс", "ui"))
     explicit_backend = any(token in folded for token in ("backend", "api", "сервер", "provider", "fal"))
+    if "admin" in folded and any(token in folded for token in ("permission", "staff", "права сотрудника")) \
+            and not any(token in folded for token in ("access", "delegation", "grant", "revoke", "доступ")):
+        return "admin permission request spans Admin API and staff Access delegation"
     if not explicit_ui and not explicit_backend:
         if "403" in folded and any(token in folded for token in ("скач", "download")):
             return "403 during download spans Gallery UI, Media ownership/ticket and auth boundaries"
@@ -104,7 +112,7 @@ def rank(task: str, items: dict, phrase_field: str) -> list[tuple[int, str, dict
     for key, item in items.items():
         score = phrase_score(task, item.get(phrase_field, []))
         if score > 0:
-            score += intent_bonus(task, item.get("kind", key))
+            score += intent_bonus(task, key)
         ranked.append((score, key, item))
     return sorted(ranked, key=lambda value: (value[0], value[1]), reverse=True)
 
@@ -189,6 +197,17 @@ def resolve_task(task: str) -> tuple[str, str, dict, dict, int, int]:
         return "block", key, block, route, score, second
     except LookupError:
         pass
+    except RuntimeError:
+        top_score = block_ranked[0][0] if block_ranked else 0
+        nearby = [item for item in block_ranked if item[0] > 0 and
+                  (top_score - item[0] <= 2 or item[0] / top_score >= 0.82)]
+        routes = {item[2]["route"] for item in nearby}
+        if top_score >= 7 and len(routes) == 1:
+            route_key = next(iter(routes))
+            route = context["routes"][route_key]
+            second = block_ranked[1][0] if len(block_ranked) > 1 else 0
+            return "route", route_key, route, route, top_score, second
+        raise
     route_ranked = rank(task, context.get("routes", {}), "keywords")
     key, route, score, second = choose(route_ranked)
     return "route", key, route, route, score, second

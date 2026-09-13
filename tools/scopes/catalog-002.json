@@ -1,0 +1,41 @@
+{
+  "base": "220d302dc238889da066c1799652d4b036007de3",
+  "max_files": 27,
+  "allowed": [
+    ".github/workflows/ci.yml",
+    "apps/api/izo/app.py",
+    "apps/api/izo/catalog/__init__.py",
+    "apps/api/izo/catalog/AGENTS.md",
+    "apps/api/izo/catalog/README.md",
+    "apps/api/izo/catalog/registry.py",
+    "apps/api/izo/catalog/repository.py",
+    "apps/api/izo/catalog/routes.py",
+    "apps/api/izo/catalog/schemas.py",
+    "apps/api/izo/catalog/service.py",
+    "apps/api/izo/catalog/tables.py",
+    "apps/api/migrations/versions/0011_catalog.py",
+    "docs/BLOCK_MAP.json",
+    "docs/CONTEXT_MAP.json",
+    "docs/CURRENT.md",
+    "docs/PLAN.json",
+    "docs/reviews/CATALOG-002.md",
+    "packages/contracts/openapi.json",
+    "tests/context_cases.json",
+    "tests/test_catalog.py",
+    "tests/test_catalog_http.py",
+    "tests/test_catalog_migration.py",
+    "tests/test_docs_system.py",
+    "tests/test_project_state.py",
+    "tools/catalog_acceptance.py",
+    "tools/context.py",
+    "tools/scopes/catalog-002.json"
+  ],
+  "sensitive_approved": [
+    ".github/workflows/ci.yml",
+    "apps/api/izo/catalog/AGENTS.md",
+    "apps/api/migrations/versions/0011_catalog.py",
+    "tools/catalog_acceptance.py",
+    "tools/context.py",
+    "tools/scopes/catalog-002.json"
+  ]
+}
