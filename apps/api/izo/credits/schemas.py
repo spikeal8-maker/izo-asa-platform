@@ -61,13 +61,13 @@ class Entry(BaseModel):
     entry_id: UUID
     operation_id: UUID
     sequence: int
-    kind: Literal["grant", "reserve", "settle", "release"]
+    kind: Literal["trial", "grant", "reserve", "settle", "release"]
     balance_delta: int
     reserved_delta: int
     balance_after: int
     reserved_after: int
     reservation_id: UUID | None
-    reason: Literal["compensation", "test_grant", "generation"]
+    reason: Literal["guest_trial", "compensation", "test_grant", "generation"]
     created_at: int
 
 
