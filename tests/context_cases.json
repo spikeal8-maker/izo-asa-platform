@@ -62,5 +62,9 @@
   {"task":"предпросмотр настроек плана","status":"resolved","kind":"block","key":"api.settings.preview"},
   {"task":"опубликовать настройки плана backend","status":"resolved","kind":"block","key":"api.settings.publish"},
   {"task":"откатить настройки плана","status":"resolved","kind":"block","key":"api.settings.rollback"},
-  {"task":"история настроек плана","status":"resolved","kind":"block","key":"api.settings.read"}
+  {"task":"история настроек плана","status":"resolved","kind":"block","key":"api.settings.read"},
+  {"task":"попробовать изображение без регистрации","status":"resolved","kind":"route","key":"web.guest"},
+  {"task":"гостевой trial backend claim","status":"resolved","kind":"route","key":"api.guest"},
+  {"task":"гостевая сессия csrf backend","status":"resolved","kind":"route","key":"api.guest"},
+  {"task":"guest studio первая генерация","status":"resolved","kind":"route","key":"web.guest"}
 ]
