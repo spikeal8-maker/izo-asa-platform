@@ -1,20 +1,25 @@
 """GUEST-001 HTTP boundary: isolated cookie, strict mutation guards and result claim."""
 from uuid import uuid4
 
+import sqlalchemy as sa
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
+from izo.accounts import tables as account_tables
 from izo.accounts.http_security import AuthBodyLimit
+from izo.credits import tables as credit_tables
 from izo.guest.routes import attach_guest
 from test_guest import guest_env
 
 
-def client_for(env, monkeypatch):
+def client_for(env, monkeypatch, trial_size=64):
     auth, _, _, _, _, _, store = env
     monkeypatch.setenv('IZO_GUEST_ENABLED', 'true')
     monkeypatch.setenv('IZO_GUEST_TRIAL_CREDITS', '3')
     monkeypatch.setenv('IZO_GUEST_NETWORK_LIMIT', '10')
     monkeypatch.setenv('IZO_GUEST_RATE_WINDOW', '3600')
+    monkeypatch.setenv('IZO_GUEST_TRIAL_WIDTH', str(trial_size))
+    monkeypatch.setenv('IZO_GUEST_TRIAL_HEIGHT', str(trial_size))
     monkeypatch.setenv('IZO_JOBS_ENABLED', 'true')
     app = FastAPI()
     app.state.media_store = store
@@ -71,9 +76,34 @@ def test_guest_mutations_fail_closed_and_external_capability_is_forbidden(guest_
             'capability_id': 'fal.flux2.klein.4b', 'prompt': 'no paid guest call',
             'width': 64, 'height': 64})
         assert external.status_code == 403
+        oversized = client.post('/api/v1/guest/quotes', json={
+            'capability_id': 'test.image.v1', 'prompt': 'wrong guest size',
+            'width': 128, 'height': 128})
+        assert oversized.status_code == 403
+        assert oversized.json()['error']['code'] == 'guest_size_restricted'
         csrf = client.headers.pop('X-CSRF-Token')
         assert quote(client).status_code == 403
         client.headers['X-CSRF-Token'] = csrf
+
+
+def test_guest_start_rolls_back_when_plan_cannot_support_trial(guest_env, monkeypatch):
+    auth, *_ = guest_env
+    with auth.engine.begin() as conn:
+        before_accounts = conn.execute(sa.select(sa.func.count()).select_from(
+            account_tables.accounts)).scalar_one()
+        before_trials = conn.execute(sa.select(sa.func.count()).select_from(
+            credit_tables.ledger).where(credit_tables.ledger.c.kind == 'trial')).scalar_one()
+    with client_for(guest_env, monkeypatch, trial_size=128) as client:
+        response = client.post('/api/v1/guest/start', json={})
+        assert response.status_code == 503
+        assert response.json()['error']['code'] == 'guest_trial_unavailable'
+        assert client.get('/api/v1/guest/me').status_code == 401
+    with auth.engine.begin() as conn:
+        after_accounts = conn.execute(sa.select(sa.func.count()).select_from(
+            account_tables.accounts)).scalar_one()
+        after_trials = conn.execute(sa.select(sa.func.count()).select_from(
+            credit_tables.ledger).where(credit_tables.ledger.c.kind == 'trial')).scalar_one()
+    assert (after_accounts, after_trials) == (before_accounts, before_trials)
 
 
 def test_terminal_result_can_be_read_then_claimed_by_same_account(guest_env, monkeypatch):
