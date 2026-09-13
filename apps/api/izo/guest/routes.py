@@ -19,7 +19,7 @@ from ..credits.trial import seed_guest_trial
 from ..entitlements.schemas import EntitlementError
 from ..jobs import tables as job_tables
 from ..jobs.catalog import JobSettings
-from ..jobs.schemas import ACTIVE, CreateJob, JobError, JobView, QuoteInput, QuoteView
+from ..jobs.schemas import ACTIVE, CreateJob, JobError, JobList, JobView, QuoteInput, QuoteView
 from ..jobs.service import JobService
 from ..media.objects import MediaStore
 from ..media.schemas import AssetView, MediaError
@@ -115,6 +115,11 @@ def attach_guest(app, accounts, config):
         mutation(request, auth)
         return JobService(guest, jobs_policy, admission_guard=guest.admission_guard).submit(
             raw(request, auth), request.headers.get("x-csrf-token"), data)
+
+    @router.get("/jobs", response_model=JobList)
+    def list_jobs(request: Request):
+        auth, guest, _ = services(request)
+        return JobService(guest, jobs_policy).list(raw(request, auth), limit=5, offset=0)
 
     @router.get("/jobs/{job_id}", response_model=JobView)
     def get_job(job_id: UUID, request: Request):
