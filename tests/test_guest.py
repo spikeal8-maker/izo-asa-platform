@@ -11,6 +11,7 @@ from izo.accounts.schemas import RegisterInput
 from izo.accounts.security import AuthError
 from izo.accounts.service import AuthService
 from izo.accounts.settings import AuthSettings
+from izo.credits import tables as credits
 from izo.credits.service import CreditService
 from izo.credits.trial import seed_guest_trial
 from izo.entitlements import tables as entitlements
@@ -102,9 +103,8 @@ def test_guest_bearer_is_not_normal_auth_and_trial_is_auditable(guest_env):
     assert guest.me(receipt.bearer).account_id == receipt.view.account_id
     with auth.engine.begin() as conn:
         state = CreditService(clock=auth.clock).reconcile(conn, receipt.view.account_id)
-        entries = conn.execute(sa.select(sa.text('kind'), sa.text('reason')).select_from(
-            sa.table('credit_ledger')).where(sa.text('account_id = :owner')),
-            {'owner': receipt.view.account_id}).all()
+        entries = conn.execute(sa.select(credits.ledger.c.kind, credits.ledger.c.reason).where(
+            credits.ledger.c.account_id == receipt.view.account_id)).all()
     assert state.consistent and state.wallet.balance == 3 and state.wallet.available == 3
     assert entries == [('trial', 'guest_trial')]
 
