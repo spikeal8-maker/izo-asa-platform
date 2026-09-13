@@ -8,7 +8,7 @@ const csrf = 'g'.repeat(43)
 
 function guestView() {
   return { account_id: guestId, csrf_token: csrf, expires_at: 2_000_000_000,
-    remaining_jobs: 1, trial_credits: 3 }
+    trial_used: false, capability_id: 'test.image.v1' }
 }
 function failedJob() {
   return { id: jobId, status: 'failed', capability_id: 'test.image.v1', prompt: 'guest browser trial',
