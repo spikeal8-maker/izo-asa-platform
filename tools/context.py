@@ -71,9 +71,12 @@ def intent_bonus(task: str, kind_or_key: str) -> int:
     backend = any(token in folded for token in BACKEND_HINTS)
     is_ui = kind_or_key.startswith("ui") or kind_or_key.startswith("web.")
     is_backend = kind_or_key.startswith("backend") or kind_or_key.startswith("api.")
+    guest_marker = any(token in folded for token in ("guest", "гостев", "гость"))
     guest_trial = ("без регистрац" in folded or "до регистрац" in folded) and any(
         token in folded for token in ("проб", "попроб", "guest"))
-    guest_backend = backend and any(token in folded for token in ("guest", "гостев", "гость"))
+    guest_backend = backend and guest_marker
+    guest_ui = guest_marker and not backend and any(
+        token in folded for token in ("studio", "студи", "первая", "первый", "генерац", "проб"))
     bonus = 0
     if ui and is_ui:
         bonus += 5
@@ -91,6 +94,10 @@ def intent_bonus(task: str, kind_or_key: str) -> int:
         bonus += 10
     elif guest_backend and kind_or_key == "api.accounts":
         bonus -= 4
+    if guest_ui and kind_or_key == "web.guest":
+        bonus += 6
+    elif guest_ui and kind_or_key == "web.studio":
+        bonus -= 2
     return bonus
 
 
