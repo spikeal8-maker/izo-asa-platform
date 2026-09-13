@@ -1,6 +1,4 @@
-"""CREDIT tests are split by responsibility.
+"""Compatibility shim; CREDIT tests are split by responsibility."""
+from credit_support import assert_error, credit_env, grant, reserve
 
-Read `test_credits_lifecycle.py` for wallet/reservation behavior and
-`test_credits_safety.py` for permission/audit/database boundaries.
-Shared fixtures live in `credit_support.py`.
-"""
+__all__ = ["assert_error", "credit_env", "grant", "reserve"]
