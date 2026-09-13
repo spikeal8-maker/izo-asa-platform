@@ -20,7 +20,9 @@ async function login(page, user) {
   await page.getByLabel('Электронная почта').fill(user.email)
   await page.getByLabel('Пароль', { exact: true }).fill(user.password)
   await page.getByRole('button', { name: 'Войти', exact: true }).click()
-  await page.waitForURL('**/account')
+  await page.waitForURL(url => url.origin === origin && url.pathname === '/')
+  // Product login now returns to Feed. Open Account explicitly to prove the server cookie restored identity.
+  await page.goto('/account')
   await expect(page.getByTestId('server-account')).toBeVisible()
 }
 try {
@@ -57,7 +59,7 @@ try {
   await expect(userPage.locator('.admin-page').getByRole('alert')).toContainText('Нет необходимого')
   await expect(userPage.getByTestId('admin-available')).toHaveCount(0)
   await u.close()
-  console.log('ADMIN_BROWSER_OK: real login -> search -> confirmed grant -> reload -> own balance; ordinary user denied')
+  console.log('ADMIN_BROWSER_OK: real login -> Feed -> server identity -> search -> confirmed grant -> reload -> own balance; ordinary user denied')
 } finally {
   await browser.close()
 }
