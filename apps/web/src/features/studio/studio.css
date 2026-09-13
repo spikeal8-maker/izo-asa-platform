@@ -14,6 +14,7 @@
 .generate-button { width: 100%; font-size: .9rem; }
 .result-panel > .panel-heading { padding: 20px 24px; }
 .result-panel h2 { font-size: 1rem; }
+.result-image { display: block; width: 100%; height: auto; max-width: 100%; object-fit: contain; }
 .server-result-empty { display: flex; flex-direction: column; justify-content: center; align-items: flex-start; min-height: 390px; padding: 32px; gap: 12px; }
 .server-result-empty > .icon { width: 56px; height: 56px; color: var(--accent); }
 .server-result-empty p { max-width: 55ch; font-size: .95rem; line-height: 1.7; }
