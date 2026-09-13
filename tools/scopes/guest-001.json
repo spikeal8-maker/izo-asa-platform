@@ -1,6 +1,6 @@
 {
   "base": "731105b1c8d16d9774c987a31b62ee7143383ccc",
-  "max_files": 38,
+  "max_files": 39,
   "allowed": [
     ".github/workflows/ci.yml",
     "apps/api/izo/accounts/guest_schemas.py",
@@ -38,6 +38,7 @@
     "tests/test_guest.py",
     "tests/test_guest_http.py",
     "tests/test_guest_migration.py",
+    "tools/context.py",
     "tools/guest_acceptance.py",
     "tools/scopes/guest-001.json"
   ],
