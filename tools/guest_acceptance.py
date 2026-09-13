@@ -6,6 +6,7 @@ from uuid import UUID, uuid4
 
 import sqlalchemy as sa
 
+from izo.accounts import tables as account_tables
 from izo.accounts.guest_service import GuestService
 from izo.accounts.guest_settings import GuestSettings
 from izo.accounts.repository import create_auth_engine
@@ -16,9 +17,12 @@ from izo.accounts.settings import AuthSettings
 from izo.config import Settings
 from izo.credits.service import CreditService
 from izo.credits.trial import seed_guest_trial
+from izo.entitlements import tables as entitlement_tables
+from izo.entitlements.schemas import AssignPlan, ImageSize, PlanPolicy, PublishPlan
+from izo.entitlements.service import EntitlementService
 from izo.guest.media import read_owned
 from izo.jobs import tables as jt
-from izo.jobs.catalog import JobSettings
+from izo.jobs.catalog import JobSettings, output_bound
 from izo.jobs.execution import JobRunner
 from izo.jobs.schemas import ACTIVE, CreateJob, QuoteInput
 from izo.jobs.service import JobService
@@ -47,11 +51,41 @@ def no_active(conn, account_id):
         raise AuthError(409, "guest_job_active")
 
 
+def provision_trial_plan(auth, account_id):
+    """Assign an isolated custom revision without changing the shared basic default."""
+    invite = auth.issue_invite() if auth.policy.registration == "invite" else None
+    operator = auth.register(RegisterInput(email=f"guest-plan-{uuid4().hex}@example.invalid",
+        display_name="Guest acceptance operator", password=CLAIM_PASSWORD, invite_code=invite),
+        "guest-plan-operator", "guest-acceptance")
+    actor_id = operator.view.account.id
+    with auth.engine.begin() as conn:
+        conn.execute(sa.update(account_tables.identities).where(
+            account_tables.identities.c.account_id == actor_id).values(verified_at=auth.now()))
+        conn.execute(sa.insert(account_tables.permissions).values(
+            account_id=actor_id, permission="plans.write"))
+        revision = conn.execute(sa.select(sa.func.coalesce(
+            sa.func.max(entitlement_tables.revisions.c.revision), 0)).where(
+            entitlement_tables.revisions.c.plan_code == "custom")).scalar_one() + 1
+        revision_id = uuid4()
+        svc = EntitlementService(clock=auth.clock)
+        svc.publish(conn, actor_id, PublishPlan(operation_id=uuid4(), revision_id=revision_id,
+            plan_code="custom", revision=revision, reason="isolated guest acceptance",
+            policy=PlanPolicy(capability_ids=("test.image.v1",), executors=("api",),
+                active_jobs=1, submissions=1, window_seconds=3600,
+                storage_bytes=max(5_000_000, output_bound(512, 512)), upload_bytes=0,
+                input_count=0, image_sizes=(ImageSize(width=512, height=512),),
+                max_action_credits=1)))
+        svc.assign(conn, actor_id, account_id, AssignPlan(operation_id=uuid4(),
+            revision_id=revision_id, expected_version=0, starts_at=auth.now(),
+            reason="isolated guest acceptance"))
+
+
 def before():
     auth, guest, jobs, store = services()
     receipt = guest.start("guest-acceptance-network", "guest-acceptance",
         initializer=lambda conn, owner, now: seed_guest_trial(
             conn, owner, guest.settings.trial_credits, now))
+    provision_trial_plan(auth, receipt.view.account_id)
     draft = QuoteInput(capability_id="test.image.v1", prompt="guest restart acceptance",
                        width=512, height=512)
     quote = jobs.quote(receipt.bearer, receipt.view.csrf_token, draft)
