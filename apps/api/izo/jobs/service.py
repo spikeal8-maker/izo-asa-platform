@@ -14,10 +14,11 @@ from .schemas import QuoteInput, QuoteView, CreateJob, JobError, JobList, ACTIVE
 
 
 class JobService:
-    def __init__(self, auth, policy=None, fal=None):
+    def __init__(self, auth, policy=None, fal=None, admission_guard=None):
         self.auth = auth
         self.policy = policy if policy is not None else catalog.JobSettings()
         self.fal = fal if fal is not None else FalSettings()
+        self.admission_guard = admission_guard
 
     def _provider_available(self, spec, draft):
         if spec.id == catalog.FAL_CAPABILITY:
@@ -91,6 +92,8 @@ class JobService:
             if conn.execute(sa.select(t.jobs.c.id).where(t.jobs.c.quote_id == quote["id"])).first():
                 raise JobError(409, "quote_already_used")
             plan, spec = self._assess(conn, p.account_id, draft, p.now)
+            if self.admission_guard is not None:
+                self.admission_guard(conn, p, command, draft)
             job_id, output_id, reservation_id = uuid4(), uuid4(), uuid4()
             outputs.reserve(conn, p.account_id, output_id,
                 catalog.output_bound(draft.width, draft.height), draft.width, draft.height, p.now)

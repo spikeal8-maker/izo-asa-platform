@@ -64,6 +64,14 @@
       "base_head": "220d302dc238889da066c1799652d4b036007de3",
       "tested_merge_tree": "bd714eafbd339536127960689d1bb340ce83ad27",
       "workflows": {"Foundation CI": 34761737440, "Dependency Security": 34761737434, "Review Source": 34761737474}
+    },
+    "MAINT-SIZE-001": {
+      "type": "pr_merge_tree",
+      "source_head": "731105b1c8d16d9774c987a31b62ee7143383ccc",
+      "verified_pr": 33,
+      "base_head": "1ab67632de764ae38842f97888da058d74499c23",
+      "tested_merge_tree": "75cc59df986cb72c2a129a548674ae4d4060f14d",
+      "workflows": {"Foundation CI": 34764639890, "Dependency Security": 34764639881, "Review Source": 34764639891}
     }
   }
 }

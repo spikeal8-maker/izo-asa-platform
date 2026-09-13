@@ -1,6 +1,7 @@
 import type { components } from './api.generated'
 export type FoundationStatus = components['schemas']['FoundationStatus']
 export type AuthView = components['schemas']['AuthView']
+export type GuestView = components['schemas']['GuestView']
 export type SessionList = components['schemas']['SessionList']
 
 export class ApiError extends Error {

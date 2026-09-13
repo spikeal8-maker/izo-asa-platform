@@ -110,10 +110,11 @@ test('IMAGE-001 exhausted reconciliation does not start a new job or pretend ref
   expect(app.jobs).toHaveLength(1)
 })
 
-test('IMAGE-001 guest and unverified identity never submit using platform hints', async ({ page }) => {
+test('IMAGE-001 guest trial replaces the legacy login wall while unverified accounts remain blocked', async ({ page }) => {
   const app = await workspace(page); app.signedIn = false
   await page.goto('/image')
-  await expect(page.getByRole('heading', { name: 'Войдите, чтобы продолжить' })).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Попробуйте без регистрации' })).toBeVisible()
+  await expect(page.getByRole('button', { name: 'Создать пробную работу' })).toBeVisible()
   await expect(page.getByTestId('studio-available')).toHaveCount(0)
   app.signedIn = true; app.account.email_verified = false
   await page.reload()
@@ -208,7 +209,7 @@ test('CHANGE-001 C a familiar code inside server failure still reuses the pendin
     return route.fulfill({ status, json: { error: { code } } })
   })
   await estimate(page)
-  await page.getByRole('button', { name: 'Подтвердить создание', exact: true }).click()
+  await page.getByRole('button', { name: 'Подтвердить создание' }).click()
   await expect(page.getByRole('alert')).toContainText('Результат отправки пока неизвестен')
   await page.reload()
   await expect(page.getByRole('button', { name: 'Рассчитать стоимость' })).toBeDisabled()

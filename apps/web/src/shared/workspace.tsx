@@ -4,7 +4,9 @@ import { problem } from './workspace-api'
 import { Link } from '../shell/router'
 
 /** The backend owns permissions. This boundary prevents stale private UI across sessions. */
-export function WorkspaceGate({ children }: { children: (auth: AuthView) => ReactNode }) {
+export function WorkspaceGate({ children, unauthenticated }: {
+  children: (auth: AuthView) => ReactNode; unauthenticated?: ReactNode
+}) {
   const [auth, setAuth] = useState<AuthView | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
@@ -33,10 +35,10 @@ export function WorkspaceGate({ children }: { children: (auth: AuthView) => Reac
   }, [])
   if (loading) return <p role="status">Проверяем вход…</p>
   if (error) return <div role="alert" className="field-error">{error}<button onClick={() => setVersion(v => v + 1)}>Повторить загрузку</button></div>
-  if (!auth) return <section className="gallery-empty"><h2>Войдите, чтобы продолжить</h2>
+  if (!auth) return <>{unauthenticated ?? <section className="gallery-empty"><h2>Войдите, чтобы продолжить</h2>
     <p>Создайте аккаунт за минуту или войдите, если уже пользовались ИЗО АСА.</p>
     <div className="account-actions"><Link className="primary" href="/register">Создать аккаунт</Link><Link className="secondary" href="/login">Войти</Link></div>
-  </section>
+  </section>}</>
   return <div key={auth.account.id} data-testid="server-workspace">{children(auth)}</div>
 }
 

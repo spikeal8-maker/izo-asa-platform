@@ -6,6 +6,7 @@ import { apiRequest, type AuthView } from '../../shared/api'
 import { WorkspaceGate, ResourceState, useResource } from '../../shared/workspace'
 import { type Plan, type Credits, type Quote, type Job, problem, navigate } from '../../shared/workspace-api'
 import { type Pending, readPending, remember, forget, rejectedBeforeAdmission } from '../../shared/submission'
+import { GuestTrial } from './GuestTrial'
 import './studio.css'
 
 const imageCapabilities = [
@@ -139,5 +140,5 @@ function Composer({ auth }: { auth: AuthView }) {
 export function Studio() {
   return <><header className="page-heading"><p className="eyebrow">СТУДИЯ / ИЗОБРАЖЕНИЕ</p>
     <h1>Создайте изображение.</h1><p>Опишите идею, выберите режим и формат результата.</p></header>
-    <WorkspaceGate>{auth => <Composer auth={auth} />}</WorkspaceGate></>
+    <WorkspaceGate unauthenticated={<GuestTrial />}>{auth => <Composer auth={auth} />}</WorkspaceGate></>
 }

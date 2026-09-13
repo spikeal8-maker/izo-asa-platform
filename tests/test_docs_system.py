@@ -40,20 +40,21 @@ def test_routing_corpus_prefers_correct_or_safe_failure():
             assert "NOT RESOLVED" in result.stderr
 
 
-def test_plan_tracks_modularity_maintenance_after_green_ux_checkpoint():
+def test_plan_tracks_guest_after_modularity_checkpoint():
     plan = json.loads((ROOT / "docs/PLAN.json").read_text(encoding="utf-8"))
     checkpoints = json.loads((ROOT / "docs/CHECKPOINTS.json").read_text(encoding="utf-8"))
     lineage = plan["canonical_lineage"]
     assert lineage["runtime_base"]["branch"] == "api/fal-klein-001"
-    assert lineage["current_package_base"]["sha"] == "1ab67632de764ae38842f97888da058d74499c23"
-    assert lineage["working_branch"] == "maint/repository-modularity"
+    assert lineage["current_package_base"]["sha"] == "731105b1c8d16d9774c987a31b62ee7143383ccc"
+    assert lineage["working_branch"] == "feat/guest-trial"
     assert lineage["next_branch_source"] == "verified_working_head"
-    assert plan["active_package"] == "MAINT-SIZE-001" and plan["next_package"] is None
-    assert plan["packages"]["UX-002"]["status"] == "technical_pass"
-    assert plan["packages"]["UX-002"]["checkpoint"] == "UX-002"
-    assert checkpoints["checkpoints"]["UX-002"]["source_head"] == lineage["current_package_base"]["sha"]
+    assert plan["active_package"] == "GUEST-001" and plan["next_package"] is None
+    assert plan["packages"]["MAINT-SIZE-001"]["status"] == "technical_pass"
+    assert plan["packages"]["MAINT-SIZE-001"]["checkpoint"] == "MAINT-SIZE-001"
+    assert checkpoints["checkpoints"]["MAINT-SIZE-001"]["source_head"] == lineage["current_package_base"]["sha"]
     assert plan["packages"]["CATALOG-002"]["status"] == "planned"
-    assert plan["packages"]["GUEST-001"]["status"] == "planned"
+    assert plan["packages"]["GUEST-001"]["status"] == "active"
+    assert "MAINT-SIZE-001" in plan["packages"]["GUEST-001"]["depends_on"]
     assert all("evidence" not in item for item in plan["packages"].values())
 
 

@@ -20,6 +20,7 @@ from .access.routes import attach_access
 from .settings.routes import attach_settings
 from .media.routes import attach_media
 from .jobs.routes import attach_jobs
+from .guest import attach_guest
 
 logger = logging.getLogger("izo.http")
 
@@ -49,6 +50,7 @@ def create_app(config: Settings | None = None,
     attach_settings(app, accounts_service)
     attach_media(app, accounts_service, config)
     attach_jobs(app, accounts_service)
+    attach_guest(app, accounts_service, config)
 
     @app.middleware("http")
     async def request_context(request: Request, call_next):
@@ -57,9 +59,6 @@ def create_app(config: Settings | None = None,
         try:
             response = await call_next(request)
         except Exception:
-            # Never log raw exceptions: provider/config errors can contain secrets.
-            # This handles errors before a response starts; streaming needs its
-            # own lifecycle/error handling when that feature is implemented.
             response = JSONResponse(
                 {"error": {"code": "internal_error", "request_id": request_id}},
                 status_code=500,
