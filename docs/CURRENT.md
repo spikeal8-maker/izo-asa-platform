@@ -1,9 +1,9 @@
 # IZO ASA · текущая точка разработки
 
 <!-- runtime_base=api/fal-klein-001@faec39d6ae0b4f035ef0f86114494789acde3b46 -->
-<!-- current_package_base=settings/plan-policy@220d302dc238889da066c1799652d4b036007de3 -->
-<!-- working_branch=ux/product-shell -->
-<!-- active_package=UX-002 -->
+<!-- current_package_base=ux/product-shell@1ab67632de764ae38842f97888da058d74499c23 -->
+<!-- working_branch=maint/repository-modularity -->
+<!-- active_package=MAINT-SIZE-001 -->
 <!-- next_package=NONE -->
 
 Это короткая точка входа после `AGENTS.md`. Machine source of truth — `PLAN.json`.
@@ -15,5 +15,5 @@
 Следующий package стартует командой `python tools/project_state.py begin-next ...`: она проверяет GitHub PR
 и required workflows текущего working head, создаёт новую ветку точно от этого head и только там меняет state.
 
-Активный пакет: **UX-002**. Следующий: **NONE**.
+Активный пакет: **MAINT-SIZE-001**. Следующий: **NONE**.
 Параллельные lineages из PLAN нельзя использовать как base без reconciliation.

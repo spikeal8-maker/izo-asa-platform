@@ -7,6 +7,7 @@ import re
 
 ROOT = Path(__file__).resolve().parents[1]
 PLAN_PATH = ROOT / "docs" / "PLAN.json"
+CHECKPOINTS_PATH = ROOT / "docs" / "CHECKPOINTS.json"
 READY_DEPENDENCY_STATUSES = {
     "technical_pass",
     "technical_ci_pass_live_acceptance_pending",
@@ -18,6 +19,11 @@ NEXT_PACKAGE_SOURCE_STATUSES = {"planned"}
 
 def load_plan(root: Path = ROOT) -> dict:
     return json.loads((root / "docs" / "PLAN.json").read_text(encoding="utf-8"))
+
+
+def load_checkpoints(root: Path = ROOT) -> dict:
+    path = root / "docs" / "CHECKPOINTS.json"
+    return json.loads(path.read_text(encoding="utf-8")) if path.exists() else {"schema_version": 1, "checkpoints": {}}
 
 
 def render_current(plan: dict) -> str:
@@ -122,16 +128,15 @@ def transition(plan: dict, *, activate: str, next_id: str | None,
             raise ValueError(f"next package {next_id} must directly depend on activating package {activate}")
     result = json.loads(json.dumps(plan))
     result["packages"][active]["status"] = "technical_pass"
-    result["packages"][active]["evidence"] = evidence
+    result["packages"][active]["checkpoint"] = active
+    result["packages"][active].pop("evidence", None)
     result["packages"][activate]["status"] = "active"
     result["active_package"] = activate
     result["next_package"] = next_id
     lineage = result["canonical_lineage"]
     lineage["current_package_base"] = {
-        "branch": lineage["working_branch"],
-        "sha": source_head,
-        "state": "verified_pr_merge_tree_checkpoint",
-    }
+        "branch": lineage["working_branch"], "sha": source_head,
+        "state": "verified_pr_merge_tree_checkpoint"}
     lineage["working_branch"] = new_branch
     if next_id is not None:
         result["packages"][next_id]["status"] = "planned_next"
@@ -164,6 +169,13 @@ def serialize_plan(plan: dict) -> str:
     return "\n".join([*lines, "}"]) + "\n"
 
 
-def write_state(plan: dict, root: Path = ROOT) -> None:
+def serialize_checkpoints(checkpoints: dict) -> str:
+    return json.dumps(checkpoints, ensure_ascii=False, indent=2, sort_keys=True) + "\n"
+
+
+def write_state(plan: dict, checkpoints: dict | None = None, root: Path = ROOT) -> None:
     (root / "docs" / "PLAN.json").write_bytes(serialize_plan(plan).encode("utf-8"))
     (root / "docs" / "CURRENT.md").write_bytes(render_current(plan).encode("utf-8"))
+    if checkpoints is not None:
+        (root / "docs" / "CHECKPOINTS.json").write_bytes(
+            serialize_checkpoints(checkpoints).encode("utf-8"))

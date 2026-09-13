@@ -9,9 +9,10 @@ import subprocess
 import sys
 from urllib.parse import urlparse
 
-from project_state_model import (NEXT_PACKAGE_SOURCE_STATUSES, PLAN_PATH,
-    READY_DEPENDENCY_STATUSES, ROOT, dependency_problems, load_plan, render_current,
-    serialize_plan, transition, validate_plan, validate_ref, write_state)
+from project_state_model import (CHECKPOINTS_PATH, NEXT_PACKAGE_SOURCE_STATUSES, PLAN_PATH,
+    READY_DEPENDENCY_STATUSES, ROOT, dependency_problems, load_checkpoints, load_plan,
+    render_current, serialize_checkpoints, serialize_plan, transition, validate_plan,
+    validate_ref, write_state)
 
 REQUIRED_WORKFLOWS = ("Foundation CI", "Dependency Security", "Review Source")
 
@@ -139,14 +140,26 @@ def begin_next(plan: dict, *, branch: str, activate: str, next_id: str | None,
         raise ValueError("next package requires a new branch")
     updated = transition(plan, activate=activate, next_id=next_id, new_branch=branch,
                          source_head=source_head, evidence=evidence)
-    plan_bytes = (root / "docs" / "PLAN.json").read_bytes()
-    current_bytes = (root / "docs" / "CURRENT.md").read_bytes()
+    checkpoints = load_checkpoints(root)
+    checkpoints = json.loads(json.dumps(checkpoints))
+    checkpoints.setdefault("checkpoints", {})[plan["active_package"]] = evidence
+    plan_path = root / "docs" / "PLAN.json"
+    current_path = root / "docs" / "CURRENT.md"
+    checkpoint_path = root / "docs" / "CHECKPOINTS.json"
+    originals = {
+        plan_path: plan_path.read_bytes(),
+        current_path: current_path.read_bytes(),
+        checkpoint_path: checkpoint_path.read_bytes() if checkpoint_path.exists() else None,
+    }
     git("switch", "-c", branch, source_head, root=root)
     try:
-        write_state(updated, root=root)
+        write_state(updated, checkpoints, root=root)
     except Exception:
-        (root / "docs" / "PLAN.json").write_bytes(plan_bytes)
-        (root / "docs" / "CURRENT.md").write_bytes(current_bytes)
+        for path, data in originals.items():
+            if data is None:
+                path.unlink(missing_ok=True)
+            else:
+                path.write_bytes(data)
         git("switch", current_branch, root=root)
         git("branch", "-D", branch, root=root)
         raise
@@ -187,7 +200,8 @@ if __name__ == "__main__":
     raise SystemExit(main())
 
 
-__all__ = ["NEXT_PACKAGE_SOURCE_STATUSES", "PLAN_PATH", "READY_DEPENDENCY_STATUSES", "ROOT",
-    "begin_next", "dependency_problems", "fetch_pr_evidence", "git", "load_plan", "render_current",
-    "serialize_plan", "transition", "validate_plan", "validate_pr_evidence", "validate_ref",
-    "verify_checkout", "write_state"]
+__all__ = ["CHECKPOINTS_PATH", "NEXT_PACKAGE_SOURCE_STATUSES", "PLAN_PATH",
+    "READY_DEPENDENCY_STATUSES", "ROOT", "begin_next", "dependency_problems",
+    "fetch_pr_evidence", "git", "load_checkpoints", "load_plan", "render_current",
+    "serialize_checkpoints", "serialize_plan", "transition", "validate_plan",
+    "validate_pr_evidence", "validate_ref", "verify_checkout", "write_state"]

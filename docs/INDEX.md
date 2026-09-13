@@ -13,6 +13,7 @@ INDEX — **стабильная карта**, а не статус и не road
 | Какой feature/domain читать, если block неизвестен | [CONTEXT_MAP.json](CONTEXT_MAP.json) |
 | Как coding-агент должен работать | [DEVELOPMENT.md](DEVELOPMENT.md), кратко — корневой `AGENTS.md` |
 | Как устроена сама документация | [DOCS_SYSTEM.md](DOCS_SYSTEM.md) |
+| Immutable CI/checkpoint evidence | `CHECKPOINTS.json` — только при проверке provenance, не стартовый контекст |
 | Почему выбрана текущая архитектурная линия | `adr/` (текущее решение ADR-002; ADR-001 — pre-reconciliation history) |
 | Что пользователь должен видеть/уметь | [PRODUCT.md](PRODUCT.md) + owner decisions в [UX_PRODUCT_SHELL.md](UX_PRODUCT_SHELL.md) |
 | Админка, permissions, settings | [ADMIN.md](ADMIN.md) |
@@ -26,6 +27,6 @@ INDEX — **стабильная карта**, а не статус и не road
 
 ## Правило для маленькой правки
 
-Не открывать PRODUCT/ADMIN/AI_RUNTIME целиком автоматически. Сначала block locator: owner/symbol/anchor и
+Не открывать PRODUCT/ADMIN/AI_RUNTIME/CHECKPOINTS целиком автоматически. Сначала block locator: owner/symbol/anchor и
 окружающий source block. Если block неизвестен — feature/domain route и локальный README. Большой документ
 нужен только при пересечении предметной границы. `AMBIGUOUS` безопаснее случайного выбора.
