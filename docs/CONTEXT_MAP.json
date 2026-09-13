@@ -29,6 +29,13 @@
       "expand_if_needed": ["apps/web/src/shared/workspace-api.ts", "apps/web/src/shared/submission.ts"],
       "do_not_read_by_default": ["docs/ADMIN.md", "docs/OPERATIONS.md", "apps/api/izo/admin"]
     },
+    "web.guest": {
+      "keywords": ["пробная работа без регистрации", "гостевой интерфейс", "guest trial ui", "guest studio", "создать до регистрации"],
+      "read_first": ["apps/web/AGENTS.md", "apps/web/src/features/studio/GuestTrial.tsx", "apps/web/src/features/studio/Studio.tsx"],
+      "tests": ["apps/web/e2e/studio.spec.ts"],
+      "expand_if_needed": ["apps/web/src/features/accounts/AccountPage.tsx", "apps/web/src/shared/api.ts", "apps/api/izo/guest/README.md"],
+      "do_not_read_by_default": ["docs/ADMIN.md", "docs/AI_RUNTIME.md", "apps/api/izo/providers"]
+    },
     "web.gallery": {
       "keywords": ["галерея", "скачать", "превью", "карточка изображения", "gallery", "download", "preview", "asset"],
       "read_first": ["apps/web/AGENTS.md", "apps/web/src/features/gallery/README.md", "apps/web/src/features/gallery/Gallery.tsx", "apps/web/src/features/gallery/AssetPage.tsx", "apps/web/src/features/gallery/gallery.css"],
@@ -63,6 +70,13 @@
       "tests": ["tests/test_accounts.py", "tests/test_auth_boundaries.py"],
       "expand_if_needed": ["apps/api/izo/accounts/tables.py", "apps/api/izo/accounts/security.py", "docs/ARCHITECTURE.md", "docs/UX_PRODUCT_SHELL.md"],
       "do_not_read_by_default": ["docs/ADMIN.md", "docs/AI_RUNTIME.md", "apps/web"]
+    },
+    "api.guest": {
+      "keywords": ["guest api", "гостевая сессия backend", "guest claim backend", "guest trial backend", "пробный лимит backend", "guest csrf"],
+      "read_first": ["apps/api/AGENTS.md", "apps/api/izo/guest/README.md", "apps/api/izo/guest/routes.py", "apps/api/izo/accounts/guest_service.py"],
+      "tests": ["tests/test_guest.py", "tests/test_guest_http.py"],
+      "expand_if_needed": ["apps/api/izo/credits/trial.py", "apps/api/izo/accounts/guest_tables.py", "apps/api/izo/jobs/service.py"],
+      "do_not_read_by_default": ["docs/ADMIN.md", "docs/AI_RUNTIME.md", "apps/api/izo/providers"]
     },
     "api.credits": {
       "keywords": ["reserve", "settle", "refund", "ledger", "credit", "списание", "резерв", "возврат баллов"],
