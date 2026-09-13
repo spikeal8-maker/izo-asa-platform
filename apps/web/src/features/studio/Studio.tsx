@@ -131,7 +131,7 @@ function Composer({ auth }: { auth: AuthView }) {
         {expired && <p role="alert">Расчёт устарел. Закройте окно и повторите.</p>}
         <button className="primary full-width quote-submit" aria-label="Подтвердить создание"
           aria-describedby="quote-reserve" disabled={busy || expired} onClick={() => void submit()}>
-          <span>Создать</span><small data-testid="quote-submit-price" aria-hidden="true">Резерв: {quote.credits} балл.</small>
+          <span>Подтвердить создание</span><small data-testid="quote-submit-price" aria-hidden="true">Резерв: {quote.credits} балл.</small>
         </button></>}
     </Dialog>
   </div>

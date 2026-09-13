@@ -88,7 +88,8 @@ export function App() {
 
     <div className="app-body"><header className="topbar">
       <div className="mobile-head">
-        <button className="mobile-menu-button" aria-label={mobileMenu ? 'Закрыть меню' : 'Открыть меню'} onClick={() => setMobileMenu(value => !value)}>☰</button>
+        <button className="mobile-menu-button" aria-label="Меню" aria-expanded={mobileMenu}
+          aria-controls="mobile-menu" onClick={() => setMobileMenu(value => !value)}>☰</button>
         <Link className="mobile-brand" href="/">ИЗО АСА</Link>
       </div>
       <nav className="direction-nav" aria-label="Инструменты">{directions.map(item => <Link key={item.href} href={item.href}
@@ -99,7 +100,7 @@ export function App() {
           : <><Link className="login-link" href="/login">Войти</Link><Link className="signup-link" href="/register">Регистрация</Link></>}
         <button className="icon-button" aria-label="Переключить тему" onClick={() => setTheme(value => value === 'light' ? 'dark' : 'light')}><Icon name="sun" /></button>
       </div>
-      {mobileMenu && <div className="mobile-menu" role="dialog" aria-label="Меню">
+      {mobileMenu && <div id="mobile-menu" className="mobile-menu" role="dialog" aria-label="Меню">
         <div className="mobile-menu-directions">{directions.map(item => <Link key={item.href} href={item.href}>{item.title}</Link>)}</div>
         <div className="mobile-menu-account">{auth ? <><Link href="/account">Аккаунт</Link><Link href="/account/credits">Баланс</Link></>
           : <><Link href="/login">Войти</Link><Link href="/register">Создать аккаунт</Link></>}</div>

@@ -10,8 +10,15 @@ test('feed-first shell is product-facing and overflow-free', async ({ page }) =>
   await expect(page.locator('.feed-card')).toHaveCount(6)
   await expect(page.getByText('ТЕСТОВАЯ ПЛАТФОРМА')).toHaveCount(0)
   await expect(page.getByText(/Одно место\.\s*Много возможностей/i)).toHaveCount(0)
-  await expect(page.getByRole('link', { name: 'Войти', exact: true })).toBeVisible()
-  await expect(page.getByRole('link', { name: 'Регистрация', exact: true })).toBeVisible()
+  if ((page.viewportSize()?.width ?? 9999) <= 820) {
+    await page.getByRole('button', { name: 'Меню', exact: true }).click()
+    const menu = page.getByRole('dialog', { name: 'Меню' })
+    await expect(menu.getByRole('link', { name: 'Войти', exact: true })).toBeVisible()
+    await expect(menu.getByRole('link', { name: 'Создать аккаунт', exact: true })).toBeVisible()
+  } else {
+    await expect(page.getByRole('link', { name: 'Войти', exact: true })).toBeVisible()
+    await expect(page.getByRole('link', { name: 'Регистрация', exact: true })).toBeVisible()
+  }
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true)
 })
 
@@ -38,8 +45,8 @@ test('jobs are not primary navigation while deep link remains available', async 
 test('mobile has top menu plus short bottom navigation', async ({ page }, info) => {
   test.skip(!info.project.name.startsWith('phone'))
   await page.goto('/')
-  await expect(page.getByRole('button', { name: 'Открыть меню' })).toBeVisible()
-  await page.getByRole('button', { name: 'Открыть меню' }).click()
+  await expect(page.getByRole('button', { name: 'Меню', exact: true })).toBeVisible()
+  await page.getByRole('button', { name: 'Меню', exact: true }).click()
   await expect(page.getByRole('dialog', { name: 'Меню' })).toBeVisible()
   await expect(page.getByRole('dialog', { name: 'Меню' }).getByRole('link', { name: 'Чат' })).toBeVisible()
   const primary = page.getByRole('navigation', { name: 'Основные разделы' })
