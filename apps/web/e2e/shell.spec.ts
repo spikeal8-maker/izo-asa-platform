@@ -1,7 +1,6 @@
 import { test, expect } from '@playwright/test'
 
 test.beforeEach(async ({ page }) => {
-  await page.route('**/api/v1/foundation', route => route.fulfill({ json: { stage: 'foundation', build_sha: 'unreleased', capabilities: [] } }))
   await page.route('**/api/v1/auth/me', route => route.fulfill({ status: 401, json: { error: { code: 'auth_required' } } }))
 })
 
@@ -13,7 +12,6 @@ test('feed-first shell is product-facing and overflow-free', async ({ page }) =>
   await expect(page.getByText(/Одно место\.\s*Много возможностей/i)).toHaveCount(0)
   await expect(page.getByRole('link', { name: 'Войти', exact: true })).toBeVisible()
   await expect(page.getByRole('link', { name: 'Регистрация', exact: true })).toBeVisible()
-  await expect(page.locator('footer').getByRole('status')).toContainText('API отвечает')
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true)
 })
 
@@ -58,15 +56,6 @@ test('8K shell uses wide canvas without stretching reading text', async ({ page 
   expect((await grid.boundingBox())?.width ?? 0).toBeGreaterThan(4000)
   expect((await page.locator('.feed-hero-copy').boundingBox())?.width ?? 9999).toBeLessThan(1000)
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true)
-})
-
-test('API failure is visible and retry recovers', async ({ page }) => {
-  await page.route('**/api/v1/foundation', route => route.fulfill({ status: 503, body: '{}' }))
-  await page.goto('/')
-  await expect(page.locator('footer').getByRole('status')).toContainText('API недоступен')
-  await page.route('**/api/v1/foundation', route => route.fulfill({ json: { stage: 'foundation', capabilities: [] } }))
-  await page.getByRole('button', { name: 'Повторить' }).click()
-  await expect(page.locator('footer').getByRole('status')).toContainText('API отвечает')
 })
 
 for (const host of ['telegram', 'max'] as const) {

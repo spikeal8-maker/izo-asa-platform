@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { Dialog } from '../../shared/ui/Dialog'
-import { Icon, type IconName } from '../../shared/ui/Icon'
+import { Icon } from '../../shared/ui/Icon'
 import { Link } from '../../shell/router'
 import { apiRequest, type AuthView } from '../../shared/api'
 import { WorkspaceGate, ResourceState, useResource } from '../../shared/workspace'
@@ -8,16 +8,9 @@ import { type Plan, type Credits, type Quote, type Job, problem, navigate } from
 import { type Pending, readPending, remember, forget, rejectedBeforeAdmission } from '../../shared/submission'
 import './studio.css'
 
-const directions: { title: string; href: string; icon: IconName }[] = [
-  { title: 'Изображение', href: '/image', icon: 'image' },
-  { title: 'Видео', href: '/studio/video', icon: 'video' },
-  { title: 'Звук', href: '/studio/audio', icon: 'audio' },
-  { title: '3D', href: '/studio/3d', icon: 'cube' },
-  { title: 'Чат', href: '/studio/chat', icon: 'chat' },
-]
 const imageCapabilities = [
-  { id: 'test.image.v1', title: 'Диагностическое изображение', detail: 'test.image.v1 · не нейросеть' },
-  { id: 'fal.flux2.klein.4b', title: 'FLUX.2 [klein] 4B', detail: 'fal.ai · реальная AI-модель' },
+  { id: 'test.image.v1', title: 'Пробный режим', detail: 'Знакомство с процессом без внешней AI-модели' },
+  { id: 'fal.flux2.klein.4b', title: 'FLUX.2 [klein] 4B', detail: 'AI-генерация изображения' },
 ]
 function Composer({ auth }: { auth: AuthView }) {
   const plan = useResource<Plan>('/api/v1/entitlements')
@@ -77,14 +70,13 @@ function Composer({ auth }: { auth: AuthView }) {
     } catch (reason) {
       if (!alive.current) return
       if (!command) {
-        setQuote(null)
-        setStorageError(true)
+        setQuote(null); setStorageError(true)
         setError('Не удалось сохранить номер запроса. Отправка задания не выполнялась.')
       } else if (rejectedBeforeAdmission(reason)) {
         try { forget(auth.account.id); setPending(null) } catch { setStorageError(true) }
         setError(problem(reason))
       } else {
-        setError('Результат отправки пока неизвестен. Повторите тот же запрос или проверьте задания; новое списание не создаётся.')
+        setError('Результат отправки пока неизвестен. Повторите тот же запрос или проверьте историю; новое списание не создаётся.')
       }
     } finally { active.current = false; if (alive.current) setBusy(false) }
   }
@@ -93,27 +85,24 @@ function Composer({ auth }: { auth: AuthView }) {
       <div className="panel-heading"><h2 id="composer-title">Что создаём?</h2><Icon name="spark" /></div>
       <ResourceState loading={plan.loading || credits.loading} error={plan.error || credits.error}
         retry={() => { plan.refresh(); credits.refresh() }} />
-      {credits.data && <p>Доступно на сервере: <strong data-testid="studio-available">{credits.data.balance.available}</strong> баллов.
-        В резерве: {credits.data.balance.reserved}.</p>}
-      {!auth.account.email_verified && <p className="field-error"><Link href="/verify-email">Подтвердите почту</Link> перед созданием задания.</p>}
-      {plan.data && !permitted && auth.account.email_verified && <p className="field-error">Оператор должен разрешить модель, API-исполнитель и размеры в вашем плане.</p>}
+      {credits.data && <p>Доступно: <strong data-testid="studio-available">{credits.data.balance.available}</strong> баллов.</p>}
+      {!auth.account.email_verified && <p className="field-error"><Link href="/verify-email">Подтвердите почту</Link>, чтобы сохранять новые генерации в аккаунте.</p>}
+      {plan.data && !permitted && auth.account.email_verified && <p className="field-error">Этот режим сейчас недоступен для вашего аккаунта.</p>}
       {storageError && <p role="alert" className="field-error">Хранилище номера запроса недоступно или повреждено.
-        Отправка заблокирована, чтобы не потерять защиту от повторов. <Link href="/jobs">Проверить задания</Link>.</p>}
-      {pending && <div className="pending-command" role="status">
-        <strong>Есть незавершённое подтверждение</strong>
+        Отправка заблокирована, чтобы не потерять защиту от повторов. <Link href="/jobs">Проверить историю</Link>.</p>}
+      {pending && <div className="pending-command" role="status"><strong>Есть незавершённая отправка</strong>
         <p>Сохраняется прежний номер запроса. Не создавайте замену, пока не проверен результат.</p>
         <button className="primary" disabled={busy} onClick={() => void submit()}>Проверить прежний запрос</button>
-        <Link href="/jobs">Открыть задания</Link>
-      </div>}
+        <Link href="/jobs">Открыть историю</Link></div>}
       <label className="field-label" htmlFor="prompt">Описание</label>
       <div className="prompt-field"><textarea id="prompt" rows={5} maxLength={2000}
-        placeholder="Опишите задачу…" disabled={busy || !!pending} value={prompt}
+        placeholder="Опишите изображение, стиль, свет и детали…" disabled={busy || !!pending} value={prompt}
         onChange={event => { setPrompt(event.target.value); setQuote(null) }} />
         <span>{prompt.length} / 2000</span></div>
-      <label className="field-label" htmlFor="image-capability">Исполнитель</label>
+      <label className="field-label" htmlFor="image-capability">Режим</label>
       <select id="image-capability" value={chosenCapability?.id ?? ''} disabled={busy || !!pending}
         onChange={event => { setCapability(event.target.value); setQuote(null) }}>
-        {!capabilities.length && <option value="">Нет доступных моделей</option>}
+        {!capabilities.length && <option value="">Нет доступных режимов</option>}
         {capabilities.map(item => <option key={item.id} value={item.id}>{item.title}</option>)}
       </select>
       {chosenCapability && <p><strong>{chosenCapability.title}</strong><br /><small>{chosenCapability.detail}</small></p>}
@@ -121,42 +110,34 @@ function Composer({ auth }: { auth: AuthView }) {
       <select id="image-size" value={chosen ? `${chosen.width}x${chosen.height}` : ''} disabled={busy || !!pending}
         onChange={event => { setSize(event.target.value); setQuote(null) }}>
         {!sizes.length && <option value="">Нет доступных размеров</option>}
-        {sizes.map(item => <option key={`${item.width}x${item.height}`} value={`${item.width}x${item.height}`}>
-          {item.width} × {item.height}</option>)}
+        {sizes.map(item => <option key={`${item.width}x${item.height}`} value={`${item.width}x${item.height}`}>{item.width} × {item.height}</option>)}
       </select>
-      <p>Исходники и редактирование пока не подключены. Разрешение вашего экрана не меняет размер файла.</p>
       {error && <p className="field-error" role="alert">{error}</p>}
       <button className="primary generate-button" disabled={!canQuote} onClick={() => void estimate()}>
         <Icon name="spark" />{busy ? 'Проверяем…' : 'Рассчитать стоимость'}</button>
-      <p><Link href="/account/credits">Баланс и история</Link> · <Link href="/jobs">Мои задания</Link></p>
+      <p><Link href="/account/credits">Баланс</Link> · <Link href="/jobs">История</Link></p>
     </section>
-    <section className="result-panel"><div className="panel-heading"><h2>От запроса к сохранённой работе</h2></div>
-      <div className="server-result-empty"><Icon name="image" /><h3>Результат создаётся на сервере</h3>
-        <p>Подтвердите цену. Задание сохранится в базе и будет выполнено отдельным процессом, даже после закрытия страницы.</p>
-        <p>Тестовый исполнитель остаётся для проверок; реальная модель используется только когда она разрешена планом и серверным подключением.</p>
-        <Link className="secondary" href="/gallery">Открыть мою галерею</Link></div>
+    <section className="result-panel"><div className="panel-heading"><h2>Результат</h2></div>
+      <div className="server-result-empty"><Icon name="image" /><h3>Здесь появится готовая работа</h3>
+        <p>После подтверждения результат сохранится в вашей галерее, откуда его можно открыть и скачать.</p>
+        <Link className="secondary" href="/gallery">Открыть галерею</Link></div>
     </section>
-    <Dialog open={!!quote} title="Подтвердить серверное задание?" onClose={() => { if (!busy) setQuote(null) }}>
-      {quote && <><p>{quote.notice}</p><dl className="summary-list">
-        <div><dt>Размер файла</dt><dd>{quote.width} × {quote.height}</dd></div>
-        <div><dt>Серверный резерв</dt><dd id="quote-reserve">{quote.credits} балл.</dd></div>
-        <div><dt>Реальный AI-вызов</dt><dd>{quote.test_only ? 'Нет' : 'Да'}</dd></div></dl>
+    <Dialog open={!!quote} title="Создать изображение?" onClose={() => { if (!busy) setQuote(null) }}>
+      {quote && <><p>{quote.test_only ? 'Пробный режим: результат создаётся без внешней AI-модели.' : quote.notice}</p><dl className="summary-list">
+        <div><dt>Размер</dt><dd>{quote.width} × {quote.height}</dd></div>
+        <div><dt>Баллы для запуска</dt><dd id="quote-reserve">{quote.credits} балл.</dd></div>
+        <div><dt>Режим</dt><dd>{quote.test_only ? 'Пробный' : 'AI'}</dd></div></dl>
         <p className="quote-prompt">{quote.prompt}</p>
-        {expired && <p role="alert">Цена устарела. Закройте окно и рассчитайте её заново.</p>}
+        {expired && <p role="alert">Расчёт устарел. Закройте окно и повторите.</p>}
         <button className="primary full-width quote-submit" aria-label="Подтвердить создание"
           aria-describedby="quote-reserve" disabled={busy || expired} onClick={() => void submit()}>
-          <span>Подтвердить создание</span>
-          <small data-testid="quote-submit-price" aria-hidden="true">Резерв: {quote.credits} балл.</small>
+          <span>Создать</span><small data-testid="quote-submit-price" aria-hidden="true">Резерв: {quote.credits} балл.</small>
         </button></>}
     </Dialog>
   </div>
 }
 export function Studio() {
-  return <><header className="page-heading"><p className="eyebrow">СТУДИЯ / СЕРВЕР</p>
-    <h1>Ваша идея. <span>Новая форма.</span></h1><p>Задания и результаты сохраняются в вашем аккаунте.</p></header>
-    <div className="direction-tabs" aria-label="Направления творчества">{directions.map((item, index) =>
-      <Link key={item.href} href={item.href} className={`workspace-card ${index === 0 ? 'selected' : ''}`}
-        aria-current={index === 0 ? 'page' : undefined}><Icon name={item.icon} />{item.title}
-        {index > 0 && <span className="direction-soon">позже</span>}</Link>)}</div>
+  return <><header className="page-heading"><p className="eyebrow">СТУДИЯ / ИЗОБРАЖЕНИЕ</p>
+    <h1>Создайте изображение.</h1><p>Опишите идею, выберите режим и формат результата.</p></header>
     <WorkspaceGate>{auth => <Composer auth={auth} />}</WorkspaceGate></>
 }

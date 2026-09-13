@@ -1,6 +1,5 @@
 import { useEffect, useState } from 'react'
 import { detectHost } from '../platform/host'
-import { ApiStatus } from './ApiStatus'
 import { SectionPage } from './SectionPage'
 import { Link, usePath } from './router'
 import { Icon, type IconName } from '../shared/ui/Icon'
@@ -115,6 +114,6 @@ export function App() {
         : detail ? <AssetPage key={path} id={path.slice('/gallery/'.length)} />
         : jobs ? <ResultPanel key={path} id={path === '/jobs' ? undefined : path.slice('/jobs/'.length)} />
         : <SectionPage path={path} />}
-    </main><footer><span>ИЗО АСА</span><ApiStatus /></footer></div></div>
+    </main><footer><span>ИЗО АСА</span></footer></div></div>
   </div>
 }
