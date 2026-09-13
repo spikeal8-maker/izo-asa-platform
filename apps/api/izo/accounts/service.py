@@ -32,7 +32,6 @@ class AuthService:
         now, window = self.now(), self.policy.rate_window
         start = now - now % window
         secret = self.policy.rate_secret.get_secret_value()
-        # Fixed-window counters are committed even when login fails. No raw PII.
         with self.engine.begin() as conn:
             network = repo.consume_rate(conn, rate_key(secret, "network", peer), start,
                                         self.policy.network_limit)
@@ -43,7 +42,7 @@ class AuthService:
             raise AuthError(429, "rate_limited", start + window - now)
 
     def issue_invite(self, ttl_seconds: int = 86400) -> str:
-        """Operator/isolated test command; deliberately not exposed by public HTTP."""
+        """Operator/closed-test command; never part of normal public registration."""
         if not 60 <= ttl_seconds <= 604800:
             raise ValueError("Invite lifetime out of range")
         now, raw, invite_id = self.now(), token(), uuid4()
@@ -60,7 +59,6 @@ class AuthService:
             permissions=repo.grant_names(conn, account["id"], self.now())), csrf_token=csrf)
 
     def _new_session(self, conn, account, label: str, now: int) -> Receipt:
-        # Caller holds account row lock: concurrent logins respect the cap.
         active = self._active_sessions(conn, account["id"], now)
         if len(active) >= self.policy.max_sessions:
             raise AuthError(409, "session_limit")
@@ -75,32 +73,37 @@ class AuthService:
 
     def register(self, data: RegisterInput, peer: str, label: str) -> Receipt:
         self.throttle(data.email, peer)
-        if self.policy.registration != "invite":
+        mode = self.policy.registration
+        if mode == "disabled":
             raise AuthError(403, "registration_disabled")
-        code = data.invite_code.get_secret_value()
-        if not TOKEN.fullmatch(code):
+        code = data.invite_code.get_secret_value() if data.invite_code else ""
+        if mode == "invite" and (not code or not TOKEN.fullmatch(code)):
             raise AuthError(400, "registration_rejected")
         password_hash = hash_password(data.password.get_secret_value())
         now, account_id, identity_id = self.now(), uuid4(), uuid4()
         try:
             with self.engine.begin() as conn:
-                invitation = conn.execute(sa.select(t.invites).where(
-                    t.invites.c.token_hash == token_hash(code)).with_for_update()).mappings().first()
-                if (not invitation or invitation["consumed_at"] is not None
-                        or invitation["expires_at"] <= now or repo.account_by_email(conn, data.email)):
+                invitation = None
+                if mode == "invite":
+                    invitation = conn.execute(sa.select(t.invites).where(
+                        t.invites.c.token_hash == token_hash(code)).with_for_update()).mappings().first()
+                    if (not invitation or invitation["consumed_at"] is not None
+                            or invitation["expires_at"] <= now):
+                        raise AuthError(400, "registration_rejected")
+                if repo.account_by_email(conn, data.email):
                     raise AuthError(400, "registration_rejected")
                 conn.execute(sa.insert(t.accounts).values(id=account_id, public_code=uuid4().hex[:16],
                     display_name=data.display_name, state="active", created_at=now))
                 conn.execute(sa.insert(t.identities).values(id=identity_id, account_id=account_id,
                     provider="email", subject=data.email))
                 conn.execute(sa.insert(t.passwords).values(identity_id=identity_id, password_hash=password_hash))
-                conn.execute(sa.update(t.invites).where(t.invites.c.id == invitation["id"]).values(
-                    consumed_at=now, account_id=account_id))
+                if invitation is not None:
+                    conn.execute(sa.update(t.invites).where(t.invites.c.id == invitation["id"]).values(
+                        consumed_at=now, account_id=account_id))
                 repo.event(conn, account_id, "account.registered", now)
                 account = repo.account_by_id(conn, account_id, lock=True)
                 return self._new_session(conn, account, label, now)
         except IntegrityError:
-            # Duplicate identities roll back invitation consumption and every new row.
             raise AuthError(400, "registration_rejected") from None
 
     def login(self, data: LoginInput, peer: str, label: str) -> Receipt:
@@ -126,7 +129,6 @@ class AuthService:
             t.sessions.c.token_hash == token_hash(raw))).mappings().first()
         if not row:
             raise AuthError(401, "auth_required")
-        # Consistent account->session lock order shared by login/revoke operations.
         account = repo.account_by_id(conn, row["account_id"], lock=True)
         row = conn.execute(sa.select(t.sessions).where(t.sessions.c.id == row["id"])
                            .with_for_update()).mappings().first()

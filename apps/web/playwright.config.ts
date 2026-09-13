@@ -17,5 +17,6 @@ export default defineConfig({
     { name: 'uhd', use: { viewport: { width: 3840, height: 2160 }, deviceScaleFactor: 1 } },
     { name: 'hidpi-150', use: { viewport: { width: 2560, height: 1440 }, deviceScaleFactor: 1.5 } },
     { name: 'hidpi-200', use: { viewport: { width: 1920, height: 1080 }, deviceScaleFactor: 2 } },
+    { name: 'eight-k', grep: /8K shell/, use: { viewport: { width: 7680, height: 4320 }, deviceScaleFactor: 1 } },
   ],
 })

@@ -31,12 +31,12 @@ export function WorkspaceGate({ children }: { children: (auth: AuthView) => Reac
       document.removeEventListener('visibilitychange', visible)
     }
   }, [])
-  if (loading) return <p role="status">Проверяем серверную сессию…</p>
-  if (error) return <div role="alert" className="field-error">{error}
-    <button onClick={() => setVersion(v => v + 1)}>Повторить проверку сессии</button></div>
+  if (loading) return <p role="status">Проверяем вход…</p>
+  if (error) return <div role="alert" className="field-error">{error}<button onClick={() => setVersion(v => v + 1)}>Повторить загрузку</button></div>
   if (!auth) return <section className="gallery-empty"><h2>Войдите, чтобы продолжить</h2>
-    <p>Работы и баллы доступны только владельцу. Демо-данные не подставляются.</p>
-    <Link className="primary" href="/login">Войти</Link></section>
+    <p>Создайте аккаунт за минуту или войдите, если уже пользовались ИЗО АСА.</p>
+    <div className="account-actions"><Link className="primary" href="/register">Создать аккаунт</Link><Link className="secondary" href="/login">Войти</Link></div>
+  </section>
   return <div key={auth.account.id} data-testid="server-workspace">{children(auth)}</div>
 }
 
@@ -66,6 +66,5 @@ export function useResource<T>(path: string, poll?: (value: T) => boolean) {
   return { data, error, loading, refresh: () => setVersion(v => v + 1) }
 }
 export function ResourceState({ error, loading, retry }: { error: string; loading: boolean; retry: () => void }) {
-  return <>{loading && <p role="status">Получаем данные…</p>}{error && <div className="field-error" role="alert">
-    {error}<button onClick={retry}>Повторить загрузку</button></div>}</>
+  return <>{loading && <p role="status">Загружаем…</p>}{error && <div className="field-error" role="alert">{error}<button onClick={retry}>Повторить загрузку</button></div>}</>
 }

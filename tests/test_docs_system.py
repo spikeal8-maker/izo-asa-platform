@@ -41,26 +41,31 @@ def test_routing_corpus_prefers_correct_or_safe_failure():
             assert 'NOT RESOLVED' in result.stderr
 
 
-def test_plan_separates_runtime_parent_working_and_next_branch_policy():
+def test_plan_reflects_owner_ux_reprioritization():
     plan = json.loads((ROOT/'docs/PLAN.json').read_text(encoding='utf-8'))
     lineage = plan['canonical_lineage']
     assert lineage['runtime_base']['branch'] == 'api/fal-klein-001'
-    assert lineage['current_package_base']['sha'] == 'fbb3ba01232c0b31682db0f37a070300d95335ed'
-    assert lineage['working_branch'] == 'settings/plan-policy'
+    assert lineage['current_package_base']['sha'] == '220d302dc238889da066c1799652d4b036007de3'
+    assert lineage['working_branch'] == 'ux/product-shell'
     assert lineage['next_branch_source'] == 'verified_working_head'
-    assert plan['active_package'] == 'SETTINGS-002'
-    assert plan['next_package'] == 'CATALOG-002'
-    assert plan['packages']['ACCESS-001']['status'] == 'technical_pass'
-    assert 'ACCESS-001' in plan['packages']['SETTINGS-002']['depends_on']
+    assert plan['active_package'] == 'UX-002'
+    assert plan['next_package'] is None
+    assert plan['packages']['SETTINGS-002']['status'] == 'technical_pass'
+    assert plan['packages']['UX-002']['status'] == 'active' and plan['packages']['UX-002']['decides_next'] is True
+    assert plan['packages']['CATALOG-002']['status'] == 'planned'
+    assert plan['packages']['GUEST-001']['status'] == 'planned'
     assert plan['packages']['SETTINGS-001']['status'] == 'superseded_reference'
     assert plan['packages']['CATALOG-001']['status'] == 'superseded_reference'
-    assert plan['packages']['SETTINGS-002']['status'] == 'active'
-    assert plan['packages']['CATALOG-002']['status'] == 'planned_next'
-    assert plan['packages']['CATALOG-UI-002']['status'] == 'planned'
-    assert plan['packages']['LOCAL-001']['depends_on'][-1] == 'CATALOG-002'
     parallel = next(item for item in plan['parallel_lineages'] if item['id'] == 'OPENROUTER-LINEAGE')
     assert parallel['status'] == 'reconciled_reference_only'
     assert parallel['do_not_continue_automatically'] is True
+
+
+def test_owner_product_shell_spec_is_canonical_and_explicit():
+    text = (ROOT/'docs/UX_PRODUCT_SHELL.md').read_text(encoding='utf-8')
+    for required in ('Лента / Explore', 'открытая, без invite-кода', '8–128', '7680×4320',
+                     'Чат → Изображение → Видео → Аудио → 3D', 'GUEST'):
+        assert required in text
 
 
 def test_live_admin_docs_use_post_reconciliation_package_ids():
@@ -86,6 +91,7 @@ def test_block_level_gallery_context_is_materially_smaller_than_old_feature_bund
     match = re.search(r'INITIAL DOCUMENT BYTES: (\d+)', result.stdout)
     assert match and int(match.group(1)) < 16000, result.stdout
     assert 'AssetPage.tsx' in result.stdout and 'Work.download' in result.stdout
+
 
 def test_boundary_tests_use_explicit_utf8_reads():
     for path in (ROOT/'tests').glob('*boundaries.py'):

@@ -8,14 +8,15 @@ INDEX — **стабильная карта**, а не статус и не road
 | Нужно понять | Читать |
 |---|---|
 | Где проект сейчас / откуда продолжать | [CURRENT.md](CURRENT.md) → [PLAN.json](PLAN.json) → `python tools/project_state.py verify` |
+| Текущий утверждённый shell/регистрация/Feed/responsive | [UX_PRODUCT_SHELL.md](UX_PRODUCT_SHELL.md) |
 | Где живёт конкретная кнопка/операция | [BLOCK_MAP.json](BLOCK_MAP.json) или `python tools/context.py --task ...` |
 | Какой feature/domain читать, если block неизвестен | [CONTEXT_MAP.json](CONTEXT_MAP.json) |
 | Как coding-агент должен работать | [DEVELOPMENT.md](DEVELOPMENT.md), кратко — корневой `AGENTS.md` |
 | Как устроена сама документация | [DOCS_SYSTEM.md](DOCS_SYSTEM.md) |
 | Почему выбрана текущая архитектурная линия | `adr/` (текущее решение ADR-002; ADR-001 — pre-reconciliation history) |
-| Что пользователь должен видеть/уметь | [PRODUCT.md](PRODUCT.md) |
+| Что пользователь должен видеть/уметь | [PRODUCT.md](PRODUCT.md) + owner decisions в [UX_PRODUCT_SHELL.md](UX_PRODUCT_SHELL.md) |
 | Админка, permissions, settings | [ADMIN.md](ADMIN.md) |
-| Визуал/responsive/accessibility | [UX.md](UX.md) |
+| Визуал/responsive/accessibility | [UX.md](UX.md) + [UX_PRODUCT_SHELL.md](UX_PRODUCT_SHELL.md) |
 | Домены, ownership и data boundaries | [ARCHITECTURE.md](ARCHITECTURE.md) |
 | Provider/AI runtime/credentials/retry | [AI_RUNTIME.md](AI_RUNTIME.md) |
 | Docker/network/release/backup | [OPERATIONS.md](OPERATIONS.md) |

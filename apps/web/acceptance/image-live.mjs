@@ -27,7 +27,8 @@ async function login(page, user) {
   await page.getByLabel('Электронная почта').fill(user.email)
   await page.getByLabel('Пароль', { exact: true }).fill(user.password)
   await page.getByRole('button', { name: 'Войти', exact: true }).click()
-  await page.waitForURL('**/account')
+  await page.waitForURL(url => new URL(url).pathname === '/')
+  await page.goto('/account')
   await expect(page.getByTestId('server-account')).toBeVisible()
 }
 async function downloadedHash(page) {
