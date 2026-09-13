@@ -47,6 +47,8 @@ def check_plan(errors: list[str], plan: dict) -> None:
         deps = item.get("depends_on", [])
         if not isinstance(deps, list) or any(dep not in packages or dep == key for dep in deps):
             errors.append(f"invalid dependencies for {key}: {deps}")
+        if "evidence" in item:
+            errors.append(f"package {key} embeds CI evidence; use CHECKPOINTS.json")
     for dep in packages.get(active_id, {}).get("depends_on", []):
         if packages.get(dep, {}).get("status") not in READY_DEPENDENCY_STATUSES:
             errors.append(f"active package dependency is not ready: {dep}={packages.get(dep, {}).get('status')}")
@@ -62,6 +64,26 @@ def check_plan(errors: list[str], plan: dict) -> None:
             errors.append(f"parallel lineage {item.get('id')} must fail closed")
 
 
+def check_checkpoints(errors: list[str], plan: dict, checkpoints: dict) -> None:
+    if checkpoints.get("schema_version") != 1 or not isinstance(checkpoints.get("checkpoints"), dict):
+        errors.append("CHECKPOINTS schema_version/checkpoints invalid")
+        return
+    registry = checkpoints["checkpoints"]
+    for package_id, item in plan.get("packages", {}).items():
+        ref = item.get("checkpoint")
+        if ref is None:
+            continue
+        if ref != package_id or ref not in registry:
+            errors.append(f"package {package_id} has invalid checkpoint ref: {ref}")
+    for key, evidence in registry.items():
+        if not isinstance(evidence, dict):
+            errors.append(f"checkpoint {key} must be an object")
+            continue
+        source = evidence.get("source_head", evidence.get("head"))
+        if not re.fullmatch(r"[0-9a-f]{40}", str(source or "")):
+            errors.append(f"checkpoint {key} requires a full source/head SHA")
+
+
 def check_current(errors: list[str], plan: dict) -> None:
     actual = (DOCS / "CURRENT.md").read_text(encoding="utf-8")
     expected = render_current(plan)
@@ -70,6 +92,8 @@ def check_current(errors: list[str], plan: dict) -> None:
 
 
 def check_context(errors: list[str], context: dict) -> None:
+    if len((DOCS / "CONTEXT_MAP.json").read_bytes()) > 20_000:
+        errors.append("CONTEXT_MAP exceeds 20KB hard context budget; shard it")
     if context.get("schema_version") != 1:
         errors.append("CONTEXT_MAP schema_version must be 1")
     routes = context.get("routes")
@@ -86,6 +110,8 @@ def check_context(errors: list[str], context: dict) -> None:
 
 
 def check_blocks(errors: list[str], blocks: dict, context: dict) -> None:
+    if len((DOCS / "BLOCK_MAP.json").read_bytes()) > 30_000:
+        errors.append("BLOCK_MAP exceeds 30KB hard context budget; shard it")
     if blocks.get("schema_version") != 1:
         errors.append("BLOCK_MAP schema_version must be 1")
     for key, block in blocks.get("blocks", {}).items():
@@ -136,15 +162,16 @@ def check_coverage(errors: list[str], context: dict) -> None:
 def check_encoding_and_stable(errors: list[str]) -> None:
     markers = ("РЎ", "Рџ", "Р°", "РЅ", "Рµ", "Рє", "Рё", "Р»", "Рѕ", "СЃ", "С‚", "СЂ", "вЂ", "В·")
     candidates = list(ROOT.rglob("*.md")) + [
-        DOCS/"PLAN.json", DOCS/"CONTEXT_MAP.json", DOCS/"BLOCK_MAP.json", ROOT/"tests/context_cases.json",
-    ]
+        DOCS / "PLAN.json", DOCS / "CHECKPOINTS.json", DOCS / "CONTEXT_MAP.json",
+        DOCS / "BLOCK_MAP.json", ROOT / "tests/context_cases.json"]
     for path in candidates:
         if ".git" in path.parts or "node_modules" in path.parts:
             continue
         text = path.read_text(encoding="utf-8")
         if sum(text.count(marker) for marker in markers) >= 4:
             errors.append(f"possible UTF-8 mojibake: {path.relative_to(ROOT)}")
-    stable = [ROOT/"AGENTS.md", ROOT/"README.md", DOCS/"INDEX.md", DOCS/"NEXT.md", DOCS/"DOCS_SYSTEM.md", DOCS/"DEVELOPMENT.md"]
+    stable = [ROOT / "AGENTS.md", ROOT / "README.md", DOCS / "INDEX.md",
+              DOCS / "NEXT.md", DOCS / "DOCS_SYSTEM.md", DOCS / "DEVELOPMENT.md"]
     for path in stable:
         text = path.read_text(encoding="utf-8")
         if re.search(r"\b[0-9a-f]{40}\b", text) or re.search(r"\bPR\s*#\d+\b", text, re.I):
@@ -154,17 +181,21 @@ def check_encoding_and_stable(errors: list[str]) -> None:
 def main() -> int:
     errors: list[str] = []
     try:
-        plan = load_json(DOCS/"PLAN.json")
-        context = load_json(DOCS/"CONTEXT_MAP.json")
-        blocks = load_json(DOCS/"BLOCK_MAP.json")
-        check_plan(errors, plan); check_current(errors, plan); check_context(errors, context)
-        check_blocks(errors, blocks, context); check_coverage(errors, context); check_encoding_and_stable(errors)
+        plan = load_json(DOCS / "PLAN.json")
+        checkpoints = load_json(DOCS / "CHECKPOINTS.json")
+        context = load_json(DOCS / "CONTEXT_MAP.json")
+        blocks = load_json(DOCS / "BLOCK_MAP.json")
+        check_plan(errors, plan); check_checkpoints(errors, plan, checkpoints)
+        check_current(errors, plan); check_context(errors, context)
+        check_blocks(errors, blocks, context); check_coverage(errors, context)
+        check_encoding_and_stable(errors)
     except (OSError, ValueError, json.JSONDecodeError) as exc:
         errors.append(f"documentation validation could not complete: {exc}")
     if errors:
         print("DOCS CHECK FAILED"); [print(f"- {error}") for error in errors]; return 1
     print("DOCS CHECK OK")
-    print("active=", plan["active_package"], "next=", plan["next_package"], "blocks=", len(blocks["blocks"]), "routes=", len(context["routes"]))
+    print("active=", plan["active_package"], "next=", plan["next_package"],
+          "blocks=", len(blocks["blocks"]), "routes=", len(context["routes"]))
     return 0
 
 
