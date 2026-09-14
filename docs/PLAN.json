@@ -4,13 +4,13 @@
   "updated": "2026-09-14",
   "canonical_lineage": {
     "runtime_base": {"branch":"api/fal-klein-001","sha":"faec39d6ae0b4f035ef0f86114494789acde3b46","pr":22,"state":"technical_ci_pass_draft"},
-    "working_branch": "maint/agent-economy",
+    "working_branch": "ux/frontend-reset",
     "provider_direction": "fal.ai / fal-ai/flux-2/klein/4b",
     "merge_deployed": false,
-    "current_package_base": {"branch":"feat/guest-trial","sha":"d99abc6528f0c460b1b061dbfb9ea583d3c3b553","state":"verified_pr_merge_tree_checkpoint"},
+    "current_package_base": {"branch":"maint/agent-economy","sha":"37baf419c45970d02ce1fab75aea15cc9e8269a0","state":"verified_pr_merge_tree_checkpoint"},
     "next_branch_source": "verified_working_head"
   },
-  "active_package": "MAINT-AGENT-002",
+  "active_package": "FRONTEND-001",
   "next_package": null,
   "rules": {
     "one_active_package": true,
@@ -53,7 +53,8 @@
     "UX-002": {"status":"technical_pass","depends_on":["SETTINGS-002","AUTH-002","IMAGE-001","ADMIN-001"],"decides_next":true,"goal":"Owner-approved product shell: open signup, feed-first entry, monochrome light/dark design, clear navigation and mobile/QHD/4K/8K responsive behavior.","checkpoint":"UX-002"},
     "MAINT-SIZE-001": {"status":"technical_pass","depends_on":["UX-002"],"decides_next":true,"goal":"Split oversized handwritten modules and enforce strict repository-wide modularity budgets for source, tests, tools and acceptance code.","checkpoint":"MAINT-SIZE-001"},
     "GUEST-001": {"status":"technical_pass","depends_on":["MAINT-SIZE-001","UX-002","AUTH-002","JOBS-001","IMAGE-001"],"decides_next":true,"goal":"Finite server-owned guest budget for first image trial before account creation, with abuse controls and same-owner result claim semantics.","checkpoint":"GUEST-001"},
-    "MAINT-AGENT-002": {"status":"active","depends_on":["GUEST-001","MAINT-SIZE-001"],"decides_next":true,"goal":"Make agent-driven development continuously cheap and bounded: context budgets, near-limit growth guards, local-doc hygiene, scope classes, review gates and recurring maintainability audits."},
+    "MAINT-AGENT-002": {"status":"technical_pass","depends_on":["GUEST-001","MAINT-SIZE-001"],"decides_next":true,"goal":"Make agent-driven development continuously cheap and bounded: context budgets, near-limit growth guards, local-doc hygiene, scope classes, review gates and recurring maintainability audits.","checkpoint":"MAINT-AGENT-002"},
+    "FRONTEND-001": {"status":"active","depends_on":["MAINT-AGENT-002","GUEST-001","UX-002"],"decides_next":true,"goal":"Owner-accepted product frontend reset: modular shell and core user surfaces, monochrome light/dark system, mobile-first navigation, responsive desktop/QHD/4K/8K behavior, and visual acceptance before feature expansion."},
     "CATALOG-002": {"status":"planned","depends_on":["SETTINGS-002","ACCESS-001","API-001","ADMIN-001"],"goal":"Provider-neutral versioned catalog for fal/future adapters.","note":"Draft PR #31 paused after owner reprioritized product UX; resume only after accepted maintenance/product checkpoint."},
     "CATALOG-UI-002": {"status":"planned","depends_on":["CATALOG-002","ADMIN-001","ACCESS-001"],"goal":"Permission-correct admin catalog UI."},
     "LOCAL-001": {"status":"planned","depends_on":["JOBS-001","API-001","CATALOG-002"]},
