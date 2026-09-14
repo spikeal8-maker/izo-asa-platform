@@ -92,10 +92,27 @@ def test_block_level_gallery_context_is_small():
 
 
 def test_every_route_stays_under_initial_context_hard_budget():
-    context = json.loads((ROOT / "docs/CONTEXT_MAP.json").read_text(encoding="utf-8"))
+    sys.path.insert(0, str(ROOT / "tools"))
+    import context as routing
+    context = routing.load_map(ROOT / "docs/CONTEXT_MAP.json", "routes")
     for key, route in context["routes"].items():
         total = sum((ROOT / raw).stat().st_size for raw in dict.fromkeys(route["read_first"]))
         assert total <= 18000, (key, total)
+
+
+def test_router_map_loader_accepts_sharded_index(tmp_path):
+    sys.path.insert(0, str(ROOT / "tools"))
+    import context as routing
+    docs = tmp_path / "docs"; docs.mkdir()
+    shard_dir = docs / "context"; shard_dir.mkdir()
+    shard = shard_dir / "web.json"
+    shard.write_text(json.dumps({"schema_version": 1, "routes": {
+        "web.test": {"keywords": ["test"], "read_first": ["README.md"]}}}), encoding="utf-8")
+    index = docs / "CONTEXT_MAP.json"
+    index.write_text(json.dumps({"schema_version": 1, "shards": ["docs/context/web.json"],
+                                 "routes": {}}), encoding="utf-8")
+    result = routing.load_map(index, "routes", root=tmp_path)
+    assert result["routes"]["web.test"]["keywords"] == ["test"]
 
 
 def test_boundary_tests_use_explicit_utf8_reads():
