@@ -1,3 +1,4 @@
+import type { FormEvent } from 'react'
 import type { components } from '../../shared/api.generated'
 import { Link } from '../../shell/router'
 import { GrantForm } from './GrantForm'
@@ -22,7 +23,7 @@ export function UserSearchPanel({ query, users, busy, onQuery, onSearch, onNext 
   users: Users | null
   busy: boolean
   onQuery: (value: string) => void
-  onSearch: (event: React.FormEvent<HTMLFormElement>) => void
+  onSearch: (event: FormEvent<HTMLFormElement>) => void
   onNext: (after: string) => void
 }) {
   return <div className="admin-panel admin-panel-flat">
