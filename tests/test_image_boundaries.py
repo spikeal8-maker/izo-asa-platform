@@ -36,11 +36,22 @@ def test_media_read_uses_fresh_ticket_and_bounded_authenticated_transport():
     assert 'hash !== expectedHash' in transport
     preview = (WEB / 'src/features/gallery/PrivateImage.tsx').read_text(encoding="utf-8")
     assert 'URL.revokeObjectURL' in preview and 'controller.abort()' in preview
+    assert 'await image.decode()' in preview and 'image.naturalWidth !== asset.width' in preview
     detail = (WEB / 'src/features/gallery/AssetPage.tsx').read_text(encoding="utf-8")
     assert 'await imageBlob(asset, auth, resource.controller.signal)' in detail
     assert 'link.download' in detail and 'release(current.current)' in detail
     gallery = (WEB / 'src/features/gallery/Gallery.tsx').read_text(encoding="utf-8")
     assert 'imageBlob(' not in gallery and 'downloadTicket(' not in gallery
+
+
+def test_private_preview_csp_allows_blob_only_for_images():
+    caddy = (ROOT / 'infra/Caddyfile').read_text(encoding="utf-8")
+    assert "img-src 'self' data: blob:" in caddy
+    assert "script-src 'self';" in caddy
+    assert "connect-src 'self';" in caddy
+    assert "object-src 'none';" in caddy
+    assert "script-src 'self' blob:" not in caddy
+    assert "connect-src 'self' blob:" not in caddy
 
 
 def test_session_loss_and_polling_have_cleanup_not_global_private_cache():
