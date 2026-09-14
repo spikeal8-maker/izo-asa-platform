@@ -23,6 +23,30 @@ def load_json(path: Path) -> dict:
     return value
 
 
+def load_map(path: Path, section: str) -> tuple[dict, list[Path]]:
+    value = load_json(path)
+    sources = [path]
+    shards = value.get("shards", [])
+    if not shards:
+        return value, sources
+    if not isinstance(shards, list) or not all(isinstance(raw, str) and raw for raw in shards):
+        raise ValueError(f"{path.relative_to(ROOT)} has invalid shards list")
+    combined = dict(value.get(section, {}))
+    for raw in shards:
+        shard_path = ROOT / raw
+        shard = load_json(shard_path)
+        sources.append(shard_path)
+        entries = shard.get(section, {})
+        if not isinstance(entries, dict):
+            raise ValueError(f"{raw} requires object section {section}")
+        duplicate = combined.keys() & entries.keys()
+        if duplicate:
+            raise ValueError(f"duplicate {section} keys across shards: {sorted(duplicate)}")
+        combined.update(entries)
+    result = dict(value); result[section] = combined
+    return result, sources
+
+
 def check_ref(errors: list[str], label: str, value: dict) -> None:
     if not isinstance(value, dict) or not value.get("branch"):
         errors.append(f"{label} requires branch")
@@ -104,9 +128,14 @@ def paths_bytes(paths: list[str]) -> int:
     return total
 
 
-def check_context(errors: list[str], context: dict) -> None:
-    if len((DOCS / "CONTEXT_MAP.json").read_bytes()) > 20_000:
-        errors.append("CONTEXT_MAP exceeds 20KB hard context budget; shard it")
+def check_map_files(errors: list[str], label: str, sources: list[Path], hard_bytes: int) -> None:
+    for path in sources:
+        if path.stat().st_size > hard_bytes:
+            errors.append(f"{label} shard/index exceeds {hard_bytes} bytes: {path.relative_to(ROOT)}")
+
+
+def check_context(errors: list[str], context: dict, sources: list[Path]) -> None:
+    check_map_files(errors, "CONTEXT_MAP", sources, 20_000)
     if context.get("schema_version") != 1:
         errors.append("CONTEXT_MAP schema_version must be 1")
     default_read = context.get("default_read", [])
@@ -116,6 +145,13 @@ def check_context(errors: list[str], context: dict) -> None:
     if not isinstance(routes, dict) or not routes:
         errors.append("CONTEXT_MAP routes must be a non-empty object")
         return
+    for rule in context.get("semantic_rules", []):
+        if not isinstance(rule, dict) or not isinstance(rule.get("scores"), dict):
+            errors.append("semantic routing rule requires an object with scores")
+            continue
+        unknown = set(rule["scores"]) - set(routes)
+        if unknown:
+            errors.append(f"semantic routing rule references unknown routes: {sorted(unknown)}")
     for key, route in routes.items():
         if not route.get("keywords") or not route.get("read_first"):
             errors.append(f"route {key} requires keywords/read_first")
@@ -135,9 +171,8 @@ def local_map(route: dict) -> str | None:
     return None
 
 
-def check_blocks(errors: list[str], blocks: dict, context: dict) -> None:
-    if len((DOCS / "BLOCK_MAP.json").read_bytes()) > 30_000:
-        errors.append("BLOCK_MAP exceeds 30KB hard context budget; shard it")
+def check_blocks(errors: list[str], blocks: dict, context: dict, sources: list[Path]) -> None:
+    check_map_files(errors, "BLOCK_MAP", sources, 30_000)
     if blocks.get("schema_version") != 1:
         errors.append("BLOCK_MAP schema_version must be 1")
     for key, block in blocks.get("blocks", {}).items():
@@ -190,7 +225,6 @@ def check_coverage(errors: list[str], context: dict) -> None:
             errors.append(f"local ownership README missing: {raw}")
         elif raw not in route_paths:
             errors.append(f"local ownership README is not covered by a context route: {raw}")
-
         live_docs = sorted(path for path in child.glob("*.md") if path.is_file())
         total = sum(path.stat().st_size for path in live_docs)
         if total > LOCAL_DOC_HARD_BYTES:
@@ -227,11 +261,11 @@ def main() -> int:
     try:
         plan = load_json(DOCS / "PLAN.json")
         checkpoints = load_json(DOCS / "CHECKPOINTS.json")
-        context = load_json(DOCS / "CONTEXT_MAP.json")
-        blocks = load_json(DOCS / "BLOCK_MAP.json")
+        context, context_sources = load_map(DOCS / "CONTEXT_MAP.json", "routes")
+        blocks, block_sources = load_map(DOCS / "BLOCK_MAP.json", "blocks")
         check_plan(errors, plan); check_checkpoints(errors, plan, checkpoints)
-        check_current(errors, plan); check_context(errors, context)
-        check_blocks(errors, blocks, context); check_coverage(errors, context)
+        check_current(errors, plan); check_context(errors, context, context_sources)
+        check_blocks(errors, blocks, context, block_sources); check_coverage(errors, context)
         check_encoding_and_stable(errors)
     except (OSError, ValueError, json.JSONDecodeError) as exc:
         errors.append(f"documentation validation could not complete: {exc}")
