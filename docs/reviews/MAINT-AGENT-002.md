@@ -32,6 +32,7 @@ Catalog implementation, business schema/data и deploy не менялись. Т
 
 ## Проверенные риски self-review
 - **Лимиты не повышались.** Первый новый CI намеренно упал на существующем context/doc debt; исправлялась структура.
+- **Guard проверяет сам себя.** После shard-validator `tools/check_docs.py` вырос выше 80% auxiliary hard-limit; headroom gate остановил PR. Вместо исключения validation logic вынесена в отдельный `tools/docs_context.py`.
 - **Routing correctness:** semantic guest preferences теперь data-driven; routing corpus остаётся обязательным gate.
 - **Sharding:** current maps физически не раздроблены без необходимости, но loader/validator готовы к shards и запрещают duplicate keys.
 - **Review evidence:** PASS старого SHA не подходит новому commit; high-risk transition проверяется до branch creation.
