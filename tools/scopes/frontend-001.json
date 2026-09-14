@@ -17,7 +17,7 @@
     "apps/web/src/features/feed/*.tsx", "apps/web/src/features/feed/*.css", "apps/web/src/features/feed/*.md",
     "apps/web/src/shared/ui/*.tsx", "apps/web/src/shared/ui/*.css",
     "apps/web/e2e/shell.spec.ts", "apps/web/e2e/studio.spec.ts", "apps/web/e2e/gallery.spec.ts", "apps/web/e2e/accounts.spec.ts", "apps/web/e2e/admin.spec.ts", "apps/web/e2e/access.spec.ts", "apps/web/e2e/guest.spec.ts",
-    "tests/context_cases.json", "tests/test_docs_system.py"
+    "tests/context_cases.json", "tests/test_docs_system.py", "tests/test_image_boundaries.py"
   ],
   "sensitive_approved": ["tools/scopes/frontend-001.json"]
 }
