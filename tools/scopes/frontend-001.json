@@ -3,8 +3,8 @@
   "scope_class": "cross_domain",
   "risk": "high",
   "independent_review_required": true,
-  "max_files": 33,
-  "large_scope_reason": "Owner-requested product frontend reset across the shared shell and existing user-facing surfaces while preserving backend/runtime contracts. The package splits legacy near-limit frontend components before visual expansion. Visual acceptance also exposed that the existing CSP blocks the validated private-image blob URLs used by Gallery; the scope therefore includes one minimal img-src-only edge-policy correction.",
+  "max_files": 32,
+  "large_scope_reason": "Owner-requested product frontend reset across the shared shell and existing user-facing surfaces while preserving backend/runtime contracts. The package splits legacy near-limit frontend components before visual expansion. Visual acceptance also exposed that the existing CSP blocks the validated private-image blob URLs used by Gallery; the scope therefore includes one minimal img-src-only edge-policy correction without increasing the package file budget.",
   "domains": ["web-shell", "studio", "gallery", "accounts", "admin", "feed", "frontend-tests", "frontend-docs", "web-edge-security"],
   "non_goals": ["No backend business-logic changes", "No migrations", "No provider/live spend", "No Credits/Jobs/Media semantic changes", "No merge/deploy", "No fake Chat/Video/Audio/3D runtime", "No CSP relaxation outside private image rendering"],
   "allowed": [
