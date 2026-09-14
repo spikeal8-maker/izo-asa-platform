@@ -29,4 +29,13 @@
 .admin-receipt{margin-top:20px;padding:16px 18px;border:1px solid var(--line);background:var(--soft);border-radius:14px;overflow-wrap:anywhere}
 .admin-page .summary-list dd,.credits-page .summary-list dd{overflow-wrap:anywhere}
 .admin-form fieldset{display:grid;gap:16px;border:0;padding:0;margin:0;min-width:0}
+@media(min-width:980px){
+  .admin-user-detail,.access-subject-panel{display:grid;grid-template-columns:minmax(0,1fr) minmax(320px,400px);column-gap:44px;align-items:start}
+  .admin-user-detail>.admin-card-heading,.access-subject-panel>.admin-card-heading{grid-column:1/-1}
+  .admin-user-detail>.admin-grant{grid-column:2;grid-row:2/span 8;align-self:start;margin:0;padding:0 0 0 30px;border-top:0;border-left:1px solid var(--line)}
+  .admin-user-detail>.admin-grant .admin-form{max-width:none;margin-top:18px;padding-top:18px}
+  .access-subject-panel>.admin-table-wrap,.access-subject-panel>p{grid-column:1}
+  .access-subject-panel>.admin-form{grid-column:2;grid-row:2/span 5;align-self:start;max-width:none;margin:0;padding:0 0 0 30px;border-top:0;border-left:1px solid var(--line)}
+  .access-subject-panel>.admin-receipt{grid-column:2}
+}
 @media(max-width:600px){.admin-page,.credits-page{max-width:100%}.admin-search{display:grid;grid-template-columns:minmax(0,1fr)}.admin-history li{display:block}.admin-history a{display:inline-block;margin-top:8px}.admin-links{gap:4px}.admin-form{max-width:100%}.admin-card-heading,.admin-section-heading{align-items:flex-start}.admin-card-heading>span,.admin-section-heading>span{flex-shrink:0}}
