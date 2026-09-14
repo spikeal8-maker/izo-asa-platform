@@ -1,5 +1,6 @@
 import type { AuthView } from '../shared/api'
-import { Icon } from '../shared/ui/Icon'
+import { Icon, type IconName } from '../shared/ui/Icon'
+import { AdminLink } from '../features/admin/AdminPage'
 import { Link } from './router'
 
 const directions = [
@@ -8,6 +9,11 @@ const directions = [
   { href: '/studio/video', title: 'Видео' },
   { href: '/studio/audio', title: 'Аудио' },
   { href: '/studio/3d', title: '3D' },
+]
+const primaryItems: { href: string; title: string; icon: IconName }[] = [
+  { href: '/', title: 'Лента', icon: 'feed' },
+  { href: '/image', title: 'Студия', icon: 'spark' },
+  { href: '/gallery', title: 'Галерея', icon: 'grid' },
 ]
 
 function mobileContext(path: string) {
@@ -22,6 +28,26 @@ function mobileContext(path: string) {
   return 'ИЗО АСА'
 }
 
+export function PrimarySidebar({ path, auth }: { path: string; auth: AuthView | null | undefined }) {
+  const feed = path === '/' || path === '/feed'
+  const studio = ['/image', '/studio/image'].includes(path)
+  const gallery = path === '/gallery' || path.startsWith('/gallery/')
+  const active = (href: string) => href === '/' ? feed : href === '/image' ? studio : gallery
+  return <aside className="sidebar">
+    <Link href="/" className="brand" aria-label="ИЗО АСА — лента">
+      <span className="brand-mark"><Icon name="spark" /></span><span>ИЗО АСА</span>
+    </Link>
+    <nav aria-label="Основные разделы">{primaryItems.map(item => <Link href={item.href} key={item.href}
+      aria-label={item.title} className={active(item.href) ? 'active' : ''}
+      aria-current={active(item.href) ? 'page' : undefined}><Icon name={item.icon} /><span>{item.title}</span></Link>)}</nav>
+    <div className="sidebar-bottom">
+      <Link href="/account/credits" className="side-link">Баланс</Link>
+      <Link href="/account" className="side-link">Аккаунт</Link>
+      {auth && <AdminLink path={path} />}
+    </div>
+  </aside>
+}
+
 export function TopBar({ path, auth, theme, mobileMenu, onToggleMenu, onToggleTheme }: {
   path: string
   auth: AuthView | null | undefined
@@ -32,7 +58,6 @@ export function TopBar({ path, auth, theme, mobileMenu, onToggleMenu, onToggleTh
 }) {
   const studio = ['/image', '/studio/image'].includes(path)
   const direction = directions.find(item => item.href === path)?.href
-
   return <header className="topbar">
     <div className="mobile-head">
       <button className="mobile-menu-button" aria-label="Меню" aria-expanded={mobileMenu}
