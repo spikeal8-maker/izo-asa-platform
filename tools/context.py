@@ -32,6 +32,29 @@ def load_json(path: Path) -> dict:
     return value
 
 
+def load_map(path: Path, section: str, *, root: Path = ROOT) -> dict:
+    """Load current monolith or an index whose shards contribute one map section."""
+    value = load_json(path)
+    shards = value.get("shards", [])
+    if not shards:
+        return value
+    if not isinstance(shards, list) or not all(isinstance(raw, str) and raw for raw in shards):
+        raise ValueError(f"Invalid shards list: {path.name}")
+    combined = dict(value.get(section, {}))
+    for raw in shards:
+        shard = load_json(root / raw)
+        entries = shard.get(section, {})
+        if not isinstance(entries, dict):
+            raise ValueError(f"Shard {raw} requires object section {section}")
+        duplicate = combined.keys() & entries.keys()
+        if duplicate:
+            raise ValueError(f"Duplicate {section} keys in shards: {sorted(duplicate)}")
+        combined.update(entries)
+    result = dict(value)
+    result[section] = combined
+    return result
+
+
 def words(value: str) -> set[str]:
     return set(re.findall(r"[\w.-]+", value.casefold(), flags=re.UNICODE))
 
@@ -65,18 +88,30 @@ def phrase_score(task: str, phrases: list[str]) -> int:
     return best
 
 
-def intent_bonus(task: str, kind_or_key: str) -> int:
+def semantic_rule_matches(folded: str, rule: dict, *, ui: bool, backend: bool) -> bool:
+    intent = rule.get("intent")
+    if intent == "backend" and not backend:
+        return False
+    if intent == "ui" and not ui:
+        return False
+    if intent == "not_backend" and backend:
+        return False
+    groups = rule.get("all_any", [])
+    if not isinstance(groups, list):
+        return False
+    for group in groups:
+        if not isinstance(group, list) or not group or not any(str(token).casefold() in folded for token in group):
+            return False
+    excluded = rule.get("none", [])
+    return not any(str(token).casefold() in folded for token in excluded)
+
+
+def intent_bonus(task: str, kind_or_key: str, semantic_rules: list[dict] | None = None) -> int:
     folded = task.casefold()
     ui = any(token in folded for token in UI_HINTS)
     backend = any(token in folded for token in BACKEND_HINTS)
     is_ui = kind_or_key.startswith("ui") or kind_or_key.startswith("web.")
     is_backend = kind_or_key.startswith("backend") or kind_or_key.startswith("api.")
-    guest_marker = any(token in folded for token in ("guest", "гостев", "гость"))
-    guest_trial = ("без регистрац" in folded or "до регистрац" in folded) and any(
-        token in folded for token in ("проб", "попроб", "guest"))
-    guest_backend = backend and guest_marker
-    guest_ui = guest_marker and not backend and any(
-        token in folded for token in ("studio", "студи", "первая", "первый", "генерац", "проб"))
     bonus = 0
     if ui and is_ui:
         bonus += 5
@@ -86,18 +121,14 @@ def intent_bonus(task: str, kind_or_key: str) -> int:
         bonus -= 2
     if backend and is_ui:
         bonus -= 2
-    if guest_trial and kind_or_key == "web.guest":
-        bonus += 8
-    elif guest_trial and kind_or_key in {"web.gallery", "api.media"}:
-        bonus -= 3
-    if guest_backend and kind_or_key == "api.guest":
-        bonus += 10
-    elif guest_backend and kind_or_key == "api.accounts":
-        bonus -= 4
-    if guest_ui and kind_or_key == "web.guest":
-        bonus += 6
-    elif guest_ui and kind_or_key == "web.studio":
-        bonus -= 2
+    for rule in semantic_rules or []:
+        if not isinstance(rule, dict) or not semantic_rule_matches(folded, rule, ui=ui, backend=backend):
+            continue
+        scores = rule.get("scores", {})
+        if isinstance(scores, dict):
+            value = scores.get(kind_or_key, 0)
+            if type(value) is int:
+                bonus += value
     return bonus
 
 
@@ -117,12 +148,12 @@ def cross_boundary_ambiguity(task: str) -> str | None:
     return None
 
 
-def rank(task: str, items: dict, phrase_field: str) -> list[tuple[int, str, dict]]:
+def rank(task: str, items: dict, phrase_field: str, semantic_rules: list[dict] | None = None) -> list[tuple[int, str, dict]]:
     ranked = []
     for key, item in items.items():
         score = phrase_score(task, item.get(phrase_field, []))
         if score > 0:
-            score += intent_bonus(task, item.get("kind", key))
+            score += intent_bonus(task, item.get("kind", key), semantic_rules)
         ranked.append((score, key, item))
     return sorted(ranked, key=lambda value: (value[0], value[1]), reverse=True)
 
@@ -194,20 +225,24 @@ def render_route(key: str, route: dict, score: int, second: int) -> str:
     return "\n".join(lines)
 
 
+def routing_maps() -> tuple[dict, dict]:
+    return load_map(MAP_PATH, "routes"), load_map(BLOCK_PATH, "blocks")
+
+
 def resolve_task(task: str) -> tuple[str, str, dict, dict, int, int]:
     reason = cross_boundary_ambiguity(task)
     if reason:
         raise RuntimeError(f"AMBIGUOUS: {reason}")
-    context = load_json(MAP_PATH)
-    blocks = load_json(BLOCK_PATH)
-    block_ranked = rank(task, blocks.get("blocks", {}), "aliases")
+    context, blocks = routing_maps()
+    rules = context.get("semantic_rules", [])
+    block_ranked = rank(task, blocks.get("blocks", {}), "aliases", rules)
     try:
         key, block, score, second = choose(block_ranked, min_confident=7)
         route = context["routes"][block["route"]]
         return "block", key, block, route, score, second
     except LookupError:
         pass
-    route_ranked = rank(task, context.get("routes", {}), "keywords")
+    route_ranked = rank(task, context.get("routes", {}), "keywords", rules)
     key, route, score, second = choose(route_ranked)
     return "route", key, route, route, score, second
 
@@ -220,8 +255,7 @@ def main() -> int:
     parser.add_argument("--json", action="store_true", dest="as_json")
     args = parser.parse_args()
     try:
-        context = load_json(MAP_PATH)
-        blocks = load_json(BLOCK_PATH)
+        context, blocks = routing_maps()
         if args.key:
             if args.key in blocks.get("blocks", {}):
                 item = blocks["blocks"][args.key]
