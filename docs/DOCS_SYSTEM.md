@@ -1,110 +1,100 @@
 # Система документации IZO ASA
 
-Цель документации — не максимальное количество текста, а **минимальный достаточный контекст** для
-безопасного изменения проекта человеком или coding-агентом. Документы делятся по времени жизни и
-ответственности; один факт не должен иметь двух равноправных владельцев.
+Цель — минимальный достаточный контекст для безопасного изменения проекта человеком или coding-агентом.
+Один факт имеет одного владельца; история не подмешивается в live context.
 
-## 1. Пять уровней контекста
+## 1. Уровни контекста
 
-1. `AGENTS.md` — долговечные правила процесса и безопасности. Не содержит текущих SHA, PR и «следующего шага».
-2. `CURRENT.md` + `PLAN.json` — runtime base, current-package base, working branch, active/next package и dependency graph.
-3. `BLOCK_MAP.json` → конкретный UI/API блок; `CONTEXT_MAP.json` → fallback до feature/domain.
-4. Локальные `AGENTS.md`/`README.md` и затем PRODUCT/ADMIN/UX/ARCHITECTURE/AI_RUNTIME/OPERATIONS — только по необходимости.
-5. `CHECKPOINTS.json`, `reviews/` и `history/` — доказательства и прошлое; они не являются стартовым контекстом обычной правки.
+1. `AGENTS.md` — короткие долговечные правила.
+2. `CURRENT.md` + `PLAN.json` — текущий package, base, branch, dependency graph.
+3. `BLOCK_MAP.json` → точный UI/API block; `CONTEXT_MAP.json` → fallback route.
+4. Local README/AGENTS и затем предметные specs — только при конкретной зависимости.
+5. `CHECKPOINTS.json`, `reviews/`, `history/` — provenance/history; не default context.
 
-## 2. Единственный владелец каждого типа факта
+## 2. Владельцы фактов
 
 | Факт | Владелец |
 |---|---|
-| Runtime base, current-package base, working branch, active/next package, dependency graph | `PLAN.json` |
-| Immutable source/PR/merge-tree/workflow evidence | `CHECKPOINTS.json` |
-| Короткое объяснение текущего состояния | `CURRENT.md` (генерируется из PLAN) |
-| Конкретный UI/API блок: owner/symbol/anchor/test | `BLOCK_MAP.json` |
-| Feature/domain fallback-контекст | `CONTEXT_MAP.json` |
-| Как работает процесс разработки и SELF_REVIEW | `DEVELOPMENT.md` |
-| Пользовательское поведение/экраны/доступ | `PRODUCT.md` |
-| Админские операции/permissions/settings | `ADMIN.md` |
-| Визуальные требования | `UX.md` |
-| Доменные и data boundaries | `ARCHITECTURE.md` |
-| Provider/runtime/credentials/reconciliation | `AI_RUNTIME.md` |
-| Архитектурное решение, которое нельзя потерять при смене плана | `adr/ADR-*.md` |
+| Current package/base/branch/dependencies | `PLAN.json` |
+| Immutable CI evidence | `CHECKPOINTS.json` |
+| Короткое текущее состояние | `CURRENT.md` |
+| Block owner/symbol/anchor/test | `BLOCK_MAP.json` |
+| Feature/domain fallback | `CONTEXT_MAP.json` |
+| Coding-agent process / SELF_REVIEW | `DEVELOPMENT.md` |
+| File/context/scope budgets и recurring audit | `MAINTAINABILITY.md` |
+| Пользовательское поведение | `PRODUCT.md` |
+| Admin/permissions/settings | `ADMIN.md` |
+| Visual/responsive/accessibility | `UX.md` |
+| Domain/data boundaries | `ARCHITECTURE.md` |
+| Provider/runtime/credentials | `AI_RUNTIME.md` |
+| Architecture decisions | `adr/ADR-*.md` |
 | Docker/release/network/backup | `OPERATIONS.md` |
-| Фактически доказанные последние результаты | `STATUS.md` |
-| Подробный отчёт отдельного пакета | `reviews/<ID>.md` |
+| Доказанные факты | `STATUS.md` |
+| Package report | `reviews/<ID>.md` |
 
-Если информация относится двум темам, один документ владеет правилом, остальные только ссылаются на него.
+## 3. Progressive disclosure
 
-## 3. Правило чтения — progressive disclosure
+Порядок:
+`AGENTS → CURRENT/verify → block locator → surrounding source block/test`.
+Если block неизвестен: `route → local README → owner source/test`.
 
-Агент не получает право на широкий scan только потому, что репозиторий доступен. Базовый порядок:
+Большой предметный документ открывается только по зависимости. Lockfiles, generated contracts, CHECKPOINTS,
+history и соседние feature по умолчанию закрыты. Бюджеты initial context обязательны по `MAINTAINABILITY.md`.
 
-`AGENTS → CURRENT/project_state verify → block locator → окружающий source block/test`; если block не найден — `context route → локальный README/AGENTS → source/test`.
+## 4. Local ownership contract
 
-Большой предметный документ открывается только если локальная карта прямо на него ссылается или
-конкретный вопрос нельзя решить по локальному контракту. Сначала искать точный route/текст/symbol/error,
-затем читать небольшой диапазон. Lockfiles, generated contracts, CHECKPOINTS, history и чужие feature по умолчанию закрыты.
+Самостоятельный feature/domain имеет короткий README:
+- routes/visible blocks/commands;
+- owner files;
+- внешние зависимости;
+- invariants;
+- nearest tests;
+- когда расширять контекст.
 
-Для мелкой UI-правки целевой начальный бюджет — обычно 3–6 исходных/тестовых файлов. Это не жёсткий
-лимит correctness: если реальная зависимость требует больше, агент объясняет причину и расширяет scope.
+README не является журналом. Domain-local Markdown считается единым live-context budget: подробная история, старые ветки,
+старые команды и package evidence уходят из каталога кода в `history/`/`reviews/`.
 
-## 4. Локальные README как карта блока
+## 5. Plan/checkpoints/freeze
 
-Каждый самостоятельный feature/backend domain должен иметь короткий README рядом с кодом. README отвечает:
+`PLAN.json` различает runtime base, current-package base и working branch.
+PLAN хранит короткие checkpoint refs; evidence находится в CHECKPOINTS.
 
-- какие маршруты/видимые блоки или команды принадлежат модулю;
-- какой файл владеет каким элементом;
-- какие зависимости являются внешними и не должны дублироваться;
-- какие инварианты нельзя нарушить;
-- какой ближайший тест запускать;
-- куда расширять чтение, если задача пересекает границу.
+После required CI working head замораживается без status commit. PR evidence помечается `pr_merge_tree`, если проверен
+synthetic merge. `project_state.py begin-next` проверяет evidence/dependencies, создаёт следующую ветку от frozen source,
+записывает checkpoint и переводит package state уже в новой ветке.
 
-README не превращается в журнал изменений и не копирует PRODUCT/ARCHITECTURE целиком.
-Рабочая local ownership map должна оставаться не больше 5 КБ; подробная история уходит в `docs/history/`.
+## 6. Definition of Done документации
 
-## 5. План, checkpoints, ветки и freeze
+1. `tools/check_docs.py` проходит.
+2. Block/route ведёт к существующему owner/anchor/test.
+3. Новый domain имеет local README + route; ключевые операции имеют block ID.
+4. Local live docs укладываются в aggregate budget и не содержат mutable history.
+5. Route/block initial context укладывается в budget.
+6. PLAN/CURRENT меняются только на новой ветке при state transition.
+7. CI evidence находится в CHECKPOINTS.
+8. STATUS содержит только доказанные факты.
+9. Stable docs не содержат mutable SHA/PR.
+10. Maintainability delta проверен.
 
-`PLAN.json` различает `runtime_base`, `current_package_base` и `working_branch`. Следующий base никогда не
-выбирается вручную: `next_branch_source=verified_working_head`.
+## 7. Запрещено
 
-PLAN хранит только короткий `checkpoint` reference. Полное CI evidence находится в `CHECKPOINTS.json`, поэтому
-machine-plan не растёт с каждым завершённым package и не заставляет агента читать историю workflow IDs.
-
-После успешных required PR workflows current working head **замораживается без status commit**. Для PR workflow
-evidence тип — `pr_merge_tree`: source head связывается с PR, зелёными workflow и synthetic merge tree, содержащим
-этот source head. `project_state.py begin-next` проверяет evidence/dependencies, записывает immutable checkpoint,
-создаёт новую ветку точно от frozen working head и только затем переводит предыдущий package в `technical_pass`.
-
-Если появляются две реализации одного package ID, feature work останавливается до reconciliation package.
-
-## 6. Документ — часть Definition of Done
-
-Правка считается документально завершённой, когда:
-
-1. `tools/check_docs.py` проходит;
-2. block locator/route для затронутой области всё ещё ведёт к существующему owner/anchor/tests;
-3. новый самостоятельный feature/domain имеет local README и route; ключевые действия получают block ID;
-4. локальный README отражает новое ownership/поведение, если граница реально изменилась;
-5. PLAN/CURRENT меняются только в новой ветке при старте следующего package, не после freeze;
-6. checkpoint evidence находится в CHECKPOINTS, а не раздувает PLAN;
-7. STATUS обновляется только подтверждёнными фактами;
-8. старый текст архивируется или явно маркируется historical/superseded.
-
-## 7. Что запрещено
-
-- Создавать ещё один `MASTER_PLAN`, `ROADMAP_FINAL`, `NOW2` или аналогичный второй source of truth.
-- Хранить текущий SHA/PR/next package в `AGENTS.md`, INDEX или локальном README.
-- Встраивать полные historical CI evidence внутрь PLAN.
-- Писать в STATUS «готово», пока required CI evidence ещё не завершено и не связано с source head.
-- Использовать review/history/checkpoints как инструкцию текущей разработки.
-- Делать documentation-only PR поводом для скрытого изменения runtime/CI/security policy.
-- Увеличивать context/scope/file-size лимит автоматически после ошибки вместо разделения ответственности.
+- Второй MASTER_PLAN/ROADMAP/NOW.
+- Current SHA/PR/next package в stable/local docs.
+- CI history внутри PLAN.
+- Broad spec как default context маленькой правки.
+- Повышение file/context/scope limit после failure вместо разделения ответственности.
+- Дублирование одного ownership rule в README и domain AGENTS.
+- Documentation-only изменение как скрытый runtime/security change.
 
 ## 8. Автоматические предохранители
 
-`tools/context.py` сначала ищет block-level locator и только затем feature/domain route; близкие кандидаты дают
-`AMBIGUOUS`, а не случайный выбор. `tools/project_state.py` различает runtime base / current-package base / working head,
-машинно связывает PR CI evidence с source SHA и пишет отдельный checkpoint. `tools/check_docs.py` проверяет PLAN/CURRENT,
-checkpoint refs, block owner+anchor, route paths, local-map coverage, context-map budgets, stable docs и UTF-8.
+`context.py` ищет block до route и fail-closed на ambiguity.
+`project_state.py` охраняет lineage/checkpoints.
+`check_docs.py` проверяет PLAN/CURRENT/checkpoints, owner/anchor/routes, coverage, UTF-8, stable docs,
+aggregate local-doc budgets и initial context budgets.
+Architecture guard проверяет handwritten production/tests/tools/e2e/acceptance/migrations, headroom и workflow size.
 
-Отдельный architecture guard запрещает giant handwritten files не только в production source, но и в tests/tools/e2e/
-acceptance/migrations. Ошибка size guard означает «разделить ответственность», а не «поднять лимит».
+`CONTEXT_MAP`/`BLOCK_MAP` должны быть шардированы до достижения hard-limit; router не должен становиться местом
+domain-specific `if guest/chat/video/...` логики. Routing signals по возможности declarative.
+
+Численные пределы и audit cadence принадлежат `MAINTAINABILITY.md`.

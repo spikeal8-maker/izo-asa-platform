@@ -10,6 +10,10 @@ from project_state import READY_DEPENDENCY_STATUSES, render_current
 
 ROOT = Path(__file__).resolve().parents[1]
 DOCS = ROOT / "docs"
+ROUTE_HARD_BYTES = 18_000
+BLOCK_DOC_HARD_BYTES = 12_000
+DEFAULT_READ_HARD_BYTES = 6_000
+LOCAL_DOC_HARD_BYTES = 6_000
 
 
 def load_json(path: Path) -> dict:
@@ -91,11 +95,23 @@ def check_current(errors: list[str], plan: dict) -> None:
         errors.append("CURRENT.md must be generated exactly from PLAN.json via project_state.render_current")
 
 
+def paths_bytes(paths: list[str]) -> int:
+    total = 0
+    for raw in dict.fromkeys(paths):
+        path = ROOT / raw
+        if path.is_file():
+            total += path.stat().st_size
+    return total
+
+
 def check_context(errors: list[str], context: dict) -> None:
     if len((DOCS / "CONTEXT_MAP.json").read_bytes()) > 20_000:
         errors.append("CONTEXT_MAP exceeds 20KB hard context budget; shard it")
     if context.get("schema_version") != 1:
         errors.append("CONTEXT_MAP schema_version must be 1")
+    default_read = context.get("default_read", [])
+    if paths_bytes(default_read) > DEFAULT_READ_HARD_BYTES:
+        errors.append(f"default agent read exceeds {DEFAULT_READ_HARD_BYTES} bytes")
     routes = context.get("routes")
     if not isinstance(routes, dict) or not routes:
         errors.append("CONTEXT_MAP routes must be a non-empty object")
@@ -107,6 +123,16 @@ def check_context(errors: list[str], context: dict) -> None:
             for raw in route.get(field, []):
                 if not isinstance(raw, str) or not raw or not (ROOT / raw).exists():
                     errors.append(f"route {key}.{field} missing path: {raw}")
+        initial = paths_bytes(route.get("read_first", []))
+        if initial > ROUTE_HARD_BYTES:
+            errors.append(f"route {key} initial context {initial} exceeds {ROUTE_HARD_BYTES} bytes")
+
+
+def local_map(route: dict) -> str | None:
+    for raw in route.get("read_first", []):
+        if raw.endswith("README.md"):
+            return raw
+    return None
 
 
 def check_blocks(errors: list[str], blocks: dict, context: dict) -> None:
@@ -118,6 +144,7 @@ def check_blocks(errors: list[str], blocks: dict, context: dict) -> None:
         route = block.get("route")
         if route not in context.get("routes", {}):
             errors.append(f"block {key} references unknown route {route}")
+            continue
         owner = ROOT / str(block.get("owner", ""))
         if not owner.is_file():
             errors.append(f"block {key} owner missing: {block.get('owner')}")
@@ -128,35 +155,51 @@ def check_blocks(errors: list[str], blocks: dict, context: dict) -> None:
         for raw in [*block.get("support", []), *block.get("tests", [])]:
             if not (ROOT / raw).exists():
                 errors.append(f"block {key} path missing: {raw}")
+        route_data = context["routes"][route]
+        initial_docs = ["AGENTS.md", "docs/CURRENT.md"]
+        mapping = local_map(route_data)
+        if mapping:
+            initial_docs.append(mapping)
+        total = paths_bytes(initial_docs)
+        if total > BLOCK_DOC_HARD_BYTES:
+            errors.append(f"block {key} initial documentation {total} exceeds {BLOCK_DOC_HARD_BYTES} bytes")
+
+
+def local_doc_groups() -> list[Path]:
+    groups: list[Path] = []
+    for base in (ROOT / "apps/api/izo", ROOT / "apps/web/src/features"):
+        if not base.exists():
+            continue
+        groups.extend(child for child in base.iterdir() if child.is_dir() and child.name != "__pycache__")
+    return groups
 
 
 def check_coverage(errors: list[str], context: dict) -> None:
     route_paths = {raw for route in context.get("routes", {}).values() for raw in route.get("read_first", [])}
-    groups = [ROOT / "apps/web/src/features", ROOT / "apps/api/izo"]
-    for base in groups:
-        for child in base.iterdir():
-            if not child.is_dir() or child.name == "__pycache__":
-                continue
-            readme = child / "README.md"
-            raw = readme.relative_to(ROOT).as_posix()
-            if not readme.is_file():
-                errors.append(f"local ownership README missing: {raw}")
-            elif raw not in route_paths:
-                errors.append(f"local ownership README is not covered by a context route: {raw}")
-    ownership = {ROOT / raw for raw in route_paths if raw.endswith("README.md")}
-    ownership.add(ROOT / "apps/web/security/README.md")
+    groups = local_doc_groups()
     mutable_sha = re.compile(r"\b[0-9a-f]{40}\b")
     mutable_pr = re.compile(r"\bPR\s*#\d+\b", re.I)
+    mutable_branch = re.compile(r"(?:рабочая\s+ветка|working\s+branch)\s*:", re.I)
     next_package = re.compile(r"следующ(?:ий|ая|ее).{0,40}пакет", re.I)
     lifecycle_drift = re.compile(r"(?:после\s+acceptance\s+продолжать|остаются\s+демо|для\s+этого\s+нужны\s+(?:CREDIT|MEDIA|JOBS))", re.I)
-    for path in ownership:
-        if not path.is_file():
-            continue
-        text = path.read_text(encoding="utf-8")
-        if mutable_sha.search(text) or mutable_pr.search(text) or next_package.search(text) or lifecycle_drift.search(text):
-            errors.append(f"local ownership map contains mutable/history lifecycle language: {path.relative_to(ROOT)}")
-        if len(text.encode("utf-8")) > 5000:
-            errors.append(f"local ownership map exceeds 5KB context budget: {path.relative_to(ROOT)}")
+
+    for child in groups:
+        readme = child / "README.md"
+        raw = readme.relative_to(ROOT).as_posix()
+        if not readme.is_file():
+            errors.append(f"local ownership README missing: {raw}")
+        elif raw not in route_paths:
+            errors.append(f"local ownership README is not covered by a context route: {raw}")
+
+        live_docs = sorted(path for path in child.glob("*.md") if path.is_file())
+        total = sum(path.stat().st_size for path in live_docs)
+        if total > LOCAL_DOC_HARD_BYTES:
+            errors.append(f"local live docs exceed {LOCAL_DOC_HARD_BYTES} bytes: {child.relative_to(ROOT)}={total}")
+        for path in live_docs:
+            text = path.read_text(encoding="utf-8")
+            if (mutable_sha.search(text) or mutable_pr.search(text) or mutable_branch.search(text)
+                    or next_package.search(text) or lifecycle_drift.search(text)):
+                errors.append(f"local live doc contains mutable/history lifecycle language: {path.relative_to(ROOT)}")
 
 
 def check_encoding_and_stable(errors: list[str]) -> None:
@@ -171,7 +214,8 @@ def check_encoding_and_stable(errors: list[str]) -> None:
         if sum(text.count(marker) for marker in markers) >= 4:
             errors.append(f"possible UTF-8 mojibake: {path.relative_to(ROOT)}")
     stable = [ROOT / "AGENTS.md", ROOT / "README.md", DOCS / "INDEX.md",
-              DOCS / "NEXT.md", DOCS / "DOCS_SYSTEM.md", DOCS / "DEVELOPMENT.md"]
+              DOCS / "NEXT.md", DOCS / "DOCS_SYSTEM.md", DOCS / "DEVELOPMENT.md",
+              DOCS / "MAINTAINABILITY.md"]
     for path in stable:
         text = path.read_text(encoding="utf-8")
         if re.search(r"\b[0-9a-f]{40}\b", text) or re.search(r"\bPR\s*#\d+\b", text, re.I):

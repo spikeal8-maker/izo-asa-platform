@@ -1,10 +1,23 @@
 """Small executable architecture checks, not a new governance framework."""
 import ast
 import json
-import re
 from pathlib import Path
+import re
+import subprocess
 
 ROOT = Path(__file__).resolve().parents[1]
+
+PROD_LIMITS = {
+    ROOT / "apps/api/izo": ({".py"}, 300, 12_000),
+    ROOT / "apps/web/src": ({".ts", ".tsx", ".css"}, 300, 12_000),
+}
+AUX_LIMITS = {
+    ROOT / "tests": ({".py"}, 350, 16_000),
+    ROOT / "tools": ({".py"}, 350, 16_000),
+    ROOT / "apps/web/e2e": ({".ts"}, 350, 16_000),
+    ROOT / "apps/web/acceptance": ({".mjs"}, 350, 16_000),
+    ROOT / "apps/api/migrations": ({".py"}, 350, 16_000),
+}
 
 
 def test_contracts_are_independent():
@@ -35,15 +48,55 @@ def _check_file_budget(root: Path, suffixes: set[str], *, max_lines: int, max_by
 
 
 def test_handwritten_files_stay_modular():
-    # Product code must stay especially small because coding agents read it frequently.
-    _check_file_budget(ROOT / "apps/api/izo", {".py"}, max_lines=300, max_bytes=12_000)
-    _check_file_budget(ROOT / "apps/web/src", {".ts", ".tsx", ".css"}, max_lines=300, max_bytes=12_000)
-    # Tests/tools may carry fixtures, but they still must not become hidden monoliths.
-    _check_file_budget(ROOT / "tests", {".py"}, max_lines=350, max_bytes=16_000)
-    _check_file_budget(ROOT / "tools", {".py"}, max_lines=350, max_bytes=16_000)
-    _check_file_budget(ROOT / "apps/web/e2e", {".ts"}, max_lines=350, max_bytes=16_000)
-    _check_file_budget(ROOT / "apps/web/acceptance", {".mjs"}, max_lines=350, max_bytes=16_000)
-    _check_file_budget(ROOT / "apps/api/migrations", {".py"}, max_lines=350, max_bytes=16_000)
+    for root, (suffixes, lines, size) in {**PROD_LIMITS, **AUX_LIMITS}.items():
+        _check_file_budget(root, suffixes, max_lines=lines, max_bytes=size)
+
+
+def _changed_paths(base: str) -> set[str]:
+    result = subprocess.run(
+        ["git", "diff", "--name-only", "--no-renames", base, "HEAD", "--"],
+        cwd=ROOT, capture_output=True, text=True, timeout=20, check=True)
+    return {line.strip() for line in result.stdout.splitlines() if line.strip()}
+
+
+def _old_blob_size(base: str, raw: str) -> int:
+    result = subprocess.run(
+        ["git", "show", f"{base}:{raw}"], cwd=ROOT, capture_output=True, timeout=20)
+    return len(result.stdout) if result.returncode == 0 else 0
+
+
+def _limit_for(path: Path):
+    for root, (_, max_lines, max_bytes) in {**PROD_LIMITS, **AUX_LIMITS}.items():
+        try:
+            path.relative_to(root)
+            return max_lines, max_bytes
+        except ValueError:
+            continue
+    return None
+
+
+def test_near_limit_changed_files_do_not_keep_growing():
+    plan = json.loads((ROOT / "docs/PLAN.json").read_text(encoding="utf-8"))
+    base = plan["canonical_lineage"]["current_package_base"]["sha"]
+    for raw in _changed_paths(base):
+        path = ROOT / raw
+        limit = _limit_for(path)
+        if not limit or not path.is_file() or ".generated." in path.name:
+            continue
+        _, max_bytes = limit
+        new_size = path.stat().st_size
+        old_size = _old_blob_size(base, raw)
+        if new_size > int(max_bytes * 0.80):
+            assert old_size and new_size <= old_size, (
+                f"{raw} is above 80% of its {max_bytes}-byte hard limit and grew "
+                f"{old_size}->{new_size}; split responsibility instead")
+
+
+def test_ci_workflows_stay_modular():
+    for path in (ROOT / ".github/workflows").glob("*.y*ml"):
+        text = path.read_text(encoding="utf-8")
+        assert len(text.splitlines()) <= 350, path
+        assert len(text.encode("utf-8")) <= 16_000, path
 
 
 def test_frontend_http_is_centralized():
