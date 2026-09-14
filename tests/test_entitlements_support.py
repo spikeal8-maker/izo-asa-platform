@@ -9,7 +9,10 @@ from izo.entitlements import tables as t
 from izo.entitlements.schemas import PlanPolicy, ImageSize, PublishPlan, SetDefault, AssignPlan, EntitlementError
 from izo.entitlements.policy import ImageDemand, RuntimeState, UsageSnapshot
 from izo.entitlements.service import EntitlementService
-from test_credits import credit_env, grant
+from credit_support import grant
+
+# Reuse the canonical Credits fixture without copying its setup into Entitlements tests.
+pytest_plugins = ("credit_support",)
 
 
 @pytest.fixture
