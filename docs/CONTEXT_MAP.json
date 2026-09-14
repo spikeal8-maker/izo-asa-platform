@@ -7,6 +7,25 @@
     "read": ["docs/INDEX.md"],
     "action": "Search the exact visible text, route, symbol, error code or API path before opening broad specifications."
   },
+  "semantic_rules": [
+    {
+      "name": "guest_trial_before_registration",
+      "all_any": [["без регистрац", "до регистрац"], ["проб", "попроб", "guest"]],
+      "scores": {"web.guest": 8, "web.gallery": -3, "api.media": -3}
+    },
+    {
+      "name": "guest_backend",
+      "intent": "backend",
+      "all_any": [["guest", "гостев", "гость"]],
+      "scores": {"api.guest": 10, "api.accounts": -4}
+    },
+    {
+      "name": "guest_studio_ui",
+      "intent": "not_backend",
+      "all_any": [["guest", "гостев", "гость"], ["studio", "студи", "первая", "первый", "генерац", "проб"]],
+      "scores": {"web.guest": 6, "web.studio": -2}
+    }
+  ],
   "routes": {
     "web.shell": {
       "keywords": ["шапка", "навигация", "меню", "тема", "header", "navigation", "theme", "shell"],
