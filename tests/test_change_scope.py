@@ -10,6 +10,8 @@ spec = importlib.util.spec_from_file_location("change_guard", ROOT / "tools/chec
 guard = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(guard)
 SCOPE = {"allowed": ["apps/web/*"], "sensitive_approved": [], "max_files": 3}
+MODERN = {"allowed": ["apps/web/*"], "sensitive_approved": [], "max_files": 8,
+          "scope_class": "tiny", "risk": "low"}
 
 
 def test_normal_ui_is_local():
@@ -72,10 +74,44 @@ def test_scope_manifest_is_explicit_about_non_goals():
 
 def test_reviewed_base_cannot_be_replaced_with_current_head():
     base = "a" * 40
-    guard.validate_base(base, {"base": base})
+    guard.validate_base(base, {"base": base, **SCOPE})
     with pytest.raises(ValueError):
-        guard.validate_base("b" * 40, {"base": base})
+        guard.validate_base("b" * 40, {"base": base, **SCOPE})
     with pytest.raises(ValueError):
-        guard.validate_base(base, {})
+        guard.validate_base(base, SCOPE)
     with pytest.raises(ValueError):
         guard.inspect([], [])
+
+
+def test_modern_scope_classes_have_finite_caps():
+    guard.validate_scope(MODERN, require_modern=True)
+    for name, cap in guard.SCOPE_CLASS_LIMITS.items():
+        scope = dict(MODERN, scope_class=name, max_files=cap)
+        if name == "cross_domain":
+            scope.update(large_scope_reason="cross-domain fixture", domains=["web", "api"], non_goals=["deploy"])
+        guard.validate_scope(scope, require_modern=True)
+        with pytest.raises(ValueError):
+            guard.validate_scope(dict(scope, max_files=cap + 1), require_modern=True)
+
+
+def test_cross_domain_requires_reason_domains_and_non_goals():
+    scope = dict(MODERN, scope_class="cross_domain", max_files=20)
+    with pytest.raises(ValueError): guard.validate_scope(scope, require_modern=True)
+    scope.update(large_scope_reason="needed across boundaries", domains=["web", "api"], non_goals=["deploy"])
+    guard.validate_scope(scope, require_modern=True)
+
+
+def test_high_risk_scope_requires_independent_review_marker():
+    high = dict(MODERN, risk="high")
+    with pytest.raises(ValueError): guard.validate_scope(high, require_modern=True)
+    guard.validate_scope(dict(high, independent_review_required=True), require_modern=True)
+
+
+def test_current_active_package_has_modern_scope_contract():
+    plan = json.loads((ROOT / "docs/PLAN.json").read_text(encoding="utf-8"))
+    active = plan["active_package"]
+    path = ROOT / "tools/scopes" / f"{active.lower()}.json"
+    assert path.is_file(), f"missing active package scope: {path}"
+    scope = json.loads(path.read_text(encoding="utf-8"))
+    guard.validate_scope(scope, require_modern=True)
+    assert scope.get("base") == plan["canonical_lineage"]["current_package_base"]["sha"]

@@ -13,6 +13,7 @@ from project_state_model import (CHECKPOINTS_PATH, NEXT_PACKAGE_SOURCE_STATUSES,
     READY_DEPENDENCY_STATUSES, ROOT, dependency_problems, load_checkpoints, load_plan,
     render_current, serialize_checkpoints, serialize_plan, transition, validate_plan,
     validate_ref, write_state)
+from review_evidence import require_independent_review
 
 REQUIRED_WORKFLOWS = ("Foundation CI", "Dependency Security", "Review Source")
 
@@ -110,6 +111,15 @@ def fetch_pr_evidence(pr_number: int, expected_head: str, *, root: Path = ROOT) 
         expected_head=expected_head, pr_number=pr_number, foundation_tree=foundation_tree)
 
 
+def active_scope(plan: dict, *, root: Path = ROOT) -> dict:
+    package_id = plan["active_package"].lower()
+    path = root / "tools" / "scopes" / f"{package_id}.json"
+    if not path.exists():
+        return {}
+    value = json.loads(path.read_text(encoding="utf-8"))
+    return value if isinstance(value, dict) else {}
+
+
 def verify_checkout(plan: dict, root: Path = ROOT) -> list[str]:
     validate_plan(plan)
     problems: list[str] = []
@@ -135,6 +145,11 @@ def begin_next(plan: dict, *, branch: str, activate: str, next_id: str | None,
     if current_branch != plan["canonical_lineage"]["working_branch"]:
         raise ValueError("begin-next must run from the current working_branch")
     source_head = git("rev-parse", "HEAD", root=root)
+    scope = active_scope(plan, root=root)
+    if scope.get("risk") == "high" or scope.get("independent_review_required") is True:
+        slug = repo_slug(root)
+        comments = gh_json(["api", f"repos/{slug}/issues/{verified_pr}/comments?per_page=100"], root=root)
+        require_independent_review(scope, comments, source_head)
     evidence = fetch_pr_evidence(verified_pr, source_head, root=root)
     if branch == current_branch:
         raise ValueError("next package requires a new branch")
@@ -201,7 +216,7 @@ if __name__ == "__main__":
 
 
 __all__ = ["CHECKPOINTS_PATH", "NEXT_PACKAGE_SOURCE_STATUSES", "PLAN_PATH",
-    "READY_DEPENDENCY_STATUSES", "ROOT", "begin_next", "dependency_problems",
+    "READY_DEPENDENCY_STATUSES", "ROOT", "active_scope", "begin_next", "dependency_problems",
     "fetch_pr_evidence", "git", "load_checkpoints", "load_plan", "render_current",
     "serialize_checkpoints", "serialize_plan", "transition", "validate_plan",
     "validate_pr_evidence", "validate_ref", "verify_checkout", "write_state"]

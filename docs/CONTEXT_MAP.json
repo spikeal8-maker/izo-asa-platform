@@ -7,145 +7,164 @@
     "read": ["docs/INDEX.md"],
     "action": "Search the exact visible text, route, symbol, error code or API path before opening broad specifications."
   },
+  "semantic_rules": [
+    {
+      "name": "guest_trial_before_registration",
+      "all_any": [["без регистрац", "до регистрац"], ["проб", "попроб", "guest"]],
+      "scores": {"web.guest": 8, "web.gallery": -3, "api.media": -3}
+    },
+    {
+      "name": "guest_backend",
+      "intent": "backend",
+      "all_any": [["guest", "гостев", "гость"]],
+      "scores": {"api.guest": 10, "api.accounts": -4}
+    },
+    {
+      "name": "guest_studio_ui",
+      "intent": "not_backend",
+      "all_any": [["guest", "гостев", "гость"], ["studio", "студи", "первая", "первый", "генерац", "проб"]],
+      "scores": {"web.guest": 6, "web.studio": -2}
+    }
+  ],
   "routes": {
     "web.shell": {
       "keywords": ["шапка", "навигация", "меню", "тема", "header", "navigation", "theme", "shell"],
-      "read_first": ["apps/web/AGENTS.md", "apps/web/src/shell/App.tsx", "apps/web/src/shell/layout.css", "apps/web/src/shell/theme.css"],
+      "read_first": ["apps/web/AGENTS.md", "apps/web/src/shell/App.tsx"],
       "tests": ["apps/web/e2e/shell.spec.ts"],
-      "expand_if_needed": ["apps/web/src/shell/router.tsx", "apps/web/src/shell/navigation.ts", "docs/UX_PRODUCT_SHELL.md"],
+      "expand_if_needed": ["apps/web/src/shell/layout.css", "apps/web/src/shell/theme.css", "apps/web/src/shell/router.tsx", "apps/web/src/shell/navigation.ts", "docs/UX_PRODUCT_SHELL.md"],
       "do_not_read_by_default": ["docs/PRODUCT.md", "docs/ADMIN.md", "docs/AI_RUNTIME.md", "apps/api"]
     },
     "web.feed": {
       "keywords": ["лента", "feed", "explore", "первый экран", "главная страница", "публичная лента", "подборка идей"],
-      "read_first": ["apps/web/AGENTS.md", "apps/web/src/features/feed/README.md", "apps/web/src/features/feed/FeedPage.tsx", "apps/web/src/features/feed/feed.css"],
+      "read_first": ["apps/web/AGENTS.md", "apps/web/src/features/feed/README.md", "apps/web/src/features/feed/FeedPage.tsx"],
       "tests": ["apps/web/e2e/shell.spec.ts"],
-      "expand_if_needed": ["apps/web/src/shell/App.tsx", "docs/UX_PRODUCT_SHELL.md"],
+      "expand_if_needed": ["apps/web/src/features/feed/feed.css", "apps/web/src/shell/App.tsx", "docs/UX_PRODUCT_SHELL.md"],
       "do_not_read_by_default": ["docs/AI_RUNTIME.md", "apps/api/izo/providers", "apps/api/izo/admin"]
     },
     "web.studio": {
       "keywords": ["студия", "генерировать", "промпт", "подтверждение", "кнопка генерации", "quote", "studio", "prompt"],
-      "read_first": ["apps/web/AGENTS.md", "apps/web/src/features/studio/README.md", "apps/web/src/features/studio/Studio.tsx", "apps/web/src/features/studio/studio.css"],
+      "read_first": ["apps/web/AGENTS.md", "apps/web/src/features/studio/README.md"],
       "tests": ["apps/web/e2e/studio.spec.ts", "apps/web/e2e/provider.spec.ts"],
-      "expand_if_needed": ["apps/web/src/shared/workspace-api.ts", "apps/web/src/shared/submission.ts"],
+      "expand_if_needed": ["apps/web/src/features/studio/Studio.tsx", "apps/web/src/features/studio/studio.css", "apps/web/src/shared/workspace-api.ts", "apps/web/src/shared/submission.ts"],
       "do_not_read_by_default": ["docs/ADMIN.md", "docs/OPERATIONS.md", "apps/api/izo/admin"]
     },
     "web.guest": {
       "keywords": ["пробная работа без регистрации", "гостевой интерфейс", "guest trial ui", "guest studio", "создать до регистрации"],
-      "read_first": ["apps/web/AGENTS.md", "apps/web/src/features/studio/GuestTrial.tsx", "apps/web/src/features/studio/Studio.tsx"],
+      "read_first": ["apps/web/AGENTS.md", "apps/web/src/features/studio/README.md"],
       "tests": ["apps/web/e2e/studio.spec.ts"],
-      "expand_if_needed": ["apps/web/src/features/accounts/AccountPage.tsx", "apps/web/src/shared/api.ts", "apps/api/izo/guest/README.md"],
+      "expand_if_needed": ["apps/web/src/features/studio/GuestTrial.tsx", "apps/web/src/features/studio/Studio.tsx", "apps/web/src/features/accounts/AccountPage.tsx", "apps/web/src/shared/api.ts", "apps/api/izo/guest/README.md"],
       "do_not_read_by_default": ["docs/ADMIN.md", "docs/AI_RUNTIME.md", "apps/api/izo/providers"]
     },
     "web.gallery": {
       "keywords": ["галерея", "скачать", "превью", "карточка изображения", "gallery", "download", "preview", "asset"],
-      "read_first": ["apps/web/AGENTS.md", "apps/web/src/features/gallery/README.md", "apps/web/src/features/gallery/Gallery.tsx", "apps/web/src/features/gallery/AssetPage.tsx", "apps/web/src/features/gallery/gallery.css"],
+      "read_first": ["apps/web/AGENTS.md", "apps/web/src/features/gallery/README.md"],
       "tests": ["apps/web/e2e/gallery.spec.ts"],
-      "expand_if_needed": ["apps/web/src/features/gallery/PrivateImage.tsx", "apps/web/src/shared/workspace-api.ts"],
+      "expand_if_needed": ["apps/web/src/features/gallery/Gallery.tsx", "apps/web/src/features/gallery/AssetPage.tsx", "apps/web/src/features/gallery/gallery.css", "apps/web/src/features/gallery/PrivateImage.tsx", "apps/web/src/shared/workspace-api.ts"],
       "do_not_read_by_default": ["docs/ADMIN.md", "docs/AI_RUNTIME.md", "apps/api/izo/providers"]
     },
     "web.accounts": {
       "keywords": ["аккаунт", "профиль", "пароль", "безопасность", "сессия", "account", "profile", "password", "security", "session", "регистрация", "войти"],
-      "read_first": ["apps/web/AGENTS.md", "apps/web/src/features/accounts/README.md", "apps/web/src/features/accounts/AccountPage.tsx", "apps/web/src/features/accounts/SecurityPage.tsx", "apps/web/src/features/accounts/accounts.css"],
+      "read_first": ["apps/web/AGENTS.md", "apps/web/src/features/accounts/README.md"],
       "tests": ["apps/web/e2e/accounts.spec.ts", "apps/web/e2e/email-security.spec.ts"],
-      "expand_if_needed": ["apps/web/src/shared/workspace.tsx", "apps/web/src/shared/api.ts", "docs/UX_PRODUCT_SHELL.md"],
+      "expand_if_needed": ["apps/web/src/features/accounts/AccountPage.tsx", "apps/web/src/features/accounts/SecurityPage.tsx", "apps/web/src/features/accounts/accounts.css", "apps/web/src/shared/workspace.tsx", "apps/web/src/shared/api.ts", "docs/UX_PRODUCT_SHELL.md"],
       "do_not_read_by_default": ["docs/AI_RUNTIME.md", "apps/api/izo/jobs", "apps/api/izo/providers"]
     },
     "web.admin": {
       "keywords": ["админка", "начислить", "пользователь в админке", "admin", "grant", "staff"],
-      "read_first": ["apps/web/AGENTS.md", "apps/web/src/features/admin/README.md", "apps/web/src/features/admin/AdminPage.tsx", "apps/web/src/features/admin/GrantForm.tsx"],
+      "read_first": ["apps/web/AGENTS.md", "apps/web/src/features/admin/README.md"],
       "tests": ["apps/web/e2e/admin.spec.ts"],
-      "expand_if_needed": ["apps/web/src/shared/workspace-api.ts", "docs/ADMIN.md"],
+      "expand_if_needed": ["apps/web/src/features/admin/AdminPage.tsx", "apps/web/src/features/admin/GrantForm.tsx", "apps/web/src/shared/workspace-api.ts", "docs/ADMIN.md"],
       "do_not_read_by_default": ["docs/PRODUCT.md", "docs/AI_RUNTIME.md", "apps/api/izo/providers"]
     },
     "web.credits": {
       "keywords": ["баланс", "баллы", "кредиты", "credits", "wallet", "balance"],
-      "read_first": ["apps/web/AGENTS.md", "apps/web/src/features/credits/README.md", "apps/web/src/features/credits/CreditsPage.tsx"],
+      "read_first": ["apps/web/AGENTS.md", "apps/web/src/features/credits/README.md"],
       "tests": ["apps/web/e2e/accounts.spec.ts"],
-      "expand_if_needed": ["apps/web/src/shared/workspace-api.ts", "apps/api/izo/credits/README.md"],
+      "expand_if_needed": ["apps/web/src/features/credits/CreditsPage.tsx", "apps/web/src/shared/workspace-api.ts", "apps/api/izo/credits/README.md"],
       "do_not_read_by_default": ["docs/AI_RUNTIME.md", "apps/api/izo/providers"]
     },
     "api.accounts": {
       "keywords": ["login", "logout", "register", "csrf", "cookie", "bearer", "auth", "вход", "регистрация", "сессия backend", "open signup", "invite mode"],
-      "read_first": ["apps/api/AGENTS.md", "apps/api/izo/accounts/README.md", "apps/api/izo/accounts/service.py", "apps/api/izo/accounts/routes.py"],
+      "read_first": ["apps/api/AGENTS.md", "apps/api/izo/accounts/README.md"],
       "tests": ["tests/test_accounts.py", "tests/test_auth_boundaries.py"],
-      "expand_if_needed": ["apps/api/izo/accounts/tables.py", "apps/api/izo/accounts/security.py", "docs/ARCHITECTURE.md", "docs/UX_PRODUCT_SHELL.md"],
+      "expand_if_needed": ["apps/api/izo/accounts/service.py", "apps/api/izo/accounts/routes.py", "apps/api/izo/accounts/tables.py", "apps/api/izo/accounts/security.py", "docs/ARCHITECTURE.md", "docs/UX_PRODUCT_SHELL.md"],
       "do_not_read_by_default": ["docs/ADMIN.md", "docs/AI_RUNTIME.md", "apps/web"]
     },
     "api.guest": {
       "keywords": ["guest api", "гостевая сессия backend", "guest claim backend", "guest trial backend", "пробный лимит backend", "guest csrf"],
-      "read_first": ["apps/api/AGENTS.md", "apps/api/izo/guest/README.md", "apps/api/izo/guest/routes.py", "apps/api/izo/accounts/guest_service.py"],
+      "read_first": ["apps/api/AGENTS.md", "apps/api/izo/guest/README.md"],
       "tests": ["tests/test_guest.py", "tests/test_guest_http.py"],
-      "expand_if_needed": ["apps/api/izo/credits/trial.py", "apps/api/izo/accounts/guest_tables.py", "apps/api/izo/jobs/service.py"],
+      "expand_if_needed": ["apps/api/izo/guest/routes.py", "apps/api/izo/accounts/guest_service.py", "apps/api/izo/credits/trial.py", "apps/api/izo/accounts/guest_tables.py", "apps/api/izo/jobs/service.py"],
       "do_not_read_by_default": ["docs/ADMIN.md", "docs/AI_RUNTIME.md", "apps/api/izo/providers"]
     },
     "api.credits": {
       "keywords": ["reserve", "settle", "refund", "ledger", "credit", "списание", "резерв", "возврат баллов"],
-      "read_first": ["apps/api/izo/credits/AGENTS.md", "apps/api/izo/credits/README.md", "apps/api/izo/credits/service.py", "apps/api/izo/credits/tables.py"],
+      "read_first": ["apps/api/AGENTS.md", "apps/api/izo/credits/README.md"],
       "tests": ["tests/test_credits.py", "tests/test_credit_boundaries.py"],
-      "expand_if_needed": ["tests/test_credits_http.py", "docs/ARCHITECTURE.md"],
+      "expand_if_needed": ["apps/api/izo/credits/service.py", "apps/api/izo/credits/tables.py", "tests/test_credits_http.py", "docs/ARCHITECTURE.md"],
       "do_not_read_by_default": ["docs/UX.md", "apps/web"]
     },
     "api.entitlements": {
       "keywords": ["тариф", "plan", "entitlement", "capability access", "доступ к модели", "квота", "лимит"],
-      "read_first": ["apps/api/izo/entitlements/AGENTS.md", "apps/api/izo/entitlements/README.md", "apps/api/izo/entitlements/policy.py", "apps/api/izo/entitlements/service.py"],
+      "read_first": ["apps/api/AGENTS.md", "apps/api/izo/entitlements/README.md"],
       "tests": ["tests/test_entitlements.py", "tests/test_entitlement_boundaries.py"],
-      "expand_if_needed": ["tests/test_entitlements_http.py", "docs/PRODUCT.md"],
+      "expand_if_needed": ["apps/api/izo/entitlements/policy.py", "apps/api/izo/entitlements/service.py", "tests/test_entitlements_http.py", "docs/PRODUCT.md"],
       "do_not_read_by_default": ["docs/UX.md", "apps/api/izo/providers"]
     },
     "api.admin": {
       "keywords": ["admin api", "permission", "staff permission", "compensation", "админ api", "права сотрудника", "начисление backend"],
-      "read_first": ["apps/api/izo/admin/AGENTS.md", "apps/api/izo/admin/README.md", "apps/api/izo/admin/service.py", "apps/api/izo/admin/routes.py"],
+      "read_first": ["apps/api/AGENTS.md", "apps/api/izo/admin/README.md"],
       "tests": ["tests/test_admin.py", "tests/test_admin_boundaries.py", "tests/test_admin_http.py"],
-      "expand_if_needed": ["docs/ADMIN.md", "apps/api/izo/credits/README.md"],
+      "expand_if_needed": ["apps/api/izo/admin/service.py", "apps/api/izo/admin/routes.py", "docs/ADMIN.md", "apps/api/izo/credits/README.md"],
       "do_not_read_by_default": ["docs/UX.md", "apps/api/izo/providers"]
     },
     "api.access": {
       "keywords": ["выдать право сотруднику", "отозвать право сотрудника", "управление доступом", "access manage", "staff access", "delegation", "permission grant", "access revoke"],
-      "read_first": ["apps/api/AGENTS.md", "apps/api/izo/access/README.md", "apps/api/izo/access/service.py", "apps/api/izo/access/routes.py"],
+      "read_first": ["apps/api/AGENTS.md", "apps/api/izo/access/README.md"],
       "tests": ["tests/test_access.py", "tests/test_access_http.py", "tests/test_access_boundaries.py"],
-      "expand_if_needed": ["apps/api/izo/access/permissions.py", "apps/api/izo/access/tables.py", "docs/ADMIN.md"],
+      "expand_if_needed": ["apps/api/izo/access/service.py", "apps/api/izo/access/routes.py", "apps/api/izo/access/permissions.py", "apps/api/izo/access/tables.py", "docs/ADMIN.md"],
       "do_not_read_by_default": ["docs/AI_RUNTIME.md", "apps/api/izo/providers", "apps/web/src/features/gallery"]
     },
     "api.settings": {
       "keywords": ["настройки плана", "политика basic", "plan settings", "settings api", "plan policy", "publish settings", "rollback settings"],
-      "read_first": ["apps/api/AGENTS.md", "apps/api/izo/settings/README.md", "apps/api/izo/settings/service.py", "apps/api/izo/settings/routes.py"],
+      "read_first": ["apps/api/AGENTS.md", "apps/api/izo/settings/README.md"],
       "tests": ["tests/test_settings.py", "tests/test_settings_http.py", "tests/test_settings_boundaries.py"],
-      "expand_if_needed": ["apps/api/izo/entitlements/README.md", "apps/api/izo/access/README.md", "docs/ADMIN.md"],
+      "expand_if_needed": ["apps/api/izo/settings/service.py", "apps/api/izo/settings/routes.py", "apps/api/izo/entitlements/README.md", "apps/api/izo/access/README.md", "docs/ADMIN.md"],
       "do_not_read_by_default": ["apps/api/izo/providers", "apps/api/izo/jobs", "apps/web/src/features/gallery"]
     },
     "api.media": {
       "keywords": ["s3", "файл", "медиа", "upload", "download ticket", "asset", "storage", "изображение хранение"],
-      "read_first": ["apps/api/izo/media/AGENTS.md", "apps/api/izo/media/README.md", "apps/api/izo/media/service.py", "apps/api/izo/media/outputs.py"],
+      "read_first": ["apps/api/AGENTS.md", "apps/api/izo/media/README.md"],
       "tests": ["tests/test_media.py", "tests/test_media_access.py", "tests/test_media_boundaries.py"],
-      "expand_if_needed": ["apps/api/izo/media/codec.py", "apps/api/izo/media/objects.py", "tests/test_media_http.py"],
+      "expand_if_needed": ["apps/api/izo/media/service.py", "apps/api/izo/media/outputs.py", "apps/api/izo/media/codec.py", "apps/api/izo/media/objects.py", "tests/test_media_http.py"],
       "do_not_read_by_default": ["docs/ADMIN.md", "apps/web/src/features/admin"]
     },
     "api.jobs": {
       "keywords": ["job", "queue", "lease", "fence", "worker", "reconcile", "очередь", "задание", "воркер", "повтор задания"],
-      "read_first": ["apps/api/izo/jobs/AGENTS.md", "apps/api/izo/jobs/README.md", "apps/api/izo/jobs/execution.py", "apps/api/izo/jobs/recovery.py"],
+      "read_first": ["apps/api/AGENTS.md", "apps/api/izo/jobs/README.md"],
       "tests": ["tests/test_jobs.py", "tests/test_jobs_recovery.py", "tests/test_jobs_boundaries.py"],
-      "expand_if_needed": ["apps/api/izo/jobs/service.py", "apps/api/izo/jobs/tables.py", "tests/test_jobs_http.py"],
+      "expand_if_needed": ["apps/api/izo/jobs/execution.py", "apps/api/izo/jobs/recovery.py", "apps/api/izo/jobs/service.py", "apps/api/izo/jobs/tables.py", "tests/test_jobs_http.py"],
       "do_not_read_by_default": ["docs/PRODUCT.md", "docs/ADMIN.md", "apps/web"]
     },
     "api.provider_execution": {
       "keywords": ["fal", "provider", "request_id", "paid retry", "provider cancel", "provider timeout", "внешний провайдер", "отмена fal", "ai api"],
-      "read_first": ["apps/api/izo/providers/AGENTS.md", "apps/api/izo/providers/README.md", "apps/api/izo/providers/fal.py", "apps/api/izo/jobs/provider_execution.py", "apps/api/izo/jobs/AGENTS.md"],
+      "read_first": ["apps/api/AGENTS.md", "apps/api/izo/providers/README.md"],
       "tests": ["tests/test_fal_provider.py", "tests/test_provider_jobs.py"],
-      "expand_if_needed": ["docs/AI_RUNTIME.md", "apps/api/izo/jobs/execution.py", "compose.yaml"],
+      "expand_if_needed": ["apps/api/izo/providers/fal.py", "apps/api/izo/jobs/provider_execution.py", "apps/api/izo/jobs/README.md", "docs/AI_RUNTIME.md", "apps/api/izo/jobs/execution.py", "compose.yaml"],
       "do_not_read_by_default": ["docs/PRODUCT.md", "docs/ADMIN.md", "apps/web/src/features/accounts"]
     },
     "ops.runtime": {
       "keywords": ["docker", "compose", "deploy", "release", "backup", "restore", "health", "network", "egress", "развертывание", "релиз", "бэкап"],
-      "read_first": ["docs/OPERATIONS.md", "compose.yaml", "README.md"],
+      "read_first": ["README.md"],
       "tests": [],
-      "expand_if_needed": ["infra", ".github/workflows/ci.yml"],
+      "expand_if_needed": ["docs/OPERATIONS.md", "compose.yaml", "infra", ".github/workflows/ci.yml"],
       "do_not_read_by_default": ["docs/PRODUCT.md", "docs/UX.md", "apps/web/src/features"]
     },
     "docs.system": {
-      "keywords": ["документация", "план", "roadmap", "agents", "context map", "self review", "handoff", "каноническая ветка", "docs"],
-      "read_first": ["AGENTS.md", "docs/CURRENT.md", "docs/PLAN.json", "docs/DOCS_SYSTEM.md", "docs/DEVELOPMENT.md"],
+      "keywords": ["документация", "план", "roadmap", "agents", "context map", "self review", "handoff", "каноническая ветка", "docs", "maintainability", "экономика агента"],
+      "read_first": ["AGENTS.md", "docs/CURRENT.md", "docs/MAINTAINABILITY.md"],
       "tests": ["tests/test_docs_system.py"],
-      "expand_if_needed": ["docs/INDEX.md", "docs/adr", "docs/history"],
+      "expand_if_needed": ["docs/PLAN.json", "docs/DOCS_SYSTEM.md", "docs/DEVELOPMENT.md", "docs/INDEX.md", "docs/adr", "docs/history"],
       "do_not_read_by_default": ["docs/PRODUCT.md", "docs/ADMIN.md", "docs/AI_RUNTIME.md", "apps/api", "apps/web"]
     }
   }

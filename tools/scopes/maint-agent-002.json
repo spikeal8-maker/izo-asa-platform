@@ -1,0 +1,19 @@
+{
+  "base": "d99abc6528f0c460b1b061dbfb9ea583d3c3b553",
+  "scope_class": "cross_domain",
+  "risk": "medium",
+  "max_files": 40,
+  "large_scope_reason": "Repository-wide development-quality package: enforce file/context/doc/scope/review budgets and remove current agent-context debt without changing product behavior.",
+  "domains": ["governance", "docs", "tests", "tools", "web-maintainability", "api-maintainability"],
+  "non_goals": ["No product feature behavior changes", "No provider/live spend", "No merge/deploy", "No schema/business-data migration"],
+  "allowed": [
+    "AGENTS.md",
+    "docs/PLAN.json", "docs/CURRENT.md", "docs/CHECKPOINTS.json", "docs/INDEX.md", "docs/DEVELOPMENT.md", "docs/DOCS_SYSTEM.md", "docs/MAINTAINABILITY.md", "docs/CONTEXT_MAP.json", "docs/BLOCK_MAP.json", "docs/reviews/MAINT-AGENT-002.md",
+    "tools/check_docs.py", "tools/docs_context.py", "tools/context.py", "tools/check_change.py", "tools/project_state.py", "tools/review_evidence.py", "tools/scopes/maint-agent-002.json",
+    "tests/test_boundaries.py", "tests/test_docs_system.py", "tests/test_change_scope.py", "tests/test_project_state.py", "tests/test_review_evidence.py", "tests/test_accounts*.py", "tests/test_entitlements*.py", "tests/context_cases.json",
+    "apps/api/izo/accounts/*.md", "apps/api/izo/*/AGENTS.md", "apps/api/izo/*/README.md",
+    "apps/web/src/features/studio/*.tsx", "apps/web/src/features/accounts/*.tsx", "apps/web/src/features/admin/*.tsx",
+    ".github/workflows/*.yml"
+  ],
+  "sensitive_approved": ["AGENTS.md", "tools/check_docs.py", "tools/docs_context.py", "tools/context.py", "tools/check_change.py", "tools/project_state.py", "tools/review_evidence.py", "tools/scopes/maint-agent-002.json", ".github/workflows/*.yml"]
+}

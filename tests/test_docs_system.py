@@ -1,4 +1,4 @@
-"""Documentation/navigation regression tests for low-token maintenance."""
+"""Documentation/navigation regressions for low-token maintenance."""
 from __future__ import annotations
 
 import json
@@ -40,21 +40,20 @@ def test_routing_corpus_prefers_correct_or_safe_failure():
             assert "NOT RESOLVED" in result.stderr
 
 
-def test_plan_tracks_guest_after_modularity_checkpoint():
+def test_plan_tracks_agent_economy_after_green_guest_checkpoint():
     plan = json.loads((ROOT / "docs/PLAN.json").read_text(encoding="utf-8"))
     checkpoints = json.loads((ROOT / "docs/CHECKPOINTS.json").read_text(encoding="utf-8"))
     lineage = plan["canonical_lineage"]
     assert lineage["runtime_base"]["branch"] == "api/fal-klein-001"
-    assert lineage["current_package_base"]["sha"] == "731105b1c8d16d9774c987a31b62ee7143383ccc"
-    assert lineage["working_branch"] == "feat/guest-trial"
+    assert lineage["current_package_base"]["sha"] == "d99abc6528f0c460b1b061dbfb9ea583d3c3b553"
+    assert lineage["working_branch"] == "maint/agent-economy"
     assert lineage["next_branch_source"] == "verified_working_head"
-    assert plan["active_package"] == "GUEST-001" and plan["next_package"] is None
-    assert plan["packages"]["MAINT-SIZE-001"]["status"] == "technical_pass"
-    assert plan["packages"]["MAINT-SIZE-001"]["checkpoint"] == "MAINT-SIZE-001"
-    assert checkpoints["checkpoints"]["MAINT-SIZE-001"]["source_head"] == lineage["current_package_base"]["sha"]
+    assert plan["active_package"] == "MAINT-AGENT-002" and plan["next_package"] is None
+    assert plan["packages"]["GUEST-001"]["status"] == "technical_pass"
+    assert plan["packages"]["GUEST-001"]["checkpoint"] == "GUEST-001"
+    assert checkpoints["checkpoints"]["GUEST-001"]["source_head"] == lineage["current_package_base"]["sha"]
+    assert plan["packages"]["MAINT-AGENT-002"]["status"] == "active"
     assert plan["packages"]["CATALOG-002"]["status"] == "planned"
-    assert plan["packages"]["GUEST-001"]["status"] == "active"
-    assert "MAINT-SIZE-001" in plan["packages"]["GUEST-001"]["depends_on"]
     assert all("evidence" not in item for item in plan["packages"].values())
 
 
@@ -75,21 +74,45 @@ def test_stable_docs_do_not_embed_mutable_sha_or_pr():
     sha = re.compile(r"\b[0-9a-f]{40}\b")
     pr = re.compile(r"\bPR\s*#\d+\b", re.I)
     for raw in ("AGENTS.md", "README.md", "docs/INDEX.md", "docs/NEXT.md",
-                "docs/DEVELOPMENT.md", "docs/DOCS_SYSTEM.md"):
+                "docs/DEVELOPMENT.md", "docs/DOCS_SYSTEM.md", "docs/MAINTAINABILITY.md"):
         text = (ROOT / raw).read_text(encoding="utf-8")
         assert not sha.search(text), raw
         assert not pr.search(text), raw
 
 
-def test_block_level_gallery_context_is_materially_smaller_than_old_feature_bundle():
+def test_block_level_gallery_context_is_small():
     result = subprocess.run(
         [sys.executable, str(ROOT / "tools/context.py"), "--task", "сделай кнопку Скачать шире"],
         cwd=ROOT, capture_output=True, text=True, timeout=10)
     assert result.returncode == 0, result.stderr
     assert "CONTEXT BLOCK: web.gallery.download_action" in result.stdout
     match = re.search(r"INITIAL DOCUMENT BYTES: (\d+)", result.stdout)
-    assert match and int(match.group(1)) < 16000, result.stdout
+    assert match and int(match.group(1)) <= 12000, result.stdout
     assert "AssetPage.tsx" in result.stdout and "Work.download" in result.stdout
+
+
+def test_every_route_stays_under_initial_context_hard_budget():
+    sys.path.insert(0, str(ROOT / "tools"))
+    import context as routing
+    context = routing.load_map(ROOT / "docs/CONTEXT_MAP.json", "routes")
+    for key, route in context["routes"].items():
+        total = sum((ROOT / raw).stat().st_size for raw in dict.fromkeys(route["read_first"]))
+        assert total <= 18000, (key, total)
+
+
+def test_router_map_loader_accepts_sharded_index(tmp_path):
+    sys.path.insert(0, str(ROOT / "tools"))
+    import context as routing
+    docs = tmp_path / "docs"; docs.mkdir()
+    shard_dir = docs / "context"; shard_dir.mkdir()
+    shard = shard_dir / "web.json"
+    shard.write_text(json.dumps({"schema_version": 1, "routes": {
+        "web.test": {"keywords": ["test"], "read_first": ["README.md"]}}}), encoding="utf-8")
+    index = docs / "CONTEXT_MAP.json"
+    index.write_text(json.dumps({"schema_version": 1, "shards": ["docs/context/web.json"],
+                                 "routes": {}}), encoding="utf-8")
+    result = routing.load_map(index, "routes", root=tmp_path)
+    assert result["routes"]["web.test"]["keywords"] == ["test"]
 
 
 def test_boundary_tests_use_explicit_utf8_reads():

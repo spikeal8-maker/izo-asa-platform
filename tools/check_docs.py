@@ -1,22 +1,11 @@
-"""Validate canonical state, low-token routing, block locators and documentation coverage."""
+"""Validate canonical state, routing budgets and documentation coverage."""
 from __future__ import annotations
 
 import json
-from pathlib import Path
 import re
-import sys
 
+from docs_context import DOCS, ROOT, check_blocks, check_context, check_coverage, load_json, load_map
 from project_state import READY_DEPENDENCY_STATUSES, render_current
-
-ROOT = Path(__file__).resolve().parents[1]
-DOCS = ROOT / "docs"
-
-
-def load_json(path: Path) -> dict:
-    value = json.loads(path.read_text(encoding="utf-8"))
-    if not isinstance(value, dict):
-        raise ValueError(f"{path.relative_to(ROOT)} must contain an object")
-    return value
 
 
 def check_ref(errors: list[str], label: str, value: dict) -> None:
@@ -71,9 +60,7 @@ def check_checkpoints(errors: list[str], plan: dict, checkpoints: dict) -> None:
     registry = checkpoints["checkpoints"]
     for package_id, item in plan.get("packages", {}).items():
         ref = item.get("checkpoint")
-        if ref is None:
-            continue
-        if ref != package_id or ref not in registry:
+        if ref is not None and (ref != package_id or ref not in registry):
             errors.append(f"package {package_id} has invalid checkpoint ref: {ref}")
     for key, evidence in registry.items():
         if not isinstance(evidence, dict):
@@ -86,77 +73,8 @@ def check_checkpoints(errors: list[str], plan: dict, checkpoints: dict) -> None:
 
 def check_current(errors: list[str], plan: dict) -> None:
     actual = (DOCS / "CURRENT.md").read_text(encoding="utf-8")
-    expected = render_current(plan)
-    if actual != expected:
+    if actual != render_current(plan):
         errors.append("CURRENT.md must be generated exactly from PLAN.json via project_state.render_current")
-
-
-def check_context(errors: list[str], context: dict) -> None:
-    if len((DOCS / "CONTEXT_MAP.json").read_bytes()) > 20_000:
-        errors.append("CONTEXT_MAP exceeds 20KB hard context budget; shard it")
-    if context.get("schema_version") != 1:
-        errors.append("CONTEXT_MAP schema_version must be 1")
-    routes = context.get("routes")
-    if not isinstance(routes, dict) or not routes:
-        errors.append("CONTEXT_MAP routes must be a non-empty object")
-        return
-    for key, route in routes.items():
-        if not route.get("keywords") or not route.get("read_first"):
-            errors.append(f"route {key} requires keywords/read_first")
-        for field in ("read_first", "tests", "expand_if_needed", "do_not_read_by_default"):
-            for raw in route.get(field, []):
-                if not isinstance(raw, str) or not raw or not (ROOT / raw).exists():
-                    errors.append(f"route {key}.{field} missing path: {raw}")
-
-
-def check_blocks(errors: list[str], blocks: dict, context: dict) -> None:
-    if len((DOCS / "BLOCK_MAP.json").read_bytes()) > 30_000:
-        errors.append("BLOCK_MAP exceeds 30KB hard context budget; shard it")
-    if blocks.get("schema_version") != 1:
-        errors.append("BLOCK_MAP schema_version must be 1")
-    for key, block in blocks.get("blocks", {}).items():
-        route = block.get("route")
-        if route not in context.get("routes", {}):
-            errors.append(f"block {key} references unknown route {route}")
-        owner = ROOT / str(block.get("owner", ""))
-        if not owner.is_file():
-            errors.append(f"block {key} owner missing: {block.get('owner')}")
-            continue
-        anchor = block.get("anchor")
-        if not isinstance(anchor, str) or not anchor or anchor not in owner.read_text(encoding="utf-8"):
-            errors.append(f"block {key} anchor missing from owner: {anchor}")
-        for raw in [*block.get("support", []), *block.get("tests", [])]:
-            if not (ROOT / raw).exists():
-                errors.append(f"block {key} path missing: {raw}")
-
-
-def check_coverage(errors: list[str], context: dict) -> None:
-    route_paths = {raw for route in context.get("routes", {}).values() for raw in route.get("read_first", [])}
-    groups = [ROOT / "apps/web/src/features", ROOT / "apps/api/izo"]
-    for base in groups:
-        for child in base.iterdir():
-            if not child.is_dir() or child.name == "__pycache__":
-                continue
-            readme = child / "README.md"
-            raw = readme.relative_to(ROOT).as_posix()
-            if not readme.is_file():
-                errors.append(f"local ownership README missing: {raw}")
-            elif raw not in route_paths:
-                errors.append(f"local ownership README is not covered by a context route: {raw}")
-    ownership = {ROOT / raw for raw in route_paths if raw.endswith("README.md")}
-    ownership.add(ROOT / "apps/web/security/README.md")
-    mutable_sha = re.compile(r"\b[0-9a-f]{40}\b")
-    mutable_pr = re.compile(r"\bPR\s*#\d+\b", re.I)
-    next_package = re.compile(r"следующ(?:ий|ая|ее).{0,40}пакет", re.I)
-    lifecycle_drift = re.compile(r"(?:после\s+acceptance\s+продолжать|остаются\s+демо|для\s+этого\s+нужны\s+(?:CREDIT|MEDIA|JOBS))", re.I)
-    for path in ownership:
-        if not path.is_file():
-            continue
-        text = path.read_text(encoding="utf-8")
-        if mutable_sha.search(text) or mutable_pr.search(text) or next_package.search(text) or lifecycle_drift.search(text):
-            errors.append(f"local ownership map contains mutable/history lifecycle language: {path.relative_to(ROOT)}")
-        if len(text.encode("utf-8")) > 5000:
-            errors.append(f"local ownership map exceeds 5KB context budget: {path.relative_to(ROOT)}")
 
 
 def check_encoding_and_stable(errors: list[str]) -> None:
@@ -170,8 +88,8 @@ def check_encoding_and_stable(errors: list[str]) -> None:
         text = path.read_text(encoding="utf-8")
         if sum(text.count(marker) for marker in markers) >= 4:
             errors.append(f"possible UTF-8 mojibake: {path.relative_to(ROOT)}")
-    stable = [ROOT / "AGENTS.md", ROOT / "README.md", DOCS / "INDEX.md",
-              DOCS / "NEXT.md", DOCS / "DOCS_SYSTEM.md", DOCS / "DEVELOPMENT.md"]
+    stable = [ROOT / "AGENTS.md", ROOT / "README.md", DOCS / "INDEX.md", DOCS / "NEXT.md",
+              DOCS / "DOCS_SYSTEM.md", DOCS / "DEVELOPMENT.md", DOCS / "MAINTAINABILITY.md"]
     for path in stable:
         text = path.read_text(encoding="utf-8")
         if re.search(r"\b[0-9a-f]{40}\b", text) or re.search(r"\bPR\s*#\d+\b", text, re.I):
@@ -183,11 +101,11 @@ def main() -> int:
     try:
         plan = load_json(DOCS / "PLAN.json")
         checkpoints = load_json(DOCS / "CHECKPOINTS.json")
-        context = load_json(DOCS / "CONTEXT_MAP.json")
-        blocks = load_json(DOCS / "BLOCK_MAP.json")
+        context, context_sources = load_map(DOCS / "CONTEXT_MAP.json", "routes")
+        blocks, block_sources = load_map(DOCS / "BLOCK_MAP.json", "blocks")
         check_plan(errors, plan); check_checkpoints(errors, plan, checkpoints)
-        check_current(errors, plan); check_context(errors, context)
-        check_blocks(errors, blocks, context); check_coverage(errors, context)
+        check_current(errors, plan); check_context(errors, context, context_sources)
+        check_blocks(errors, blocks, context, block_sources); check_coverage(errors, context)
         check_encoding_and_stable(errors)
     except (OSError, ValueError, json.JSONDecodeError) as exc:
         errors.append(f"documentation validation could not complete: {exc}")
