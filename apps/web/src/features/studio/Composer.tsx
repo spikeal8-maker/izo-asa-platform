@@ -33,13 +33,14 @@ export function Composer({ auth }: { auth: AuthView }) {
   const [error, setError] = useState('')
   const [expired, setExpired] = useState(false)
   const [pending, setPending] = useState<Pending | null>(null)
-  const [storageError, setStorageError] = useState(false)
+  const [storageIssue, setStorageIssue] = useState<'read' | 'write' | null>(null)
   const active = useRef(false)
   const alive = useRef(true)
 
   useEffect(() => {
     alive.current = true
-    try { setPending(readPending(auth.account.id)) } catch { setStorageError(true) }
+    setStorageIssue(null)
+    try { setPending(readPending(auth.account.id)) } catch { setStorageIssue('read') }
     return () => { alive.current = false }
   }, [auth.account.id])
 
@@ -57,7 +58,7 @@ export function Composer({ auth }: { auth: AuthView }) {
   const chosenCapability = capabilities.find(item => item.id === capability) ?? capabilities[0]
   const permitted = auth.account.email_verified && auth.account.state === 'active'
     && plan.data?.configured && plan.data.policy?.executors.includes('api') && !!chosen && !!chosenCapability
-  const canQuote = permitted && !!credits.data && !!prompt.trim() && !busy && !pending && !storageError
+  const canQuote = permitted && !!credits.data && !!prompt.trim() && !busy && !pending && !storageIssue
 
   async function estimate() {
     if (!canQuote || active.current || !chosen || !chosenCapability) return
@@ -84,10 +85,10 @@ export function Composer({ auth }: { auth: AuthView }) {
     } catch (reason) {
       if (!alive.current) return
       if (!command) {
-        setQuote(null); setStorageError(true)
+        setQuote(null); setStorageIssue('write')
         setError('Не удалось сохранить номер запроса. Отправка задания не выполнялась.')
       } else if (rejectedBeforeAdmission(reason)) {
-        try { forget(auth.account.id); setPending(null) } catch { setStorageError(true) }
+        try { forget(auth.account.id); setPending(null) } catch { setStorageIssue('write') }
         setError(problem(reason))
       } else {
         setError('Результат отправки пока неизвестен. Повторите тот же запрос или проверьте историю; новое списание не создаётся.')
@@ -103,8 +104,10 @@ export function Composer({ auth }: { auth: AuthView }) {
       {credits.data && <p>Доступно: <strong data-testid="studio-available">{credits.data.balance.available}</strong> баллов.</p>}
       {!auth.account.email_verified && <p className="field-error"><Link href="/verify-email">Подтвердите почту</Link>, чтобы сохранять новые генерации в аккаунте.</p>}
       {plan.data && !permitted && auth.account.email_verified && <p className="field-error">Этот режим сейчас недоступен для вашего аккаунта.</p>}
-      {storageError && <p role="alert" className="field-error">Не удалось сохранить номер запроса.
-        Отправка заблокирована, чтобы не потерять защиту от повторов. <Link href="/jobs">Проверить историю</Link>.</p>}
+      {storageIssue && <p role="alert" className="field-error">{storageIssue === 'read'
+        ? 'Сохранённое состояние запроса повреждено или недоступно.'
+        : 'Не удалось сохранить номер запроса.'}
+        {' '}Отправка заблокирована, чтобы не потерять защиту от повторов. <Link href="/jobs">Проверить историю</Link>.</p>}
       {pending && <div className="pending-command" role="status"><strong>Есть незавершённая отправка</strong>
         <p>Сохраняется прежний номер запроса. Не создавайте замену, пока не проверен результат.</p>
         <button className="primary" disabled={busy} onClick={() => void submit()}>Проверить прежний запрос</button>
