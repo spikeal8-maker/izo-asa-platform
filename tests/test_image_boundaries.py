@@ -23,10 +23,10 @@ def test_pending_command_is_owner_scoped_and_has_no_credentials_or_pixels():
     assert 'izo-pending-submit:${owner}' in text and 'value.owner !== owner' in text
     assert 'crypto.randomUUID()' in text and 'saved.operation_id' in text
     assert 'operation_id,owner,quote_id,version' in text
-    studio = (WEB / 'src/features/studio/Studio.tsx').read_text(encoding="utf-8")
-    assert studio.index('remember(auth.account.id') < studio.index("apiRequest<Job>('/api/v1/jobs'")
-    assert 'command.quote_id' in studio and 'command.operation_id' in studio
-    assert 'active.current' in studio
+    composer = (WEB / 'src/features/studio/Composer.tsx').read_text(encoding="utf-8")
+    assert composer.index('remember(auth.account.id') < composer.index("apiRequest<Job>('/api/v1/jobs'")
+    assert 'command.quote_id' in composer and 'command.operation_id' in composer
+    assert 'active.current' in composer
 
 
 def test_media_read_uses_fresh_ticket_and_bounded_authenticated_transport():
