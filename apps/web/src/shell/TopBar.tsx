@@ -10,6 +10,18 @@ const directions = [
   { href: '/studio/3d', title: '3D' },
 ]
 
+function mobileContext(path: string) {
+  if (path === '/' || path === '/feed') return 'Лента'
+  if (path === '/gallery' || path.startsWith('/gallery/')) return 'Галерея'
+  if (path === '/image' || path === '/studio/image') return 'Изображение'
+  const direction = directions.find(item => item.href === path)
+  if (direction) return direction.title
+  if (path.startsWith('/admin')) return 'Админка'
+  if (path.startsWith('/account') || path === '/login' || path === '/register') return 'Аккаунт'
+  if (path.startsWith('/jobs')) return 'Задание'
+  return 'ИЗО АСА'
+}
+
 export function TopBar({ path, auth, theme, mobileMenu, onToggleMenu, onToggleTheme }: {
   path: string
   auth: AuthView | null | undefined
@@ -26,6 +38,7 @@ export function TopBar({ path, auth, theme, mobileMenu, onToggleMenu, onToggleTh
       <button className="mobile-menu-button" aria-label="Меню" aria-expanded={mobileMenu}
         aria-controls="mobile-menu" onClick={onToggleMenu}>☰</button>
       <Link className="mobile-brand" href="/">ИЗО АСА</Link>
+      <span className="mobile-context" aria-current="page">{mobileContext(path)}</span>
     </div>
     <nav className="direction-nav" aria-label="Инструменты">{directions.map(item => <Link key={item.href} href={item.href}
       className={direction === item.href || (item.href === '/image' && studio) ? 'active' : ''}>{item.title}</Link>)}</nav>
