@@ -1,7 +1,6 @@
 import { useEffect, useState, type FormEvent } from 'react'
 import { apiRequest, ApiError, type AuthView, type GuestView, type SessionList } from '../../shared/api'
-import { AuthEntry } from './AuthEntry'
-import { AccountSessions } from './AccountSessions'
+import { AccountSessions, AuthEntry } from './AuthEntry'
 import './accounts.css'
 
 const messages: Record<string, string> = {
