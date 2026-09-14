@@ -13,8 +13,7 @@ import { AccessPage } from '../features/admin/AccessPage'
 import { CreditsPage } from '../features/credits/CreditsPage'
 import { FeedPage } from '../features/feed/FeedPage'
 import { apiRequest, ApiError, type AuthView } from '../shared/api'
-import { PrimarySidebar } from './PrimarySidebar'
-import { TopBar } from './TopBar'
+import { PrimarySidebar, TopBar } from './TopBar'
 import './layout.css'
 
 function initialTheme(): 'light' | 'dark' {
