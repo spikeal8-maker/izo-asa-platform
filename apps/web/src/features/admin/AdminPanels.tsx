@@ -46,7 +46,7 @@ export function UserDetailPanel({ user, credits, access, busy, onGranted }: {
   busy: boolean
   onGranted: () => void
 }) {
-  return <div className="admin-panel admin-user-card">
+  return <div className="admin-panel admin-user-card admin-user-detail">
     <div className="admin-card-heading"><div><small>Пользователь</small><h2>{user.display_name}</h2></div><span>{user.state}</span></div>
     <dl className="summary-list"><div><dt>Публичный код</dt><dd>{user.public_code}</dd></div>
       <div><dt>Способ входа подтверждён</dt><dd>{user.verified ? 'Да' : 'Нет'}</dd></div></dl>
