@@ -55,8 +55,9 @@ Feature/domain route:
 - если route не укладывается, он делится на более узкие routes/blocks, а файлы переносятся в `expand_if_needed`;
 - расширение route-budget запрещено как исправление CI.
 
-`CONTEXT_MAP` и `BLOCK_MAP` шардируются до достижения hard-limit; router обязан поддерживать shard index,
-а не требовать возвращения к одному гигантскому JSON.
+Domain-specific routing preference хранится как данные map, а не как новый `if <domain>` в router-коде.
+`CONTEXT_MAP` и `BLOCK_MAP` шардируются до достижения hard-limit; router и docs-validator обязаны поддерживать
+shard index, а не требовать возвращения к одному гигантскому JSON.
 
 ## 4. Локальная документация
 
@@ -92,7 +93,11 @@ cross-account access/release-network policy.
 3. отдельного independent review evidence;
 4. полного required CI.
 
-Самопроверка не заменяет independent review.
+Самопроверка не заменяет independent review. Evidence хранится вне source в top-level PR comment и привязывается
+к точному frozen source через строку:
+`INDEPENDENT_REVIEW PASS source=<40-char-sha> reviewer=<reviewer-id>`.
+`project_state.py begin-next` обязан fail-closed до создания следующей ветки, если high-risk scope не имеет такого
+PASS для текущего source SHA. Review старого SHA не переносится автоматически на новый commit.
 
 ## 7. Непрерывный audit
 
