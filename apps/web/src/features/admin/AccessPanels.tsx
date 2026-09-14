@@ -59,6 +59,7 @@ export function AccessSubjectPanel({ subject, access, action, permission, ttl, c
         <td>{item.expires_at ? new Date(item.expires_at * 1000).toLocaleString('ru-RU') : 'Без срока'}</td>
         <td>{item.managed ? 'ACCESS-001' : 'Внешнее / bootstrap'}</td></tr>)}</tbody></table></div>
     {!subject.permissions.length && <p>Действующих прав нет.</p>}
+    <p className="prototype-note">scope: <strong>global</strong></p>
     {access.permissions.includes('access.manage') && <form className="admin-form" onSubmit={onMutate}>
       <fieldset disabled={busy}><legend>Изменить доступ</legend>
         <label>Действие<select value={action} onChange={event => onAction(event.target.value as Action)}>
