@@ -5,13 +5,22 @@ import { apiRequest, type AuthView } from '../../shared/api'
 import { ResourceState, useResource } from '../../shared/workspace'
 import { type Plan, type Credits, type Quote, type Job, problem, navigate } from '../../shared/workspace-api'
 import { type Pending, readPending, remember, forget, rejectedBeforeAdmission } from '../../shared/submission'
-import { EmptyResult } from './EmptyResult'
 import { QuoteDialog } from './QuoteDialog'
 
 const imageCapabilities = [
   { id: 'test.image.v1', title: 'Пробный режим', detail: 'Знакомство с процессом без внешней AI-модели' },
   { id: 'fal.flux2.klein.4b', title: 'FLUX.2 [klein] 4B', detail: 'AI-генерация изображения' },
 ]
+
+function EmptyResult() {
+  return <section className="result-panel">
+    <div className="panel-heading"><h2>Результат</h2></div>
+    <div className="server-result-empty"><Icon name="image" /><h3>Здесь появится готовая работа</h3>
+      <p>После подтверждения результат сохранится в вашей галерее, откуда его можно открыть и скачать.</p>
+      <Link className="secondary" href="/gallery">Открыть галерею</Link>
+    </div>
+  </section>
+}
 
 export function Composer({ auth }: { auth: AuthView }) {
   const plan = useResource<Plan>('/api/v1/entitlements')
@@ -94,7 +103,7 @@ export function Composer({ auth }: { auth: AuthView }) {
       {credits.data && <p>Доступно: <strong data-testid="studio-available">{credits.data.balance.available}</strong> баллов.</p>}
       {!auth.account.email_verified && <p className="field-error"><Link href="/verify-email">Подтвердите почту</Link>, чтобы сохранять новые генерации в аккаунте.</p>}
       {plan.data && !permitted && auth.account.email_verified && <p className="field-error">Этот режим сейчас недоступен для вашего аккаунта.</p>}
-      {storageError && <p role="alert" className="field-error">Хранилище номера запроса недоступно или повреждено.
+      {storageError && <p role="alert" className="field-error">Не удалось сохранить номер запроса.
         Отправка заблокирована, чтобы не потерять защиту от повторов. <Link href="/jobs">Проверить историю</Link>.</p>}
       {pending && <div className="pending-command" role="status"><strong>Есть незавершённая отправка</strong>
         <p>Сохраняется прежний номер запроса. Не создавайте замену, пока не проверен результат.</p>
