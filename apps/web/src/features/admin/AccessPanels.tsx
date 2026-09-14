@@ -52,7 +52,7 @@ export function AccessSubjectPanel({ subject, access, action, permission, ttl, c
   onPassword: (value: string) => void
   onMutate: FormEventHandler<HTMLFormElement>
 }) {
-  return <div className="admin-panel admin-user-card">
+  return <div className="admin-panel admin-user-card access-subject-panel">
     <div className="admin-card-heading"><div><small>Доступ</small><h2>{subject.display_name}</h2></div><span>{subject.public_code}</span></div>
     <div className="admin-table-wrap"><table><thead><tr><th>Право</th><th>Срок</th><th>Источник</th></tr></thead>
       <tbody>{subject.permissions.map(item => <tr key={item.permission}><td>{item.permission}</td>
