@@ -12,8 +12,8 @@
 
 Текущий package разрабатывается только в **working_branch**. `current_package_base` — его уже замороженный
 родитель и используется для ancestry-проверки; **не выбирать его вручную как base следующего package**.
-Следующий package стартует только после технической и визуальной приёмки FRONTEND-001: текущий frontend reset
-должен остаться отдельным frozen checkpoint, а дальнейшие Feed/Chat/Video/Catalog пакеты не должны разрастаться поверх непринятой оболочки.
+Следующий package стартует командой `python tools/project_state.py begin-next ...`: она проверяет GitHub PR
+и required workflows текущего working head, создаёт новую ветку точно от этого head и только там меняет state.
 
 Активный пакет: **FRONTEND-001**. Следующий: **NONE**.
 Параллельные lineages из PLAN нельзя использовать как base без reconciliation.
