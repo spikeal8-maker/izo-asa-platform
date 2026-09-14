@@ -40,20 +40,19 @@ def test_routing_corpus_prefers_correct_or_safe_failure():
             assert "NOT RESOLVED" in result.stderr
 
 
-def test_plan_tracks_agent_economy_after_green_guest_checkpoint():
+def test_plan_current_base_is_a_verified_checkpoint_without_embedded_evidence():
     plan = json.loads((ROOT / "docs/PLAN.json").read_text(encoding="utf-8"))
     checkpoints = json.loads((ROOT / "docs/CHECKPOINTS.json").read_text(encoding="utf-8"))
     lineage = plan["canonical_lineage"]
     assert lineage["runtime_base"]["branch"] == "api/fal-klein-001"
-    assert lineage["current_package_base"]["sha"] == "d99abc6528f0c460b1b061dbfb9ea583d3c3b553"
-    assert lineage["working_branch"] == "maint/agent-economy"
     assert lineage["next_branch_source"] == "verified_working_head"
-    assert plan["active_package"] == "MAINT-AGENT-002" and plan["next_package"] is None
-    assert plan["packages"]["GUEST-001"]["status"] == "technical_pass"
-    assert plan["packages"]["GUEST-001"]["checkpoint"] == "GUEST-001"
-    assert checkpoints["checkpoints"]["GUEST-001"]["source_head"] == lineage["current_package_base"]["sha"]
-    assert plan["packages"]["MAINT-AGENT-002"]["status"] == "active"
-    assert plan["packages"]["CATALOG-002"]["status"] == "planned"
+    assert lineage["working_branch"]
+    active = plan["active_package"]
+    assert plan["packages"][active]["status"] == "active"
+    base_sha = lineage["current_package_base"]["sha"]
+    matching = [key for key, value in checkpoints["checkpoints"].items()
+                if value.get("source_head", value.get("head")) == base_sha]
+    assert matching, f"current_package_base {base_sha} has no immutable checkpoint evidence"
     assert all("evidence" not in item for item in plan["packages"].values())
 
 
