@@ -46,7 +46,7 @@ footer { display: flex; justify-content: space-between; align-items: center; gap
   .sidebar > .brand, .sidebar-bottom { display: none; }
   .sidebar nav { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 4px; margin: 0; }
   .sidebar nav a { flex-direction: column; gap: 2px; padding: 5px 2px; font-size: .66rem; min-height: 52px; }
-  .topbar { grid-template-columns: 1fr auto; min-height: 58px; padding: calc(7px + env(safe-area-inset-top)) 14px 7px; border-bottom: 1px solid var(--line); background: color-mix(in srgb,var(--panel) 96%,transparent); }
+  .topbar { position: relative; top: auto; grid-template-columns: 1fr auto; min-height: 58px; padding: calc(7px + env(safe-area-inset-top)) 14px 7px; border-bottom: 1px solid var(--line); background: var(--panel); backdrop-filter: none; }
   .direction-nav { display: none; }
   .mobile-head { display: flex; align-items: center; gap: 7px; }
   .mobile-brand { display: inline-flex; align-items: center; font-weight: 720; font-size: .9rem; }
