@@ -1,11 +1,12 @@
 import { useEffect, useRef, useState } from 'react'
-import { Dialog } from '../../shared/ui/Dialog'
 import { Icon } from '../../shared/ui/Icon'
 import { Link } from '../../shell/router'
 import { apiRequest, type AuthView } from '../../shared/api'
 import { ResourceState, useResource } from '../../shared/workspace'
 import { type Plan, type Credits, type Quote, type Job, problem, navigate } from '../../shared/workspace-api'
 import { type Pending, readPending, remember, forget, rejectedBeforeAdmission } from '../../shared/submission'
+import { EmptyResult } from './EmptyResult'
+import { QuoteDialog } from './QuoteDialog'
 
 const imageCapabilities = [
   { id: 'test.image.v1', title: 'Пробный режим', detail: 'Знакомство с процессом без внешней AI-модели' },
@@ -122,22 +123,7 @@ export function Composer({ auth }: { auth: AuthView }) {
         <Icon name="spark" />{busy ? 'Проверяем…' : 'Рассчитать стоимость'}</button>
       <p><Link href="/account/credits">Баланс</Link> · <Link href="/jobs">История</Link></p>
     </section>
-    <section className="result-panel"><div className="panel-heading"><h2>Результат</h2></div>
-      <div className="server-result-empty"><Icon name="image" /><h3>Здесь появится готовая работа</h3>
-        <p>После подтверждения результат сохранится в вашей галерее, откуда его можно открыть и скачать.</p>
-        <Link className="secondary" href="/gallery">Открыть галерею</Link></div>
-    </section>
-    <Dialog open={!!quote} title="Создать изображение?" onClose={() => { if (!busy) setQuote(null) }}>
-      {quote && <><p>{quote.test_only ? 'Пробный режим: результат создаётся без внешней AI-модели.' : quote.notice}</p><dl className="summary-list">
-        <div><dt>Размер</dt><dd>{quote.width} × {quote.height}</dd></div>
-        <div><dt>Баллы для запуска</dt><dd id="quote-reserve">{quote.credits} балл.</dd></div>
-        <div><dt>Режим</dt><dd>{quote.test_only ? 'Пробный' : 'AI'}</dd></div></dl>
-        <p className="quote-prompt">{quote.prompt}</p>
-        {expired && <p role="alert">Расчёт устарел. Закройте окно и повторите.</p>}
-        <button className="primary full-width quote-submit" aria-label="Подтвердить создание"
-          aria-describedby="quote-reserve" disabled={busy || expired} onClick={() => void submit()}>
-          <span>Подтвердить создание</span><small data-testid="quote-submit-price" aria-hidden="true">Резерв: {quote.credits} балл.</small>
-        </button></>}
-    </Dialog>
+    <EmptyResult />
+    <QuoteDialog quote={quote} busy={busy} expired={expired} onClose={() => setQuote(null)} onSubmit={() => void submit()} />
   </div>
 }
