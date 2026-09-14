@@ -1,0 +1,23 @@
+{
+  "base": "37baf419c45970d02ce1fab75aea15cc9e8269a0",
+  "scope_class": "cross_domain",
+  "risk": "medium",
+  "max_files": 32,
+  "large_scope_reason": "Owner-requested product frontend reset across the shared shell and the existing user-facing surfaces while preserving backend/runtime contracts. The package also splits legacy near-limit frontend components before visual expansion.",
+  "domains": ["web-shell", "studio", "gallery", "accounts", "admin", "feed", "frontend-tests", "frontend-docs"],
+  "non_goals": ["No backend business-logic changes", "No migrations", "No provider/live spend", "No Credits/Jobs/Media semantic changes", "No merge/deploy", "No fake Chat/Video/Audio/3D runtime"],
+  "allowed": [
+    "docs/PLAN.json", "docs/CURRENT.md", "docs/CHECKPOINTS.json", "docs/BLOCK_MAP.json", "docs/CONTEXT_MAP.json", "docs/UX.md", "docs/UX_PRODUCT_SHELL.md", "docs/reviews/FRONTEND-001.md",
+    "tools/scopes/frontend-001.json",
+    "apps/web/src/shell/*.tsx", "apps/web/src/shell/*.ts", "apps/web/src/shell/*.css",
+    "apps/web/src/features/studio/*.tsx", "apps/web/src/features/studio/*.css", "apps/web/src/features/studio/*.md",
+    "apps/web/src/features/gallery/*.tsx", "apps/web/src/features/gallery/*.css", "apps/web/src/features/gallery/*.md",
+    "apps/web/src/features/accounts/*.tsx", "apps/web/src/features/accounts/*.css", "apps/web/src/features/accounts/*.md",
+    "apps/web/src/features/admin/*.tsx", "apps/web/src/features/admin/*.css", "apps/web/src/features/admin/*.md",
+    "apps/web/src/features/feed/*.tsx", "apps/web/src/features/feed/*.css", "apps/web/src/features/feed/*.md",
+    "apps/web/src/shared/ui/*.tsx", "apps/web/src/shared/ui/*.css",
+    "apps/web/e2e/shell.spec.ts", "apps/web/e2e/studio.spec.ts", "apps/web/e2e/gallery.spec.ts", "apps/web/e2e/accounts.spec.ts", "apps/web/e2e/admin.spec.ts", "apps/web/e2e/access.spec.ts", "apps/web/e2e/guest.spec.ts",
+    "tests/context_cases.json", "tests/test_docs_system.py"
+  ],
+  "sensitive_approved": ["tools/scopes/frontend-001.json"]
+}
