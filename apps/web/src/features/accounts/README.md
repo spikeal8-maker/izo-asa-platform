@@ -5,8 +5,10 @@ session, password/recovery policy и permissions; UI не доказывает �
 
 | Видимый блок / задача | Основной файл | Ближайший test |
 |---|---|---|
-| Вход/регистрация/карточка аккаунта | `AccountPage.tsx` | `e2e/accounts.spec.ts` |
-| Сессии/security/recovery screens | `SecurityPage.tsx` | `e2e/accounts.spec.ts`, `e2e/email-security.spec.ts` |
+| Auth/session orchestration, submit/revoke | `AccountPage.tsx` | `e2e/accounts.spec.ts` |
+| Вход/регистрация layout | `AuthEntry.tsx` | `e2e/accounts.spec.ts` |
+| Профиль и список сессий | `AccountSessions.tsx` | `e2e/accounts.spec.ts` |
+| Security/recovery screens | `SecurityPage.tsx` | `e2e/email-security.spec.ts` |
 | Локальный внешний вид | `accounts.css` | тот же affected spec |
 | Общий auth/session transport | `../../shared/workspace.tsx`, `../../shared/api.ts` | affected account + dependent specs |
 
@@ -17,5 +19,5 @@ session, password/recovery policy и permissions; UI не доказывает �
 - 401/403 очищают private state, а не превращаются в guest success;
 - UI не изобретает recovery/session semantics — при их изменении перейти в `api.accounts` context route.
 
-Для текста, отступа или кнопки не читать весь backend. Для изменения auth semantics — расширить контекст через
-`python tools/context.py --key api.accounts`.
+Для текста, отступа или кнопки открывать только соответствующий presentation-owner. Для изменения auth semantics —
+расширить контекст через `python tools/context.py --key api.accounts`.
