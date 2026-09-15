@@ -17,13 +17,13 @@
 .avatar { display: grid; place-items: center; min-width: 32px; height: 32px; border-radius: 50%; background: var(--color-brand); color: var(--color-on-brand); font-size: .7rem; font-weight: 700; }
 .mobile-head, .mobile-brand, .mobile-context, .mobile-menu-button, .mobile-menu { display: none; }
 
-@media (max-width: 1180px) {
+@media (max-width: 1500px) {
   .topbar { grid-template-columns: minmax(122px, .8fr) auto minmax(176px, .8fr); gap: 5px; padding-left: 8px; padding-right: 8px; }
   .top-utility span { display: none; }
   .top-utility { width: 34px; padding: 0; justify-content: center; }
   .direction-nav a { padding: 0 8px; gap: 5px; }
 }
-@media (max-width: 1000px) and (min-width: 861px) {
+@media (max-width: 1280px) and (min-width: 861px) {
   .direction-nav a span { display: none; }
   .direction-nav a { width: 38px; padding: 0; justify-content: center; }
   .direction-nav a.active::after { left: 8px; right: 8px; }
