@@ -2,6 +2,7 @@ import type { AuthView } from '../shared/api'
 import { Icon, type IconName } from '../shared/ui/Icon'
 import { AdminLink } from '../features/admin/AdminPage'
 import { Link } from './router'
+import './product-nav.css'
 
 const directions: { href: string; title: string; icon: IconName }[] = [
   { href: '/', title: 'Чат', icon: 'chat' },
