@@ -10,7 +10,8 @@ Backend business logic, migrations, provider spend, Credits/Jobs/Media semantics
 The owner revised the frontend contract while FRONTEND-001 was still active: Chat replaces Feed as the canonical `/`
 surface and Semantic Color System v1.1 replaces the previous monochrome draft. Scope therefore moved from the earlier
 32-path snapshot to a hard ceiling of **40**, with the actual package remaining at that cross-domain ceiling after the
-navigation split. This was an explicit product-requirement change, not a limit increase used to make CI green.
+navigation split and account regression update. This was an explicit product-requirement change, not a limit increase used
+to make CI green.
 
 The only edge-security change remains the narrow Gallery requirement `img-src ... blob:` in `infra/Caddyfile`;
 no other CSP directive is relaxed.
@@ -19,9 +20,11 @@ no other CSP directive is relaxed.
 
 - `/` and `/studio/chat` resolve to the new Chat home; `/feed` remains a separate Explore surface;
 - `ChatPage.tsx` owns the primary chat/composer surface instead of inflating `App.tsx`;
+- empty desktop Chat follows the supplied reference: one heading and a centered 768px composer, without invented quick-action cards;
+- phone Chat keeps the composer at the bottom and respects the mobile safe-area/navigation space;
 - global creative navigation is Chat / Image / Video / Audio / 3D;
 - mobile keeps the same creative modes in the upper strip and a short Chat / Feed / Gallery bottom navigation;
-- shell geometry follows the accepted chat reference: bounded 768px conversation/composer, 56px desktop header and 94px two-row phone header;
+- shell geometry follows the supplied chat reference: 260px desktop sidebar, 56px desktop header, bounded 768px conversation/composer and 94px two-row phone header;
 - Semantic Color System v1.1 is now the runtime source through `theme.css`;
 - existing components consume compatibility aliases that point back to the semantic tokens, so future approved palette changes are centralized;
 - violet is the only brand color; creative modes do not receive separate decorative colors;
@@ -44,8 +47,17 @@ asserted the superseded feed-first wording. The size gate was not weakened. Prod
 into `product-nav.css`, bringing layout responsibility back below headroom. The documentation regression now asserts the
 new chat-first owner contract and Semantic Color System v1.1 instead of preserving obsolete requirements.
 
-The chat-first revision checks that Feed moved to `/feed` rather than disappearing, jobs remain outside primary navigation,
-both light/dark brand tokens resolve to v1.1 values, and phone creative navigation remains reachable without hover.
+The following browser run passed unit/architecture and then exposed deterministic frontend-test collisions across the viewport
+matrix: browsers normalize CSS custom-property hex case; the old login regression still expected the former Feed heading on
+`/`; and the new aria labels `Режим модели` / `Режимы ИЗО АСА` collided with the existing Studio field labelled `Режим`.
+The palette was not changed to satisfy the test. Assertions now expect browser-normalized values, login explicitly verifies
+Chat home, and navigation/model accessible names were disambiguated from the Studio form control.
+
+Browser screenshots from that same run also showed two presentation issues not expressed by the failing assertions: the
+empty desktop composer was docked too low versus the supplied chat reference, and the 1440px header became visually dense
+because media queries considered the full viewport but not the 260px sidebar. The empty-state composer is now centered on
+desktop, while phone keeps bottom docking; utility labels collapse at a wider breakpoint and creative labels collapse before
+the remaining desktop header becomes crowded.
 
 ## Maintainability delta
 
@@ -54,6 +66,7 @@ both light/dark brand tokens resolve to v1.1 values, and phone creative navigati
 - `TopBar.tsx` owns navigation behavior while `product-nav.css` owns its desktop/mobile presentation; `layout.css` no longer accumulates both responsibilities;
 - `AccountPage.tsx`, `AdminPage.tsx` and `AccessPage.tsx` remain orchestration owners with small presentation siblings;
 - `theme.css` owns semantic tokens once; feature CSS references variables rather than copying palette HEX values;
+- Feed returned to its frozen stylesheet to keep the package at 40 paths; its UI chrome still inherits v1.1 through shared aliases, while its illustrative artwork remains exempt from the UI palette by the color-system contract;
 - `apps/web/AGENTS.md` points Chat and product-navigation changes to their small owners;
 - scope remains `cross_domain <= 40`; tests/limits were not weakened;
 - no dependency, migration, generated API contract or backend runtime owner was introduced.
