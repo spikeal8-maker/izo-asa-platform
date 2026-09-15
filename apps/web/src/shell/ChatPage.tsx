@@ -1,4 +1,4 @@
-import { FormEvent, useRef, useState } from 'react'
+import { useRef, useState, type FormEvent } from 'react'
 import { Icon, type IconName } from '../shared/ui/Icon'
 import { Link } from './router'
 import './chat.css'
