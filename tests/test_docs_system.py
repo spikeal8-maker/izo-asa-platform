@@ -58,8 +58,9 @@ def test_plan_current_base_is_a_verified_checkpoint_without_embedded_evidence():
 
 def test_owner_product_shell_spec_is_canonical_and_explicit():
     text = (ROOT / "docs/UX_PRODUCT_SHELL.md").read_text(encoding="utf-8")
-    for required in ("Лента / Explore", "открытая, без invite-кода", "8–128", "7680×4320",
-                     "Чат → Изображение → Видео → Аудио → 3D", "GUEST"):
+    for required in ("Главная поверхность продукта — Chat", "Лента/Explore", "Обычная регистрация открытая",
+                     "7680×4320", "Чат → Изображение → Видео → Звук → 3D", "Guest image trial",
+                     "Semantic Color System v1.1"):
         assert required in text
 
 
