@@ -2,7 +2,7 @@ import { useEffect, useState, type FormEvent } from 'react'
 import type { components } from '../../shared/api.generated'
 import { apiRequest, ApiError, type AuthView } from '../../shared/api'
 import { Link } from '../../shell/router'
-import { GrantForm } from './GrantForm'
+import { AdminNav, AuditPanel, UserDetailPanel, UserSearchPanel } from './AdminPanels'
 import '../../shared/ui/records.css'
 
 type Access = components['schemas']['AdminAccess']
@@ -31,10 +31,8 @@ export function AdminLink({ path }: { path: string }) {
       .then(value => {
         if (controller.signal.aborted) return
         const permissions = value.account.permissions
-        setHref(permissions.includes('users.read_limited') ? '/admin/users'
-          : permissions.includes('access.read') ? '/admin/access' : '')
-      })
-      .catch(() => { if (!controller.signal.aborted) setHref('') })
+        setHref(permissions.includes('users.read_limited') ? '/admin/users' : permissions.includes('access.read') ? '/admin/access' : '')
+      }).catch(() => { if (!controller.signal.aborted) setHref('') })
     return () => controller.abort()
   }, [path])
   return href ? <Link href={href} className="staff-link">Администрирование</Link> : null
@@ -95,60 +93,29 @@ export function AdminPage({ path }: { path: string }) {
   async function older() {
     if (busy || !events?.next_before) return
     setBusy(true)
-    try { setEvents(await apiRequest<Events>('/api/v1/admin/audit?before='+events.next_before)) }
+    try { setEvents(await apiRequest<Events>('/api/v1/admin/audit?before=' + events.next_before)) }
     catch (reason) { setError(errorText(reason)) }
     finally { setBusy(false) }
   }
+  function refreshCredits() {
+    if (!user) return
+    void apiRequest<Credits>(`/api/v1/admin/users/${user.id}/credits`).then(setCredits).catch(reason => setError(errorText(reason)))
+  }
 
+  const current = auditing ? 'audit' : 'users'
   return <section className="admin-page">
-    <header className="page-heading"><p className="eyebrow">СЕРВЕРНОЕ УПРАВЛЕНИЕ · ADMIN-001</p>
+    <header className="page-heading"><p className="eyebrow">АДМИНИСТРИРОВАНИЕ</p>
       <h1>{target ? 'Пользователь' : auditing ? 'Журнал действий' : 'Пользователи'}</h1>
-      <p>Настоящие аккаунты и баллы. Студия и её демо-работы к этому балансу ещё не подключены.</p>
-    </header>
+      <p>Управление аккаунтами, балансом и действиями персонала через серверные полномочия.</p></header>
     {!known ? <p role="alert">Этот административный экран ещё не реализован.</p> : <>
-      {error && <p role="alert" className="field-error">{error} <button onClick={() => setVersion(v=>v+1)} disabled={busy}>Повторить</button></p>}
+      {error && <p role="alert" className="field-error">{error} <button onClick={() => setVersion(value => value + 1)} disabled={busy}>Повторить</button></p>}
       {!access && !busy && <p><Link href="/login">Войти</Link> · <Link href="/verify-email">Подтвердить почту</Link></p>}
       {busy && <p role="status">Загружаем серверные данные…</p>}
-      {access && <>
-        <nav className="admin-links" aria-label="Административные страницы">
-          <Link href="/admin/users">Пользователи</Link>
-          {access.permissions.includes('audit.read') && <Link href="/admin/audit">Журнал действий</Link>}
-          {access.permissions.includes('access.read') && <Link href="/admin/access">Доступ</Link>}
-          <Link href="/account/credits">Мои баллы</Link>
-        </nav>
-        {!target && !auditing && <div className="admin-panel">
-          <form onSubmit={search} className="admin-search"><label>Имя или публичный код
-            <input value={query} onChange={e=>{setQuery(e.target.value);setUsers(null)}} minLength={3} maxLength={80} required /></label>
-            <button className="primary" disabled={busy}>Найти пользователя</button></form>
-          {!users && !busy && <p>Введите минимум 3 символа. Список не загружается целиком.</p>}
-          {users && <><div className="admin-table-wrap"><table><thead><tr><th>Имя</th><th>Код</th><th>Статус</th><th>Действие</th></tr></thead>
-            <tbody>{users.users.map(item=><tr key={item.id}><td>{item.display_name}</td><td>{item.public_code}</td><td>{item.state}</td>
-              <td><Link href={'/admin/users/'+item.id}>Открыть карточку</Link></td></tr>)}</tbody></table></div>
-            {users.users.length===0 && <p>Совпадений нет.</p>}
-            {users.next_after && <button disabled={busy} onClick={()=>void search(undefined,users.next_after!)}>Следующие пользователи</button>}</>}
-        </div>}
-        {user && <div className="admin-panel"><h2>{user.display_name}</h2>
-          <dl className="summary-list"><div><dt>Публичный код</dt><dd>{user.public_code}</dd></div>
-            <div><dt>Состояние</dt><dd>{user.state}</dd></div><div><dt>Способ входа подтверждён</dt><dd>{user.verified?'Да':'Нет'}</dd></div></dl>
-          {credits ? <><h2>Серверный баланс</h2><dl className="summary-list">
-            <div><dt>Доступно</dt><dd data-testid="admin-available">{credits.balance.available}</dd></div>
-            <div><dt>В резерве</dt><dd>{credits.balance.reserved}</dd></div></dl>
-            <h3>Последние операции</h3><ul className="admin-history">{credits.entries.map(entry=><li key={entry.entry_id}>
-              <span>{entry.kind} · {entry.reason}</span><strong>{entry.balance_delta>0?'+':''}{entry.balance_delta}</strong></li>)}</ul>
-            {!credits.entries.length && <p>Операций пока нет.</p>}
-            {credits.next_before && <p>Показаны последние 20 операций. Полный поиск журнала — следующий интерфейсный пакет.</p>}</>
-            : !busy && <p>Финансовые сведения не загружены или нет полномочия на их просмотр.</p>}
-          {access.max_grant>0 && access.permissions.includes('credits.grant') &&
-            <GrantForm user={user} maximum={access.max_grant} csrf={access.csrf_token}
-              onGranted={()=>{void apiRequest<Credits>(`/api/v1/admin/users/${user.id}/credits`).then(setCredits).catch(reason=>setError(errorText(reason)))}} />}
-        </div>}
-        {events && <div className="admin-panel"><h2>Последние действия персонала</h2>
-          <p>События не редактируются. Приватные файлы, пароли и ключи здесь не отображаются.</p>
-          <ul className="admin-history">{events.events.map(item=><li key={item.id}><div><strong>{item.action}</strong>
-            <p>{item.outcome} · {new Date(item.created_at*1000).toLocaleString('ru-RU')}{item.case_reference?' · '+item.case_reference:''}</p></div>
-            {item.target_id && <Link href={'/admin/users/'+item.target_id}>Получатель</Link>}</li>)}</ul>
-          {!events.events.length && <p>Событий нет.</p>}{events.next_before && <button disabled={busy} onClick={()=>void older()}>Более ранние события</button>}
-        </div>}
+      {access && <><AdminNav access={access} current={current} />
+        {!target && !auditing && <UserSearchPanel query={query} users={users} busy={busy}
+          onQuery={value => { setQuery(value); setUsers(null) }} onSearch={event => void search(event)} onNext={after => void search(undefined, after)} />}
+        {user && <UserDetailPanel user={user} credits={credits} access={access} busy={busy} onGranted={refreshCredits} />}
+        {events && <AuditPanel events={events} busy={busy} onOlder={() => void older()} />}
       </>}
     </>}
   </section>

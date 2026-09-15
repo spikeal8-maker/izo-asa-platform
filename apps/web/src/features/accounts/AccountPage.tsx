@@ -1,6 +1,6 @@
 import { useEffect, useState, type FormEvent } from 'react'
 import { apiRequest, ApiError, type AuthView, type GuestView, type SessionList } from '../../shared/api'
-import { Link } from '../../shell/router'
+import { AccountSessions, AuthEntry } from './AuthEntry'
 import './accounts.css'
 
 const messages: Record<string, string> = {
@@ -53,8 +53,7 @@ export function AccountPage({ mode }: { mode: 'account' | 'login' | 'register' }
     apiRequest<GuestView>('/api/v1/guest/me', { signal: controller.signal }).then(value => {
       if (!controller.signal.aborted) setGuest(value)
     }).catch(reason => {
-      if (!controller.signal.aborted && !(reason instanceof ApiError && reason.status === 401))
-        setError(explanation(reason))
+      if (!controller.signal.aborted && !(reason instanceof ApiError && reason.status === 401)) setError(explanation(reason))
     })
     return () => controller.abort()
   }, [registering])
@@ -70,10 +69,8 @@ export function AccountPage({ mode }: { mode: 'account' | 'login' | 'register' }
     if (registering) payload.display_name = String(values.get('display_name') ?? '')
     setBusy(true); setError('')
     try {
-      const endpoint = registering && guest ? '/api/v1/guest/claim'
-        : `/api/v1/auth/${registering ? 'register' : 'login'}`
-      await apiRequest<AuthView>(endpoint, { method: 'POST', data: payload,
-        csrf: registering && guest ? guest.csrf_token : undefined })
+      const endpoint = registering && guest ? '/api/v1/guest/claim' : `/api/v1/auth/${registering ? 'register' : 'login'}`
+      await apiRequest<AuthView>(endpoint, { method: 'POST', data: payload, csrf: registering && guest ? guest.csrf_token : undefined })
       window.location.assign('/')
     } catch (reason) {
       if (registering && reason instanceof ApiError && reason.code === 'guest_required') setGuest(null)
@@ -99,38 +96,8 @@ export function AccountPage({ mode }: { mode: 'account' | 'login' | 'register' }
     } finally { setBusy(false) }
   }
 
-  if (!auth && !loading && mode !== 'account') return <section className="auth-page">
-    <div className="auth-card">
-      <p className="eyebrow">ИЗО АСА</p>
-      <h1>{registering ? 'Создать аккаунт' : 'Войти'}</h1>
-      <p>{registering
-        ? guest ? 'Пробная работа останется в этом аккаунте. Укажите данные для продолжения.'
-          : 'Сохраняйте работы, историю и баланс между устройствами.'
-        : 'Продолжите работу с вашими проектами и галереей.'}</p>
-      {error && <div className="field-error" role="alert">{error}</div>}
-      <form onSubmit={submit} className="account-form">
-        {registering && <label>Имя<input name="display_name" autoComplete="nickname" required maxLength={80} /></label>}
-        <label>Электронная почта<input name="email" type="email" autoComplete="username" required maxLength={254} /></label>
-        <label>Пароль<input name="password" type="password" aria-label="Пароль"
-          aria-describedby={registering ? 'password-help' : undefined}
-          autoComplete={registering ? 'new-password' : 'current-password'} required minLength={registering ? 8 : 1} maxLength={128} />
-          {registering && <small id="password-help">Минимум 8 символов. Можно использовать длинную фразу.</small>}</label>
-        <button className="primary full-width" type="submit" disabled={busy}>{busy ? 'Проверяем…' : registering ? 'Создать аккаунт' : 'Войти'}</button>
-      </form>
-      {!registering && <p className="auth-minor"><Link href="/password/forgot">Забыли пароль?</Link></p>}
-      <p className="auth-switch"><Link href={registering ? '/login' : '/register'}>{registering ? 'Уже есть аккаунт? Войти' : 'Нет аккаунта? Зарегистрироваться'}</Link></p>
-    </div>
-  </section>
-
-  return <section className="account-page">
-    <header className="page-heading"><p className="eyebrow">АККАУНТ</p><h1>Ваш профиль</h1><p>Управляйте способом входа, безопасностью и активными сессиями.</p></header>
-    {error && <div className="field-error" role="alert">{error}<button disabled={busy} onClick={() => setReload(value => value + 1)}>Повторить</button></div>}
-    {loading ? <p role="status">Загружаем аккаунт…</p> : auth ? <div data-testid="server-account" className="account-panel">
-      <h2>{auth.account.display_name}</h2><p>{auth.account.email ?? 'Адрес не привязан'}</p>
-      <div className="account-links"><Link href="/verify-email">Подтвердить почту</Link><Link href="/account/security">Изменить пароль</Link><Link href="/account/connections">Способы входа</Link></div>
-      <h3>Активные сессии</h3>
-      <ul className="session-list">{sessions.map(session => <li key={session.id}><div><strong>{session.current ? 'Это устройство' : 'Другое устройство'}</strong><small>{session.client_label}</small><small>{new Date(session.created_at * 1000).toLocaleString('ru-RU')}</small></div><button disabled={busy} onClick={() => void revoke(`/api/v1/auth/sessions/${session.id}`, session.current)}>Завершить</button></li>)}</ul>
-      <div className="account-actions"><button disabled={busy || sessions.length < 2} onClick={() => void revoke('/api/v1/auth/sessions/revoke-others')}>Завершить другие</button><button disabled={busy} onClick={() => void revoke('/api/v1/auth/logout', true)}>Выйти</button></div>
-    </div> : <div className="account-panel"><h2>Вы не вошли</h2><p>Войдите или создайте аккаунт, чтобы сохранять работы и историю.</p><div className="feed-actions"><Link className="primary" href="/login">Войти</Link><Link className="secondary" href="/register">Регистрация</Link></div></div>}
-  </section>
+  if (!auth && !loading && mode !== 'account') return <AuthEntry registering={registering} guest={guest} busy={busy} error={error} onSubmit={submit} />
+  if (loading) return <section className="account-page"><p role="status">Загружаем аккаунт…</p></section>
+  return <AccountSessions auth={auth} sessions={sessions} busy={busy} error={error}
+    onReload={() => setReload(value => value + 1)} onRevoke={(path, current) => void revoke(path, current)} />
 }

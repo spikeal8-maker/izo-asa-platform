@@ -29,7 +29,6 @@ function Work({ id, auth }: { id: string; auth: AuthView }) {
     current.current = resource
     setBusy(true); setDownloadError('')
     try {
-      // Reauthorize and read fresh, bounded, hash-checked bytes. Never reuse the preview.
       const blob = await imageBlob(asset, auth, resource.controller.signal)
       if (resource.controller.signal.aborted) return
       resource.url = URL.createObjectURL(blob)
@@ -46,20 +45,19 @@ function Work({ id, auth }: { id: string; auth: AuthView }) {
   }
   return <><ResourceState loading={loading} error={error} retry={refresh} />{asset && <div className="asset-detail">
     <PrivateImage asset={asset} auth={auth} />
-    <section className="asset-information"><h2>Изображение {asset.id.slice(0, 8)}</h2>
-      <p>Файл получен из приватного серверного хранилища. Тестовый генератор создаёт PNG с отметкой TEST ONLY.</p>
+    <section className="asset-information"><p className="eyebrow">СОХРАНЕНО В ГАЛЕРЕЕ</p><h2>Изображение</h2>
+      <p>Работа доступна только в вашем аккаунте. Её можно открыть здесь в полном размере или скачать.</p>
       <dl className="summary-list"><div><dt>Размер</dt><dd>{asset.width} × {asset.height}</dd></div>
-        <div><dt>Формат</dt><dd>PNG</dd></div><div><dt>Объём</dt><dd>{asset.byte_size.toLocaleString('ru-RU')} байт</dd></div>
+        <div><dt>Формат</dt><dd>PNG</dd></div>
         <div><dt>Создано</dt><dd>{new Date(asset.created_at * 1000).toLocaleString('ru-RU')}</dd></div></dl>
       <button className="primary full-width" disabled={busy} onClick={() => void download()}><Icon name="download" /> Скачать PNG</button>
       {downloadError && <p className="field-error" role="alert">{downloadError}</p>}
-      <p>Удаление, публикация и использование файла как исходника пока не подключены. Архив доступен независимо от остатка баллов.</p>
-      <Link href="/jobs">Открыть мои задания</Link>
+      <p className="asset-secondary-action"><Link href="/jobs">История генераций</Link></p>
     </section></div>}</>
 }
 export function AssetPage({ id }: { id: string }) {
   return <><Link className="back-link" href="/gallery"><Icon name="back" /> Мои работы</Link>
-    <header className="page-heading"><p className="eyebrow">ПРИВАТНЫЙ ФАЙЛ</p><h1>Работа</h1></header>
+    <header className="page-heading"><p className="eyebrow">МОЯ РАБОТА</p><h1>Изображение</h1></header>
     {!isId(id) ? <section className="gallery-empty"><h2>Работа не найдена</h2><Link href="/gallery">Вернуться в галерею</Link></section>
       : <WorkspaceGate>{auth => <Work id={id} auth={auth} />}</WorkspaceGate>}
   </>
