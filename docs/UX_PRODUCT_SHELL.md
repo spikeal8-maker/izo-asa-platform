@@ -1,82 +1,119 @@
-# UX-002 · Product Shell — решение владельца
+# IZO ASA · Product Shell + Semantic Color System v1.1
 
-Статус: обязательное продуктовое ТЗ для следующего пользовательского shell. Оно уточняет PRODUCT/UX и имеет приоритет над неутверждённым UX-001 shell там, где формулировки расходятся.
+Статус: обязательное продуктовое ТЗ текущего frontend. Решение владельца заменяет прежний feed-first shell UX-002 там,
+где они расходятся. Главная поверхность продукта — Chat; Feed остаётся отдельным публичным разделом.
 
-## 1. Первый контакт
+## 1. Главная поверхность
 
-- Первая публичная страница web — **Лента / Explore**, а не Studio и не технический overview.
-- Гость может открыть ленту, посмотреть примеры/публичные работы, перейти в направления Studio и понять продукт без регистрации.
-- Никаких публичных надписей `TEST ONLY`, `тестовая платформа`, package ID, AUTH/JOBS/IMAGE ID или внутренних стадий разработки.
-- Недоступное направление не должно быть пустой страницей `В разработке`: показывается продуктовый preview сценариев и путь к уже доступному инструменту.
-- О продукте должно быть понятно из интерфейса: что можно создавать, где хранятся работы, что такое лента и как начать.
+- `/` — **Чат**. `/studio/chat` сохраняется как совместимый alias.
+- Чат является основной точкой входа в ИЗО АСА: обычный диалог + запуск Image/Video/Audio/3D из одного composer.
+- `/feed` — отдельная Лента/Explore; `/gallery` — личная Галерея.
+- Верхняя продуктовая полоса на всех основных пользовательских поверхностях: **Чат → Изображение → Видео → Звук → 3D**.
+- Лента, Галерея, Помощь, токены/баланс и Account являются utility navigation, а не отдельными creative modes.
+- Недоступный runtime нельзя изображать успешным. Пока server text-chat отсутствует, frontend может показать composer/navigation,
+  но не генерирует fake assistant answer. Рабочая image generation остаётся на существующем Jobs/Media path.
 
-## 2. Регистрация и guest-first
+## 2. Chat geometry
 
-- Обычная регистрация **открытая, без invite-кода**.
-- Invite mode сохраняется только как скрытый операторский режим закрытого стенда и не является пользовательским UX.
-- Пароль: 8–128 символов, без требований «буква/цифра/символ»; UI предлагает длинную фразу.
-- После регистрации/входа пользователь возвращается в продукт, по умолчанию в ленту, а не в техническую страницу аккаунта.
-- Целевой guest-flow: первый пробный диалог и/или ограниченный первый generation action разрешены до регистрации. Guest-budget конечный и серверный; после его исчерпания продолжение требует аккаунт. IP/device fingerprint не является identity.
-- Guest runtime, перенос пробного результата в аккаунт и abuse controls реализуются отдельным backend package; UX-002 не имеет права имитировать успешную бесплатную генерацию, если backend ещё не поддерживает её.
+Desktop reference:
+- sidebar: около `260px`;
+- top header: `56px`;
+- reading/chat measure: `768px`;
+- composer measure: `768px`;
+- assistant text без тяжёлой карточки; user message — спокойный neutral bubble;
+- composer закреплён внизу chat surface и не перекрывает сообщения;
+- sidebar и product header используют тот же shell на остальных страницах.
 
-## 3. Информационная архитектура
+Mobile reference:
+- верхняя область — две строки: context/account + горизонтальная полоса creative modes;
+- короткая нижняя navigation: Chat / Feed / Gallery;
+- composer учитывает `safe-area-inset-bottom` и экранную клавиатуру;
+- hover-preview не является единственным способом доступа к функции.
 
-Primary navigation:
-1. **Лента** — публичный Explore и стартовый экран.
-2. **Студия** — рабочие инструменты.
-3. **Галерея** — личные работы.
+## 3. Semantic Color System v1.1
 
-`Задания` не является главным пользовательским разделом. Job lifecycle остаётся в системе, но в UI называется понятным контекстом вроде «История / Активность» и открывается из Studio/Account при необходимости.
+`apps/web/src/shell/theme.css` — runtime source of truth. Все страницы используют только semantic tokens ниже.
+При смене утверждённого цвета меняется токен, а не отдельные компоненты.
 
-Desktop sidebar содержит только основные разделы и редкие account/balance действия внизу. Верхняя панель Studio содержит направления: **Чат → Изображение → Видео → Аудио → 3D**. На мобильном остаётся короткая нижняя primary navigation и обязательная кнопка меню сверху для account/theme/редких действий.
+### Light
 
-## 4. Визуальная система
+```css
+--color-bg: #F6F6F8;
+--color-surface: #FFFFFF;
+--color-border: #D7DAE0;
+--color-text: #181A1F;
+--color-text-secondary: #4F5660;
+--color-brand: #6E45C1;
+--color-brand-soft: #F0ECF7;
+--color-on-brand: #FFFFFF;
+--color-success: #176B4A;
+--color-warning: #8A5A00;
+--color-error: #B73748;
+```
 
-Основная тема — **light**. Основа интерфейса: белый, чёрный, нейтральные серые. Один третий цвет допустим редко для состояния/фокуса/акцента; текущий кирпично-бежевый shell запрещён.
+### Dark
 
-Approved starting tokens для реализации UX-002:
-- light background/panel: `#FFFFFF`;
-- light ink: `#101010`;
-- neutral soft: `#F7F7F8`, line `#E5E5E5`;
-- muted text: `#6B6B6B`;
-- rare accent: `#0F8A68`;
-- dark background: `#212121`, panel `#2B2B2B`, ink `#F4F4F4`, line `#424242`.
+```css
+--color-bg: #111318;
+--color-surface: #191C22;
+--color-border: #343A45;
+--color-text: #F3F4F6;
+--color-text-secondary: #B0B6C0;
+--color-brand: #9D78EA;
+--color-brand-soft: #2B2437;
+--color-on-brand: #111318;
+--color-success: #53C89A;
+--color-warning: #F2B84D;
+--color-error: #FF7A88;
+```
 
-Акцент не окрашивает всю навигацию/шапку. Primary button в основном чёрный/белый; accent используется точечно. Белая тема включается по умолчанию, dark сохраняется как пользовательское предпочтение.
+Rules:
+- neutral interface + один фирменный violet;
+- нет отдельных декоративных цветов для Chat/Image/Video/Audio/3D/SVG;
+- только primary/secondary text levels;
+- success/warning/error используются только как системные состояния;
+- hover/focus/selected выводятся через semantic tokens и `color-mix`; новые HEX в component CSS не создаются;
+- logo gradient допустим только внутри logo asset;
+- generated content не ограничивается UI palette;
+- compatibility aliases старых CSS-переменных разрешены только как migration layer и должны ссылаться на `--color-*`.
 
-## 5. Feed / imagery
+## 4. Registration / guest
 
-- Лента — визуальная: карточки изображений/видео/3D превалируют над служебным текстом.
-- До появления реального FEED backend разрешены только явно presentation-примеры; их нельзя выдавать за публикации реальных пользователей.
-- После FEED-001 карточка показывает author/publication metadata, reactions/remix по принятому контракту, без раскрытия private prompt/references.
-- Desktop: masonry/grid, разумное использование ширины. Mobile: две колонки там, где карточка остаётся читаемой.
+- Обычная регистрация открытая; invite остаётся operator/test режимом.
+- Login/Register не содержат package IDs и технических стадий.
+- Guest image trial использует только server-owned guest budget; frontend не создаёт локальный wallet/success.
+- После регистрации пользователь возвращается в продукт, по умолчанию в Chat.
 
-## 6. Account / balance
+## 5. Feed / Gallery
 
-- Login/Register — отдельная спокойная карточка без технической терминологии.
-- Пользователь видит `Войти` и `Регистрация` явно; не только аватар-иконку.
-- Account не рассказывает про diagnostic executor, test mail или package IDs.
-- Balance UI в будущем должен различать дневной/периодический лимит и приобретённый остаток, если эти buckets существуют в backend; UI не выдумывает их до BILLING/Entitlements contract.
-- Admin links не видны обычному пользователю без staff permissions.
+- Feed доступен без login и остаётся визуальным Explore.
+- До FEED backend разрешены только явно presentation-примеры; нельзя имитировать реальных authors/likes/publications.
+- Gallery показывает только server-owned private assets текущего пользователя.
+- Download/preview ownership и bytes validation остаются backend/Media responsibility.
+
+## 6. Account / tokens
+
+- UI не выдумывает daily/monthly buckets, если их нет в backend contract.
+- До появления отдельного billing bucket в shell используется нейтральное действие `Токены`/`Баланс` с переходом к server Credits.
+- Admin links не видны без staff permissions.
 
 ## 7. Responsive contract
 
-Обязательные CSS viewport checks: 360×800, 390×844, 768×1024, 1024×768, 1440×900, 1920×1080, 2560×1440, 3840×2160 и **7680×4320**.
+Обязательные CSS viewport checks: 360×800, 390×844, 768×1024, 1024×768, 1440×900, 1920×1080,
+2560×1440, 3840×2160 и 7680×4320. Дополнительно DPR=2/1.5 и ручная Windows scaling 125/150/200%.
 
-Дополнительно: 1920×1080 DPR=2, 2560×1440 DPR=1.5, Windows scaling 125/150/200% при ручной приёмке. 8K не означает растянуть текст на всю ширину: reading measure ограничен, но feed/gallery/canvas/table используют доступное пространство. Нельзя фиксировать весь content на 2560 px и оставлять пустые поля на 4K/8K.
+8K не растягивает reading text на весь экран: Chat/composer остаются bounded, а Feed/Gallery/Canvas/Table используют ширину.
+На телефоне нет document horizontal overflow; primary actions доступны без hover.
 
-На телефоне основные действия доступны без hover; есть верхняя кнопка меню, safe-area, экранная клавиатура не закрывает submit. Нет горизонтального overflow страницы.
+## 8. Frontend acceptance
 
-## 8. Acceptance UX-002
-
-Обязательные проверки:
-- `/` и `/feed` открывают Feed/Explore;
-- свободная регистрация без invite, password >=8;
-- login/register не содержат внутренних стадий/ID;
-- light default + dark switch;
-- primary nav: Feed / Studio / Gallery; Jobs отсутствует в primary nav;
-- top Studio direction nav: Chat/Image/Video/Audio/3D;
-- mobile top menu + bottom primary nav;
-- no document horizontal overflow на всей viewport matrix;
-- отдельный 8K smoke: hero/readable text bounded, feed uses >4 columns, primary controls остаются доступными;
-- guest-first generation остаётся blocked как backend capability до отдельного GUEST package, без fake success.
+- `/` и `/studio/chat` показывают Chat home;
+- `/feed` остаётся отдельным Explore;
+- top creative nav: Chat/Image/Video/Audio/3D;
+- mobile: horizontal creative nav + short Chat/Feed/Gallery bottom nav;
+- light default + persistent dark switch;
+- semantic v1.1 colors одинаковы на всех пользовательских surfaces;
+- отсутствуют decorative per-mode colors;
+- Chat не показывает fake server success;
+- existing Image/Gallery/Account/Admin server contracts не меняются этим visual package;
+- no horizontal overflow на полной viewport matrix.
