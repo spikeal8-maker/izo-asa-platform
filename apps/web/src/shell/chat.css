@@ -46,7 +46,7 @@
 .chat-tool-item small { color: var(--color-text-secondary); font-size: .7rem; }
 
 @media (max-width: 860px) {
-  .chat-content { height: calc(100dvh - 102px - 64px - env(safe-area-inset-bottom)); }
+  .chat-content { height: calc(100dvh - 94px - 64px - env(safe-area-inset-bottom)); }
   .chat-column { width: 100%; padding: 18px 16px 18px; }
   .chat-empty { min-height: 48vh; padding: 20px 0 8px; }
   .chat-empty h1 { font-size: 1.65rem; }
