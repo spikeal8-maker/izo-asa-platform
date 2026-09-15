@@ -4,7 +4,7 @@ test.beforeEach(async ({ page }) => {
   await page.route('**/api/v1/auth/me', route => route.fulfill({ status: 401, json: { error: { code: 'auth_required' } } }))
 })
 
-test('chat-first home is the primary product surface', async ({ page }) => {
+test('chat-first home is the primary product surface', async ({ page }, info) => {
   await page.goto('/')
   await expect(page.getByRole('heading', { level: 1 })).toHaveText('Чем я могу помочь?')
   await expect(page.getByRole('textbox', { name: 'Сообщение' })).toBeVisible()
@@ -12,6 +12,7 @@ test('chat-first home is the primary product surface', async ({ page }) => {
   await expect(page.getByRole('navigation', { name: 'Основные разделы' }).getByRole('link', { name: 'Чат', exact: true })).toHaveAttribute('aria-current', 'page')
   await expect(page.locator('html')).toHaveCSS('--color-brand', '#6e45c1')
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true)
+  await page.screenshot({ path: info.outputPath('chat-home.png'), fullPage: true })
 })
 
 test('feed remains available as a separate public explore page', async ({ page }) => {
