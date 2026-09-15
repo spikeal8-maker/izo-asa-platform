@@ -69,15 +69,15 @@ export function TopBar({ path, auth, theme, mobileMenu, onToggleMenu, onToggleTh
       <Link className="mobile-brand" href="/">ИЗО АСА</Link>
       <span className="mobile-context" aria-current="page">{mobileContext(path)}</span>
     </div>
-    <div className="model-chip" aria-label="Модель: ASA Auto"><span>ASA Auto</span><small>Auto</small></div>
+    <div className="model-chip" aria-label="Модель: ASA Auto"><span>ASA Auto</span></div>
     <nav className="direction-nav" aria-label="Творческие инструменты ИЗО АСА">{directions.map(item => <Link key={item.href} href={item.href}
       aria-label={item.title} className={activeDirection(item.href) ? 'active' : ''}
       aria-current={activeDirection(item.href) ? 'page' : undefined}>
       <Icon name={item.icon} /><span>{item.title}</span></Link>)}</nav>
     <div className="header-actions">
-      <Link className="top-utility" href="/feed"><Icon name="feed" /><span>Лента</span></Link>
-      <Link className="top-utility" href="/gallery"><Icon name="grid" /><span>Галерея</span></Link>
-      <Link className="top-utility" href="/help"><Icon name="info" /><span>Помощь</span></Link>
+      <Link className="top-utility" href="/feed" aria-label="Лента"><Icon name="feed" /><span>Лента</span></Link>
+      <Link className="top-utility" href="/gallery" aria-label="Галерея"><Icon name="grid" /><span>Галерея</span></Link>
+      <Link className="top-utility" href="/help" aria-label="Помощь"><Icon name="info" /><span>Помощь</span></Link>
       {auth ? <><Link className="balance-button" href="/account/credits">Токены</Link>
         <Link className="avatar" href="/account" aria-label="Аккаунт">{auth.account.display_name.slice(0, 1).toUpperCase()}</Link></>
         : <><Link className="login-link" href="/login">Войти</Link><Link className="signup-link" href="/register">Регистрация</Link></>}
