@@ -19,13 +19,13 @@ export function FeedPage() {
         <p>Одно пространство для изображений, видео, звука, 3D и чата. Лента открыта для просмотра, а рабочие инструменты всегда рядом.</p>
         <div className="feed-actions">
           <Link className="primary" href="/image">Создать изображение</Link>
-          <Link className="secondary" href="/">Открыть чат</Link>
+          <Link className="secondary" href="/studio/chat">Открыть чат</Link>
         </div>
       </div>
       <div className="quick-start" aria-label="Быстрый старт">
         <span>Что хотите сделать?</span>
         <p>Опишите идею — начните с изображения или откройте чат.</p>
-        <div><Link href="/image">Изображение <b aria-hidden="true">→</b></Link><Link href="/">Чат <b aria-hidden="true">→</b></Link></div>
+        <div><Link href="/image">Изображение <b aria-hidden="true">→</b></Link><Link href="/studio/chat">Чат <b aria-hidden="true">→</b></Link></div>
       </div>
     </header>
 
