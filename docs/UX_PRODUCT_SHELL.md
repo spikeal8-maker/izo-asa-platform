@@ -20,8 +20,9 @@ Desktop reference:
 - top header: `56px`;
 - reading/chat measure: `768px`;
 - composer measure: `768px`;
+- пустой Chat показывает один heading и composer как центрированную стартовую поверхность без invented quick-action cards;
+- после первого сообщения composer переходит в нижний dock chat surface и не перекрывает сообщения;
 - assistant text без тяжёлой карточки; user message — спокойный neutral bubble;
-- composer закреплён внизу chat surface и не перекрывает сообщения;
 - sidebar и product header используют тот же shell на остальных страницах.
 
 Mobile reference:
@@ -108,6 +109,7 @@ Rules:
 ## 8. Frontend acceptance
 
 - `/` и `/studio/chat` показывают Chat home;
+- empty desktop Chat: один heading + центрированный composer; conversation state: нижний composer dock;
 - `/feed` остаётся отдельным Explore;
 - top creative nav: Chat/Image/Video/Audio/3D;
 - mobile: horizontal creative nav + short Chat/Feed/Gallery bottom nav;
