@@ -43,15 +43,7 @@ export function ChatPage() {
   return <section className={`chat-page ${empty ? 'is-empty' : ''}`} aria-label="Чат ИЗО АСА">
     <div className="chat-scroll" aria-live="polite">
       <div className="chat-column">
-        {empty ? <div className="chat-empty">
-          <h1>Чем я могу помочь?</h1>
-          <p>Обсудите идею или сразу выберите нужный инструмент.</p>
-          <div className="chat-quick-actions" aria-label="Быстрые действия">
-            {tools.map(tool => <Link key={tool.href} href={tool.href} className="chat-quick-action">
-              <Icon name={tool.icon} /><span><strong>{tool.label}</strong><small>{tool.detail}</small></span>
-            </Link>)}
-          </div>
-        </div> : <div className="chat-turns">
+        {empty ? <div className="chat-empty"><h1>Чем я могу помочь?</h1></div> : <div className="chat-turns">
           {turns.map(turn => <div className="chat-turn chat-turn-user" key={turn.id}>
             <div className="chat-user-bubble">{turn.text}</div>
           </div>)}
