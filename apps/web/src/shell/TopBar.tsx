@@ -69,8 +69,8 @@ export function TopBar({ path, auth, theme, mobileMenu, onToggleMenu, onToggleTh
       <Link className="mobile-brand" href="/">ИЗО АСА</Link>
       <span className="mobile-context" aria-current="page">{mobileContext(path)}</span>
     </div>
-    <div className="model-chip" aria-label="Режим модели: ASA Auto"><span>ASA Auto</span><small>Auto</small></div>
-    <nav className="direction-nav" aria-label="Режимы ИЗО АСА">{directions.map(item => <Link key={item.href} href={item.href}
+    <div className="model-chip" aria-label="Модель: ASA Auto"><span>ASA Auto</span><small>Auto</small></div>
+    <nav className="direction-nav" aria-label="Творческие инструменты ИЗО АСА">{directions.map(item => <Link key={item.href} href={item.href}
       className={activeDirection(item.href) ? 'active' : ''} aria-current={activeDirection(item.href) ? 'page' : undefined}>
       <Icon name={item.icon} /><span>{item.title}</span></Link>)}</nav>
     <div className="header-actions">
