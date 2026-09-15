@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { detectHost } from '../platform/host'
 import { SectionPage } from './SectionPage'
 import { usePath } from './router'
+import { ChatPage } from './ChatPage'
 import { Studio } from '../features/studio/Studio'
 import { ResultPanel } from '../features/studio/ResultPanel'
 import { Gallery } from '../features/gallery/Gallery'
@@ -27,7 +28,8 @@ export function App() {
   const [auth, setAuth] = useState<AuthView | null | undefined>(undefined)
   const path = usePath()
   const host = detectHost(window)
-  const feed = path === '/' || path === '/feed'
+  const chat = path === '/' || path === '/studio/chat'
+  const feed = path === '/feed'
   const studio = ['/image', '/studio/image'].includes(path)
   const gallery = path === '/gallery'
   const security = securityPages[path]
@@ -61,25 +63,25 @@ export function App() {
       heading.tabIndex = -1
       heading.focus({ preventScroll: true })
       document.title = `${heading.textContent} · ИЗО АСА`
-    }
-  }, [path])
+    } else if (chat) document.title = 'Чат · ИЗО АСА'
+  }, [path, chat])
 
-  return <div className="app" data-platform={host}>
+  return <div className={`app ${chat ? 'chat-shell' : ''}`} data-platform={host}>
     <a className="skip-link" href="#main">К содержимому</a>
     <PrimarySidebar path={path} auth={auth} />
     <div className="app-body">
       <TopBar path={path} auth={auth} theme={theme} mobileMenu={mobileMenu}
         onToggleMenu={() => setMobileMenu(value => !value)}
         onToggleTheme={() => setTheme(value => value === 'light' ? 'dark' : 'light')} />
-      <div className="content"><main id="main" tabIndex={-1}>
+      <div className={chat ? 'content chat-content' : 'content'}><main id="main" tabIndex={-1}>
         {accessAdmin ? <AccessPage key={path} /> : admin ? <AdminPage key={path} path={path} /> : credits ? <CreditsPage />
           : security ? <SecurityPage key={path} mode={security} />
           : account ? <AccountPage key={path} mode={path === '/register' ? 'register' : path === '/login' ? 'login' : 'account'} />
-          : feed ? <FeedPage /> : studio ? <Studio key={path} /> : gallery ? <Gallery key={path} />
+          : chat ? <ChatPage /> : feed ? <FeedPage /> : studio ? <Studio key={path} /> : gallery ? <Gallery key={path} />
           : detail ? <AssetPage key={path} id={path.slice('/gallery/'.length)} />
           : jobs ? <ResultPanel key={path} id={path === '/jobs' ? undefined : path.slice('/jobs/'.length)} />
           : <SectionPage path={path} />}
-      </main><footer><span>ИЗО АСА</span></footer></div>
+      </main>{!chat && <footer><span>ИЗО АСА</span></footer>}</div>
     </div>
   </div>
 }
