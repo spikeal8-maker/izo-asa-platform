@@ -1,49 +1,67 @@
 # FRONTEND-001 · SELF_REVIEW
 
-Verdict: **SELF_REVIEW PASS · FREEZE REQUIRES EXACT-HEAD CI · OWNER VISUAL ACCEPTANCE PENDING**
+Verdict: **SELF_REVIEW PASS · EXACT-HEAD CI PENDING · OWNER VISUAL ACCEPTANCE PENDING**
 
 ## Scope
 
-Base: frozen `MAINT-AGENT-002`. Package class: `cross_domain`, risk `high`, with independent review required.
+Base: frozen `MAINT-AGENT-002`. Package class: `cross_domain`, risk `high`, independent review required.
 Backend business logic, migrations, provider spend, Credits/Jobs/Media semantics and merge/deploy remain non-goals.
-Final scope is intentionally capped at **32 changed paths**; the cap was not raised to absorb the edge-policy correction.
-The only edge-security change is the narrow Gallery requirement `img-src ... blob:` in `infra/Caddyfile`; no other CSP directive is relaxed.
+
+The owner revised the frontend contract while FRONTEND-001 was still active: Chat replaces Feed as the canonical `/`
+surface and Semantic Color System v1.1 replaces the previous monochrome draft. Scope therefore moved from the earlier
+32-path snapshot to a hard ceiling of **40**, with the actual package still below that cross-domain ceiling. This was an
+explicit product-requirement change, not a limit increase used to make CI green.
+
+The only edge-security change remains the narrow Gallery requirement `img-src ... blob:` in `infra/Caddyfile`;
+no other CSP directive is relaxed.
 
 ## User result reviewed
 
-- base visual system is monochrome light/dark: white/black/gray; color is reserved for semantic states;
-- shell orchestration stays in `App.tsx`, while `TopBar.tsx` owns the compact top/mobile navigation and primary sidebar presentation;
-- Studio is no longer a near-limit page component: orchestration/presentation owners are explicit;
-- Account, Admin and Access near-limit pages were split without moving security-sensitive handlers away from their block owners;
-- Feed/Gallery/Admin/Account/Studio use one flatter visual language instead of unrelated legacy card palettes;
-- mobile topbar and bottom navigation remain product navigation rather than page-specific UI;
-- the phone Studio composer is compact enough that its primary action clears the fixed bottom navigation without floating over adjacent form controls;
-- Gallery work detail no longer presents itself as a private server-storage/test-file screen; download and ownership behavior are unchanged;
-- unsupported Chat/Video/Audio/3D runtimes are not faked.
+- `/` and `/studio/chat` resolve to the new Chat home; `/feed` remains a separate Explore surface;
+- `ChatPage.tsx` owns the primary chat/composer surface instead of inflating `App.tsx`;
+- global creative navigation is Chat / Image / Video / Audio / 3D;
+- mobile keeps the same creative modes in the upper strip and a short Chat / Feed / Gallery bottom navigation;
+- shell geometry follows the accepted chat reference: bounded 768px conversation/composer, 56px desktop header and 94px two-row phone header;
+- Semantic Color System v1.1 is now the runtime source through `theme.css`;
+- existing components consume compatibility aliases that point back to the semantic tokens, so future approved palette changes are centralized;
+- violet is the only brand color; creative modes do not receive separate decorative colors;
+- hover/focus/selected states derive from tokens through `color-mix` rather than new component HEX values;
+- Studio remains split into page composition + Composer/Result/Quote owners;
+- Account, Admin and Access stay split without moving security-sensitive handlers;
+- Gallery ownership/download semantics remain unchanged;
+- text Chat does not fake a successful assistant response while the server runtime is absent;
+- Video/Audio/3D runtimes remain presentation-only and are not reported as working generation backends.
 
 ## Regression review
 
-The first state/split CI exposed three stale structural assumptions: generated CURRENT, package-specific state assertions and an IMAGE boundary tied to the old Studio owner. They were fixed by restoring generated state, making the state regression generic and moving the boundary to Composer.
+Earlier FRONTEND-001 checks exposed stale generated state, package-specific assertions, an IMAGE boundary tied to the
+old Studio owner, ACCESS scope disappearing after component split, private-preview CSP rejecting validated blob URLs,
+and a phone Studio action overlapping bottom navigation. Those fixes remain in the current lineage.
 
-The Account/Admin/Access split then exposed one real UI regression: ACCESS scope was no longer visible. The test was not weakened; visible `scope: global` was restored.
-
-Browser evidence exposed additional defects that pass/fail alone did not catch: technical Gallery-detail language, private-preview CSP blocking validated blob URLs, and the phone Studio primary action landing under the fixed bottom navigation. The Gallery language was simplified, CSP was corrected only for `img-src blob:`, and the mobile composer was shortened rather than introducing a floating action that could cover another control.
+The chat-first revision additionally checks that Feed moved to `/feed` rather than disappearing, jobs remain outside
+primary navigation, both light/dark brand tokens resolve to v1.1 values, and phone creative navigation remains reachable
+without hover.
 
 ## Maintainability delta
 
-- old `Studio.tsx` (~10.7 KB before FRONTEND-001) is now a thin page composition; the main `Composer.tsx` remains below the 80% production headroom threshold after its own split;
-- `AccountPage.tsx`, `AdminPage.tsx` and `AccessPage.tsx` were reduced from near-limit pages to orchestration owners, with presentation in small sibling modules;
-- navigation presentation was consolidated into `TopBar.tsx` rather than increasing the package file budget for the CSP correction;
-- new handwritten files were reviewed against the 12 KB / 300-line production hard limit and 80% headroom rule;
-- BLOCK_MAP ownership follows the real quote/submit/theme handlers after the split;
-- Account/Admin local README maps point small UI changes to presentation owners instead of broad page files;
-- no context/file/scope limit was increased to obtain CI green;
-- no new dependency, migration, generated API contract or backend runtime owner was introduced.
+- old `Studio.tsx` remains thin and `Composer.tsx` stays below production hard limits;
+- `ChatPage.tsx` and `chat.css` are separate owners under `web.shell`, not additions to an existing near-limit page;
+- `AccountPage.tsx`, `AdminPage.tsx` and `AccessPage.tsx` remain orchestration owners with small presentation siblings;
+- `theme.css` owns semantic tokens once; feature CSS references variables rather than copying palette HEX values;
+- `apps/web/AGENTS.md` points Chat changes directly to `ChatPage.tsx` / `chat.css`;
+- scope remains `cross_domain <= 40`; tests/limits were not weakened;
+- no dependency, migration, generated API contract or backend runtime owner was introduced.
 
 ## Security / ownership
 
-Auth/session mutations remain server-authorized. ACCESS load/mutate handlers still own stable operation IDs, fresh-password handling and permission allowlists. Admin compensation still uses the existing GrantForm and backend permissions. Gallery preview/download still obtains fresh bounded authenticated bytes and validates metadata/hash through the existing media transport. `blob:` is permitted only as an image source so those already-validated private bytes can be decoded by the browser; script/connect/object policy is unchanged.
+Auth/session mutations remain server-authorized. Chat local presentation does not create a wallet, provider configuration,
+server Job, fake assistant output or private Media ownership. Working image generation still crosses the existing
+Entitlements → Credits → Jobs → Media contracts. ACCESS and Admin permission handling is unchanged. Gallery preview/download
+continues to fetch bounded authenticated bytes through the existing Media transport.
 
 ## Acceptance boundary
 
-Technical CI is necessary but **not sufficient** to close FRONTEND-001. Freeze requires successful required workflows bound to the final source head, followed by owner visual review of the final browser evidence / Docker build on mobile and desktop-class screens. Until that acceptance, later Feed/Chat/Video/Catalog UI packages must not treat the shell as owner-approved.
+This revision requires a new exact-head Foundation CI, Dependency Security and Review Source result; earlier green heads do
+not transfer automatically. Technical CI is still not sufficient to close FRONTEND-001: the owner must visually review the
+final Chat shell and inherited Feed/Gallery/Account/Admin surfaces on phone and desktop-class viewports before the package is
+accepted as the base for later CHAT/FEED/VIDEO expansion.
