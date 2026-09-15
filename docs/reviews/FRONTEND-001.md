@@ -17,7 +17,7 @@ The only edge-security change is the narrow Gallery requirement `img-src ... blo
 - Account, Admin and Access near-limit pages were split without moving security-sensitive handlers away from their block owners;
 - Feed/Gallery/Admin/Account/Studio use one flatter visual language instead of unrelated legacy card palettes;
 - mobile topbar and bottom navigation remain product navigation rather than page-specific UI;
-- the Studio primary action stays above the fixed mobile bottom navigation while the composer is in view, so the main action is not obscured on phone viewports;
+- the phone Studio composer is compact enough that its primary action clears the fixed bottom navigation without floating over adjacent form controls;
 - Gallery work detail no longer presents itself as a private server-storage/test-file screen; download and ownership behavior are unchanged;
 - unsupported Chat/Video/Audio/3D runtimes are not faked.
 
@@ -27,7 +27,7 @@ The first state/split CI exposed three stale structural assumptions: generated C
 
 The Account/Admin/Access split then exposed one real UI regression: ACCESS scope was no longer visible. The test was not weakened; visible `scope: global` was restored.
 
-Browser evidence exposed additional defects that pass/fail alone did not catch: technical Gallery-detail language, private-preview CSP blocking validated blob URLs, and the phone Studio primary action landing under the fixed bottom navigation. The Gallery language was simplified, CSP was corrected only for `img-src blob:`, and the mobile action is now sticky inside its composer above the bottom navigation.
+Browser evidence exposed additional defects that pass/fail alone did not catch: technical Gallery-detail language, private-preview CSP blocking validated blob URLs, and the phone Studio primary action landing under the fixed bottom navigation. The Gallery language was simplified, CSP was corrected only for `img-src blob:`, and the mobile composer was shortened rather than introducing a floating action that could cover another control.
 
 ## Maintainability delta
 
