@@ -5,7 +5,7 @@
 
 | Область | Локальная карта | Основной test |
 |---|---|---|
-| Shell/navigation/theme | `src/shell/App.tsx`, `TopBar.tsx`, `layout.css`, `theme.css` | `e2e/shell.spec.ts` |
+| Shell/navigation/theme | `src/shell/App.tsx`, `TopBar.tsx`, `layout.css`, `product-nav.css`, `theme.css` | `e2e/shell.spec.ts` |
 | Главный чат / composer | `src/shell/ChatPage.tsx`, `chat.css` | `e2e/shell.spec.ts` |
 | Studio/result/provider selection | `src/features/studio/README.md` | `e2e/studio.spec.ts`, `provider.spec.ts` |
 | Gallery/private asset UI | `src/features/gallery/README.md` | `e2e/gallery.spec.ts` |
