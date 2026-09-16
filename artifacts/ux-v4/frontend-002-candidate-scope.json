@@ -1,0 +1,66 @@
+{
+  "schema_version": 1,
+  "status": "staging_candidate_only",
+  "candidate_id": "FRONTEND-002",
+  "source_snapshot": {
+    "branch": "ux/frontend-reset",
+    "sha": "5c0e79b6fc3a7120207d0889b176fbfed3dab973"
+  },
+  "goal": "Reconcile Chat-first canonical UX semantics and remove the persistent manual creative-workspace picker from Chat without backend/runtime or unresolved route migration.",
+  "scope_class": "normal",
+  "risk": "medium",
+  "max_files": 20,
+  "allowed_candidate_paths": [
+    "docs/PLAN.json",
+    "docs/CURRENT.md",
+    "docs/CHECKPOINTS.json",
+    "tools/scopes/frontend-002.json",
+    "docs/PRODUCT.md",
+    "docs/UX.md",
+    "docs/UX_PRODUCT_SHELL.md",
+    "docs/reviews/FRONTEND-002.md",
+    "apps/web/src/shell/ChatPage.tsx",
+    "apps/web/src/shell/chat.css",
+    "apps/web/src/shell/navigation.ts",
+    "apps/web/src/shell/SectionPage.tsx",
+    "apps/web/e2e/shell.spec.ts",
+    "tests/test_docs_system.py",
+    "tests/context_cases.json"
+  ],
+  "optional_paths_must_be_justified": [
+    "tests/test_docs_system.py",
+    "tests/context_cases.json"
+  ],
+  "non_goals": [
+    "No App.tsx/router.tsx route migration",
+    "No canonical Video/Audio/3D route decision",
+    "No durable ChatThread route or backend",
+    "No Image editor route decision",
+    "No Chat streaming/orchestration/tool execution backend",
+    "No Video/Audio/3D runtime",
+    "No Feed Publication backend",
+    "No Image quote/admission/provider/Jobs semantic change",
+    "No Credits/Auth/permissions/Media ownership change",
+    "No merge/deploy/live provider call"
+  ],
+  "invariants": [
+    "Image Entitlements->quote->stable operation_id->Job->Media path remains unchanged",
+    "Unknown paid submit outcome never creates a replacement operation",
+    "Chat without server runtime never renders assistant/tool success",
+    "Creative navigation remains Chat/Image/Video/Audio/3D",
+    "Unsupported modality runtimes remain honest placeholders",
+    "Semantic Color System v1.1 remains the shell color contract"
+  ],
+  "fail_first_cases": [
+    "Chat home has no persistent button named Инструменты",
+    "Help contains no instruction to choose a tool inside Chat"
+  ],
+  "required_regressions": [
+    "Global creative navigation remains five workspaces",
+    "Chat alias /studio/chat remains the same surface",
+    "Chat submit without backend shows honest unavailable state and no assistant success",
+    "Existing Studio/provider paid-safety tests remain green",
+    "Responsive shell matrix remains green"
+  ],
+  "activation_rule": "This JSON is not a tools/scopes manifest. A real package may be created only by the repository lifecycle after FRONTEND-001 remaining gates and project_state.py begin-next succeed."
+}
