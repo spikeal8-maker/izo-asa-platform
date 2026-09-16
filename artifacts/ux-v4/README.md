@@ -17,11 +17,19 @@ This directory stores the complete UX SPEC v4 produced for `spikeal8-maker/izo-a
 
 The repository explicitly forbids a second stable master/roadmap hierarchy. The package is therefore stored as a Git-tracked, checksum-verifiable artifact on this staging branch rather than being dropped wholesale into canonical `docs/` or into frozen PR #36.
 
-The human-readable files `coverage_report.md`, `00_DECISION_REGISTER.md`, `00_CURRENT_API_MAP.md`, `IMPLEMENTATION_GAP_AUDIT.md`, `CANONICAL_RECONCILIATION_PATCHSET.md` and `SHA256SUMS.txt` are exposed next to the archive for quick review.
+The complete archive is preserved unchanged. The files next to it are second-pass repository-grounded review artifacts and implementation locators; they are not silently folded into canonical docs.
 
-`IMPLEMENTATION_GAP_AUDIT.md` is the repository-grounded second-pass review: it separates WORKING, PARTIAL, PLACEHOLDER, TARGET-ONLY and CONFLICT surfaces and records what must be reconciled before UX v4 becomes canonical.
+## Review / implementation documents
 
-`CANONICAL_RECONCILIATION_PATCHSET.md` converts that audit into an owner-by-owner patch proposal for `PRODUCT.md`, `UX.md`, `UX_PRODUCT_SHELL.md`, `ADMIN.md` and only-needed architecture ADRs. It is deliberately not applied to the frozen canonical branch.
+- `00_DECISION_REGISTER.md` — established/conflicting/proposed decisions.
+- `00_CURRENT_API_MAP.md` — current verified Image/Jobs/Gallery API snapshot.
+- `IMPLEMENTATION_GAP_AUDIT.md` — WORKING/PARTIAL/PLACEHOLDER/TARGET-ONLY/CONFLICT audit.
+- `CANONICAL_RECONCILIATION_PATCHSET.md` — exact repository-owned docs that must be reconciled later.
+- `IMPLEMENTATION_CONTRACT.md` — bounded implementation rules, safety invariants and required tests.
+- `CURRENT_TO_TARGET_FILE_MAP.md` — current source owners/tests for each target UX change.
+- `OPEN_DECISIONS.md` — only decisions that remain genuinely unresolved, with safe behavior until resolution.
+- `coverage_report.md` — coverage summary for 45 user + 30 admin pages.
+- `SHA256SUMS.txt` — checksums for the archived v4 source package.
 
 ## Restore
 
@@ -43,10 +51,10 @@ Expected validator result: `UX SPEC VALID`, `user=45 admin=30 total=75`.
 
 ## Verification performed
 
-The source implementation was re-read after the initial v4 package was staged. The audit specifically rechecked `App.tsx`, `navigation.ts`, `ChatPage.tsx`, `SectionPage.tsx`, `Composer.tsx`, `ResultPanel.tsx`, `Gallery.tsx`, `FeedPage.tsx`, `AccountPage.tsx`, `SecurityPage.tsx`, `AdminPage.tsx`, current package state and PR #36.
+The source implementation was re-read after the initial v4 package was staged. Review covered `App.tsx`, `navigation.ts`, `ChatPage.tsx`, `SectionPage.tsx`, `Composer.tsx`, `ResultPanel.tsx`, `Gallery.tsx`, `FeedPage.tsx`, `AccountPage.tsx`, `SecurityPage.tsx`, `AdminPage.tsx`, Studio local README, `BLOCK_MAP.json`, `CONTEXT_MAP.json`, `ARCHITECTURE.md`, current package state and PR #36.
 
-The audit deliberately does not promote placeholder Video/Audio/3D/Chat runtime, prototype Feed examples or future A-01…A-30 admin surfaces to “implemented”. Route disagreements are recorded as unresolved decisions rather than silently normalized.
+The audit deliberately does not promote placeholder Video/Audio/3D/Chat runtime, prototype Feed examples or future A-01…A-30 admin surfaces to “implemented”. Route/entity disagreements are recorded as unresolved decisions rather than silently normalized.
 
 ## Promotion rule
 
-Do not merge this staging artifact directly as canonical product documentation. Resolve route conflicts from `00_DECISION_REGISTER.md`, `IMPLEMENTATION_GAP_AUDIT.md` and `CANONICAL_RECONCILIATION_PATCHSET.md`, then update repository-owned `PRODUCT.md`, `UX.md`, `ADMIN.md`, `ARCHITECTURE.md`/ADR as applicable in a permitted package, with repo checks and CI rerun.
+Do not merge this staging artifact directly as canonical product documentation. Resolve open decisions, then update repository-owned `PRODUCT.md`, `UX.md`, `UX_PRODUCT_SHELL.md`, `ADMIN.md`, `ARCHITECTURE.md`/ADR as applicable in a permitted package. After docs reconciliation, modify only the mapped owners, update routing/block ownership for files actually touched, and rerun repository checks/CI on the exact source head.
