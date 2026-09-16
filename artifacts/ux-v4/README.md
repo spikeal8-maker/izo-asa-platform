@@ -52,6 +52,8 @@ The complete archive is preserved unchanged. The files next to it are second-pas
 - `LIFECYCLE_NEXT_SELECTION_GAP.md` — proof that `decides_next + next_package=null` currently deadlocks `begin-next` for a newly selected package.
 - `PROJECT_STATE_DECIDES_NEXT_PATCH_PREVIEW.md` — fail-closed repair design that keeps state mutation on the new branch.
 - `ISSUE_188_REPAIR_SCOPE.md` — bounded repair scope, mandatory invariants and required tests for the lifecycle defect.
+- `project-state-188-candidate.json` — machine-readable maintenance-only repair candidate; not an active package/scope manifest.
+- `LIFECYCLE_RECOVERY_PROTOCOL_CANDIDATE.md` — one-time bootstrap protocol proposal for the repair paradox; explicit owner approval would be required before any use.
 
 ## Coverage / archive files
 
@@ -90,7 +92,7 @@ The browser evidence itself was unpacked and visually inspected across phone, ta
 
 A fresh gate check reconfirmed all three required workflows as successful for exact source `5c0e79b...`; PR #36 remains open/draft/unmerged, owner visual acceptance is not recorded, and an independent-review PASS marker is not recorded. The machine-readable snapshot is in `FRONTEND_001_GATE_STATUS.json`.
 
-A continuation-safety pass also found a process defect: because `FRONTEND-001` has `decides_next=true` with `next_package=null`, current `transition()` rejects every `--activate`; additionally a genuinely new `FRONTEND-002` is absent from PLAN. Issue #188 tracks this defect. The staging repair proposal preserves exact-head evidence and does not authorize manual mutation of the frozen branch.
+A continuation-safety pass also found a process defect: because `FRONTEND-001` has `decides_next=true` with `next_package=null`, current `transition()` rejects every `--activate`; additionally a genuinely new `FRONTEND-002` is absent from PLAN. Issue #188 tracks this defect. The staging repair proposal preserves exact-head evidence and does not authorize manual mutation of the frozen branch. Because the defect also blocks activation of its own maintenance fix, a separate recovery protocol candidate is documented but not approved or executed.
 
 The audit deliberately does not promote placeholder Video/Audio/3D/Chat runtime, prototype Feed examples or future A-01…A-30 admin surfaces to “implemented”. Route/entity disagreements are recorded as unresolved decisions rather than silently normalized.
 
