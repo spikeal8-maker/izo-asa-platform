@@ -2,7 +2,7 @@
 
 This directory stores the complete UX SPEC v4 produced for `spikeal8-maker/izo-asa-platform`.
 
-**Status:** non-canonical staging artifact. It must not be treated as a second `PRODUCT/UX/ADMIN` source of truth. Canonical reconciliation belongs in a later lifecycle package after the current frozen `FRONTEND-001` gates allow `begin-next`.
+**Status:** non-canonical staging artifact. It must not be treated as a second `PRODUCT/UX/ADMIN` source of truth. Canonical reconciliation belongs in a later lifecycle package after the current frozen `FRONTEND-001` gates and continuation tooling allow a safe transition.
 
 ## Exact source snapshot
 
@@ -17,7 +17,7 @@ This directory stores the complete UX SPEC v4 produced for `spikeal8-maker/izo-a
 
 The repository explicitly forbids a second stable master/roadmap hierarchy. The package is therefore stored as a Git-tracked, checksum-verifiable artifact on this staging branch rather than being dropped wholesale into canonical `docs/` or into frozen PR #36.
 
-The complete archive is preserved unchanged. The files next to it are second-pass repository-grounded review artifacts and implementation locators; they are not silently folded into canonical docs.
+The complete archive is preserved unchanged. The files next to it are second-pass repository-grounded review artifacts, implementation locators and lifecycle diagnostics; they are not silently folded into canonical docs.
 
 ## Review / implementation documents
 
@@ -33,9 +33,12 @@ The complete archive is preserved unchanged. The files next to it are second-pas
 - `FAIL_FIRST_ACCEPTANCE.md` — acceptance cases, including the two expected red tests on the current head.
 - `CANONICAL_DOC_PATCH_MANIFEST.md` — section-by-section canonical documentation edits and explicit no-change owners.
 - `CHAT_PATCH_PREVIEW.md` — minimal exact-source code/copy preview for removing the manual Chat workspace picker without backend changes.
-- `STAGING_SELF_CHECK.md` — isolation, scope arithmetic, risk, fail-first grounding and lifecycle-blocker verification.
+- `STAGING_SELF_CHECK.md` — isolation, scope arithmetic, risk, fail-first grounding and lifecycle verification.
 - `FRONTEND_001_EXIT_GATE.md` — exact remaining gates before a real post-FRONTEND-001 package can start.
 - `FRONTEND_001_VISUAL_AUDIT.md` — second-pass inspection of the exact-head GitHub browser evidence, including missing visual states.
+- `FRONTEND_001_GATE_REQUEST.md` — owner-acceptance and independent-review coordination without pretending either gate is complete.
+- `LIFECYCLE_NEXT_SELECTION_GAP.md` — proof that `decides_next + next_package=null` currently deadlocks `begin-next` for a newly selected package.
+- `PROJECT_STATE_DECIDES_NEXT_PATCH_PREVIEW.md` — fail-closed repair design that keeps state mutation on the new branch.
 - `coverage_report.md` — coverage summary for 45 user + 30 admin pages.
 - `SHA256SUMS.txt` — checksums for the archived v4 source package.
 
@@ -59,12 +62,14 @@ Expected validator result: `UX SPEC VALID`, `user=45 admin=30 total=75`.
 
 ## Verification performed
 
-The source implementation was re-read after the initial v4 package was staged. Review covered `App.tsx`, `navigation.ts`, `ChatPage.tsx`, `chat.css`, `SectionPage.tsx`, `Composer.tsx`, `ResultPanel.tsx`, `Gallery.tsx`, `FeedPage.tsx`, `AccountPage.tsx`, `SecurityPage.tsx`, `AdminPage.tsx`, Studio local README, `BLOCK_MAP.json`, `CONTEXT_MAP.json`, `ARCHITECTURE.md`, `DEVELOPMENT.md`, current shell E2E, current package state, PR #36 and its exact-head browser-evidence artifact.
+The source implementation was re-read after the initial v4 package was staged. Review covered `App.tsx`, `navigation.ts`, `ChatPage.tsx`, `chat.css`, `SectionPage.tsx`, `Composer.tsx`, `ResultPanel.tsx`, `Gallery.tsx`, `FeedPage.tsx`, `AccountPage.tsx`, `SecurityPage.tsx`, `AdminPage.tsx`, Studio local README, `BLOCK_MAP.json`, `CONTEXT_MAP.json`, `ARCHITECTURE.md`, `DEVELOPMENT.md`, `project_state.py`, `project_state_model.py`, `review_evidence.py`, `tests/test_project_state.py`, current shell E2E, current package state, PR #36 and its exact-head browser-evidence artifact.
 
 The browser evidence itself was unpacked and visually inspected across phone, tablet, laptop, desktop, QHD and UHD Chat-home screenshots. That review is recorded in `FRONTEND_001_VISUAL_AUDIT.md` and deliberately remains separate from owner acceptance.
+
+A continuation-safety pass also found a process defect: because `FRONTEND-001` has `decides_next=true` with `next_package=null`, current `transition()` rejects every `--activate`; additionally a genuinely new `FRONTEND-002` is absent from PLAN. The staging repair proposal preserves exact-head evidence and does not authorize manual mutation of the frozen branch.
 
 The audit deliberately does not promote placeholder Video/Audio/3D/Chat runtime, prototype Feed examples or future A-01…A-30 admin surfaces to “implemented”. Route/entity disagreements are recorded as unresolved decisions rather than silently normalized.
 
 ## Promotion rule
 
-Do not merge this staging artifact directly as canonical product documentation. Resolve open decisions, then update repository-owned `PRODUCT.md`, `UX.md`, `UX_PRODUCT_SHELL.md`, `ADMIN.md`, `ARCHITECTURE.md`/ADR as applicable in a permitted package. After docs reconciliation, modify only the mapped owners, update routing/block ownership only where actually necessary, and rerun repository checks/CI on the exact source head.
+Do not merge this staging artifact directly as canonical product documentation. First close the current FRONTEND-001 gates and repair/resolve the continuation lifecycle without changing its frozen source. Then update repository-owned `PRODUCT.md`, `UX.md`, `UX_PRODUCT_SHELL.md`, `ADMIN.md`, `ARCHITECTURE.md`/ADR as applicable in a permitted package. After docs reconciliation, modify only the mapped owners, update routing/block ownership only where actually necessary, and rerun repository checks/CI on the exact source head.
