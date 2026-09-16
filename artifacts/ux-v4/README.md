@@ -37,6 +37,9 @@ The complete archive is preserved unchanged. The files next to it are second-pas
 - `STAGING_SELF_CHECK.md` — isolation, scope arithmetic, risk, fail-first grounding and lifecycle verification.
 - `FRONTEND_001_EXIT_GATE.md` — exact remaining gates before a real post-FRONTEND-001 package can start.
 - `FRONTEND_001_VISUAL_AUDIT.md` — second-pass inspection of the exact-head GitHub browser evidence, including missing visual states.
+- `OWNER_VISUAL_ACCEPTANCE_CHECKLIST.md` — explicit owner review criteria and non-default decision formats; no acceptance is pre-recorded.
+- `INDEPENDENT_REVIEW_CHECKLIST.md` — exact-source reviewer focus and machine PASS requirements; no PASS is pre-recorded.
+- `FRONTEND_001_GATE_STATUS.json` — machine-readable snapshot of current gate state.
 - `FRONTEND_001_GATE_REQUEST.md` — owner-acceptance and independent-review coordination without pretending either gate is complete.
 - `LIFECYCLE_NEXT_SELECTION_GAP.md` — proof that `decides_next + next_package=null` currently deadlocks `begin-next` for a newly selected package.
 - `PROJECT_STATE_DECIDES_NEXT_PATCH_PREVIEW.md` — fail-closed repair design that keeps state mutation on the new branch.
@@ -45,7 +48,7 @@ The complete archive is preserved unchanged. The files next to it are second-pas
 
 Tracking outside this directory:
 
-- PR #36 now contains an explicit gate request for an independent review of the exact frozen source; the request deliberately does not contain a machine-readable PASS marker.
+- PR #36 contains an explicit independent-review request for the exact frozen source; the request deliberately does not contain a machine-readable PASS marker.
 - Issue #188 tracks the `decides_next + next_package=null` continuation deadlock and the required fail-closed repair properties.
 
 ## Restore
@@ -72,7 +75,9 @@ The source implementation was re-read after the initial v4 package was staged. R
 
 The browser evidence itself was unpacked and visually inspected across phone, tablet, laptop, desktop, QHD and UHD Chat-home screenshots. That review is recorded in `FRONTEND_001_VISUAL_AUDIT.md` and deliberately remains separate from owner acceptance.
 
-A continuation-safety pass also found a process defect: because `FRONTEND-001` has `decides_next=true` with `next_package=null`, current `transition()` rejects every `--activate`; additionally a genuinely new `FRONTEND-002` is absent from PLAN. Issue #188 now tracks this defect. The staging repair proposal preserves exact-head evidence and does not authorize manual mutation of the frozen branch.
+A fresh gate check reconfirmed all three required workflows as successful for exact source `5c0e79b...`; PR #36 remains open/draft/unmerged, owner visual acceptance is not recorded, and an independent-review PASS marker is not recorded. The machine-readable snapshot is in `FRONTEND_001_GATE_STATUS.json`.
+
+A continuation-safety pass also found a process defect: because `FRONTEND-001` has `decides_next=true` with `next_package=null`, current `transition()` rejects every `--activate`; additionally a genuinely new `FRONTEND-002` is absent from PLAN. Issue #188 tracks this defect. The staging repair proposal preserves exact-head evidence and does not authorize manual mutation of the frozen branch.
 
 The audit deliberately does not promote placeholder Video/Audio/3D/Chat runtime, prototype Feed examples or future A-01…A-30 admin surfaces to “implemented”. Route/entity disagreements are recorded as unresolved decisions rather than silently normalized.
 
