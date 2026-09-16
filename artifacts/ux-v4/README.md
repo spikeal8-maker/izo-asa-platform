@@ -35,16 +35,29 @@ The complete archive is preserved unchanged. The files next to it are second-pas
 - `CANONICAL_DOC_PATCH_MANIFEST.md` — section-by-section canonical documentation edits and explicit no-change owners.
 - `CHAT_PATCH_PREVIEW.md` — minimal exact-source code/copy preview for removing the manual Chat workspace picker without backend changes.
 - `STAGING_SELF_CHECK.md` — isolation, scope arithmetic, risk, fail-first grounding and lifecycle verification.
+
+## FRONTEND-001 gate / review documents
+
 - `FRONTEND_001_EXIT_GATE.md` — exact remaining gates before a real post-FRONTEND-001 package can start.
 - `FRONTEND_001_VISUAL_AUDIT.md` — second-pass inspection of the exact-head GitHub browser evidence, including missing visual states.
-- `OWNER_VISUAL_ACCEPTANCE_CHECKLIST.md` — explicit owner review criteria and non-default decision formats; no acceptance is pre-recorded.
+- `OWNER_VISUAL_ACCEPTANCE_CHECKLIST.md` — explicit owner review criteria and decision formats; no acceptance is pre-recorded.
+- `OWNER_ACCEPTANCE_PACKET_INDEX.md` — short index for the owner-facing review packet.
 - `INDEPENDENT_REVIEW_CHECKLIST.md` — exact-source reviewer focus and machine PASS requirements; no PASS is pre-recorded.
 - `FRONTEND_001_GATE_STATUS.json` — machine-readable snapshot of current gate state.
 - `FRONTEND_001_GATE_REQUEST.md` — owner-acceptance and independent-review coordination without pretending either gate is complete.
+- `REVIEW_COORDINATION.md` — separation of owner acceptance, independent review, CI evidence and lifecycle repair.
+
+## Lifecycle repair documents
+
 - `LIFECYCLE_NEXT_SELECTION_GAP.md` — proof that `decides_next + next_package=null` currently deadlocks `begin-next` for a newly selected package.
 - `PROJECT_STATE_DECIDES_NEXT_PATCH_PREVIEW.md` — fail-closed repair design that keeps state mutation on the new branch.
+- `ISSUE_188_REPAIR_SCOPE.md` — bounded repair scope, mandatory invariants and required tests for the lifecycle defect.
+
+## Coverage / archive files
+
 - `coverage_report.md` — coverage summary for 45 user + 30 admin pages.
 - `SHA256SUMS.txt` — checksums for the archived v4 source package.
+- `restore_ux_v4.py` + `archive/` — exact archive reconstruction path.
 
 Tracking outside this directory:
 
