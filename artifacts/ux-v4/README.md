@@ -17,7 +17,7 @@ This directory stores the complete UX SPEC v4 produced for `spikeal8-maker/izo-a
 
 The repository explicitly forbids a second stable master/roadmap hierarchy. The package is therefore stored as a Git-tracked, checksum-verifiable artifact on this staging branch rather than being dropped wholesale into canonical `docs/` or into frozen PR #36.
 
-The complete archive is preserved unchanged. The files next to it are second-pass repository-grounded review artifacts, implementation locators and lifecycle diagnostics; they are not silently folded into canonical docs.
+The complete archive is preserved unchanged. The files next to it are repository-grounded review artifacts, implementation locators, decision records and lifecycle diagnostics; they are not silently folded into canonical docs.
 
 ## Review / implementation documents
 
@@ -27,33 +27,35 @@ The complete archive is preserved unchanged. The files next to it are second-pas
 - `CANONICAL_RECONCILIATION_PATCHSET.md` — exact repository-owned docs that must be reconciled later.
 - `IMPLEMENTATION_CONTRACT.md` — bounded implementation rules, safety invariants and required tests.
 - `CURRENT_TO_TARGET_FILE_MAP.md` — current source owners/tests for each target UX change.
-- `OPEN_DECISIONS.md` — only decisions that remain genuinely unresolved, with safe behavior until resolution.
-- `OWNER_DECISION_PACKET.md` — recommended defaults for the eight remaining product decisions; recommendations only, not canonical acceptance.
-- `NEXT_PACKAGE_SCOPE_CANDIDATE.md` — bounded candidate for the first post-FRONTEND-001 Chat reconciliation package.
-- `frontend-002-candidate-scope.json` — machine-readable copy of that candidate scope; it is not an active `tools/scopes` manifest.
-- `FAIL_FIRST_ACCEPTANCE.md` — acceptance cases, including the two expected red tests on the current head.
-- `CANONICAL_DOC_PATCH_MANIFEST.md` — section-by-section canonical documentation edits and explicit no-change owners.
-- `CHAT_PATCH_PREVIEW.md` — minimal exact-source code/copy preview for removing the manual Chat workspace picker without backend changes.
-- `STAGING_SELF_CHECK.md` — isolation, scope arithmetic, risk, fail-first grounding and lifecycle verification.
+- `OPEN_DECISIONS.md` — only decisions that remain genuinely unresolved.
+- `OWNER_DECISION_PACKET.md` — recommended defaults for O-01…O-08; recommendations only.
+- `OWNER_DECISIONS_STATUS.json` — machine-readable O-01…O-08 status snapshot; all remain pending until explicit owner decisions and canonical doc updates.
+- `NEXT_PACKAGE_SCOPE_CANDIDATE.md` + `frontend-002-candidate-scope.json` — bounded post-gate Chat reconciliation candidate.
+- `FAIL_FIRST_ACCEPTANCE.md` — expected red acceptance cases on the current head.
+- `CANONICAL_DOC_PATCH_MANIFEST.md` — section-by-section canonical docs edits.
+- `CHAT_PATCH_PREVIEW.md` — minimal exact-source code/copy preview.
+- `STAGING_SELF_CHECK.md` — isolation/scope/risk/lifecycle self-check.
 
 ## FRONTEND-001 gate / review documents
 
-- `FRONTEND_001_EXIT_GATE.md` — exact remaining gates before a real post-FRONTEND-001 package can start.
-- `FRONTEND_001_VISUAL_AUDIT.md` — second-pass inspection of the exact-head GitHub browser evidence, including missing visual states.
-- `OWNER_VISUAL_ACCEPTANCE_CHECKLIST.md` — explicit owner review criteria and decision formats; no acceptance is pre-recorded.
-- `OWNER_ACCEPTANCE_PACKET_INDEX.md` — short index for the owner-facing review packet.
-- `INDEPENDENT_REVIEW_CHECKLIST.md` — exact-source reviewer focus and machine PASS requirements; no PASS is pre-recorded.
-- `FRONTEND_001_GATE_STATUS.json` — machine-readable snapshot of current gate state.
-- `FRONTEND_001_GATE_REQUEST.md` — owner-acceptance and independent-review coordination without pretending either gate is complete.
-- `REVIEW_COORDINATION.md` — separation of owner acceptance, independent review, CI evidence and lifecycle repair.
+- `FRONTEND_001_EXIT_GATE.md` — exact remaining gates.
+- `FRONTEND_001_VISUAL_AUDIT.md` — second-pass browser-evidence inspection.
+- `OWNER_VISUAL_ACCEPTANCE_CHECKLIST.md` — explicit owner review criteria; no acceptance pre-recorded.
+- `OWNER_ACCEPTANCE_PACKET_INDEX.md` — short owner-facing index.
+- `INDEPENDENT_REVIEW_CHECKLIST.md` — exact-source independent-review checklist; no PASS pre-recorded.
+- `FRONTEND_001_GATE_STATUS.json` — machine-readable current gate snapshot.
+- `FRONTEND_001_GATE_REQUEST.md` — coordination request without pretending gates are complete.
+- `REVIEW_COORDINATION.md` — separation of owner acceptance, independent review, CI and lifecycle repair.
 
 ## Lifecycle repair documents
 
-- `LIFECYCLE_NEXT_SELECTION_GAP.md` — proof that `decides_next + next_package=null` currently deadlocks `begin-next` for a newly selected package.
-- `PROJECT_STATE_DECIDES_NEXT_PATCH_PREVIEW.md` — fail-closed repair design that keeps state mutation on the new branch.
-- `ISSUE_188_REPAIR_SCOPE.md` — bounded repair scope, mandatory invariants and required tests for the lifecycle defect.
-- `project-state-188-candidate.json` — machine-readable maintenance-only repair candidate; not an active package/scope manifest.
-- `LIFECYCLE_RECOVERY_PROTOCOL_CANDIDATE.md` — one-time bootstrap protocol proposal for the repair paradox; explicit owner approval would be required before any use.
+- `LIFECYCLE_NEXT_SELECTION_GAP.md` — proof of the `decides_next + next_package=null` deadlock.
+- `PROJECT_STATE_DECIDES_NEXT_PATCH_PREVIEW.md` — fail-closed repair design.
+- `ISSUE_188_REPAIR_SCOPE.md` — bounded repair scope/invariants/tests.
+- `project-state-188-candidate.json` — machine-readable `MAINT-LIFECYCLE-001` repair candidate, not active state.
+- `MAINT_LIFECYCLE_001_ACCEPTANCE.md` — behavioral acceptance contract A-01…A-11 for the repair.
+- `PROJECT_STATE_FIX_CODE_SPEC.md` — exact code-change specification preserving strict `transition()` semantics.
+- `LIFECYCLE_RECOVERY_PROTOCOL_CANDIDATE.md` — one-time bootstrap proposal for the repair paradox; explicit owner approval required before any use.
 
 ## Coverage / archive files
 
@@ -61,10 +63,11 @@ The complete archive is preserved unchanged. The files next to it are second-pas
 - `SHA256SUMS.txt` — checksums for the archived v4 source package.
 - `restore_ux_v4.py` + `archive/` — exact archive reconstruction path.
 
-Tracking outside this directory:
+## Tracking outside this directory
 
-- PR #36 contains an explicit independent-review request for the exact frozen source; the request deliberately does not contain a machine-readable PASS marker.
-- Issue #188 tracks the `decides_next + next_package=null` continuation deadlock and the required fail-closed repair properties.
+- PR #36 — FRONTEND-001 exact-source review/acceptance coordination. Review packet links are posted in the PR conversation; neither pending human gate is marked complete.
+- Issue #188 — lifecycle continuation deadlock and fail-closed repair.
+- Issue #189 — owner decision tracker for O-01…O-08 routes/future studio scope. Checkbox state alone is not canonical; PRODUCT/UX/ARCHITECTURE updates are still required in a permitted package.
 
 ## Restore
 
@@ -74,7 +77,7 @@ Run from this directory:
 python restore_ux_v4.py
 ```
 
-The script concatenates the nine Git-tracked Base64 parts, decodes the exact `tar.xz`, checks its SHA-256, and extracts the complete package. After extraction run:
+The script reconstructs and verifies the archived v4 source package. After extraction:
 
 ```bash
 cd IZO_ASA_UX_SPEC_V4
@@ -86,16 +89,20 @@ Expected validator result: `UX SPEC VALID`, `user=45 admin=30 total=75`.
 
 ## Verification performed
 
-The source implementation was re-read after the initial v4 package was staged. Review covered `App.tsx`, `navigation.ts`, `ChatPage.tsx`, `chat.css`, `SectionPage.tsx`, `Composer.tsx`, `ResultPanel.tsx`, `Gallery.tsx`, `FeedPage.tsx`, `AccountPage.tsx`, `SecurityPage.tsx`, `AdminPage.tsx`, Studio local README, `BLOCK_MAP.json`, `CONTEXT_MAP.json`, `ARCHITECTURE.md`, `DEVELOPMENT.md`, `project_state.py`, `project_state_model.py`, `review_evidence.py`, `tests/test_project_state.py`, current shell E2E, current package state, PR #36 and its exact-head browser-evidence artifact.
+The source implementation and lifecycle tooling were re-read against the frozen source. Review includes shell/Chat, Studio/Jobs/Gallery/Feed/Account/Admin owners, `BLOCK_MAP.json`, `CONTEXT_MAP.json`, `ARCHITECTURE.md`, `DEVELOPMENT.md`, `project_state.py`, `project_state_model.py`, `review_evidence.py`, `tests/test_project_state.py`, current shell E2E, PR #36 and exact-head browser evidence.
 
-The browser evidence itself was unpacked and visually inspected across phone, tablet, laptop, desktop, QHD and UHD Chat-home screenshots. That review is recorded in `FRONTEND_001_VISUAL_AUDIT.md` and deliberately remains separate from owner acceptance.
+Current known facts after the latest recheck:
 
-A fresh gate check reconfirmed all three required workflows as successful for exact source `5c0e79b...`; PR #36 remains open/draft/unmerged, owner visual acceptance is not recorded, and an independent-review PASS marker is not recorded. The machine-readable snapshot is in `FRONTEND_001_GATE_STATUS.json`.
+- canonical `ux/frontend-reset` still points to `5c0e79b6fc3a7120207d0889b176fbfed3dab973`;
+- PR #36 is still open/draft/unmerged and has 40 changed files;
+- all three required exact-head workflows remain recorded as successful;
+- owner visual acceptance remains pending;
+- independent-review PASS evidence remains pending;
+- issue #188 remains the continuation-tooling blocker;
+- O-01…O-08 are tracked in issue #189 and remain non-canonical pending explicit decisions.
 
-A continuation-safety pass also found a process defect: because `FRONTEND-001` has `decides_next=true` with `next_package=null`, current `transition()` rejects every `--activate`; additionally a genuinely new `FRONTEND-002` is absent from PLAN. Issue #188 tracks this defect. The staging repair proposal preserves exact-head evidence and does not authorize manual mutation of the frozen branch. Because the defect also blocks activation of its own maintenance fix, a separate recovery protocol candidate is documented but not approved or executed.
-
-The audit deliberately does not promote placeholder Video/Audio/3D/Chat runtime, prototype Feed examples or future A-01…A-30 admin surfaces to “implemented”. Route/entity disagreements are recorded as unresolved decisions rather than silently normalized.
+The browser evidence was unpacked and visually inspected across phone, tablet, laptop, desktop, QHD and UHD. The known visible `Инструменты` Chat picker remains documented as a follow-up mismatch, not as already-fixed behavior.
 
 ## Promotion rule
 
-Do not merge this staging artifact directly as canonical product documentation. First close the current FRONTEND-001 gates and repair/resolve the continuation lifecycle without changing its frozen source. Then update repository-owned `PRODUCT.md`, `UX.md`, `UX_PRODUCT_SHELL.md`, `ADMIN.md`, `ARCHITECTURE.md`/ADR as applicable in a permitted package. After docs reconciliation, modify only the mapped owners, update routing/block ownership only where actually necessary, and rerun repository checks/CI on the exact source head.
+Do not merge this staging artifact directly as canonical product documentation. First close FRONTEND-001 human gates and repair/resolve continuation lifecycle without changing the frozen source. Then reconcile repository-owned `PRODUCT.md`, `UX.md`, `UX_PRODUCT_SHELL.md`, `ADMIN.md`, `ARCHITECTURE.md`/ADR in permitted packages, modify only mapped owners, and rerun exact-source repository checks/CI.
