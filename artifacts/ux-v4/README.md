@@ -41,6 +41,7 @@ The complete archive is preserved unchanged. The files next to it are repository
 
 - `FRONTEND_001_EXIT_GATE.md` — exact remaining gates.
 - `FRONTEND_001_VISUAL_AUDIT.md` — second-pass browser-evidence inspection.
+- `FRONTEND_001_SCOPE_RECHECK.md` — fresh exact 40-path list plus selected sensitive-diff recheck; self-audit only, not independent review.
 - `OWNER_VISUAL_ACCEPTANCE_CHECKLIST.md` — explicit owner review criteria; no acceptance pre-recorded.
 - `OWNER_ACCEPTANCE_PACKET_INDEX.md` — short owner-facing index.
 - `INDEPENDENT_REVIEW_CHECKLIST.md` — exact-source independent-review checklist; no PASS pre-recorded.
@@ -67,8 +68,8 @@ The complete archive is preserved unchanged. The files next to it are repository
 
 ## Tracking outside this directory
 
-- PR #36 — FRONTEND-001 exact-source review/acceptance coordination. Review packet links are posted in the PR conversation; neither pending human gate is marked complete.
-- Issue #188 — lifecycle continuation deadlock and fail-closed repair.
+- PR #36 — FRONTEND-001 exact-source review/acceptance coordination. Review packet and scope-recheck links are posted in the PR conversation; neither pending human gate is marked complete.
+- Issue #188 — lifecycle continuation deadlock and fail-closed repair; repair acceptance/code/test specs are linked from issue comments.
 - Issue #189 — owner decision tracker for O-01…O-08 routes/future studio scope. Checkbox state alone is not canonical; PRODUCT/UX/ARCHITECTURE updates are still required in a permitted package.
 
 ## Restore
