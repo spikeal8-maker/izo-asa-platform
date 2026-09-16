@@ -32,6 +32,7 @@ The complete archive is preserved unchanged. The files next to it are second-pas
 - `frontend-002-candidate-scope.json` — machine-readable copy of that candidate scope; it is not an active `tools/scopes` manifest.
 - `FAIL_FIRST_ACCEPTANCE.md` — acceptance cases, including the two expected red tests on the current head.
 - `CANONICAL_DOC_PATCH_MANIFEST.md` — section-by-section canonical documentation edits and explicit no-change owners.
+- `STAGING_SELF_CHECK.md` — isolation, scope arithmetic, risk, fail-first grounding and lifecycle-blocker verification.
 - `coverage_report.md` — coverage summary for 45 user + 30 admin pages.
 - `SHA256SUMS.txt` — checksums for the archived v4 source package.
 
