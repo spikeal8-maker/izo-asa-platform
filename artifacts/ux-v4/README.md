@@ -28,6 +28,7 @@ The complete archive is preserved unchanged. The files next to it are second-pas
 - `IMPLEMENTATION_CONTRACT.md` — bounded implementation rules, safety invariants and required tests.
 - `CURRENT_TO_TARGET_FILE_MAP.md` — current source owners/tests for each target UX change.
 - `OPEN_DECISIONS.md` — only decisions that remain genuinely unresolved, with safe behavior until resolution.
+- `OWNER_DECISION_PACKET.md` — recommended defaults for the eight remaining product decisions; recommendations only, not canonical acceptance.
 - `NEXT_PACKAGE_SCOPE_CANDIDATE.md` — bounded candidate for the first post-FRONTEND-001 Chat reconciliation package.
 - `frontend-002-candidate-scope.json` — machine-readable copy of that candidate scope; it is not an active `tools/scopes` manifest.
 - `FAIL_FIRST_ACCEPTANCE.md` — acceptance cases, including the two expected red tests on the current head.
@@ -41,6 +42,11 @@ The complete archive is preserved unchanged. The files next to it are second-pas
 - `PROJECT_STATE_DECIDES_NEXT_PATCH_PREVIEW.md` — fail-closed repair design that keeps state mutation on the new branch.
 - `coverage_report.md` — coverage summary for 45 user + 30 admin pages.
 - `SHA256SUMS.txt` — checksums for the archived v4 source package.
+
+Tracking outside this directory:
+
+- PR #36 now contains an explicit gate request for an independent review of the exact frozen source; the request deliberately does not contain a machine-readable PASS marker.
+- Issue #188 tracks the `decides_next + next_package=null` continuation deadlock and the required fail-closed repair properties.
 
 ## Restore
 
@@ -66,7 +72,7 @@ The source implementation was re-read after the initial v4 package was staged. R
 
 The browser evidence itself was unpacked and visually inspected across phone, tablet, laptop, desktop, QHD and UHD Chat-home screenshots. That review is recorded in `FRONTEND_001_VISUAL_AUDIT.md` and deliberately remains separate from owner acceptance.
 
-A continuation-safety pass also found a process defect: because `FRONTEND-001` has `decides_next=true` with `next_package=null`, current `transition()` rejects every `--activate`; additionally a genuinely new `FRONTEND-002` is absent from PLAN. The staging repair proposal preserves exact-head evidence and does not authorize manual mutation of the frozen branch.
+A continuation-safety pass also found a process defect: because `FRONTEND-001` has `decides_next=true` with `next_package=null`, current `transition()` rejects every `--activate`; additionally a genuinely new `FRONTEND-002` is absent from PLAN. Issue #188 now tracks this defect. The staging repair proposal preserves exact-head evidence and does not authorize manual mutation of the frozen branch.
 
 The audit deliberately does not promote placeholder Video/Audio/3D/Chat runtime, prototype Feed examples or future A-01…A-30 admin surfaces to “implemented”. Route/entity disagreements are recorded as unresolved decisions rather than silently normalized.
 
