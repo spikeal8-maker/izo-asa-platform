@@ -17,7 +17,9 @@ This directory stores the complete UX SPEC v4 produced for `spikeal8-maker/izo-a
 
 The repository explicitly forbids a second stable master/roadmap hierarchy. The package is therefore stored as a Git-tracked, checksum-verifiable artifact on this staging branch rather than being dropped wholesale into canonical `docs/` or into frozen PR #36.
 
-The human-readable files `coverage_report.md`, `00_DECISION_REGISTER.md`, `00_CURRENT_API_MAP.md` and `SHA256SUMS.txt` are also exposed next to the archive for quick review.
+The human-readable files `coverage_report.md`, `00_DECISION_REGISTER.md`, `00_CURRENT_API_MAP.md`, `IMPLEMENTATION_GAP_AUDIT.md` and `SHA256SUMS.txt` are exposed next to the archive for quick review.
+
+`IMPLEMENTATION_GAP_AUDIT.md` is the repository-grounded second-pass review: it separates WORKING, PARTIAL, PLACEHOLDER, TARGET-ONLY and CONFLICT surfaces and records what must be reconciled before UX v4 becomes canonical.
 
 ## Restore
 
@@ -37,6 +39,12 @@ sha256sum -c SHA256SUMS.txt
 
 Expected validator result: `UX SPEC VALID`, `user=45 admin=30 total=75`.
 
+## Verification performed
+
+The source implementation was re-read after the initial v4 package was staged. The audit specifically rechecked `App.tsx`, `navigation.ts`, `ChatPage.tsx`, `SectionPage.tsx`, `Composer.tsx`, `ResultPanel.tsx`, `Gallery.tsx`, `FeedPage.tsx`, `AccountPage.tsx`, `SecurityPage.tsx`, `AdminPage.tsx`, current package state and PR #36.
+
+The audit deliberately does not promote placeholder Video/Audio/3D/Chat runtime, prototype Feed examples or future A-01…A-30 admin surfaces to “implemented”. Route disagreements are recorded as unresolved decisions rather than silently normalized.
+
 ## Promotion rule
 
-Do not merge this staging artifact directly as canonical product documentation. Resolve route conflicts from `00_DECISION_REGISTER.md`, then update repository-owned `PRODUCT.md`, `UX.md`, `ADMIN.md`, `ARCHITECTURE.md`/ADR as applicable in a permitted package, with repo checks and CI rerun.
+Do not merge this staging artifact directly as canonical product documentation. Resolve route conflicts from `00_DECISION_REGISTER.md` and `IMPLEMENTATION_GAP_AUDIT.md`, then update repository-owned `PRODUCT.md`, `UX.md`, `ADMIN.md`, `ARCHITECTURE.md`/ADR as applicable in a permitted package, with repo checks and CI rerun.
