@@ -24,6 +24,7 @@ The complete archive is preserved unchanged. The files next to it are repository
 - `00_DECISION_REGISTER.md` — established/conflicting/proposed decisions.
 - `00_CURRENT_API_MAP.md` — current verified Image/Jobs/Gallery API snapshot.
 - `IMPLEMENTATION_GAP_AUDIT.md` — WORKING/PARTIAL/PLACEHOLDER/TARGET-ONLY/CONFLICT audit.
+- `UX_V4_TRACEABILITY_MATRIX.md` — requirement → canonical owner → current code owner → test → status traceability.
 - `CANONICAL_RECONCILIATION_PATCHSET.md` — exact repository-owned docs that must be reconciled later.
 - `IMPLEMENTATION_CONTRACT.md` — bounded implementation rules, safety invariants and required tests.
 - `CURRENT_TO_TARGET_FILE_MAP.md` — current source owners/tests for each target UX change.
@@ -55,6 +56,7 @@ The complete archive is preserved unchanged. The files next to it are repository
 - `project-state-188-candidate.json` — machine-readable `MAINT-LIFECYCLE-001` repair candidate, not active state.
 - `MAINT_LIFECYCLE_001_ACCEPTANCE.md` — behavioral acceptance contract A-01…A-11 for the repair.
 - `PROJECT_STATE_FIX_CODE_SPEC.md` — exact code-change specification preserving strict `transition()` semantics.
+- `PROJECT_STATE_FIX_TEST_MATRIX.md` — pure-model/orchestration/CLI regression matrix for issue #188.
 - `LIFECYCLE_RECOVERY_PROTOCOL_CANDIDATE.md` — one-time bootstrap proposal for the repair paradox; explicit owner approval required before any use.
 
 ## Coverage / archive files
