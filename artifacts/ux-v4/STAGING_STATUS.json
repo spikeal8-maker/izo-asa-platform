@@ -1,0 +1,50 @@
+{
+  "schema_version": 1,
+  "status": "staging_compact",
+  "repository": "spikeal8-maker/izo-asa-platform",
+  "source": {
+    "branch": "ux/frontend-reset",
+    "sha": "5c0e79b6fc3a7120207d0889b176fbfed3dab973",
+    "pr": 36
+  },
+  "frontend_001": {
+    "technical_ci": "pass",
+    "self_review": "pass",
+    "owner_visual_acceptance": "pending",
+    "independent_review": "pending",
+    "merged": false,
+    "deployed": false,
+    "changed_files": 40
+  },
+  "control_plane": {
+    "issue_188": "open",
+    "decides_next_null_deadlock": true,
+    "review_identity_hardening_needed": true,
+    "safe_to_begin_next": false
+  },
+  "product_decisions": {
+    "D-01_video_audio_3d_routes": "pending",
+    "D-02_chat_url_model": "pending",
+    "D-03_image_editor_route": "pending",
+    "D-04_video_project": "deferred_default_defined",
+    "D-05_audio_project": "deferred_default_defined",
+    "D-06_3d_depth": "deferred_default_defined",
+    "D-07_marketing_home": "deferred_default_defined",
+    "D-08_lineage_graph": "deferred_default_defined"
+  },
+  "active_staging_documents": [
+    "README.md",
+    "QUALITY_IMPLEMENTATION_SPEC.md",
+    "DECISIONS.md",
+    "CONTROL_PLANE_REPAIR_SPEC.md",
+    "CRITICAL_ANALYSIS.md",
+    "STAGING_STATUS.json"
+  ],
+  "rules": [
+    "staging is not canonical",
+    "do not mutate frozen FRONTEND-001 source",
+    "do not use registry coverage as readiness",
+    "do not add new coordination documents unless they replace an existing active document",
+    "accepted facts must move to canonical docs before implementation"
+  ]
+}
