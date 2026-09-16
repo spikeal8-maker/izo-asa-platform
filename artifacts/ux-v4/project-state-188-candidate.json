@@ -1,0 +1,58 @@
+{
+  "schema_version": 1,
+  "status": "staging_candidate_only",
+  "issue": 188,
+  "candidate_id": "MAINT-LIFECYCLE-001",
+  "goal": "Repair project_state continuation for decides_next packages with next_package=null without mutating the frozen finishing branch or weakening exact-head/review gates.",
+  "source_snapshot": {
+    "branch": "ux/frontend-reset",
+    "sha": "5c0e79b6fc3a7120207d0889b176fbfed3dab973",
+    "finishing_package": "FRONTEND-001"
+  },
+  "scope_class": "tiny",
+  "risk": "high",
+  "reason_for_high_risk": "The code controls package lineage, exact-head checkpoint evidence and independent-review enforcement. A defect could bypass continuation safety even without touching product runtime.",
+  "candidate_paths": [
+    "tools/project_state.py",
+    "tools/project_state_model.py",
+    "tests/test_project_state.py",
+    "docs/DEVELOPMENT.md",
+    "docs/reviews/MAINT-LIFECYCLE-001.md",
+    "tools/scopes/maint-lifecycle-001.json"
+  ],
+  "optional_paths": [
+    "docs/DOCS_SYSTEM.md"
+  ],
+  "non_goals": [
+    "No product/frontend/backend business changes",
+    "No automatic product-package selection",
+    "No weakening of required workflow evidence",
+    "No weakening of independent review",
+    "No mutation of frozen FRONTEND-001 source",
+    "No merge/deploy behavior"
+  ],
+  "required_properties": [
+    "Existing preselected planned_next flow remains supported",
+    "Owner-selected package definition is validated in memory before branch creation",
+    "New package must directly depend on finishing package",
+    "All other dependencies must be ready",
+    "Candidate input cannot set status/checkpoint/evidence/SHA/branch/runtime lineage",
+    "Independent review and exact-head PR evidence are checked before branch creation",
+    "PLAN/CURRENT/CHECKPOINTS are written only on the new branch",
+    "Write failure restores original files and deletes the new branch"
+  ],
+  "required_tests": [
+    "valid decides_next selection from null next",
+    "reject when active does not decide next",
+    "reject duplicate or completed package id",
+    "reject candidate id mismatch",
+    "reject missing direct finishing dependency",
+    "reject unready additional dependency",
+    "reject unknown control fields",
+    "review failure creates no branch",
+    "workflow evidence failure creates no branch",
+    "write failure rolls back branch and state",
+    "preselected planned_next behavior remains green"
+  ],
+  "activation_warning": "This file is not a PLAN package and is not a tools/scopes manifest. Current project_state cannot activate it safely; issue #188 must be resolved or an explicitly approved recovery procedure must bootstrap the repair without changing the frozen source."
+}
