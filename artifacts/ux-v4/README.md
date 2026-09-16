@@ -28,6 +28,10 @@ The complete archive is preserved unchanged. The files next to it are second-pas
 - `IMPLEMENTATION_CONTRACT.md` — bounded implementation rules, safety invariants and required tests.
 - `CURRENT_TO_TARGET_FILE_MAP.md` — current source owners/tests for each target UX change.
 - `OPEN_DECISIONS.md` — only decisions that remain genuinely unresolved, with safe behavior until resolution.
+- `NEXT_PACKAGE_SCOPE_CANDIDATE.md` — bounded candidate for the first post-FRONTEND-001 Chat reconciliation package.
+- `frontend-002-candidate-scope.json` — machine-readable copy of that candidate scope; it is not an active `tools/scopes` manifest.
+- `FAIL_FIRST_ACCEPTANCE.md` — acceptance cases, including the two expected red tests on the current head.
+- `CANONICAL_DOC_PATCH_MANIFEST.md` — section-by-section canonical documentation edits and explicit no-change owners.
 - `coverage_report.md` — coverage summary for 45 user + 30 admin pages.
 - `SHA256SUMS.txt` — checksums for the archived v4 source package.
 
@@ -51,10 +55,10 @@ Expected validator result: `UX SPEC VALID`, `user=45 admin=30 total=75`.
 
 ## Verification performed
 
-The source implementation was re-read after the initial v4 package was staged. Review covered `App.tsx`, `navigation.ts`, `ChatPage.tsx`, `SectionPage.tsx`, `Composer.tsx`, `ResultPanel.tsx`, `Gallery.tsx`, `FeedPage.tsx`, `AccountPage.tsx`, `SecurityPage.tsx`, `AdminPage.tsx`, Studio local README, `BLOCK_MAP.json`, `CONTEXT_MAP.json`, `ARCHITECTURE.md`, current package state and PR #36.
+The source implementation was re-read after the initial v4 package was staged. Review covered `App.tsx`, `navigation.ts`, `ChatPage.tsx`, `SectionPage.tsx`, `Composer.tsx`, `ResultPanel.tsx`, `Gallery.tsx`, `FeedPage.tsx`, `AccountPage.tsx`, `SecurityPage.tsx`, `AdminPage.tsx`, Studio local README, `BLOCK_MAP.json`, `CONTEXT_MAP.json`, `ARCHITECTURE.md`, `DEVELOPMENT.md`, current shell E2E, current package state and PR #36.
 
 The audit deliberately does not promote placeholder Video/Audio/3D/Chat runtime, prototype Feed examples or future A-01…A-30 admin surfaces to “implemented”. Route/entity disagreements are recorded as unresolved decisions rather than silently normalized.
 
 ## Promotion rule
 
-Do not merge this staging artifact directly as canonical product documentation. Resolve open decisions, then update repository-owned `PRODUCT.md`, `UX.md`, `UX_PRODUCT_SHELL.md`, `ADMIN.md`, `ARCHITECTURE.md`/ADR as applicable in a permitted package. After docs reconciliation, modify only the mapped owners, update routing/block ownership for files actually touched, and rerun repository checks/CI on the exact source head.
+Do not merge this staging artifact directly as canonical product documentation. Resolve open decisions, then update repository-owned `PRODUCT.md`, `UX.md`, `UX_PRODUCT_SHELL.md`, `ADMIN.md`, `ARCHITECTURE.md`/ADR as applicable in a permitted package. After docs reconciliation, modify only the mapped owners, update routing/block ownership only where actually necessary, and rerun repository checks/CI on the exact source head.
