@@ -32,6 +32,7 @@ The complete archive is preserved unchanged. The files next to it are second-pas
 - `frontend-002-candidate-scope.json` — machine-readable copy of that candidate scope; it is not an active `tools/scopes` manifest.
 - `FAIL_FIRST_ACCEPTANCE.md` — acceptance cases, including the two expected red tests on the current head.
 - `CANONICAL_DOC_PATCH_MANIFEST.md` — section-by-section canonical documentation edits and explicit no-change owners.
+- `CHAT_PATCH_PREVIEW.md` — minimal exact-source code/copy preview for removing the manual Chat workspace picker without backend changes.
 - `STAGING_SELF_CHECK.md` — isolation, scope arithmetic, risk, fail-first grounding and lifecycle-blocker verification.
 - `coverage_report.md` — coverage summary for 45 user + 30 admin pages.
 - `SHA256SUMS.txt` — checksums for the archived v4 source package.
@@ -56,7 +57,7 @@ Expected validator result: `UX SPEC VALID`, `user=45 admin=30 total=75`.
 
 ## Verification performed
 
-The source implementation was re-read after the initial v4 package was staged. Review covered `App.tsx`, `navigation.ts`, `ChatPage.tsx`, `SectionPage.tsx`, `Composer.tsx`, `ResultPanel.tsx`, `Gallery.tsx`, `FeedPage.tsx`, `AccountPage.tsx`, `SecurityPage.tsx`, `AdminPage.tsx`, Studio local README, `BLOCK_MAP.json`, `CONTEXT_MAP.json`, `ARCHITECTURE.md`, `DEVELOPMENT.md`, current shell E2E, current package state and PR #36.
+The source implementation was re-read after the initial v4 package was staged. Review covered `App.tsx`, `navigation.ts`, `ChatPage.tsx`, `chat.css`, `SectionPage.tsx`, `Composer.tsx`, `ResultPanel.tsx`, `Gallery.tsx`, `FeedPage.tsx`, `AccountPage.tsx`, `SecurityPage.tsx`, `AdminPage.tsx`, Studio local README, `BLOCK_MAP.json`, `CONTEXT_MAP.json`, `ARCHITECTURE.md`, `DEVELOPMENT.md`, current shell E2E, current package state and PR #36.
 
 The audit deliberately does not promote placeholder Video/Audio/3D/Chat runtime, prototype Feed examples or future A-01…A-30 admin surfaces to “implemented”. Route/entity disagreements are recorded as unresolved decisions rather than silently normalized.
 
