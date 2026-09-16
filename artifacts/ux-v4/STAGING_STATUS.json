@@ -1,6 +1,7 @@
 {
-  "schema_version": 1,
+  "schema_version": 2,
   "status": "staging_compact",
+  "checked_at": "2026-09-16T23:53:00+03:00",
   "repository": "spikeal8-maker/izo-asa-platform",
   "source": {
     "branch": "ux/frontend-reset",
@@ -23,14 +24,14 @@
     "safe_to_begin_next": false
   },
   "product_decisions": {
-    "D-01_video_audio_3d_routes": "pending",
-    "D-02_chat_url_model": "pending",
-    "D-03_image_editor_route": "pending",
-    "D-04_video_project": "deferred_default_defined",
-    "D-05_audio_project": "deferred_default_defined",
-    "D-06_3d_depth": "deferred_default_defined",
-    "D-07_marketing_home": "deferred_default_defined",
-    "D-08_lineage_graph": "deferred_default_defined"
+    "D-01_video_audio_3d_routes": {"canonical_state": "pending_owner_decision"},
+    "D-02_chat_url_model": {"canonical_state": "pending_owner_decision"},
+    "D-03_image_editor_route": {"canonical_state": "pending_owner_decision"},
+    "D-04_video_project": {"canonical_state": "pending_owner_decision", "recommended_default": "generation_result_first_no_persistent_timeline"},
+    "D-05_audio_project": {"canonical_state": "pending_owner_decision", "recommended_default": "core_audio_first_no_multitrack_daw"},
+    "D-06_3d_depth": {"canonical_state": "pending_owner_decision", "recommended_default": "generator_manifest_viewer_export_first"},
+    "D-07_marketing_home": {"canonical_state": "pending_owner_decision", "recommended_default": "no_separate_marketing_home"},
+    "D-08_lineage_graph": {"canonical_state": "pending_owner_decision", "recommended_default": "existing_source_relations_first"}
   },
   "active_staging_documents": [
     "README.md",
@@ -40,11 +41,22 @@
     "CRITICAL_ANALYSIS.md",
     "STAGING_STATUS.json"
   ],
+  "context_policy": {
+    "default_agent_read": ["README.md"],
+    "quality_spec_full_read_by_default": false,
+    "rule": "read only task-relevant sections; canonical AGENTS/CURRENT/block-route flow remains primary"
+  },
+  "external_tracking": {
+    "frontend_pr": 36,
+    "lifecycle_issue": 188,
+    "product_decisions_issue": 189
+  },
   "rules": [
     "staging is not canonical",
     "do not mutate frozen FRONTEND-001 source",
     "do not use registry coverage as readiness",
     "do not add new coordination documents unless they replace an existing active document",
-    "accepted facts must move to canonical docs before implementation"
+    "accepted facts must move to canonical docs before implementation",
+    "issue and PR coordination must not link to deleted staging files"
   ]
 }
