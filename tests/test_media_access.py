@@ -62,14 +62,14 @@ def test_restricted_account_cannot_create_upload(env, state):
     failure('account_restricted' if state in {'generation_suspended','deletion_pending'} else 'auth_required', lambda: start(env))
 
 
-def test_unverified_and_bad_csrf_cannot_create_upload(env):
+def test_unverified_account_can_create_upload_but_bad_csrf_is_still_rejected(env):
     svc, users, _, engine, _ = env
     upload, command, _ = start(env)
     user = users[0]
     failure('csrf_rejected', lambda: svc.begin(user.bearer, 'x'*43, command))
     with engine.begin() as conn:
         conn.execute(sa.update(a.identities).where(a.identities.c.account_id==user.view.account.id).values(verified_at=None))
-    failure('verification_required', lambda: start(env))
+    assert start(env)[0]
 
 
 def test_download_token_bound_to_asset_session_and_expiry(env):

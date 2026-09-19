@@ -191,11 +191,11 @@ def test_no_new_reserves_but_existing_obligations_can_be_closed(credit_env, stat
         assert svc.reconcile(conn, owner).consistent
 
 
-def test_unverified_can_read_but_cannot_reserve(credit_env):
+def test_unverified_active_account_can_read_and_reserve(credit_env):
     engine, svc, owner, _, staff = credit_env
     with engine.begin() as conn:
         grant(conn, svc, owner, staff)
         conn.execute(sa.update(auth_tables.identities).where(
             auth_tables.identities.c.account_id == owner).values(verified_at=None))
         assert svc.overview(conn, owner).balance.available == 100
-        assert_error("verification_required", lambda: svc.reserve(conn, owner, reserve()))
+        assert svc.reserve(conn, owner, reserve()).kind == "reserve"

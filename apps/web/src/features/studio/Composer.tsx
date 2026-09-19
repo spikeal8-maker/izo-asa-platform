@@ -56,7 +56,7 @@ export function Composer({ auth }: { auth: AuthView }) {
   const capabilities = imageCapabilities.filter(item => plan.data?.policy?.capability_ids.includes(item.id))
   const chosen = sizes.find(item => `${item.width}x${item.height}` === size) ?? sizes[0]
   const chosenCapability = capabilities.find(item => item.id === capability) ?? capabilities[0]
-  const permitted = auth.account.email_verified && auth.account.state === 'active'
+  const permitted = auth.account.state === 'active'
     && plan.data?.configured && plan.data.policy?.executors.includes('api') && !!chosen && !!chosenCapability
   const canQuote = permitted && !!credits.data && !!prompt.trim() && !busy && !pending && !storageIssue
 
@@ -102,8 +102,7 @@ export function Composer({ auth }: { auth: AuthView }) {
       <ResourceState loading={plan.loading || credits.loading} error={plan.error || credits.error}
         retry={() => { plan.refresh(); credits.refresh() }} />
       {credits.data && <p>Доступно: <strong data-testid="studio-available">{credits.data.balance.available}</strong> баллов.</p>}
-      {!auth.account.email_verified && <p className="field-error"><Link href="/verify-email">Подтвердите почту</Link>, чтобы сохранять новые генерации в аккаунте.</p>}
-      {plan.data && !permitted && auth.account.email_verified && <p className="field-error">Этот режим сейчас недоступен для вашего аккаунта.</p>}
+      {plan.data && !permitted && <p className="field-error">Этот режим сейчас недоступен для вашего аккаунта.</p>}
       {storageIssue && <p role="alert" className="field-error">{storageIssue === 'read'
         ? 'Сохранённое состояние запроса повреждено или недоступно.'
         : 'Не удалось сохранить номер запроса.'}

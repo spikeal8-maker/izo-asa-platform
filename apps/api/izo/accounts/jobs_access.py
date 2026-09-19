@@ -1,7 +1,6 @@
 """Accounts-owned locks for jobs; worker IDs are never browser credentials."""
 import sqlalchemy as sa
 from . import tables as t
-from .credit_access import verified
 from .media_access import context
 
 
@@ -12,7 +11,7 @@ def lock_worker_owner(conn, owner, *, skip_locked=False):
         .where(t.accounts.c.id == owner).with_for_update(skip_locked=skip_locked)).mappings().first()
     if row is None:
         return None
-    return row["state"] if verified(conn, owner) else "unverified"
+    return row["state"]
 
 
 __all__ = ["context", "lock_worker_owner"]

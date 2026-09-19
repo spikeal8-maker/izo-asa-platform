@@ -3,23 +3,26 @@ import { apiRequest, ApiError, type AuthView, type GuestView, type SessionList }
 import { AccountSessions, AuthEntry } from './AuthEntry'
 import './accounts.css'
 
-const messages: Record<string, string> = {
-  invalid_credentials: 'Не удалось войти. Проверьте адрес и пароль.',
-  registration_rejected: 'Не удалось создать аккаунт. Возможно, такой адрес уже используется.',
+const formMessages: Record<string, string> = {
+  invalid_credentials: 'Неверная почта или пароль.',
+  registration_rejected: 'Не удалось создать аккаунт. Возможно, эта почта уже используется.',
   registration_disabled: 'Регистрация сейчас недоступна.',
-  invalid_input: 'Проверьте поля. Пароль должен содержать от 8 до 128 символов.',
-  rate_limited: 'Слишком много попыток. Попробуйте немного позже.',
-  auth_busy: 'Сервер занят проверкой входа. Повторите попытку.',
-  auth_not_configured: 'Авторизация временно недоступна.',
-  csrf_rejected: 'Сессия устарела. Обновите страницу и повторите действие.',
-  origin_rejected: 'Этот адрес приложения не разрешён сервером.',
-  session_limit: 'Достигнут лимит активных сессий. Завершите ненужную сессию на другом устройстве.',
+  invalid_input: 'Проверьте введённые данные.',
+  rate_limited: 'Слишком много попыток. Повторите позже.',
   guest_job_active: 'Дождитесь завершения пробной работы и затем создайте аккаунт.',
   guest_required: 'Пробная сессия завершилась. Можно зарегистрироваться как новый пользователь.',
 }
-function explanation(error: unknown) {
-  return error instanceof ApiError ? messages[error.code] ?? 'Запрос отклонён сервером.'
-    : 'Сервер недоступен. Повторите попытку после восстановления связи.'
+function formExplanation(error: unknown, registering: boolean) {
+  if (error instanceof ApiError && formMessages[error.code]) return formMessages[error.code]
+  return registering ? 'Не удалось создать аккаунт. Повторите попытку.'
+    : 'Не удалось выполнить вход. Повторите попытку.'
+}
+function accountExplanation(error: unknown) {
+  if (error instanceof ApiError) {
+    if (error.code === 'csrf_rejected') return 'Сессия устарела. Обновите страницу и повторите действие.'
+    if (error.code === 'session_limit') return 'Достигнут лимит активных сессий. Завершите ненужную сессию на другом устройстве.'
+  }
+  return 'Не удалось выполнить действие. Повторите попытку.'
 }
 
 export function AccountPage({ mode }: { mode: 'account' | 'login' | 'register' }) {
@@ -42,7 +45,8 @@ export function AccountPage({ mode }: { mode: 'account' | 'login' | 'register' }
     }).catch(reason => {
       if (controller.signal.aborted) return
       if (reason instanceof ApiError && reason.status === 401) { setAuth(null); setSessions([]) }
-      else setError(explanation(reason))
+      else if (mode === 'account') setError(accountExplanation(reason))
+      else { setAuth(null); setSessions([]) }
     }).finally(() => { if (!controller.signal.aborted) setLoading(false) })
     return () => controller.abort()
   }, [mode, reload])
@@ -50,10 +54,11 @@ export function AccountPage({ mode }: { mode: 'account' | 'login' | 'register' }
   useEffect(() => {
     if (!registering) { setGuest(null); return }
     const controller = new AbortController()
+    setGuest(null)
     apiRequest<GuestView>('/api/v1/guest/me', { signal: controller.signal }).then(value => {
       if (!controller.signal.aborted) setGuest(value)
-    }).catch(reason => {
-      if (!controller.signal.aborted && !(reason instanceof ApiError && reason.status === 401)) setError(explanation(reason))
+    }).catch(() => {
+      if (!controller.signal.aborted) setGuest(null)
     })
     return () => controller.abort()
   }, [registering])
@@ -74,7 +79,7 @@ export function AccountPage({ mode }: { mode: 'account' | 'login' | 'register' }
       window.location.assign('/')
     } catch (reason) {
       if (registering && reason instanceof ApiError && reason.code === 'guest_required') setGuest(null)
-      setError(explanation(reason))
+      setError(formExplanation(reason, registering))
     } finally {
       const password = form.elements.namedItem('password') as HTMLInputElement | null
       if (password) password.value = ''
@@ -92,7 +97,7 @@ export function AccountPage({ mode }: { mode: 'account' | 'login' | 'register' }
       else setReload(value => value + 1)
     } catch (reason) {
       if (reason instanceof ApiError && reason.status === 401) { setAuth(null); setSessions([]) }
-      setError(explanation(reason))
+      setError(accountExplanation(reason))
     } finally { setBusy(false) }
   }
 

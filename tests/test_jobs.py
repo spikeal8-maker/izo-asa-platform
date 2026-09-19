@@ -227,3 +227,18 @@ def test_changed_quote_price_is_rejected_without_hold(env):
         service.submit(user.bearer, user.view.csrf_token,
                        CreateJob(quote_id=quote.id, operation_id=uuid4()))
     assert balances(env).wallet.reserved == 0
+
+def test_unverified_active_account_can_quote_submit_and_complete(env):
+    service, runner, users, _, _ = env
+    user = users[1]
+    with service.auth.engine.begin() as conn:
+        conn.execute(sa.update(a.identities).where(
+            a.identities.c.account_id == user.view.account.id).values(verified_at=None))
+    quote = service.quote(user.bearer, user.view.csrf_token, draft())
+    job = service.submit(user.bearer, user.view.csrf_token,
+        CreateJob(quote_id=quote.id, operation_id=uuid4()))
+    assert job.status == "queued"
+    claim = runner.claim()
+    assert claim is not None and claim.account_id == user.view.account.id
+    runner.execute(claim, render_test_image)
+    assert service.get(user.bearer, job.id).status == "succeeded"

@@ -17,7 +17,6 @@ export function AuthEntry({ registering, guest, busy, error, onSubmit }: {
         ? guest ? 'Пробная работа останется в этом аккаунте. Укажите данные для продолжения.'
           : 'Сохраняйте работы, историю и баланс между устройствами.'
         : 'Продолжите работу с вашими проектами и галереей.'}</p>
-      {error && <div className="field-error" role="alert">{error}</div>}
       <form onSubmit={onSubmit} className="account-form">
         {registering && <label>Имя<input name="display_name" autoComplete="nickname" required maxLength={80} /></label>}
         <label>Электронная почта<input name="email" type="email" autoComplete="username" required maxLength={254} /></label>
@@ -25,6 +24,7 @@ export function AuthEntry({ registering, guest, busy, error, onSubmit }: {
           aria-describedby={registering ? 'password-help' : undefined}
           autoComplete={registering ? 'new-password' : 'current-password'} required minLength={registering ? 8 : 1} maxLength={128} />
           {registering && <small id="password-help">Минимум 8 символов. Можно использовать длинную фразу.</small>}</label>
+        {error && <div className="field-error" role="alert">{error}</div>}
         <button className="primary full-width" type="submit" disabled={busy}>{busy ? 'Проверяем…' : registering ? 'Создать аккаунт' : 'Войти'}</button>
       </form>
       {!registering && <p className="auth-minor"><Link href="/password/forgot">Забыли пароль?</Link></p>}
