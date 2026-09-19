@@ -110,18 +110,21 @@ test('IMAGE-001 exhausted reconciliation does not start a new job or pretend ref
   expect(app.jobs).toHaveLength(1)
 })
 
-test('IMAGE-001 guest trial replaces the legacy login wall while unverified accounts remain blocked', async ({ page }) => {
-  const app = await workspace(page); app.signedIn = false
+test('AUTH-UNBLOCK-001 unverified active account can quote and submit studio job', async ({ page }) => {
+  const app = await workspace(page)
+  app.account.email_verified = false
   await page.goto('/image')
-  await expect(page.getByRole('heading', { name: 'Попробуйте без регистрации' })).toBeVisible()
-  await expect(page.getByRole('button', { name: 'Создать пробную работу' })).toBeVisible()
-  await expect(page.getByTestId('studio-available')).toHaveCount(0)
-  app.signedIn = true; app.account.email_verified = false
-  await page.reload()
-  await expect(page.getByRole('link', { name: 'Подтвердите почту' })).toBeVisible()
-  await expect(page.getByRole('button', { name: 'Рассчитать стоимость' })).toBeDisabled()
-  expect(app.jobs).toHaveLength(0)
+  await expect(page.locator('a[href="/verify-email"]')).toHaveCount(0)
+  await page.locator('textarea#prompt').fill('auth unblock')
+  await expect(page.locator('button.generate-button')).toBeEnabled()
+  await page.locator('button.generate-button').click()
+  await expect(page.getByRole('dialog')).toBeVisible()
+  expect(app.requests.filter(r => r.path === '/api/v1/jobs/quotes')).toHaveLength(1)
+  await page.locator('button.quote-submit').click()
+  await expect(page.getByTestId('job-status')).toBeVisible()
+  expect(app.requests.filter(r => r.path === '/api/v1/jobs' && r.method === 'POST')).toHaveLength(1)
 })
+
 
 test('IMAGE-001 failure removes stale private job data and retry reads server again', async ({ page }) => {
   const app = await workspace(page)

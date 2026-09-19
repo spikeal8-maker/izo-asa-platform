@@ -149,3 +149,20 @@ def test_openapi_response_matches_generated_artifact():
     exported = json.loads(Path("packages/contracts/openapi.json").read_text())
     actual = create_app(Settings()).openapi()
     assert exported == actual
+
+def test_readiness_rejects_broken_auth_even_when_database_and_storage_are_healthy(monkeypatch):
+    from izo import health
+    monkeypatch.delenv("IZO_AUTH_RATE_SECRET", raising=False)
+    monkeypatch.setattr(health, "database_ready", lambda config: True)
+    monkeypatch.setattr(health, "S3Store", lambda config: type("Store", (), {"healthy": lambda self: True})())
+    assert not health.dependencies_ready(Settings(s3_access_key="local", s3_secret_key="local"))
+
+
+def test_readiness_accepts_configured_auth_with_mail_disabled(monkeypatch):
+    from izo import health
+    monkeypatch.setenv("IZO_AUTH_RATE_SECRET", "r" * 40)
+    monkeypatch.setenv("IZO_AUTH_REGISTRATION", "open")
+    monkeypatch.setenv("IZO_RECOVERY_DELIVERY", "disabled")
+    monkeypatch.setattr(health, "database_ready", lambda config: True)
+    monkeypatch.setattr(health, "S3Store", lambda config: type("Store", (), {"healthy": lambda self: True})())
+    assert health.dependencies_ready(Settings(s3_access_key="local", s3_secret_key="local"))

@@ -84,8 +84,6 @@ class CreditService:
             states = self._lock(conn, account_id)
             if states[account_id] != "active":
                 raise CreditError(403, "account_restricted")
-            if not access.verified(conn, account_id):
-                raise CreditError(403, "verification_required")
             digest = repo.fingerprint("reserve", command)
             old = repo.replay(conn, account_id, command.operation_id, digest)
             if old is not None:

@@ -74,3 +74,8 @@ def test_openapi_matches_public_password_and_optional_invite_contract():
             for operation in operations.values():
                 error_schema = operation["responses"]["422"]["content"]["application/json"]["schema"]
                 assert error_schema == {"$ref": "#/components/schemas/AuthErrorView"}
+
+def test_compose_requires_persistent_auth_secret_and_defaults_public_registration():
+    compose = (ROOT / "compose.yaml").read_text(encoding="utf-8")
+    assert "IZO_AUTH_RATE_SECRET: ${IZO_AUTH_RATE_SECRET:?Run python tools/bootstrap.py first}" in compose
+    assert "IZO_AUTH_REGISTRATION: ${IZO_AUTH_REGISTRATION:-open}" in compose
