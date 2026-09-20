@@ -80,13 +80,13 @@ def test_corrupted_policy_fails_closed(env):
         expect('invalid_policy', lambda: svc.resolve(conn, owner))
 
 
-def test_unverified_and_suspended_still_can_read_own_policy(env):
+def test_unverified_active_account_keeps_basic_plan_while_suspension_still_blocks(env):
     engine, svc, owner, *_ = env
     with engine.begin() as conn:
         setup(conn, env)
         conn.execute(sa.update(account_tables.identities).where(account_tables.identities.c.account_id == owner).values(verified_at=None))
         assert svc.resolve(conn, owner).configured
-        assert svc.assess_image(conn, owner, demand(), runtime(), usage(owner)).code == 'verification_required'
+        assert svc.assess_image(conn, owner, demand(), runtime(), usage(owner)).allowed
         conn.execute(sa.update(account_tables.accounts).where(account_tables.accounts.c.id == owner).values(state='generation_suspended'))
         assert svc.resolve(conn, owner).configured
         assert svc.assess_image(conn, owner, demand(), runtime(), usage(owner)).code == 'account_restricted'
