@@ -1,0 +1,52 @@
+{
+  "package_id": "FRONTEND-002",
+  "base": "c3d9390c2e376ab4656714a9bceee522a7854477",
+  "scope_class": "cross_domain",
+  "risk": "high",
+  "independent_review_required": true,
+  "max_files": 24,
+  "large_scope_reason": "Owner-revised frontend continuation owns the existing visual shell WIP recovered after independent CI/Auth merges, without absorbing backend or Agent-System work.",
+  "domains": [
+    "web-shell",
+    "chat-home",
+    "responsive-ui",
+    "brand-assets",
+    "frontend-tests",
+    "frontend-docs"
+  ],
+  "non_goals": [
+    "No backend or runtime semantics",
+    "No Agent-System WIP",
+    "No Credits, Jobs, Media or provider changes",
+    "No visual WIP transfer during state initialization"
+  ],
+  "allowed": [
+    "docs/PLAN.json",
+    "docs/CURRENT.md",
+    "tools/scopes/frontend-002.json",
+    "apps/web/e2e/shell.spec.ts",
+    "apps/web/index.html",
+    "apps/web/public/favicon.svg",
+    "apps/web/src/shared/ui/Icon.tsx",
+    "apps/web/src/shell/App.tsx",
+    "apps/web/src/shell/ChatPage.tsx",
+    "apps/web/src/shell/SectionPage.tsx",
+    "apps/web/src/shell/TopBar.tsx",
+    "apps/web/src/shell/chat.css",
+    "apps/web/src/shell/layout.css",
+    "apps/web/src/shell/navigation.ts",
+    "apps/web/src/shell/product-nav.css",
+    "apps/web/src/shell/chat/ChatComposer.css",
+    "apps/web/src/shell/chat/ChatComposer.tsx",
+    "apps/web/src/shell/chat/ChatSidebar.css",
+    "apps/web/src/shell/chat/ChatSidebar.tsx",
+    "apps/web/src/shell/chat/modelCatalog.ts",
+    "apps/web/src/shell/chat/types.ts",
+    "apps/web/src/shell/chat/useVisualViewport.ts",
+    "apps/web/src/shell/chat/useVoiceCapture.ts",
+    "docs/UX_PRODUCT_SHELL.md"
+  ],
+  "sensitive_approved": [
+    "tools/scopes/frontend-002.json"
+  ]
+}
