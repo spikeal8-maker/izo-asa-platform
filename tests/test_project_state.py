@@ -9,7 +9,8 @@ import pytest
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "tools"))
-from project_state import dependency_problems, render_current, transition, validate_pr_evidence  # noqa: E402
+from project_state import (READY_DEPENDENCY_STATUSES, dependency_problems, reconcile_continuation,
+    reconcile_continuation_transition, render_current, transition, validate_plan, validate_pr_evidence)  # noqa: E402
 
 
 def plan():
@@ -31,6 +32,24 @@ def transitionable_plan():
         "status": "planned_next", "depends_on": [active, "AUTH-002"], "decides_next": True}
     source["next_package"] = "TEST-NEXT"
     return source
+
+
+def reconcile_plan():
+    source = plan()
+    active = source["active_package"]
+    source["packages"]["TEST-CONT"] = {
+        "status": "planned", "continues": active, "depends_on": ["AUTH-002"], "decides_next": True}
+    return source
+
+
+REF, SRC = "a" * 40, "b" * 40
+
+
+def rec(source=None, **overrides):
+    args = dict(activate="TEST-CONT", new_branch="test/continuation", source_head=SRC,
+                reference_head=REF, acceptance_gaps=["scope"])
+    args.update(overrides)
+    return reconcile_continuation_transition(source or reconcile_plan(), **args)
 
 
 def test_current_is_rendered_from_machine_plan():
@@ -160,3 +179,92 @@ def test_transition_rejects_completed_or_unrelated_next_package():
     with pytest.raises(ValueError, match="not eligible from status technical_pass"):
         transition(source, activate="TEST-NEXT", next_id="AUTH-001", new_branch="test/next",
                    source_head="a" * 40, evidence=evidence())
+
+
+def test_reconcile_valid():
+    source = reconcile_plan(); active = source["active_package"]
+    updated = rec(source, acceptance_gaps=["scope", "independent_review"])
+    old = updated["packages"][active]
+    assert old["status"] == "superseded_incomplete_reference"
+    assert old["reference_head"] == REF
+    assert old["acceptance_gaps"] == ["scope", "independent_review"]
+    assert old["superseded_by"] == "TEST-CONT" and "checkpoint" not in old
+    assert updated["active_package"] == "TEST-CONT"
+    assert updated["canonical_lineage"]["current_package_base"] == {
+        "branch": source["canonical_lineage"]["working_branch"], "sha": SRC,
+        "state": "reconciled_continuation_base"}
+    assert "superseded_incomplete_reference" not in READY_DEPENDENCY_STATUSES
+    validate_plan(updated)
+
+
+def test_reconcile_same_source_fails():
+    with pytest.raises(ValueError, match="normal lifecycle"):
+        rec(source_head=REF)
+
+
+@pytest.mark.parametrize("gaps", [[], ["made_up_value"]])
+def test_reconcile_bad_gaps(gaps):
+    with pytest.raises(ValueError, match="gaps"):
+        rec(acceptance_gaps=gaps)
+
+
+def test_reconcile_bad_dependencies():
+    source = reconcile_plan(); source["packages"]["TEST-CONT"]["continues"] = "AUTH-002"
+    with pytest.raises(ValueError, match="continue active package"): rec(source)
+    source = reconcile_plan()
+    source["packages"]["TEST-CONT"]["depends_on"] = [source["active_package"]]
+    with pytest.raises(ValueError, match="not ready"): rec(source)
+
+
+def test_reconcile_non_ancestor_fails(monkeypatch):
+    import project_state as state
+    source = reconcile_plan()
+    base = source["canonical_lineage"]["current_package_base"]["sha"]
+
+    def fake_git(*args, root=ROOT):
+        if args == ("status", "--porcelain"): return ""
+        if args == ("branch", "--show-current"): return source["canonical_lineage"]["working_branch"]
+        if args == ("rev-parse", "HEAD"): return SRC
+        if args == ("merge-base", "--is-ancestor", base, SRC): return ""
+        if args == ("cat-file", "-e", f"{REF}^{{commit}}"): return ""
+        if args == ("merge-base", "--is-ancestor", REF, SRC): raise ValueError("unrelated")
+        raise AssertionError(args)
+
+    monkeypatch.setattr(state, "git", fake_git)
+    with pytest.raises(ValueError, match="ancestor"):
+        reconcile_continuation(source, branch="test/continuation", activate="TEST-CONT",
+            reference_head=REF, gaps=["scope"], root=ROOT)
+
+
+def test_reconcile_rolls_back_atomically(tmp_path, monkeypatch):
+    import project_state as state
+    source = reconcile_plan()
+    docs = tmp_path / "docs"; docs.mkdir()
+    originals = {"PLAN.json": b"old-plan", "CURRENT.md": b"old-current",
+                 "CHECKPOINTS.json": b"old-checkpoints"}
+    for name, data in originals.items(): (docs / name).write_bytes(data)
+    base = source["canonical_lineage"]["current_package_base"]["sha"]; calls = []
+
+    def fake_git(*args, root=tmp_path):
+        if args == ("status", "--porcelain"): return ""
+        if args == ("branch", "--show-current"): return source["canonical_lineage"]["working_branch"]
+        if args == ("rev-parse", "HEAD"): return SRC
+        if args in {("merge-base", "--is-ancestor", base, SRC),
+                    ("merge-base", "--is-ancestor", REF, SRC),
+                    ("cat-file", "-e", f"{REF}^{{commit}}")}: return ""
+        if args[:2] == ("switch", "-c"): calls.append("create"); return ""
+        if args == ("switch", source["canonical_lineage"]["working_branch"]): calls.append("rollback"); return ""
+        if args[:2] == ("branch", "-D"): calls.append("delete"); return ""
+        raise AssertionError(args)
+
+    def broken_write(updated, checkpoints=None, root=tmp_path):
+        assert checkpoints is None
+        for name in originals: (root / "docs" / name).write_bytes(b"partial")
+        raise OSError("disk failure")
+
+    monkeypatch.setattr(state, "git", fake_git); monkeypatch.setattr(state, "write_state", broken_write)
+    with pytest.raises(OSError, match="disk failure"):
+        reconcile_continuation(source, branch="test/continuation", activate="TEST-CONT",
+            reference_head=REF, gaps=["scope"], root=tmp_path)
+    for name, data in originals.items(): assert (docs / name).read_bytes() == data
+    assert calls == ["create", "rollback", "delete"]

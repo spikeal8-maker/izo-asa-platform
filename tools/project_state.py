@@ -1,4 +1,4 @@
-"""Inspect IZO ASA state and start the next package from verified GitHub evidence."""
+"""Inspect and transition IZO ASA project state."""
 from __future__ import annotations
 
 import argparse
@@ -10,9 +10,9 @@ import sys
 from urllib.parse import urlparse
 
 from project_state_model import (CHECKPOINTS_PATH, NEXT_PACKAGE_SOURCE_STATUSES, PLAN_PATH,
-    READY_DEPENDENCY_STATUSES, ROOT, dependency_problems, load_checkpoints, load_plan,
-    render_current, serialize_checkpoints, serialize_plan, transition, validate_plan,
-    validate_ref, write_state)
+    READY_DEPENDENCY_STATUSES, RECONCILIATION_GAPS, ROOT, dependency_problems, load_checkpoints,
+    load_plan, reconcile_continuation_transition, render_current, serialize_checkpoints,
+    serialize_plan, transition, validate_plan, validate_ref, write_state)
 from review_evidence import require_independent_review
 
 REQUIRED_WORKFLOWS = ("Foundation CI", "Dependency Security", "Review Source")
@@ -181,6 +181,38 @@ def begin_next(plan: dict, *, branch: str, activate: str, next_id: str | None,
     return updated, evidence
 
 
+def reconcile_continuation(plan: dict, *, branch: str, activate: str,
+                           reference_head: str, gaps: list[str],
+                           root: Path = ROOT) -> dict:
+    if git("status", "--porcelain", root=root):
+        raise ValueError("reconciliation requires clean checkout")
+    problems = verify_checkout(plan, root)
+    if problems:
+        raise ValueError("; ".join(problems))
+    source_head = git("rev-parse", "HEAD", root=root)
+    git("cat-file", "-e", f"{reference_head}^{{commit}}", root=root)
+    try:
+        git("merge-base", "--is-ancestor", reference_head, source_head, root=root)
+    except ValueError as exc:
+        raise ValueError("reference_head not ancestor of HEAD") from exc
+    updated = reconcile_continuation_transition(plan, activate=activate, new_branch=branch,
+        source_head=source_head, reference_head=reference_head, acceptance_gaps=gaps)
+    paths = [root / "docs" / name for name in ("PLAN.json", "CURRENT.md", "CHECKPOINTS.json")]
+    originals = {path: path.read_bytes() if path.exists() else None for path in paths}
+    original_branch = plan["canonical_lineage"]["working_branch"]
+    git("switch", "-c", branch, source_head, root=root)
+    try:
+        write_state(updated, root=root)
+    except Exception:
+        for path, data in originals.items():
+            if data is None: path.unlink(missing_ok=True)
+            else: path.write_bytes(data)
+        git("switch", original_branch, root=root)
+        git("branch", "-D", branch, root=root)
+        raise
+    return updated
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     sub = parser.add_subparsers(dest="command", required=True)
@@ -191,6 +223,11 @@ def main() -> int:
     begin.add_argument("--activate", required=True)
     begin.add_argument("--next", dest="next_id")
     begin.add_argument("--verified-pr", required=True, type=int)
+    rec = sub.add_parser("reconcile-continuation")
+    rec.add_argument("--branch", required=True)
+    rec.add_argument("--activate", required=True)
+    rec.add_argument("--reference-head", required=True)
+    rec.add_argument("--gap", dest="gaps", action="append", choices=sorted(RECONCILIATION_GAPS), required=True)
     args = parser.parse_args()
     try:
         plan = load_plan()
@@ -201,10 +238,15 @@ def main() -> int:
             if problems:
                 raise ValueError("; ".join(problems))
             print("PROJECT STATE OK"); return 0
-        updated, evidence = begin_next(plan, branch=args.branch, activate=args.activate,
-            next_id=args.next_id, verified_pr=args.verified_pr)
-        print(f"STATE STARTED: active={updated['active_package']} branch={args.branch}")
-        print(f"EVIDENCE: {evidence['type']} source={evidence['source_head']} merge={evidence['tested_merge_tree']}")
+        if args.command == "begin-next":
+            updated, evidence = begin_next(plan, branch=args.branch, activate=args.activate,
+                next_id=args.next_id, verified_pr=args.verified_pr)
+            print(f"STATE STARTED: active={updated['active_package']} branch={args.branch}")
+            print(f"EVIDENCE: {evidence['type']} source={evidence['source_head']} merge={evidence['tested_merge_tree']}")
+            return 0
+        updated = reconcile_continuation(plan, branch=args.branch, activate=args.activate,
+            reference_head=args.reference_head, gaps=args.gaps)
+        print(f"STATE RECONCILED: active={updated['active_package']} branch={args.branch}")
         return 0
     except (OSError, ValueError, json.JSONDecodeError, subprocess.TimeoutExpired) as exc:
         print(f"PROJECT STATE ERROR: {exc}", file=sys.stderr)
