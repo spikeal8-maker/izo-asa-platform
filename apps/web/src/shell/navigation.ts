@@ -1,16 +1,26 @@
 export const workspaces = [
-  { id: 'chat', title: 'Чат', mark: 'Ч', description: 'Главная поверхность: разговор и запуск инструментов платформы.' },
-  { id: 'image', title: 'Изображение', mark: 'И', description: 'От идеи и референсов — к готовому изображению.' },
-  { id: 'video', title: 'Видео', mark: 'В', description: 'Анимация изображений и создание видеосцен.' },
-  { id: 'audio', title: 'Звук', mark: 'А', description: 'Речь, музыка и работа с аудиоматериалами.' },
-  { id: '3d', title: '3D', mark: '3D', description: 'Создание и просмотр трёхмерных объектов.' },
+  { id: 'chat', path: '/', title: 'Чат', mobileTitle: 'Чат', mark: 'Ч', description: 'Главная поверхность: разговор и запуск инструментов платформы.' },
+  { id: 'image', path: '/image', title: 'Изображение', mobileTitle: 'Изо', mark: 'И', description: 'От идеи и референсов — к готовому изображению.' },
+  { id: 'video', path: '/video', title: 'Видео', mobileTitle: 'Видео', mark: 'В', description: 'Анимация изображений и создание видеосцен.' },
+  { id: 'audio', path: '/audio', title: 'Звук', mobileTitle: 'Звук', mark: 'А', description: 'Речь, музыка и работа с аудиоматериалами.' },
+  { id: '3d', path: '/3d', title: '3D', mobileTitle: '3D', mark: '3D', description: 'Создание и просмотр трёхмерных объектов.' },
 ] as const
 
+export const routeAliases: Record<string, string> = {
+  '/studio/chat': '/',
+  '/studio/image': '/image',
+  '/studio/video': '/video',
+  '/studio/audio': '/audio',
+  '/studio/3d': '/3d',
+}
+
+export function canonicalRoute(path: string) {
+  return routeAliases[path] ?? path
+}
+
 export const navigation = [
-  { path: '/', title: 'Чат' },
-  { path: '/studio/chat', title: 'Чат' },
+  ...workspaces.map(({ path, title }) => ({ path, title })),
   { path: '/feed', title: 'Лента' },
-  ...workspaces.filter(w => w.id !== 'chat').map(w => ({ path: w.id === 'image' ? '/image' : `/studio/${w.id}`, title: w.title })),
   { path: '/gallery', title: 'Галерея' },
   { path: '/help', title: 'Помощь' },
   { path: '/account', title: 'Аккаунт' },

@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { detectHost } from '../platform/host'
 import { SectionPage } from './SectionPage'
+import { canonicalRoute } from './navigation'
 import { usePath } from './router'
 import { ChatPage } from './ChatPage'
 import { Studio } from '../features/studio/Studio'
@@ -14,7 +15,7 @@ import { AccessPage } from '../features/admin/AccessPage'
 import { CreditsPage } from '../features/credits/CreditsPage'
 import { FeedPage } from '../features/feed/FeedPage'
 import { apiRequest, ApiError, type AuthView } from '../shared/api'
-import { PrimarySidebar, TopBar } from './TopBar'
+import { TopBar } from './TopBar'
 import './layout.css'
 
 function initialTheme(): 'light' | 'dark' {
@@ -24,14 +25,15 @@ function initialTheme(): 'light' | 'dark' {
 
 export function App() {
   const [theme, setTheme] = useState(initialTheme)
-  const [mobileMenu, setMobileMenu] = useState(false)
   const [auth, setAuth] = useState<AuthView | null | undefined>(undefined)
-  const path = usePath()
+  const rawPath = usePath()
+  const path = canonicalRoute(rawPath)
   const host = detectHost(window)
-  const chat = path === '/' || path === '/studio/chat'
+  const chat = path === '/'
   const feed = path === '/feed'
-  const studio = ['/image', '/studio/image'].includes(path)
+  const studio = path === '/image'
   const gallery = path === '/gallery'
+  const section = ['/video', '/audio', '/3d', '/help'].includes(path)
   const security = securityPages[path]
   const account = !!security || ['/account', '/account/sessions', '/login', '/register'].includes(path)
   const credits = path === '/account/credits'
@@ -46,6 +48,12 @@ export function App() {
   }, [theme])
 
   useEffect(() => {
+    if (rawPath === path) return
+    window.history.replaceState(null, '', path)
+    window.dispatchEvent(new Event('izo:navigate'))
+  }, [rawPath, path])
+
+  useEffect(() => {
     const controller = new AbortController()
     apiRequest<AuthView>('/api/v1/auth/me', { signal: controller.signal })
       .then(setAuth).catch(reason => {
@@ -54,10 +62,9 @@ export function App() {
         else setAuth(null)
       })
     return () => controller.abort()
-  }, [path])
+  }, [])
 
   useEffect(() => {
-    setMobileMenu(false)
     const heading = document.querySelector<HTMLElement>('main h1')
     if (heading) {
       heading.tabIndex = -1
@@ -66,22 +73,28 @@ export function App() {
     } else if (chat) document.title = 'Чат · ИЗО АСА'
   }, [path, chat])
 
+  async function logout() {
+    if (!auth) return
+    try { await apiRequest<void>('/api/v1/auth/logout', { method: 'POST', csrf: auth.csrf_token }) }
+    finally {
+      setAuth(null)
+      window.history.pushState(null, '', '/')
+      window.dispatchEvent(new Event('izo:navigate'))
+    }
+  }
+
   return <div className={`app ${chat ? 'chat-shell' : ''}`} data-platform={host}>
     <a className="skip-link" href="#main">К содержимому</a>
-    <PrimarySidebar path={path} auth={auth} />
-    <div className="app-body">
-      <TopBar path={path} auth={auth} theme={theme} mobileMenu={mobileMenu}
-        onToggleMenu={() => setMobileMenu(value => !value)}
-        onToggleTheme={() => setTheme(value => value === 'light' ? 'dark' : 'light')} />
-      <div className={chat ? 'content chat-content' : 'content'}><main id="main" tabIndex={-1}>
-        {accessAdmin ? <AccessPage key={path} /> : admin ? <AdminPage key={path} path={path} /> : credits ? <CreditsPage />
-          : security ? <SecurityPage key={path} mode={security} />
-          : account ? <AccountPage key={path} mode={path === '/register' ? 'register' : path === '/login' ? 'login' : 'account'} />
-          : chat ? <ChatPage /> : feed ? <FeedPage /> : studio ? <Studio key={path} /> : gallery ? <Gallery key={path} />
-          : detail ? <AssetPage key={path} id={path.slice('/gallery/'.length)} />
-          : jobs ? <ResultPanel key={path} id={path === '/jobs' ? undefined : path.slice('/jobs/'.length)} />
-          : <SectionPage path={path} />}
-      </main>{!chat && <footer><span>ИЗО АСА</span></footer>}</div>
-    </div>
+    <TopBar path={path} auth={auth} theme={theme} onThemeChange={setTheme} onLogout={() => void logout()} />
+    <div className={chat ? 'content chat-content' : 'content'}><main id="main" tabIndex={-1}>
+      {accessAdmin ? <AccessPage key={path} /> : admin ? <AdminPage key={path} path={path} /> : credits ? <CreditsPage />
+        : security ? <SecurityPage key={path} mode={security} />
+        : account ? <AccountPage key={path} mode={path === '/register' ? 'register' : path === '/login' ? 'login' : 'account'} />
+        : chat ? <ChatPage auth={auth} theme={theme} onThemeChange={setTheme} onLogout={() => void logout()} />
+        : feed ? <FeedPage /> : studio ? <Studio key={path} /> : gallery ? <Gallery key={path} />
+        : detail ? <AssetPage key={path} id={path.slice('/gallery/'.length)} />
+        : jobs ? <ResultPanel key={path} id={path === '/jobs' ? undefined : path.slice('/jobs/'.length)} />
+        : section ? <SectionPage path={path} /> : <SectionPage path={path} />}
+    </main>{!chat && <footer><span>ИЗО АСА</span></footer>}</div>
   </div>
 }
