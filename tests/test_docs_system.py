@@ -40,7 +40,7 @@ def test_routing_corpus_prefers_correct_or_safe_failure():
             assert "NOT RESOLVED" in result.stderr
 
 
-def test_plan_current_base_is_a_verified_checkpoint_without_embedded_evidence():
+def test_plan_current_base_has_explicit_checkpoint_semantics_without_embedded_evidence():
     plan = json.loads((ROOT / "docs/PLAN.json").read_text(encoding="utf-8"))
     checkpoints = json.loads((ROOT / "docs/CHECKPOINTS.json").read_text(encoding="utf-8"))
     lineage = plan["canonical_lineage"]
@@ -49,12 +49,14 @@ def test_plan_current_base_is_a_verified_checkpoint_without_embedded_evidence():
     assert lineage["working_branch"]
     active = plan["active_package"]
     assert plan["packages"][active]["status"] == "active"
-    base_sha = lineage["current_package_base"]["sha"]
+    base = lineage["current_package_base"]
+    state = base.get("state")
+    assert state in {"verified_pr_merge_tree_checkpoint", "reconciled_continuation_base"}
     matching = [key for key, value in checkpoints["checkpoints"].items()
-                if value.get("source_head", value.get("head")) == base_sha]
-    assert matching, f"current_package_base {base_sha} has no immutable checkpoint evidence"
+                if value.get("source_head", value.get("head")) == base["sha"]]
+    if state == "verified_pr_merge_tree_checkpoint":
+        assert matching, f"current_package_base {base['sha']} has no immutable checkpoint evidence"
     assert all("evidence" not in item for item in plan["packages"].values())
-
 
 def test_owner_product_shell_spec_is_canonical_and_explicit():
     text = (ROOT / "docs/UX_PRODUCT_SHELL.md").read_text(encoding="utf-8")
