@@ -20,7 +20,7 @@ async function O(p:Z){const x=B(p,N.n);if(await x.isVisible())await x.click()}
 test.beforeEach(async({page})=>page.route('**/api/v1/auth/me',r=>r.fulfill({status:401,json:{error:{code:'auth_required'}}})))
 test('r',async({page})=>{
 for(const path of ['/','/image','/video','/audio','/3d','/feed','/gallery']){await page.goto(path);await Promise.all([
-C(H(page),1),C(page.getByRole('navigation',{name:'Режимы ИЗО АСА'}).getByRole('link'),5),C(page.getByText('Страница не найдена',{exact:true}),0)])}
+C(H(page),1),C(page.getByRole('navigation',{name:/ИЗО АСА$/}).getByRole('link'),5),C(page.getByText('Страница не найдена',{exact:true}),0)])}
 await page.goto('/studio/video');await e(page).toHaveURL(/\/video$/);await X(page.getByRole('heading',{level:1}),'Видео')
 await page.goto('/help');await C(page.getByText('Начните с обычного запроса и выберите инструмент, если нужен результат другого типа.',{exact:true}),0)
 await V(page.getByText('Опишите задачу обычным языком. Прямые инструменты для изображений, видео, звука и 3D доступны отдельными разделами.',{exact:true}))
@@ -84,7 +84,7 @@ test.skip(!i.project.name.startsWith('phone'));await F(page);if(i.project.name==
 const m=await page.evaluate(()=>{const a=document.querySelector('.app.chat-shell')!.getBoundingClientRect(),h=document.querySelector('[data-testid="global-header"]')!.getBoundingClientRect(),c=document.querySelector('.chat-composer')!.getBoundingClientRect()
 return{v:visualViewport?.height??innerHeight,h:parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--chat-viewport-height')),a:a.top,t:h.top,c:c.bottom}});e([Math.abs(m.h-m.v)<=1,m.a>=0,m.t>=0,m.c<=m.v+1]).toEqual([true,true,true,true])}
 const h=H(page),s=S(page);await V(B(page,N.n));const b=await s.boundingBox();e(b?b.x+b.width:1).toBeLessThanOrEqual(0)
-await V(L(page.getByRole('navigation',{name:'Режимы ИЗО АСА'}),'Изображение'));const x=(await h.boundingBox())?.height??0;e([x>=63,x<=65]).toEqual([true,true])
+await V(L(page.getByRole('navigation',{name:/ИЗО АСА$/}),'Изображение'));const x=(await h.boundingBox())?.height??0;e([x>=63,x<=65]).toEqual([true,true])
 await G(page);await page.reload();e((await D(page,'token-main').boundingBox())?.width??0).toBeGreaterThanOrEqual(46);await Y(page)
 })
 for(const host of ['telegram','max'] as const)test(host,async({page})=>{

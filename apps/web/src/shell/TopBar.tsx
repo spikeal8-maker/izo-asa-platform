@@ -98,13 +98,13 @@ export function TopBar({ path, auth, theme, onThemeChange, onLogout }: {
 
   useEffect(() => {
     setCredits(null)
-    if (!auth) return
+    if (!auth || path === '/gallery' || path.startsWith('/gallery/')) return
     const controller = new AbortController()
     apiRequest<Credits>('/api/v1/credits', { signal: controller.signal })
       .then(value => setCredits(value.balance.available))
       .catch(() => setCredits(null))
     return () => controller.abort()
-  }, [auth?.account.id])
+  }, [auth?.account.id, path])
 
   useEffect(() => {
     const close = (event: PointerEvent) => {
@@ -146,7 +146,7 @@ export function TopBar({ path, auth, theme, onThemeChange, onLogout }: {
       </nav>
     </div>
 
-    <nav className="product-nav" aria-label="Режимы ИЗО АСА">
+    <nav className="product-nav" aria-label="Творческие инструменты ИЗО АСА">
       {workspaces.map(item => <Link key={item.id} href={item.path}
         className={path === item.path ? 'product-tab active' : 'product-tab'}
         aria-current={path === item.path ? 'page' : undefined} aria-label={item.title}>
@@ -166,6 +166,10 @@ export function TopBar({ path, auth, theme, onThemeChange, onLogout }: {
           <Icon name="gem" /><span className="token-value">{mainTokens}</span>
         </Link>
       </div>
+      {auth && <button type="button" className="header-theme-toggle" aria-label="Переключить тему"
+        data-theme-value={theme} onClick={() => onThemeChange(theme === 'light' ? 'dark' : 'light')}>
+        <Icon name="sun" />
+      </button>}
 
       {auth ? <div className="profile-control" ref={profile}
         onKeyDown={event => {

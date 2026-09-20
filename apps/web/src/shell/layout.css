@@ -25,6 +25,9 @@ footer { display: flex; justify-content: space-between; align-items: center; gap
 .workspace-preview h2 { font-size: 1rem; }
 .job-detail { max-width: 1120px; }
 
+.staff-context { display: flex; justify-content: flex-end; padding-top: 8px; }
+.staff-context .staff-link { min-height: 36px; display: inline-flex; align-items: center; padding: 0 10px; border-radius: 9px; color: var(--color-text-secondary); }
+
 @media (min-width: 2200px) {
   .content { max-width: 4500px; padding-left: 92px; padding-right: 92px; }
 }
@@ -112,6 +115,10 @@ footer { display: flex; justify-content: space-between; align-items: center; gap
   font-weight: 550;
 }
 
+.header-theme-toggle { width: clamp(34px, calc(25px + .5vw), 52px); height: clamp(34px, calc(25px + .5vw), 52px); padding: 0; border: 0; border-radius: 50%; display: grid; place-items: center; background: transparent; color: var(--color-text); }
+.header-theme-toggle:hover { background: color-mix(in srgb, var(--color-text) 6%, var(--color-surface)); }
+.header-theme-toggle .icon { width: 18px; height: 18px; }
+
 .profile-control { position: relative; flex: 0 0 auto; }
 
 .header-avatar {
@@ -173,7 +180,8 @@ footer { display: flex; justify-content: space-between; align-items: center; gap
 
 .login-button { height: 32px; padding: 0 8px; font-size: 12px; }
 
-.header-avatar { width: 32px; height: 32px; font-size: 10px; }
+.header-theme-toggle, .header-avatar { width: 32px; height: 32px; }
+.header-avatar { font-size: 10px; }
 }
 
 @media (max-width: 760px) {
@@ -235,7 +243,8 @@ footer { display: flex; justify-content: space-between; align-items: center; gap
 
 .login-button { height: 28px; padding: 0 5px; border-radius: 7px; font-size: 10px; }
 
-.header-avatar { width: 28px; height: 28px; font-size: 9px; }
+.header-theme-toggle, .header-avatar { width: 28px; height: 28px; }
+.header-avatar { font-size: 9px; }
 }
 
 @media (max-width: 390px) {
@@ -277,5 +286,5 @@ footer { display: flex; justify-content: space-between; align-items: center; gap
 
 .login-button { height: 26px; padding: 0 3px; font-size: 8.5px; }
 
-.header-avatar { width: 26px; height: 26px; }
+.header-theme-toggle, .header-avatar { width: 26px; height: 26px; }
 }

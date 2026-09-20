@@ -10,7 +10,7 @@ import { Gallery } from '../features/gallery/Gallery'
 import { AssetPage } from '../features/gallery/AssetPage'
 import { AccountPage } from '../features/accounts/AccountPage'
 import { SecurityPage, securityPages } from '../features/accounts/SecurityPage'
-import { AdminPage } from '../features/admin/AdminPage'
+import { AdminLink, AdminPage } from '../features/admin/AdminPage'
 import { AccessPage } from '../features/admin/AccessPage'
 import { CreditsPage } from '../features/credits/CreditsPage'
 import { FeedPage } from '../features/feed/FeedPage'
@@ -86,7 +86,9 @@ export function App() {
   return <div className={`app ${chat ? 'chat-shell' : ''}`} data-platform={host}>
     <a className="skip-link" href="#main">К содержимому</a>
     <TopBar path={path} auth={auth} theme={theme} onThemeChange={setTheme} onLogout={() => void logout()} />
-    <div className={chat ? 'content chat-content' : 'content'}><main id="main" tabIndex={-1}>
+    <div className={chat ? 'content chat-content' : 'content'}>
+      {admin && <aside className="staff-context" aria-label="Административный доступ"><AdminLink path={path} /></aside>}
+      <main id="main" tabIndex={-1}>
       {accessAdmin ? <AccessPage key={path} /> : admin ? <AdminPage key={path} path={path} /> : credits ? <CreditsPage />
         : security ? <SecurityPage key={path} mode={security} />
         : account ? <AccountPage key={path} mode={path === '/register' ? 'register' : path === '/login' ? 'login' : 'account'} />
