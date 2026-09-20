@@ -15,6 +15,11 @@ READY_DEPENDENCY_STATUSES = {
     "historical_technical_pass",
 }
 NEXT_PACKAGE_SOURCE_STATUSES = {"planned"}
+RECONCILIATION_GAPS = {
+    "scope", "independent_review", "owner_visual_acceptance",
+    "ci", "runtime", "operational",
+}
+INCOMPLETE_REFERENCE_STATUS = "superseded_incomplete_reference"
 
 
 def load_plan(root: Path = ROOT) -> dict:
@@ -46,8 +51,9 @@ def render_current(plan: dict) -> str:
 
 Текущий package разрабатывается только в **working_branch**. `current_package_base` — его уже замороженный
 родитель и используется для ancestry-проверки; **не выбирать его вручную как base следующего package**.
-Следующий package стартует командой `python tools/project_state.py begin-next ...`: она проверяет GitHub PR
-и required workflows текущего working head, создаёт новую ветку точно от этого head и только там меняет state.
+Нормально принятый package продолжает `python tools/project_state.py begin-next ...`: команда проверяет PR и CI,
+создаёт новую ветку точно от verified working head и только там меняет state. Если active package нельзя честно принять,
+а canonical branch уже продвинулась независимыми verified merges, используется только explicit `reconcile-continuation`.
 
 Активный пакет: **{active}**. Следующий: **{next_text}**.
 Параллельные lineages из PLAN нельзя использовать как base без reconciliation.
@@ -78,6 +84,24 @@ def validate_plan(plan: dict) -> None:
         deps = item.get("depends_on", [])
         if not isinstance(deps, list) or any(dep not in packages or dep == key for dep in deps):
             raise ValueError(f"invalid dependencies for {key}: {deps}")
+        continues = item.get("continues")
+        if continues is not None and (continues not in packages or continues == key):
+            raise ValueError(f"invalid continuation for {key}: {continues}")
+        superseded_by = item.get("superseded_by")
+        if superseded_by is not None and (superseded_by not in packages or superseded_by == key):
+            raise ValueError(f"invalid superseded_by for {key}: {superseded_by}")
+        if item.get("status") == INCOMPLETE_REFERENCE_STATUS:
+            reference = str(item.get("reference_head", ""))
+            gaps = item.get("acceptance_gaps")
+            if not re.fullmatch(r"[0-9a-f]{40}", reference):
+                raise ValueError(f"{key} requires reference_head")
+            if (not isinstance(gaps, list) or not gaps or len(set(gaps)) != len(gaps)
+                    or any(gap not in RECONCILIATION_GAPS for gap in gaps)):
+                raise ValueError(f"{key} requires valid acceptance_gaps")
+            if superseded_by is None or packages[superseded_by].get("continues") != key:
+                raise ValueError(f"{key} requires reciprocal continuation")
+            if "checkpoint" in item:
+                raise ValueError(f"{key} cannot have checkpoint")
     for dep in packages.get(active_id, {}).get("depends_on", []):
         if packages[dep].get("status") not in READY_DEPENDENCY_STATUSES:
             raise ValueError(f"active package dependency is not ready: {dep}={packages[dep].get('status')}")
@@ -140,6 +164,53 @@ def transition(plan: dict, *, activate: str, next_id: str | None,
     lineage["working_branch"] = new_branch
     if next_id is not None:
         result["packages"][next_id]["status"] = "planned_next"
+    validate_plan(result)
+    return result
+
+
+def reconcile_continuation_transition(plan: dict, *, activate: str, new_branch: str,
+                                      source_head: str, reference_head: str,
+                                      acceptance_gaps: list[str]) -> dict:
+    validate_plan(plan)
+    active = plan["active_package"]
+    packages = plan["packages"]
+    if plan.get("next_package") is not None:
+        raise ValueError("reconciliation requires next_package=null")
+    if not packages[active].get("decides_next"):
+        raise ValueError("active package must decide next")
+    target = packages.get(activate)
+    if target is None or target.get("status") != "planned":
+        raise ValueError(f"{activate} must exist with status planned")
+    if target.get("continues") != active:
+        raise ValueError(f"{activate} must continue active package {active}")
+    if new_branch == plan["canonical_lineage"]["working_branch"]:
+        raise ValueError("new branch required")
+    if any(not re.fullmatch(r"[0-9a-f]{40}", value) for value in (source_head, reference_head)):
+        raise ValueError("source/reference head requires full lowercase SHA")
+    if reference_head == source_head:
+        raise ValueError("same source: use normal lifecycle")
+    if (not acceptance_gaps or len(set(acceptance_gaps)) != len(acceptance_gaps)
+            or any(gap not in RECONCILIATION_GAPS for gap in acceptance_gaps)):
+        raise ValueError("invalid gaps")
+    for dep in target.get("depends_on", []):
+        status = packages[dep].get("status")
+        if status not in READY_DEPENDENCY_STATUSES:
+            raise ValueError(f"dependency {dep} is not ready: {status}")
+
+    result = json.loads(json.dumps(plan))
+    old = result["packages"][active]
+    old.update(status=INCOMPLETE_REFERENCE_STATUS, reference_head=reference_head,
+               acceptance_gaps=list(acceptance_gaps), superseded_by=activate)
+    old.pop("checkpoint", None)
+    old.pop("evidence", None)
+    result["packages"][activate]["status"] = "active"
+    result["active_package"] = activate
+    result["next_package"] = None
+    lineage = result["canonical_lineage"]
+    lineage["current_package_base"] = {
+        "branch": lineage["working_branch"], "sha": source_head,
+        "state": "reconciled_continuation_base"}
+    lineage["working_branch"] = new_branch
     validate_plan(result)
     return result
 

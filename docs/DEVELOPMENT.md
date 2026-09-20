@@ -72,8 +72,13 @@ SELF_REVIEW и CI. Требуется отдельное review evidence.
 Общий CI не заменяется локальными тестами. Skipped stage не является доказательством.
 
 После required workflows current working head замораживается; source/status больше не меняются.
-Следующий package запускается только `project_state.py begin-next`, который проверяет PR/source/workflows/dependencies,
-создаёт ветку от frozen source и уже там меняет PLAN/CURRENT/CHECKPOINTS.
+Следующий нормально принятый package запускается только `project_state.py begin-next`, который проверяет
+PR/source/workflows/dependencies, создаёт ветку от frozen source и уже там меняет PLAN/CURRENT/CHECKPOINTS.
+
+`project_state.py reconcile-continuation` — отдельный fail-closed transition только для случая, когда active package
+нельзя честно принять, но его canonical branch уже продвинулась независимыми verified merges. Он сохраняет historical
+package как `superseded_incomplete_reference` с явными acceptance gaps, не создаёт checkpoint и начинает continuation
+от текущего canonical HEAD. Это не shortcut для обхода CI, scope, independent review или owner acceptance.
 
 Merge/deploy/live-provider call — отдельные действия.
 

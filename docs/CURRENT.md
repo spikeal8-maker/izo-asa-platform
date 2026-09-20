@@ -12,8 +12,9 @@
 
 Текущий package разрабатывается только в **working_branch**. `current_package_base` — его уже замороженный
 родитель и используется для ancestry-проверки; **не выбирать его вручную как base следующего package**.
-Следующий package стартует командой `python tools/project_state.py begin-next ...`: она проверяет GitHub PR
-и required workflows текущего working head, создаёт новую ветку точно от этого head и только там меняет state.
+Нормально принятый package продолжает `python tools/project_state.py begin-next ...`: команда проверяет PR и CI,
+создаёт новую ветку точно от verified working head и только там меняет state. Если active package нельзя честно принять,
+а canonical branch уже продвинулась независимыми verified merges, используется только explicit `reconcile-continuation`.
 
 Активный пакет: **FRONTEND-001**. Следующий: **NONE**.
 Параллельные lineages из PLAN нельзя использовать как base без reconciliation.

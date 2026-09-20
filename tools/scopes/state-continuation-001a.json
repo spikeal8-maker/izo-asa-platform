@@ -1,0 +1,21 @@
+{
+  "package_id": "STATE-CONTINUATION-001A",
+  "base": "6d54143b2bec56049a07bd065dc934c85ba047c0",
+  "scope_class": "tiny",
+  "risk": "high",
+  "independent_review_required": true,
+  "max_files": 6,
+  "allowed": [
+    "tools/project_state.py",
+    "tools/project_state_model.py",
+    "tests/test_project_state.py",
+    "docs/CURRENT.md",
+    "docs/DEVELOPMENT.md",
+    "tools/scopes/state-continuation-001a.json"
+  ],
+  "sensitive_approved": [
+    "tools/project_state.py",
+    "tools/project_state_model.py",
+    "tools/scopes/state-continuation-001a.json"
+  ]
+}
