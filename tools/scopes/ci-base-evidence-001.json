@@ -1,0 +1,16 @@
+{
+  "package_id": "CI-BASE-EVIDENCE-001",
+  "base": "5c0e79b6fc3a7120207d0889b176fbfed3dab973",
+  "scope_class": "tiny",
+  "risk": "medium",
+  "max_files": 3,
+  "allowed": [
+    ".github/workflows/ci.yml",
+    "tests/test_ci_source_history.py",
+    "tools/scopes/ci-base-evidence-001.json"
+  ],
+  "sensitive_approved": [
+    ".github/workflows/ci.yml",
+    "tools/scopes/ci-base-evidence-001.json"
+  ]
+}
