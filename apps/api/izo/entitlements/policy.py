@@ -60,8 +60,6 @@ def evaluate(view: EntitlementView, demand: ImageDemand, runtime: RuntimeState,
 
     if view.account_state != "active":
         return result("account_restricted")
-    if not view.identity_verified:
-        return result("verification_required")
     if not runtime.feature_enabled:
         return result("feature_unavailable")
     p = view.policy

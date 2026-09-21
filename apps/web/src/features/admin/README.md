@@ -4,9 +4,11 @@
 
 | Видимый блок / задача | Основной файл | Ближайший test |
 |---|---|---|
-| Admin route/list/detail shell | `AdminPage.tsx` | `e2e/admin.spec.ts` |
+| Admin loading/search/audit orchestration | `AdminPage.tsx` | `e2e/admin.spec.ts` |
+| Users/detail/audit presentation | `AdminPanels.tsx` | `e2e/admin.spec.ts` |
 | Начисление/компенсация | `GrantForm.tsx` | `e2e/admin.spec.ts` |
-| A-28 доступ персонала | `AccessPage.tsx` | `e2e/access.spec.ts` |
+| ACCESS load/mutate orchestration | `AccessPage.tsx` | `e2e/access.spec.ts` |
+| ACCESS lookup/subject presentation | `AccessPanels.tsx` | `e2e/access.spec.ts` |
 | Общий transport/CSRF | `../../shared/api.ts` | affected admin/access spec |
 
 ## Инварианты
@@ -19,5 +21,5 @@
 - password очищается после каждой попытки и не хранится в receipt/local storage;
 - raw provider secrets не должны появляться в generic admin form.
 
-Для локального текста/layout не читать весь `docs/ADMIN.md`. Если меняется permission, delegation ceiling,
-settings/catalog semantics — перейти в `api.access`/`api.admin` и только затем открыть соответствующий раздел ADMIN.
+Для локального текста/layout открывать соответствующий panel-owner, а не весь feature. Если меняется permission,
+delegation ceiling, settings/catalog semantics — перейти в `api.access`/`api.admin` и только затем открыть ADMIN.

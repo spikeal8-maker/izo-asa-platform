@@ -8,7 +8,7 @@
     X-Content-Type-Options nosniff
     Referrer-Policy no-referrer
     X-Robots-Tag "noindex, nofollow"
-    Content-Security-Policy "default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data:; connect-src 'self'; object-src 'none'; base-uri 'self'; frame-ancestors 'self'"
+    Content-Security-Policy "default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data: blob:; connect-src 'self'; object-src 'none'; base-uri 'self'; frame-ancestors 'self'"
   }
   encode gzip
   handle /api/* {

@@ -18,8 +18,6 @@ def context(auth, conn, bearer, csrf=None, *, mutation=False, write=False):
         raise AuthError(403, "account_restricted")
     if write and account["state"] != "active":
         raise AuthError(403, "account_restricted")
-    if write and account["verified_at"] is None:
-        raise AuthError(403, "verification_required")
     return MediaPrincipal(account["id"], session["id"], auth.now())
 
 

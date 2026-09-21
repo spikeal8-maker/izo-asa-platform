@@ -38,8 +38,17 @@ def database_ready(config: Settings) -> bool:
         return False
 
 
+def auth_ready() -> bool:
+    try:
+        from .accounts.settings import AuthSettings
+        AuthSettings().require_configured()
+        return True
+    except Exception:
+        return False
+
+
 def dependencies_ready(config: Settings) -> bool:
-    if not database_ready(config):
+    if not auth_ready() or not database_ready(config):
         return False
     if not config.s3_access_key.get_secret_value() or not config.s3_secret_key.get_secret_value():
         return False
