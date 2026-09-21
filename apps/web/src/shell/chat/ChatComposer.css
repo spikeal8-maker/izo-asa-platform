@@ -8,16 +8,16 @@ padding:clamp(22px,2.2vw,46px) clamp(12px,1.2vw,28px) clamp(8px,.7vw,16px);
 background:linear-gradient(to bottom,transparent 0%,var(--color-surface) 28%,var(--color-surface) 100%);
 }
 .chat-composer-wrap {
-width:min(100%,clamp(680px,76cqw,2400px));
+width:min(100%,clamp(680px,76cqw,3600px));
 margin:0 auto;
 container-type:inline-size;
 }
 .chat-composer {
---composer-control-size:clamp(38px,calc(34px + 1cqw),58px);
+--composer-control-size:clamp(38px,calc(34px + .75cqw),72px);
 --composer-gap:clamp(4px,.45cqw,10px);
 --composer-pad:clamp(6px,.6cqw,13px);
---composer-input-size:clamp(16px,calc(14px + .36cqw),24px);
---composer-label-size:clamp(13px,calc(11px + .24cqw),19px);
+--composer-input-size:clamp(16px,calc(14px + .3cqw),28px);
+--composer-label-size:clamp(13px,calc(11px + .22cqw),21px);
 position:relative;
 display:grid;
 grid-template-columns:var(--composer-control-size) minmax(0,1fr) auto var(--composer-control-size) var(--composer-control-size);
@@ -108,7 +108,7 @@ place-items:center;
 background:transparent;
 }
 .chat-circle-button:hover:not(:disabled) { background:color-mix(in srgb,var(--color-text) 6%,transparent); }
-.chat-circle-button .icon { width:clamp(19px,2cqw,28px); height:clamp(19px,2cqw,28px); }
+.chat-circle-button .icon { width:clamp(19px,1.5cqw,30px); height:clamp(19px,1.5cqw,30px); }
 .chat-model-selector {
 height:var(--composer-control-size);
 min-height:var(--composer-control-size);
@@ -164,7 +164,7 @@ background:color-mix(in srgb,var(--color-text) 16%,var(--color-surface));
 color:var(--color-surface);
 opacity:1;
 }
-.chat-send-button .icon { width:clamp(17px,1.7cqw,24px); height:clamp(17px,1.7cqw,24px); }
+.chat-send-button .icon { width:clamp(17px,1.3cqw,26px); height:clamp(17px,1.3cqw,26px); }
 .chat-popover {
 position:absolute;
 z-index:80;
@@ -268,7 +268,7 @@ transition:transform 42ms linear;
 margin-top:clamp(6px,.5cqw,10px);
 text-align:center;
 color:var(--color-text-secondary);
-font-size:clamp(11px,calc(9.5px + .16cqw),15px);
+font-size:clamp(11px,calc(9.5px + .14cqw),17px);
 line-height:1.3;
 }
 
