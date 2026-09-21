@@ -4,7 +4,7 @@
   "scope_class": "cross_domain",
   "risk": "high",
   "independent_review_required": true,
-  "max_files": 25,
+  "max_files": 26,
   "large_scope_reason": "Owner-revised frontend continuation owns the existing visual shell WIP recovered after independent CI/Auth merges, without absorbing backend or Agent-System work.",
   "domains": [
     "web-shell",
@@ -25,6 +25,7 @@
     "docs/CURRENT.md",
     "tools/scopes/frontend-002.json",
     "apps/web/e2e/shell.spec.ts",
+    "apps/web/e2e/gallery.spec.ts",
     "apps/web/index.html",
     "apps/web/public/favicon.svg",
     "apps/web/src/shared/ui/Icon.tsx",
