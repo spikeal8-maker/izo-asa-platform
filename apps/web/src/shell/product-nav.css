@@ -128,7 +128,7 @@
 .menu-logout { color: var(--color-text); }
 
 @media (max-width: 1119px) {
-  .token-pill.daily, .token-pill.main { min-width: clamp(44px, 7vw, 58px); }
+  .token-pill.daily, .token-pill.main { min-width: clamp(46px, 7vw, 58px); }
   .token-pill {
     height: clamp(28px, calc(26px + .5vw), 34px);
     padding-inline: clamp(2px, .6vw, 5px);
@@ -163,7 +163,7 @@
 }
 
 @media (max-width: 360px) {
-  .token-pill.daily, .token-pill.main { min-width: 40px; }
+  .token-pill.daily, .token-pill.main { min-width: 46px; }
   .token-value, .token-pill.main .token-value { min-width: 16px; font-size: 10.5px; }
   .product-tab { font-size: 11.5px; gap: 2px; }
   .product-tab .icon { width: 16px; height: 16px; }
