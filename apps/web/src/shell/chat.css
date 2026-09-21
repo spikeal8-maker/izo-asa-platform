@@ -2,7 +2,7 @@
 .chat-content main { height: 100%; }
 .chat-page {
   --chat-toolbar-height: clamp(48px, calc(40px + .55vw), 88px);
-  --chat-sidebar-width: clamp(280px, 17vw, 720px);
+  --chat-sidebar-width: clamp(280px, 16vw, 960px);
   --chat-control-size: clamp(40px, calc(36px + .3vw), 64px);
   --chat-icon-size: clamp(19px, calc(17px + .15vw), 30px);
   --chat-label-size: clamp(14px, calc(12px + .16vw), 22px);
@@ -51,7 +51,7 @@
   position: relative;
 }
 .chat-column {
-  width: min(calc(100% - var(--chat-gap-lg) * 2), clamp(720px, 80cqw, 2700px));
+  width: min(calc(100% - var(--chat-gap-lg) * 2), clamp(720px, 78cqw, 4000px));
   margin: 0 auto;
   min-height: 100%;
   padding: var(--chat-gap-lg) 0 clamp(130px, 12vh, 280px);
@@ -68,7 +68,7 @@
 }
 .chat-start-state h1 {
   margin: 0;
-  font-size: clamp(28px, calc(22px + 1.05cqw), 76px);
+  font-size: clamp(28px, calc(22px + .95cqw), 88px);
   line-height: 1.16;
   font-weight: 600;
   letter-spacing: -.035em;
