@@ -1,88 +1,105 @@
-import { useRef, useState, type FormEvent } from 'react'
-import { Icon, type IconName } from '../shared/ui/Icon'
-import { Link } from './router'
+import { useEffect, useState } from 'react'
+import type { AuthView } from '../shared/api'
+import { Icon } from '../shared/ui/Icon'
+import { ChatComposer } from './chat/ChatComposer'
+import { ChatSidebar } from './chat/ChatSidebar'
+import type { LocalChat, LocalTurn } from './chat/types'
+import { useVisualViewport } from './chat/useVisualViewport'
 import './chat.css'
 
-type LocalTurn = { id: number; text: string }
+const runtimeNotice = 'Текстовый помощник пока не подключён к серверу. Выбранные инструменты и вложения здесь не имитируют серверную обработку.'
 
-const tools: { href: string; label: string; icon: IconName; detail: string }[] = [
-  { href: '/image', label: 'Изображение', icon: 'image', detail: 'Создать или отредактировать изображение' },
-  { href: '/studio/video', label: 'Видео', icon: 'video', detail: 'Оживить изображение или собрать сцену' },
-  { href: '/studio/audio', label: 'Звук', icon: 'audio', detail: 'Озвучка, музыка и работа с голосом' },
-  { href: '/studio/3d', label: '3D', icon: 'cube', detail: 'Создание и подготовка 3D-объектов' },
-]
-
-export function ChatPage() {
-  const [draft, setDraft] = useState('')
+export function ChatPage({ auth, theme, onThemeChange, onLogout }: {
+  auth: AuthView | null | undefined
+  theme: 'light' | 'dark'
+  onThemeChange: (value: 'light' | 'dark') => void
+  onLogout: () => void
+}) {
   const [turns, setTurns] = useState<LocalTurn[]>([])
-  const [toolsOpen, setToolsOpen] = useState(false)
+  const [history, setHistory] = useState<LocalChat[]>([])
+  const [currentChatId, setCurrentChatId] = useState<number | null>(null)
   const [notice, setNotice] = useState('')
-  const textarea = useRef<HTMLTextAreaElement>(null)
+  const [sidebarOpen, setSidebarOpen] = useState(() => window.matchMedia('(min-width: 761px)').matches)
 
-  function resize() {
-    const element = textarea.current
-    if (!element) return
-    element.style.height = 'auto'
-    element.style.height = `${Math.min(element.scrollHeight, 160)}px`
+  useVisualViewport()
+
+  useEffect(() => {
+    const media = window.matchMedia('(max-width: 760px)')
+    const collapseOnMobile = () => { if (media.matches) setSidebarOpen(false) }
+    collapseOnMobile()
+    media.addEventListener('change', collapseOnMobile)
+    return () => media.removeEventListener('change', collapseOnMobile)
+  }, [])
+
+  function newChat() {
+    setCurrentChatId(null)
+    setTurns([])
+    setNotice('')
+    if (window.matchMedia('(max-width: 760px)').matches) setSidebarOpen(false)
   }
 
-  function submit(event: FormEvent) {
-    event.preventDefault()
-    const text = draft.trim()
-    if (!text) return
-    setTurns(current => [...current, { id: Date.now(), text }])
-    setDraft('')
-    setToolsOpen(false)
-    setNotice('Текстовый помощник пока не подключён к серверу. Изображения уже доступны через режим «Изображение».')
-    requestAnimationFrame(() => {
-      if (textarea.current) textarea.current.style.height = 'auto'
+  function openChat(chat: LocalChat) {
+    setCurrentChatId(chat.id)
+    setTurns(chat.turns)
+    setNotice(chat.turns.length ? runtimeNotice : '')
+    if (window.matchMedia('(max-width: 760px)').matches) setSidebarOpen(false)
+  }
+
+  function send(text: string) {
+    const now = Date.now()
+    const turn = { id: now, text }
+    const nextTurns = [...turns, turn]
+    const chatId = currentChatId ?? now
+    setTurns(nextTurns)
+    setCurrentChatId(chatId)
+    setHistory(current => {
+      const entry = { id: chatId, title: nextTurns[0]?.text.slice(0, 72) || 'Чат', turns: nextTurns }
+      return [entry, ...current.filter(item => item.id !== chatId)]
     })
+    setNotice(runtimeNotice)
   }
 
   const empty = turns.length === 0
-  return <section className={`chat-page ${empty ? 'is-empty' : ''}`} aria-label="Чат ИЗО АСА">
-    <div className="chat-scroll" aria-live="polite">
-      <div className="chat-column">
-        {empty ? <div className="chat-empty"><h1>Чем я могу помочь?</h1></div> : <div className="chat-turns">
-          {turns.map(turn => <div className="chat-turn chat-turn-user" key={turn.id}>
-            <div className="chat-user-bubble">{turn.text}</div>
-          </div>)}
-          {notice && <div className="chat-runtime-note" role="status"><Icon name="info" /><span>{notice}</span></div>}
-        </div>}
-      </div>
-    </div>
 
-    <div className="chat-composer-dock">
-      <div className="chat-composer-wrap">
-        <form className="chat-composer" onSubmit={submit}>
-          <textarea ref={textarea} rows={1} value={draft} aria-label="Сообщение"
-            placeholder="Спросите что-нибудь" onChange={event => { setDraft(event.target.value); resize() }}
-            onKeyDown={event => {
-              if (event.key === 'Enter' && !event.shiftKey && !event.nativeEvent.isComposing) {
-                event.preventDefault()
-                event.currentTarget.form?.requestSubmit()
-              }
-            }} />
-          <div className="chat-composer-bottom">
-            <div className="chat-composer-left">
-              <button type="button" className="chat-circle-button" aria-label="Добавить" aria-expanded={toolsOpen}
-                onClick={() => setToolsOpen(value => !value)}><Icon name="plus" /></button>
-              <button type="button" className="chat-tools-button" aria-expanded={toolsOpen}
-                onClick={() => setToolsOpen(value => !value)}><Icon name="spark" /><span>Инструменты</span></button>
-            </div>
-            <div className="chat-composer-right">
-              <button type="button" className="chat-circle-button" aria-label="Голосовой ввод" disabled title="Голосовой ввод будет подключён отдельно"><Icon name="audio" /></button>
-              <button type="submit" className="chat-send-button" aria-label="Отправить" disabled={!draft.trim()}><Icon name="arrow" /></button>
-            </div>
-          </div>
-          {toolsOpen && <div className="chat-tools-popover" role="menu" aria-label="Инструменты">
-            {tools.map(tool => <Link key={tool.href} href={tool.href} role="menuitem" className="chat-tool-item">
-              <Icon name={tool.icon} /><span><strong>{tool.label}</strong><small>{tool.detail}</small></span>
-            </Link>)}
-          </div>}
-        </form>
-        <div className="chat-composer-note">ИЗО АСА может ошибаться. Проверяйте важную информацию.</div>
+  return <section className={`chat-page ${empty ? 'is-empty' : ''} ${sidebarOpen ? 'sidebar-open' : ''}`} aria-label="Чат ИЗО АСА">
+    <ChatSidebar
+      auth={auth}
+      history={history}
+      currentChatId={currentChatId}
+      theme={theme}
+      onThemeChange={onThemeChange}
+      onLogout={onLogout}
+      onNewChat={newChat}
+      onOpenChat={openChat}
+      onClose={() => setSidebarOpen(false)}
+    />
+
+    {sidebarOpen && <button className="chat-drawer-backdrop" aria-label="Закрыть историю" onClick={() => setSidebarOpen(false)} />}
+
+    <div className="chat-main">
+      <div className="chat-toolbar">
+        {!sidebarOpen && <button className="chat-icon-button chat-sidebar-open" aria-label="Открыть панель"
+          onClick={() => setSidebarOpen(true)}><Icon name="panel" /></button>}
       </div>
+
+      {empty
+        ? <div className="chat-start-state">
+            <h1>Чем я могу помочь?</h1>
+            <ChatComposer auth={auth} onSend={send} />
+          </div>
+        : <>
+            <div className="chat-scroll" aria-live="polite"><div className="chat-column">
+              <div className="chat-turns">
+                {turns.map(turn => <div className="chat-turn chat-turn-user" key={turn.id}>
+                  <div className="chat-user-bubble">{turn.text}</div>
+                </div>)}
+                {notice && <div className="chat-runtime-note" role="status"><Icon name="info" /><span>{notice}</span></div>}
+              </div>
+            </div></div>
+            <div className="chat-composer-dock">
+              <ChatComposer auth={auth} onSend={send} />
+            </div>
+          </>}
     </div>
   </section>
 }

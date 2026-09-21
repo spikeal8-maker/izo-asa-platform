@@ -1,92 +1,189 @@
+import { useEffect, useRef, useState, type KeyboardEvent } from 'react'
 import type { AuthView } from '../shared/api'
+import { apiRequest } from '../shared/api'
+import type { Credits } from '../shared/workspace-api'
 import { Icon, type IconName } from '../shared/ui/Icon'
-import { AdminLink } from '../features/admin/AdminPage'
 import { Link } from './router'
+import { workspaces } from './navigation'
 import './product-nav.css'
 
-const directions: { href: string; title: string; icon: IconName }[] = [
-  { href: '/', title: 'Чат', icon: 'chat' },
-  { href: '/image', title: 'Изображение', icon: 'image' },
-  { href: '/studio/video', title: 'Видео', icon: 'video' },
-  { href: '/studio/audio', title: 'Звук', icon: 'audio' },
-  { href: '/studio/3d', title: '3D', icon: 'cube' },
-]
-const primaryItems: { href: string; title: string; icon: IconName }[] = [
-  { href: '/', title: 'Чат', icon: 'chat' },
-  { href: '/feed', title: 'Лента', icon: 'feed' },
-  { href: '/gallery', title: 'Галерея', icon: 'grid' },
-]
+const icons: Record<(typeof workspaces)[number]['id'], IconName> = {
+  chat: 'chat', image: 'image', video: 'video', audio: 'audio', '3d': 'cube',
+}
+const socialLinks = [
+  { label: 'VK', short: 'VK', href: null },
+  { label: 'Instagram', short: 'IG', href: null },
+  { label: 'Telegram', short: 'TG', href: 'https://t.me/izo_asa_bot' },
+  { label: 'MAX', short: 'MAX', href: 'https://max.ru/id231408577954_4_bot' },
+] as const
 
-function mobileContext(path: string) {
-  if (path === '/' || path === '/studio/chat') return 'Чат'
-  if (path === '/feed') return 'Лента'
-  if (path === '/gallery' || path.startsWith('/gallery/')) return 'Галерея'
-  if (path === '/image' || path === '/studio/image') return 'Изображение'
-  const direction = directions.find(item => item.href === path)
-  if (direction) return direction.title
-  if (path.startsWith('/admin')) return 'Админка'
-  if (path.startsWith('/account') || path === '/login' || path === '/register') return 'Аккаунт'
-  if (path.startsWith('/jobs')) return 'Задание'
-  if (path === '/help') return 'Помощь'
-  return 'ИЗО АСА'
+function menuKeyboard(event: KeyboardEvent<HTMLDivElement>, close?: () => void) {
+  if (event.key === 'Escape') {
+    event.preventDefault()
+    close?.()
+    return
+  }
+  if (!['ArrowDown', 'ArrowUp', 'Home', 'End'].includes(event.key)) return
+  const items = Array.from(event.currentTarget.querySelectorAll<HTMLElement>(
+    '[role="menuitem"]:not([aria-disabled="true"]), [role="menuitemradio"]:not([aria-disabled="true"])',
+  )).filter(item => item.offsetParent !== null)
+  if (!items.length) return
+  event.preventDefault()
+  const current = items.indexOf(document.activeElement as HTMLElement)
+  let next = current
+  if (event.key === 'Home') next = 0
+  else if (event.key === 'End') next = items.length - 1
+  else if (event.key === 'ArrowDown') next = current < 0 ? 0 : (current + 1) % items.length
+  else next = current < 0 ? items.length - 1 : (current - 1 + items.length) % items.length
+  items[next]?.focus()
 }
 
-export function PrimarySidebar({ path, auth }: { path: string; auth: AuthView | null | undefined }) {
-  const active = (href: string) => href === '/'
-    ? path === '/' || path === '/studio/chat'
-    : href === '/gallery' ? path === '/gallery' || path.startsWith('/gallery/') : path === href
-  return <aside className="sidebar">
-    <Link href="/" className="brand" aria-label="ИЗО АСА — чат">
-      <span className="brand-mark"><Icon name="spark" /></span><span>ИЗО АСА</span>
-    </Link>
-    <nav aria-label="Основные разделы">{primaryItems.map(item => <Link href={item.href} key={item.href}
-      aria-label={item.title} className={active(item.href) ? 'active' : ''}
-      aria-current={active(item.href) ? 'page' : undefined}><Icon name={item.icon} /><span>{item.title}</span></Link>)}</nav>
-    <div className="sidebar-bottom">
-      <Link href="/help" className="side-link"><Icon name="info" />Помощь</Link>
-      <Link href="/account/credits" className="side-link">Токены</Link>
-      <Link href="/account" className="side-link">Аккаунт</Link>
-      {auth && <AdminLink path={path} />}
+export function AccountMenu({ className, theme, onThemeChange, onLogout, onClose, onEscape }: {
+  className: string
+  theme: 'light' | 'dark'
+  onThemeChange: (value: 'light' | 'dark') => void
+  onLogout: () => void
+  onClose?: () => void
+  onEscape?: () => void
+}) {
+  const closeFromKeyboard = () => {
+    if (onEscape) onEscape()
+    else onClose?.()
+  }
+  useEffect(() => {
+    const escape = (event: globalThis.KeyboardEvent) => {
+      if (event.key !== 'Escape') return
+      event.preventDefault()
+      closeFromKeyboard()
+    }
+    document.addEventListener('keydown', escape)
+    return () => document.removeEventListener('keydown', escape)
+  }, [onEscape, onClose])
+
+  return <div className={className} role="menu" onKeyDown={event => menuKeyboard(event, closeFromKeyboard)}>
+    <Link href="/account" role="menuitem" onClick={onClose}>Аккаунт</Link>
+    <Link href="/account/credits" role="menuitem" onClick={onClose}>Токены</Link>
+    <Link href="/account/security" role="menuitem" onClick={onClose}>Настройки</Link>
+    <Link href="/help" role="menuitem" onClick={onClose}>Помощь</Link>
+
+    <div className="theme-row" role="group" aria-label="Переключить тему">
+      <span>Тема</span>
+      <button role="menuitemradio" aria-checked={theme === 'light'} onClick={() => onThemeChange('light')}>Светлая</button>
+      <button role="menuitemradio" aria-checked={theme === 'dark'} onClick={() => onThemeChange('dark')}>Тёмная</button>
     </div>
-  </aside>
+
+    <div className="social-links" aria-label="Социальные сети">
+      {socialLinks.map(item => item.href
+        ? <a key={item.label} className="social-link" href={item.href} target="_blank" rel="noreferrer"
+            role="menuitem" aria-label={item.label} title={item.label}>{item.short}</a>
+        : <span key={item.label} className="social-link disabled" role="menuitem" aria-disabled="true"
+            aria-label={item.label} title={`${item.label}: ссылка не настроена`}>{item.short}</span>)}
+    </div>
+
+    <button className="menu-logout" role="menuitem" onClick={() => { onClose?.(); onLogout() }}>Выйти</button>
+  </div>
 }
 
-export function TopBar({ path, auth, theme, mobileMenu, onToggleMenu, onToggleTheme }: {
+export function TopBar({ path, auth, theme, onThemeChange, onLogout }: {
   path: string
   auth: AuthView | null | undefined
   theme: 'light' | 'dark'
-  mobileMenu: boolean
-  onToggleMenu: () => void
-  onToggleTheme: () => void
+  onThemeChange: (value: 'light' | 'dark') => void
+  onLogout: () => void
 }) {
-  const chat = path === '/' || path === '/studio/chat'
-  const studioImage = ['/image', '/studio/image'].includes(path)
-  const activeDirection = (href: string) => href === '/' ? chat : href === '/image' ? studioImage : path === href
-  return <header className="topbar">
-    <div className="mobile-head">
-      <button className="mobile-menu-button" aria-label="Меню" aria-expanded={mobileMenu}
-        aria-controls="mobile-menu" onClick={onToggleMenu}>☰</button>
-      <Link className="mobile-brand" href="/">ИЗО АСА</Link>
-      <span className="mobile-context" aria-current="page">{mobileContext(path)}</span>
+  const [credits, setCredits] = useState<number | null>(null)
+  const [menuOpen, setMenuOpen] = useState(false)
+  const profile = useRef<HTMLDivElement>(null)
+  const profileButton = useRef<HTMLButtonElement>(null)
+
+  useEffect(() => {
+    setCredits(null)
+    if (!auth) return
+    const controller = new AbortController()
+    apiRequest<Credits>('/api/v1/credits', { signal: controller.signal })
+      .then(value => setCredits(value.balance.available))
+      .catch(() => setCredits(null))
+    return () => controller.abort()
+  }, [auth?.account.id, path])
+
+  useEffect(() => {
+    const close = (event: PointerEvent) => {
+      if (!profile.current?.contains(event.target as Node)) setMenuOpen(false)
+    }
+    document.addEventListener('pointerdown', close)
+    return () => document.removeEventListener('pointerdown', close)
+  }, [])
+
+  useEffect(() => {
+    if (!menuOpen) return
+    const escape = (event: globalThis.KeyboardEvent) => {
+      if (event.key !== 'Escape') return
+      event.preventDefault()
+      setMenuOpen(false)
+      requestAnimationFrame(() => profileButton.current?.focus())
+    }
+    document.addEventListener('keydown', escape)
+    return () => document.removeEventListener('keydown', escape)
+  }, [menuOpen])
+
+  const initial = auth?.account.display_name.trim().slice(0, 1).toUpperCase() || 'А'
+  const tokenHref = auth ? '/account/credits' : '/login'
+  const mainTokens = auth && credits !== null ? String(credits) : '0'
+
+  return <header className="global-header" data-testid="global-header">
+    <div className="header-left">
+      <Link className="global-brand" href="/" aria-label="ИЗО АСА">
+        <img className="brand-favicon" src="/favicon.svg" alt="" aria-hidden="true" />
+        <span className="brand-name"><span className="brand-izo">ИЗО</span><span className="brand-asa">АСА</span></span>
+      </Link>
+      <nav className="explore-nav" aria-label="Лента и Галерея">
+        <Link className={path === '/feed' ? 'header-route active' : 'header-route'} href="/feed" aria-label="Лента">
+          <Icon name="feed" /><span>Лента</span>
+        </Link>
+        <Link className={path === '/gallery' ? 'header-route active' : 'header-route'} href="/gallery" aria-label="Галерея">
+          <Icon name="grid" /><span>Галерея</span>
+        </Link>
+      </nav>
     </div>
-    <div className="model-chip" aria-label="Модель: ASA Auto"><span>ASA Auto</span></div>
-    <nav className="direction-nav" aria-label="Творческие инструменты ИЗО АСА">{directions.map(item => <Link key={item.href} href={item.href}
-      aria-label={item.title} className={activeDirection(item.href) ? 'active' : ''}
-      aria-current={activeDirection(item.href) ? 'page' : undefined}>
-      <Icon name={item.icon} /><span>{item.title}</span></Link>)}</nav>
-    <div className="header-actions">
-      <Link className="top-utility" href="/feed" aria-label="Лента"><Icon name="feed" /><span>Лента</span></Link>
-      <Link className="top-utility" href="/gallery" aria-label="Галерея"><Icon name="grid" /><span>Галерея</span></Link>
-      <Link className="top-utility" href="/help" aria-label="Помощь"><Icon name="info" /><span>Помощь</span></Link>
-      {auth ? <><Link className="balance-button" href="/account/credits">Токены</Link>
-        <Link className="avatar" href="/account" aria-label="Аккаунт">{auth.account.display_name.slice(0, 1).toUpperCase()}</Link></>
-        : <><Link className="login-link" href="/login">Войти</Link><Link className="signup-link" href="/register">Регистрация</Link></>}
-      <button className="icon-button" aria-label="Переключить тему" data-theme-value={theme} onClick={onToggleTheme}><Icon name="sun" /></button>
+
+    <nav className="product-nav" aria-label="Творческие инструменты ИЗО АСА">
+      {workspaces.map(item => <Link key={item.id} href={item.path}
+        className={path === item.path ? 'product-tab active' : 'product-tab'}
+        aria-current={path === item.path ? 'page' : undefined} aria-label={item.title}>
+        <Icon name={icons[item.id]} />
+        <span className="desktop-label">{item.title}</span><span className="mobile-label">{item.mobileTitle}</span>
+      </Link>)}
+    </nav>
+
+    <div className="header-right">
+      <div className="token-box" data-testid="global-token-group" aria-label="Баланс токенов">
+        <Link className="token-pill daily" data-testid="token-daily" href={tokenHref}
+          aria-label="Дневные токены: 0 из 0" title="Дневные токены: 0 из 0">
+          <Icon name="sun" /><span className="token-value">0/0</span>
+        </Link>
+        <Link className="token-pill main" data-testid="token-main" href={tokenHref}
+          aria-label={`Основные токены: ${mainTokens}`} title={`Основные токены: ${mainTokens}`}>
+          <Icon name="gem" /><span className="token-value">{mainTokens}</span>
+        </Link>
+      </div>
+      {auth && <button type="button" className="header-theme-toggle" aria-label="Переключить тему"
+        data-theme-value={theme} onClick={() => onThemeChange(theme === 'light' ? 'dark' : 'light')}>
+        <Icon name="sun" />
+      </button>}
+
+      {auth ? <div className="profile-control" ref={profile}
+        onKeyDown={event => {
+          if (event.key !== 'Escape' || !menuOpen) return
+          event.preventDefault()
+          setMenuOpen(false)
+          requestAnimationFrame(() => profileButton.current?.focus())
+        }}>
+        <button ref={profileButton} className="header-avatar" aria-label="Профиль" aria-expanded={menuOpen}
+          onClick={() => setMenuOpen(value => !value)}>{initial}</button>
+        {menuOpen && <AccountMenu className="profile-menu" theme={theme} onThemeChange={onThemeChange}
+          onLogout={onLogout} onClose={() => setMenuOpen(false)}
+          onEscape={() => { setMenuOpen(false); requestAnimationFrame(() => profileButton.current?.focus()) }} />}
+      </div> : auth === null ? <Link className="login-button" href="/login">Войти</Link> : null}
     </div>
-    {mobileMenu && <div id="mobile-menu" className="mobile-menu" role="dialog" aria-label="Меню">
-      <div className="mobile-menu-primary"><Link href="/feed">Лента</Link><Link href="/gallery">Галерея</Link><Link href="/help">Помощь</Link></div>
-      <div className="mobile-menu-account">{auth ? <><Link href="/account">Аккаунт</Link><Link href="/account/credits">Токены</Link></>
-        : <><Link href="/login">Войти</Link><Link href="/register">Создать аккаунт</Link></>}</div>
-    </div>}
   </header>
 }
