@@ -1,7 +1,7 @@
 import { test, expect, type Page } from '@playwright/test'
 import { noOverflow, workspace } from './workspace-fixtures'
 
-const widths = [390, 768, 1024, 1440, 1920, 2560, 3840, 7680]
+const widths = [320, 390, 768, 1024, 1440, 1920, 2560, 3840, 7680]
 const desktopWidths = [1440, 1920, 2560, 3840, 7680]
 const composer = (page: Page) => page.locator('.chat-composer')
 const input = (page: Page) => page.getByRole('textbox', { name: 'Сообщение' })
@@ -80,12 +80,12 @@ test('composer is compact for one line and expands from real wrapping', async ({
   test.setTimeout(120_000)
   test.skip(info.project.name !== 'laptop')
   await workspace(page)
-  for (const width of [390, 768, 1440, 1920, 2560, 3840, 7680]) {
+  for (const width of [320, 390, 768, 1440, 1920, 2560, 3840, 7680]) {
     await freshChat(page, width)
     const box = composer(page)
     expect(await layout(page)).toBe('compact')
     const emptyHeight = (await box.boundingBox())!.height
-    await input(page).fill('Короткий запрос')
+    await input(page).fill('Привет')
     await expect(box).toHaveAttribute('data-layout', 'compact')
     expect(Math.abs((await box.boundingBox())!.height - emptyHeight)).toBeLessThanOrEqual(2)
     const row = await box.evaluate(node => ['.chat-composer-plus', 'textarea', '.chat-model-selector', '.chat-mic-button', '.chat-send-button'].map(selector => { const r = node.querySelector(selector)!.getBoundingClientRect(); return r.top + r.height / 2 }))
