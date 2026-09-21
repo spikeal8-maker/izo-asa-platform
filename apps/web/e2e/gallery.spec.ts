@@ -115,16 +115,18 @@ test('IMAGE-001 navigation releases private object URL; signout clears loaded wo
   await expect(page.getByTestId('private-image')).toHaveCount(0)
 })
 
-test('IMAGE-001 zero balance still reads own files and theme persists', async ({ page }) => {
-  const app = await workspace(page); app.balance = 0; app.assets.push(asset())
+test('IMAGE-001 gallery header uses real positive balance and theme persists', async ({ page }) => {
+  const app = await workspace(page); app.balance = 137; app.assets.push(asset())
   await page.goto('/gallery')
   await expect(page.locator('.asset-card')).toHaveCount(1)
+  await expect(page.getByTestId('token-main')).toHaveText('137')
+  expect(app.requests.filter(r => r.path === '/api/v1/credits').length).toBeGreaterThan(0)
   await page.getByRole('button', { name: 'Переключить тему' }).click()
   await expect(page.locator('html')).toHaveAttribute('data-theme', 'dark')
   await page.reload()
   await expect(page.locator('html')).toHaveAttribute('data-theme', 'dark')
   await expect(page.locator('.asset-card')).toHaveCount(1)
-  expect(app.requests.filter(r => r.path === '/api/v1/credits')).toHaveLength(0)
+  await expect(page.getByTestId('token-main')).toHaveText('137')
 })
 
 
