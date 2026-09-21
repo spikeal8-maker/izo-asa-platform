@@ -8,6 +8,7 @@ import { useVisualViewport } from './chat/useVisualViewport'
 import './chat.css'
 
 const runtimeNotice = 'Текстовый помощник пока не подключён к серверу. Выбранные инструменты и вложения здесь не имитируют серверную обработку.'
+const desktopQuery = '(min-width: 1120px)'
 
 export function ChatPage({ auth, theme, onThemeChange, onLogout }: {
   auth: AuthView | null | undefined
@@ -19,30 +20,30 @@ export function ChatPage({ auth, theme, onThemeChange, onLogout }: {
   const [history, setHistory] = useState<LocalChat[]>([])
   const [currentChatId, setCurrentChatId] = useState<number | null>(null)
   const [notice, setNotice] = useState('')
-  const [sidebarOpen, setSidebarOpen] = useState(() => window.matchMedia('(min-width: 761px)').matches)
+  const [sidebarOpen, setSidebarOpen] = useState(() => window.matchMedia(desktopQuery).matches)
 
   useVisualViewport()
 
   useEffect(() => {
-    const media = window.matchMedia('(max-width: 760px)')
-    const collapseOnMobile = () => { if (media.matches) setSidebarOpen(false) }
-    collapseOnMobile()
-    media.addEventListener('change', collapseOnMobile)
-    return () => media.removeEventListener('change', collapseOnMobile)
+    const media = window.matchMedia(desktopQuery)
+    const syncSidebarMode = () => setSidebarOpen(media.matches)
+    syncSidebarMode()
+    media.addEventListener('change', syncSidebarMode)
+    return () => media.removeEventListener('change', syncSidebarMode)
   }, [])
 
   function newChat() {
     setCurrentChatId(null)
     setTurns([])
     setNotice('')
-    if (window.matchMedia('(max-width: 760px)').matches) setSidebarOpen(false)
+    if (!window.matchMedia(desktopQuery).matches) setSidebarOpen(false)
   }
 
   function openChat(chat: LocalChat) {
     setCurrentChatId(chat.id)
     setTurns(chat.turns)
     setNotice(chat.turns.length ? runtimeNotice : '')
-    if (window.matchMedia('(max-width: 760px)').matches) setSidebarOpen(false)
+    if (!window.matchMedia(desktopQuery).matches) setSidebarOpen(false)
   }
 
   function send(text: string) {
