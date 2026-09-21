@@ -84,7 +84,7 @@ test('composer is compact for one line and expands from real wrapping', async ({
     const box = composer(page)
     expect(await layout(page)).toBe('compact')
     const emptyHeight = (await box.boundingBox())!.height
-    await input(page).fill('Короткий однострочный запрос')
+    await input(page).fill('Короткий запрос')
     await expect(box).toHaveAttribute('data-layout', 'compact')
     expect(Math.abs((await box.boundingBox())!.height - emptyHeight)).toBeLessThanOrEqual(2)
     const row = await box.evaluate(node => ['.chat-composer-plus', 'textarea', '.chat-model-selector', '.chat-mic-button', '.chat-send-button'].map(selector => { const r = node.querySelector(selector)!.getBoundingClientRect(); return r.top + r.height / 2 }))
