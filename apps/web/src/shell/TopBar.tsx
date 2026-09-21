@@ -98,7 +98,7 @@ export function TopBar({ path, auth, theme, onThemeChange, onLogout }: {
 
   useEffect(() => {
     setCredits(null)
-    if (!auth || path === '/gallery' || path.startsWith('/gallery/')) return
+    if (!auth) return
     const controller = new AbortController()
     apiRequest<Credits>('/api/v1/credits', { signal: controller.signal })
       .then(value => setCredits(value.balance.available))
