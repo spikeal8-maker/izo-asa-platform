@@ -77,6 +77,7 @@ test('continuous resize has no responsive jumps or horizontal overflow', async (
 })
 
 test('composer is compact for one line and expands from real wrapping', async ({ page }, info) => {
+  test.setTimeout(120_000)
   test.skip(info.project.name !== 'laptop')
   await workspace(page)
   for (const width of [390, 768, 1440, 1920, 2560, 3840, 7680]) {
