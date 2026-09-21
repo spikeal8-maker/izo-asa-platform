@@ -1,87 +1,75 @@
 .global-brand:hover, .header-route:hover, .token-pill:hover {
   background: color-mix(in srgb, var(--color-text) 6%, var(--color-surface));
 }
-
 .brand-izo { color: var(--color-warning); font-weight: 750; }
-
 .brand-asa { color: var(--color-brand); font-weight: 750; }
-
 .header-route.active { background: color-mix(in srgb, var(--color-text) 7%, var(--color-surface)); }
-
 .product-nav {
   height: 100%;
   display: grid;
   grid-template-columns: repeat(5, max-content);
   align-items: center;
   justify-content: center;
-  gap: 3px;
+  gap: clamp(1px, .18vw, 5px);
   min-width: 0;
 }
-
 .product-tab {
   position: relative;
-  height: clamp(38px, calc(25px + .8vw), 62px);
-  padding: 0 clamp(10px, .55vw, 18px);
-  border-radius: 9px;
+  height: clamp(38px, calc(31px + .42vw), 62px);
+  padding: 0 clamp(6px, .48vw, 16px);
+  border-radius: clamp(8px, .5vw, 12px);
   display: flex;
   align-items: center;
-  gap: clamp(6px, .35vw, 10px);
-  font-size: clamp(16px, calc(9px + .5vw), 30px);
+  gap: clamp(4px, .3vw, 9px);
+  font-size: clamp(15px, calc(12px + .24vw), 30px);
   font-weight: 500;
   color: var(--color-text);
   white-space: nowrap;
 }
-
-.product-tab .icon { width: clamp(20px, calc(13px + .5vw), 34px); height: clamp(20px, calc(13px + .5vw), 34px); color: var(--color-text); }
-
-.product-tab:hover, .product-tab.active {
-  background: color-mix(in srgb, var(--color-text) 6%, var(--color-surface));
+.product-tab .icon {
+  width: clamp(18px, calc(15px + .22vw), 31px);
+  height: clamp(18px, calc(15px + .22vw), 31px);
+  color: var(--color-text);
 }
-
+.product-tab:hover, .product-tab.active { background: color-mix(in srgb, var(--color-text) 6%, var(--color-surface)); }
 .product-tab.active::after {
   content: '';
   position: absolute;
-  left: 11px;
-  right: 11px;
-  bottom: calc((var(--global-header-height) - clamp(38px, calc(25px + .8vw), 62px)) / -2 + 1px);
+  left: 14%;
+  right: 14%;
+  bottom: calc((var(--global-header-height) - clamp(38px, calc(31px + .42vw), 62px)) / -2 + 1px);
   height: 2px;
   border-radius: 2px;
   background: var(--color-text);
 }
-
 .mobile-label { display: none; }
-
-.token-pill .icon { width: clamp(20px, calc(13px + .45vw), 32px); height: clamp(20px, calc(13px + .45vw), 32px); }
-
+.token-pill .icon {
+  width: clamp(18px, calc(15px + .2vw), 29px);
+  height: clamp(18px, calc(15px + .2vw), 29px);
+}
 .token-pill.daily .icon { color: var(--color-warning); }
-
 .token-pill.main .icon { color: var(--color-brand); }
-
 .token-pill.main .token-value { color: var(--color-brand); }
-
 .token-value {
   color: var(--color-text);
-  font-size: clamp(14px, calc(9px + .35vw), 26px);
+  font-size: clamp(13px, calc(10px + .22vw), 25px);
   line-height: 1;
   font-weight: 600;
   font-variant-numeric: tabular-nums;
 }
-
 .login-button:hover { background: color-mix(in srgb, var(--color-text) 88%, var(--color-surface)); }
-
 .profile-menu {
   position: absolute;
   top: calc(100% + 6px);
   right: 0;
   z-index: 120;
-  width: 238px;
+  width: clamp(238px, 15vw, 320px);
   padding: 6px;
   border: 1px solid var(--color-border);
   border-radius: 14px;
   background: var(--color-surface);
   box-shadow: var(--shadow);
 }
-
 .profile-menu > a, .profile-menu > button,
 .chat-profile-menu > a, .chat-profile-menu > button {
   width: 100%;
@@ -94,15 +82,13 @@
   border-radius: 9px;
   background: transparent;
   color: var(--color-text);
-  font-size: 14px;
+  font-size: clamp(14px, calc(12px + .12vw), 18px);
   text-align: left;
 }
-
 .profile-menu > a:hover, .profile-menu > button:hover,
 .chat-profile-menu > a:hover, .chat-profile-menu > button:hover {
   background: color-mix(in srgb, var(--color-text) 6%, var(--color-surface));
 }
-
 .theme-row {
   margin: 4px 0;
   padding: 7px 10px;
@@ -113,22 +99,18 @@
   gap: 4px;
   align-items: center;
   color: var(--color-text-secondary);
-  font-size: 12px;
+  font-size: clamp(12px, calc(10px + .12vw), 16px);
 }
-
 .theme-row button {
   min-height: 30px;
   padding: 0 7px;
   border: 0;
   border-radius: 8px;
   background: transparent;
-  font-size: 12px;
+  font-size: inherit;
 }
-
 .theme-row button[aria-pressed='true'] { background: var(--color-brand-soft); color: var(--color-brand); }
-
 .social-links { padding: 8px 10px; display: flex; align-items: center; gap: 7px; }
-
 .social-link {
   width: 34px;
   height: 34px;
@@ -141,99 +123,48 @@
   font-weight: 600;
   letter-spacing: -.02em;
 }
-
 .social-link:hover { background: color-mix(in srgb, var(--color-text) 10%, var(--color-surface)); }
-
 .social-link.disabled { color: var(--color-text-secondary); opacity: .48; cursor: default; }
-
 .menu-logout { color: var(--color-text); }
 
-@media (max-width: 1260px) and (min-width: 761px) {
-.product-nav { gap: 0; }
-
-.product-tab { padding: 0 7px; font-size: 14px; gap: 4px; }
-
-.product-tab .icon { width: 18px; height: 18px; }
-
-.token-pill .icon { width: 18px; height: 18px; }
-
-.token-value { font-size: 13px; }
-}
-
-@media (max-width: 1000px) and (min-width: 761px) {
-.product-tab { height: 36px; padding: 0 5px; font-size: 12.5px; gap: 3px; }
-
-.product-tab .icon { width: 16px; height: 16px; }
-
-.product-tab.active::after { left: 6px; right: 6px; bottom: calc((var(--global-header-height) - 36px) / -2 + 1px); }
-
-.token-pill .icon { width: 17px; height: 17px; }
-
-.token-value { font-size: 12px; }
-}
-
-@media (max-width: 760px) {
-.token-pill.daily { min-width: 48px; }
-
-.token-pill.main { min-width: 48px; }
-
-.token-pill .icon { width: 16px; height: 16px; }
-
-.token-value { min-width: 18px; font-size: 10px; text-align: center; }
-
-.token-pill.main .token-value { min-width: 22px; }
-
-.product-nav {
+@media (max-width: 1119px) {
+  .token-pill.daily, .token-pill.main { min-width: clamp(46px, 7vw, 58px); }
+  .token-pill {
+    height: clamp(28px, calc(26px + .5vw), 34px);
+    padding-inline: clamp(2px, .6vw, 5px);
+    gap: clamp(2px, .35vw, 4px);
+  }
+  .token-pill .icon { width: clamp(15px, 2.2vw, 18px); height: clamp(15px, 2.2vw, 18px); }
+  .token-value { min-width: 18px; font-size: clamp(10.5px, calc(9.5px + .45vw), 13px); text-align: center; }
+  .token-pill.main .token-value { min-width: 22px; }
+  .product-nav {
     grid-row: 2;
     grid-column: 1 / -1;
     width: 100%;
-    height: 30px;
+    height: 32px;
     grid-template-columns: repeat(5, minmax(0, 1fr));
     gap: 0;
     padding: 0;
   }
-
-.product-tab {
+  .product-tab {
     width: 100%;
-    height: 30px;
-    padding: 0 1px;
+    height: 32px;
+    padding: 0 clamp(1px, .4vw, 4px);
     border-radius: 0;
     justify-content: center;
-    gap: 3px;
-    font-size: 10.5px;
+    gap: clamp(2px, .45vw, 5px);
+    font-size: clamp(11.5px, 3.2vw, 14px);
   }
-
-.product-tab .icon { width: 16px; height: 16px; }
-
-.desktop-label { display: none; }
-
-.mobile-label { display: inline; }
-
-.product-tab.active::after { left: 18%; right: 18%; bottom: 0; height: 2px; }
-
-.profile-menu { position: fixed; top: 36px; right: 4px; width: min(238px, calc(100vw - 8px)); }
+  .product-tab .icon { width: clamp(16px, 4.2vw, 20px); height: clamp(16px, 4.2vw, 20px); }
+  .desktop-label { display: none; }
+  .mobile-label { display: inline; }
+  .product-tab.active::after { left: 18%; right: 18%; bottom: 0; height: 2px; }
+  .profile-menu { position: fixed; top: 38px; right: 4px; width: min(260px, calc(100vw - 8px)); }
 }
 
-@media (max-width: 390px) {
-.token-pill.daily { min-width: 46px; }
-
-.token-pill.main { min-width: 46px; }
-
-.token-value { font-size: 9.5px; }
-
-.product-tab { font-size: 10px; gap: 2px; }
-
-.product-tab .icon { width: 15px; height: 15px; }
-}
-
-@media (max-width: 340px) {
-.token-pill.daily, .token-pill.main { min-width: 40px; }
-
-.token-pill .icon { width: 13px; height: 13px; }
-
-.token-value, .token-pill.main .token-value { min-width: 14px; font-size: 8.5px; }
-
-.product-tab { font-size: 9.5px; gap: 1px; }
-
-.product-tab .icon { width: 14px; height: 14px; }
+@media (max-width: 360px) {
+  .token-pill.daily, .token-pill.main { min-width: 46px; }
+  .token-value, .token-pill.main .token-value { min-width: 16px; font-size: 10.5px; }
+  .product-tab { font-size: 11.5px; gap: 2px; }
+  .product-tab .icon { width: 16px; height: 16px; }
 }

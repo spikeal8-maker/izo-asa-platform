@@ -4,7 +4,7 @@
   "scope_class": "cross_domain",
   "risk": "high",
   "independent_review_required": true,
-  "max_files": 26,
+  "max_files": 28,
   "large_scope_reason": "Owner-revised frontend continuation owns the existing visual shell WIP recovered after independent CI/Auth merges, without absorbing backend or Agent-System work.",
   "domains": [
     "web-shell",
@@ -46,7 +46,9 @@
     "apps/web/src/shell/chat/useVisualViewport.ts",
     "apps/web/src/shell/chat/useVoiceCapture.ts",
     "docs/UX_PRODUCT_SHELL.md",
-    "tests/test_docs_system.py"
+    "tests/test_docs_system.py",
+    "apps/web/e2e/chat-responsive.spec.ts",
+    "apps/web/src/shell/chat/composerLayout.ts"
   ],
   "sensitive_approved": [
     "tools/scopes/frontend-002.json"
