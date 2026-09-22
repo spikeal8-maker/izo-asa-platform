@@ -203,7 +203,8 @@ test('composer remeasures when compact control geometry changes', async ({ page 
   state.capabilities = ['fal.flux2.klein.4b']
   await freshChat(page, 1440)
   const near = await preciseBoundaryText(page)
-  await input(page).fill(near.compact)
+  const controlSensitiveText = near.compact.slice(0, -4)
+  await input(page).fill(controlSensitiveText)
   await expect(composer(page)).toHaveAttribute('data-layout', 'compact')
 
   const modelButton = page.getByRole('button', { name: 'Выбрать модель' })
