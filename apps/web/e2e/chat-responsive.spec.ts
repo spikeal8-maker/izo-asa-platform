@@ -1,8 +1,10 @@
 import { test, expect, type Page } from '@playwright/test'
+import { COMPOSER_COLLAPSE_HEADROOM_PX } from '../src/shell/chat/composerLayout'
 import { noOverflow, workspace } from './workspace-fixtures'
 
 const widths = [320, 390, 768, 1024, 1440, 1920, 2560, 3840, 7680]
 const desktopWidths = [1440, 1920, 2560, 3840, 7680]
+const structuralBoundaries = [359, 360, 361, 519, 520, 521, 1119, 1120, 1121]
 const composer = (page: Page) => page.locator('.chat-composer')
 const input = (page: Page) => page.getByRole('textbox', { name: 'Сообщение' })
 
@@ -29,6 +31,66 @@ async function boundaryText(page: Page) {
     else compact = mid
   }
   return { compact: 'слово '.repeat(compact).trim(), expanded: 'слово '.repeat(expanded).trim() }
+}
+
+async function preciseBoundaryText(page: Page) {
+  let compact = 1, expanded = 2400
+  const value = (length: number) => 'i'.repeat(length)
+  await input(page).fill(value(expanded))
+  await expect(composer(page)).toHaveAttribute('data-layout', 'expanded')
+  while (expanded - compact > 1) {
+    const mid = Math.floor((compact + expanded) / 2)
+    await input(page).fill(value(mid))
+    await page.waitForTimeout(16)
+    if (await layout(page) === 'expanded') expanded = mid
+    else compact = mid
+  }
+  return { compact: value(compact), expanded: value(expanded) }
+}
+
+async function mirrorWidth(page: Page) {
+  return page.locator('.chat-composer-measure').evaluate(node => Number.parseFloat((node as HTMLElement).style.width))
+}
+
+async function widenUntilMirrorGain(page: Page, baseWidth: number, gain: number) {
+  const viewport = page.viewportSize()
+  if (!viewport) throw new Error('viewport is unavailable')
+  let width = viewport.width
+  for (let step = 0; step < 80; step++) {
+    width += 4
+    await page.setViewportSize({ width, height: viewport.height })
+    await page.waitForTimeout(16)
+    const current = await mirrorWidth(page)
+    if (current >= baseWidth + gain) return current
+  }
+  throw new Error(`composer mirror did not gain ${gain}px`)
+}
+
+async function expectNoHeaderCollision(page: Page) {
+  const boxes = await page.locator('.global-brand,.explore-nav,.product-nav,.header-right').evaluateAll(nodes =>
+    nodes.map(node => {
+      const rect = node.getBoundingClientRect()
+      return { name: (node as HTMLElement).className, left: rect.left, right: rect.right, top: rect.top, bottom: rect.bottom }
+    }),
+  )
+  for (let first = 0; first < boxes.length; first++) {
+    for (let second = first + 1; second < boxes.length; second++) {
+      const a = boxes[first], b = boxes[second]
+      const overlapX = Math.max(0, Math.min(a.right, b.right) - Math.max(a.left, b.left))
+      const overlapY = Math.max(0, Math.min(a.bottom, b.bottom) - Math.max(a.top, b.top))
+      expect(overlapX * overlapY, `${a.name} collides with ${b.name}`).toBeLessThanOrEqual(1)
+    }
+  }
+}
+
+async function expectCompactRow(page: Page) {
+  const row = await composer(page).evaluate(node =>
+    ['.chat-composer-plus', 'textarea', '.chat-model-selector', '.chat-mic-button', '.chat-send-button'].map(selector => {
+      const rect = node.querySelector(selector)!.getBoundingClientRect()
+      return rect.top + rect.height / 2
+    }),
+  )
+  expect(Math.max(...row) - Math.min(...row)).toBeLessThanOrEqual(2)
 }
 
 test('chat shell uses geometry-based sidebar mode and fluid desktop scaling', async ({ page }, info) => {
@@ -88,8 +150,7 @@ test('composer is compact for one line and expands from real wrapping', async ({
     await input(page).fill('Привет')
     await expect(box).toHaveAttribute('data-layout', 'compact')
     expect(Math.abs((await box.boundingBox())!.height - emptyHeight)).toBeLessThanOrEqual(2)
-    const row = await box.evaluate(node => ['.chat-composer-plus', 'textarea', '.chat-model-selector', '.chat-mic-button', '.chat-send-button'].map(selector => { const r = node.querySelector(selector)!.getBoundingClientRect(); return r.top + r.height / 2 }))
-    expect(Math.max(...row) - Math.min(...row)).toBeLessThanOrEqual(2)
+    await expectCompactRow(page)
 
     const near = await boundaryText(page)
     await input(page).fill(near.compact)
@@ -107,18 +168,22 @@ test('composer is compact for one line and expands from real wrapping', async ({
   }
 })
 
-test('composer layout has hysteresis on resize and attachments force expansion', async ({ page }, info) => {
+test('composer resize hysteresis is bounded by real geometry and attachments force expansion', async ({ page }, info) => {
   test.skip(info.project.name !== 'laptop')
   const state = await workspace(page)
   state.capabilities = ['fal.flux2.klein.4b']
   await freshChat(page, 1920, 1080)
-  const near = await boundaryText(page)
+  const near = await preciseBoundaryText(page)
   await input(page).fill(near.expanded)
   await expect(composer(page)).toHaveAttribute('data-layout', 'expanded')
-  for (const width of [1919, 1921, 2560, 3839, 3840, 3841, 5760, 7680]) {
-    await page.setViewportSize({ width, height: Math.max(1080, Math.round(width * .5625)) })
-    await expect(composer(page)).toHaveAttribute('data-layout', 'expanded')
-  }
+  const baseMirrorWidth = await mirrorWidth(page)
+
+  await widenUntilMirrorGain(page, baseMirrorWidth, COMPOSER_COLLAPSE_HEADROOM_PX - 4)
+  await expect(composer(page)).toHaveAttribute('data-layout', 'expanded')
+
+  await widenUntilMirrorGain(page, baseMirrorWidth, COMPOSER_COLLAPSE_HEADROOM_PX + 8)
+  await expect(composer(page)).toHaveAttribute('data-layout', 'compact')
+
   await input(page).fill('')
   await expect(composer(page)).toHaveAttribute('data-layout', 'compact')
 
@@ -130,4 +195,66 @@ test('composer layout has hysteresis on resize and attachments force expansion',
   await expect(composer(page)).toHaveAttribute('data-layout', 'expanded')
   await page.getByRole('button', { name: 'Удалить вложение' }).click()
   await expect(composer(page)).toHaveAttribute('data-layout', 'compact')
+})
+
+test('composer remeasures when compact control geometry changes', async ({ page }, info) => {
+  test.skip(info.project.name !== 'laptop')
+  const state = await workspace(page)
+  state.capabilities = ['fal.flux2.klein.4b']
+  await freshChat(page, 1440)
+  const near = await preciseBoundaryText(page)
+  await input(page).fill(near.compact)
+  await expect(composer(page)).toHaveAttribute('data-layout', 'compact')
+
+  const modelButton = page.getByRole('button', { name: 'Выбрать модель' })
+  const autoWidth = (await modelButton.boundingBox())!.width
+  await modelButton.click()
+  const imageCategory = page.locator('.chat-model-category').filter({ hasText: 'Изображения' })
+  await expect(imageCategory).toContainText('1')
+  await imageCategory.locator('summary').click()
+  await page.getByRole('menuitemradio', { name: 'FLUX.2 [klein] 4B' }).click()
+  await expect(modelButton).toContainText('FLUX.2 [klein] 4B')
+  expect((await modelButton.boundingBox())!.width).toBeGreaterThan(autoWidth)
+  await expect(composer(page)).toHaveAttribute('data-layout', 'expanded')
+
+  await modelButton.click()
+  await page.getByRole('menuitemradio', { name: 'Авто' }).click()
+  await expect(modelButton).toContainText('Авто')
+  await expect(composer(page)).toHaveAttribute('data-layout', 'compact')
+})
+
+test('responsive structural boundaries keep header, sidebar and composer geometry valid', async ({ page }, info) => {
+  test.setTimeout(120_000)
+  test.skip(info.project.name !== 'laptop')
+  await workspace(page)
+  for (const width of structuralBoundaries) {
+    await freshChat(page, width)
+    const shell = page.locator('.chat-page')
+    const side = page.locator('.chat-sidebar')
+    const shouldBeDesktop = width >= 1120
+    expect(await shell.evaluate(node => node.classList.contains('sidebar-open'))).toBe(shouldBeDesktop)
+    expect(await side.evaluate(node => getComputedStyle(node).position)).toBe(shouldBeDesktop ? 'static' : 'absolute')
+    if (!shouldBeDesktop) {
+      const box = await side.boundingBox()
+      expect(box ? box.x + box.width : 1).toBeLessThanOrEqual(0)
+    }
+
+    await expectNoHeaderCollision(page)
+    await expect(composer(page)).toHaveAttribute('data-layout', 'compact')
+    await input(page).fill('Привет')
+    await expect(composer(page)).toHaveAttribute('data-layout', 'compact')
+    await expectCompactRow(page)
+
+    await input(page).fill('длинный текст '.repeat(120))
+    await expect(composer(page)).toHaveAttribute('data-layout', 'expanded')
+    const expandedRows = await composer(page).evaluate(node => ({
+      input: node.querySelector('textarea')!.getBoundingClientRect(),
+      plus: node.querySelector('.chat-composer-plus')!.getBoundingClientRect(),
+    }))
+    expect(expandedRows.input.top).toBeLessThan(expandedRows.plus.top)
+    await noOverflow(page)
+
+    await input(page).fill('')
+    await expect(composer(page)).toHaveAttribute('data-layout', 'compact')
+  }
 })
