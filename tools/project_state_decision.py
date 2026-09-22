@@ -36,12 +36,12 @@ def _normalize_spec(spec: dict, *, finishing: str) -> dict:
 
 
 def validate_decided_candidate(plan: dict, candidate: dict) -> dict:
-    validate_plan(plan)
-    active, packages = plan["active_package"], plan["packages"]
+    active, packages = plan.get("active_package"), plan.get("packages", {})
     if plan.get("next_package") is not None:
         raise ValueError("decided transition requires next_package=null")
-    if not packages[active].get("decides_next"):
+    if not packages.get(active, {}).get("decides_next"):
         raise ValueError("active package must decide next")
+    validate_plan(plan)
     spec = _normalize_spec(candidate, finishing=active)
     activate = spec["id"]
     if activate == active:
