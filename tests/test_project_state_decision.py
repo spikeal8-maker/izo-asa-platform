@@ -233,3 +233,73 @@ def test_missing_scope_blocks_before_branch_creation(tmp_path, monkeypatch):
             source, branch="test/dynamic", candidate=candidate(source), verified_pr=99,
             root=tmp_path)
     assert calls == []
+
+
+def _mocked_transition(monkeypatch, tmp_path, kind, review_transport):
+    import project_state as state
+    source = base_plan()
+    if kind == "legacy":
+        active = source["active_package"]
+        source["packages"]["TEST-MOCK"] = {
+            "status": "planned_next", "depends_on": [active], "decides_next": True}
+        source["next_package"] = "TEST-MOCK"
+    _write_docs(tmp_path, source); events = []; reviews = []
+    def fake_git(*args, root=tmp_path):
+        if args == ("status", "--porcelain"): return ""
+        if args == ("branch", "--show-current"): return source["canonical_lineage"]["working_branch"]
+        if args == ("rev-parse", "HEAD"): return "a" * 40
+        if args[:2] == ("switch", "-c"): events.append("create"); return ""
+        raise AssertionError(args)
+    def wrapped_review(*args, **kwargs):
+        reviews.append(1)
+        return review_transport(*args, **kwargs)
+    monkeypatch.setattr(state, "git", fake_git)
+    monkeypatch.setattr(state, "active_scope", lambda *a, **k: {
+        "package_id": source["active_package"], "risk": "high",
+        "independent_review_required": True})
+    monkeypatch.setattr(state, "fetch_pr_evidence", lambda *a, **k: evidence())
+    monkeypatch.setattr(state, "fetch_review_evidence", wrapped_review)
+    def invoke(**kwargs):
+        if kind == "legacy":
+            return state.begin_next(source, branch="test/mock", activate="TEST-MOCK",
+                                    next_id=None, verified_pr=99, root=tmp_path, **kwargs)
+        return state.begin_decided_next(source, branch="test/mock", candidate=candidate(source),
+                                        verified_pr=99, root=tmp_path, **kwargs)
+    return invoke, events, reviews
+
+
+@pytest.mark.parametrize("kind", ["legacy", "decided"])
+def test_mocked_ci_never_bypasses_missing_review(kind, tmp_path, monkeypatch):
+    def no_review(*a, **k): raise ValueError("review required")
+    invoke, events, reviews = _mocked_transition(monkeypatch, tmp_path, kind, no_review)
+    with pytest.raises(ValueError, match="review required"): invoke()
+    assert reviews == [1] and events == []
+
+
+@pytest.mark.parametrize("kind", ["legacy", "decided"])
+def test_mocked_ci_waiver_never_masks_changes_requested(kind, tmp_path, monkeypatch):
+    def blocked(*a, **k): raise ValueError("changes requested")
+    invoke, events, reviews = _mocked_transition(monkeypatch, tmp_path, kind, blocked)
+    with pytest.raises(ValueError, match="changes requested"):
+        invoke(owner_waiver=True, independent_review_unavailable=True,
+               owner_waiver_source="a" * 40, owner_waiver_reason="fixture")
+    assert reviews == [1] and events == []
+
+
+@pytest.mark.parametrize("kind", ["legacy", "decided"])
+def test_mocked_ci_valid_owner_waiver_is_recorded(kind, tmp_path, monkeypatch):
+    waiver = {"independent_review": "unavailable", "owner_waiver": True,
+              "owner_actor": "owner", "owner_waiver_source": "a" * 40,
+              "owner_waiver_reason": "fixture"}
+    invoke, events, reviews = _mocked_transition(monkeypatch, tmp_path, kind, lambda *a, **k: waiver)
+    _, actual = invoke(owner_waiver=True, independent_review_unavailable=True,
+                       owner_waiver_source="a" * 40, owner_waiver_reason="fixture")
+    assert reviews == [1] and events == ["create"]
+    assert actual["owner_waiver"] is True
+
+
+def test_active_scope_does_not_fall_back_outside_checkout(tmp_path):
+    import project_state as state
+    assert not (tmp_path / "tools").exists()
+    with pytest.raises(ValueError, match="scope"):
+        state.active_scope(base_plan(), root=tmp_path)
