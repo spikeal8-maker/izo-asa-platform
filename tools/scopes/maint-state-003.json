@@ -1,0 +1,44 @@
+{
+  "package_id": "MAINT-STATE-003",
+  "base": "380064825f47ecf078b81f9f87d9dcdbd96b76ab",
+  "scope_class": "normal",
+  "risk": "high",
+  "independent_review_required": true,
+  "max_files": 16,
+  "domains": [
+    "governance",
+    "project-state",
+    "review-evidence",
+    "tests",
+    "docs"
+  ],
+  "non_goals": [
+    "No product/frontend/backend Chat implementation",
+    "No Renderer, DeepSeek, Jobs, Media, DB, Docker or deploy changes",
+    "No merge and no mutation of the frozen source branch"
+  ],
+  "allowed": [
+    "docs/PLAN.json",
+    "docs/CURRENT.md",
+    "docs/CHECKPOINTS.json",
+    "docs/MAINTAINABILITY.md",
+    "docs/reviews/MAINT-STATE-003.md",
+    "tools/project_state.py",
+    "tools/project_state_model.py",
+    "tools/project_state_evidence.py",
+    "tools/project_state_decision.py",
+    "tools/review_evidence.py",
+    "tools/scopes/maint-state-003.json",
+    "tests/test_project_state_decision.py",
+    "tests/test_review_evidence.py",
+    "tests/test_project_state.py"
+  ],
+  "sensitive_approved": [
+    "tools/project_state.py",
+    "tools/project_state_model.py",
+    "tools/project_state_evidence.py",
+    "tools/project_state_decision.py",
+    "tools/review_evidence.py",
+    "tools/scopes/maint-state-003.json"
+  ]
+}
