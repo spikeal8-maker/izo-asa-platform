@@ -30,7 +30,8 @@
     "tools/review_evidence.py",
     "tools/scopes/maint-state-003.json",
     "tests/test_project_state_decision.py",
-    "tests/test_review_evidence.py"
+    "tests/test_review_evidence.py",
+    "tests/test_project_state.py"
   ],
   "sensitive_approved": [
     "tools/project_state.py",

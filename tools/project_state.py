@@ -13,7 +13,6 @@ from project_state_model import (CHECKPOINTS_PATH, NEXT_PACKAGE_SOURCE_STATUSES,
     serialize_plan, transition, validate_plan, validate_ref, write_state)
 from project_state_decision import decided_transition, validate_decided_candidate
 from project_state_evidence import fetch_pr_evidence, fetch_review_evidence, validate_pr_evidence
-_PF = fetch_pr_evidence
 def run(args: list[str], *, root: Path = ROOT) -> str:
     result = subprocess.run(args, cwd=root, capture_output=True, text=True,
                             encoding="utf-8", errors="strict", timeout=30)
@@ -25,8 +24,7 @@ def git(*args: str, root: Path = ROOT) -> str:
 
 def active_scope(plan: dict, *, root: Path = ROOT) -> dict:
     package = plan["active_package"]
-    base = root if (root / "tools").exists() else ROOT
-    path = base / "tools" / "scopes" / f"{package.lower()}.json"
+    path = root / "tools" / "scopes" / f"{package.lower()}.json"
     if not path.is_file():
         raise ValueError("active scope missing")
     try:
@@ -74,8 +72,7 @@ def _write_transition(plan: dict, updated: dict, evidence: dict, *, branch: str,
 def _transition_evidence(plan: dict, pr: int, source_head: str, review: dict, root: Path) -> dict:
     scope = active_scope(plan, root=root)
     evidence = fetch_pr_evidence(pr, source_head, root=root)
-    if fetch_pr_evidence is _PF:
-        evidence.update(fetch_review_evidence(scope, pr, source_head, root=root, **review))
+    evidence.update(fetch_review_evidence(scope, pr, source_head, root=root, **review))
     return evidence
 def begin_next(plan: dict, *, branch: str, activate: str, next_id: str | None,
                verified_pr: int, owner_waiver: bool = False,
