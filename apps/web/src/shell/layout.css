@@ -169,7 +169,7 @@ footer { display: flex; justify-content: space-between; align-items: center; gap
   .header-avatar { font-size: 10px; }
 }
 
-@media (max-width: 360px) {
+@media (max-width: 361px) {
   .explore-nav { gap: 1px; }
   .explore-nav .header-route { width: 30px; padding: 0; justify-content: center; }
   .explore-nav .header-route span { display: none; }
