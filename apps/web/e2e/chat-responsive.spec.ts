@@ -4,7 +4,7 @@ import { noOverflow, workspace } from './workspace-fixtures'
 
 const widths = [320, 390, 768, 1024, 1440, 1920, 2560, 3840, 7680]
 const desktopWidths = [1440, 1920, 2560, 3840, 7680]
-const structuralBoundaries = [359, 360, 361, 519, 520, 521, 1119, 1120, 1121]
+const structuralBoundaries = [359, 360, 361, 388, 389, 390, 519, 520, 521, 1119, 1120, 1121]
 const composer = (page: Page) => page.locator('.chat-composer')
 const input = (page: Page) => page.getByRole('textbox', { name: 'Сообщение' })
 
