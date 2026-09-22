@@ -76,3 +76,80 @@ def test_waiver_requires_owner_actor_unavailable_assertion_and_reason():
 def test_non_high_scope_needs_neither_review_nor_waiver():
     assert review_decision({"risk": "medium"}, [], "not-a-sha", owner_login="owner") == {
         "independent_review": "not_required", "owner_waiver": False}
+
+
+def test_latest_review_verdict_wins_over_historical_approval():
+    head = "a" * 40
+    reviews = [
+        {"id": 1, "state": "APPROVED", "commit_id": head,
+         "submitted_at": "2026-09-22T10:00:00Z", "user": {"login": "reviewer"}},
+        {"id": 2, "state": "CHANGES_REQUESTED", "commit_id": head,
+         "submitted_at": "2026-09-22T10:05:00Z", "user": {"login": "reviewer"}},
+    ]
+    with pytest.raises(ValueError, match="changes requested"):
+        review_decision(high_scope(), reviews, head, owner_login="owner")
+
+
+def test_later_approval_supersedes_changes_requested_on_exact_head():
+    head = "a" * 40
+    reviews = [
+        {"id": 1, "state": "CHANGES_REQUESTED", "commit_id": head,
+         "submitted_at": "2026-09-22T10:00:00Z", "user": {"login": "reviewer"}},
+        {"id": 2, "state": "APPROVED", "commit_id": head,
+         "submitted_at": "2026-09-22T10:05:00Z", "user": {"login": "reviewer"}},
+    ]
+    result = review_decision(high_scope(), reviews, head, owner_login="owner")
+    assert result["independent_review"] == "approved"
+    assert result["independent_review_id"] == 2
+
+
+@pytest.mark.parametrize("review", [
+    {"id": 1, "state": "DISMISSED", "commit_id": "a" * 40,
+     "submitted_at": "2026-09-22T10:00:00Z", "user": {"login": "reviewer"}},
+    {"id": 2, "state": "APPROVED", "commit_id": "b" * 40,
+     "submitted_at": "2026-09-22T10:00:00Z", "user": {"login": "reviewer"}},
+    {"id": 3, "state": "APPROVED", "commit_id": "a" * 40,
+     "submitted_at": "2026-09-22T10:00:00Z", "user": {"login": "owner"}},
+    {"id": 4, "state": "COMMENTED", "commit_id": "a" * 40,
+     "submitted_at": "2026-09-22T10:00:00Z", "user": {"login": "reviewer"}},
+])
+def test_dismissed_wrong_sha_self_and_comment_are_not_independent_approval(review):
+    with pytest.raises(ValueError, match="structured independent"):
+        review_decision(high_scope(), [review], "a" * 40, owner_login="owner")
+
+
+def test_owner_waiver_does_not_mask_current_changes_requested():
+    head = "a" * 40
+    reviews = [
+        {"id": 1, "state": "APPROVED", "commit_id": head,
+         "submitted_at": "2026-09-22T10:00:00Z", "user": {"login": "reviewer"}},
+        {"id": 2, "state": "CHANGES_REQUESTED", "commit_id": head,
+         "submitted_at": "2026-09-22T10:05:00Z", "user": {"login": "reviewer"}},
+    ]
+    with pytest.raises(ValueError, match="changes requested"):
+        review_decision(
+            high_scope(), reviews, head, owner_login="owner", actor_login="owner",
+            owner_waiver=True, independent_review_unavailable=True,
+            owner_waiver_source=head, owner_waiver_reason="only owner actor connected")
+
+
+def test_review_fetch_keeps_second_page_latest_verdict(monkeypatch):
+    import project_state_evidence as evidence_module
+    head = "a" * 40
+    page1 = [{"id": 1, "state": "CHANGES_REQUESTED", "commit_id": head,
+              "submitted_at": "2026-09-22T10:00:00Z", "user": {"login": "reviewer"}}]
+    page2 = [{"id": 2, "state": "APPROVED", "commit_id": head,
+              "submitted_at": "2026-09-22T10:05:00Z", "user": {"login": "reviewer"}}]
+
+    monkeypatch.setattr(evidence_module, "repo_slug", lambda root=None: "owner/repo")
+
+    def fake_gh(args, root=None):
+        joined = " ".join(args)
+        if "/pulls/99/reviews" in joined:
+            return [page1, page2] if "--paginate" in args else page1
+        raise AssertionError(args)
+
+    monkeypatch.setattr(evidence_module, "gh_json", fake_gh)
+    result = evidence_module.fetch_review_evidence(high_scope(), 99, head)
+    assert result["independent_review"] == "approved"
+    assert result["independent_review_id"] == 2

@@ -167,3 +167,145 @@ def test_legacy_begin_next_still_works(tmp_path, monkeypatch):
         source, branch="test/legacy", activate="TEST-LEGACY", next_id=None,
         verified_pr=99, root=tmp_path)
     assert updated["active_package"] == "TEST-LEGACY" and events == ["create"]
+
+
+def _runs_for_freshness(head, foundation_rows):
+    other = [
+        {"name": "Dependency Security", "headSha": head, "event": "pull_request",
+         "status": "completed", "conclusion": "success", "databaseId": 50,
+         "runAttempt": 1, "prNumbers": [99]},
+        {"name": "Review Source", "headSha": head, "event": "pull_request",
+         "status": "completed", "conclusion": "success", "databaseId": 60,
+         "runAttempt": 1, "prNumbers": [99]},
+    ]
+    return [*foundation_rows, *other]
+
+
+def _validate_runs(runs, head="a" * 40):
+    return validate_pr_evidence(
+        pr={"headRefOid": head, "baseRefOid": "b" * 40, "state": "OPEN"},
+        runs=runs, merge_sha="c" * 40,
+        merge_commit={"parents": [{"sha": "b" * 40}, {"sha": head}]},
+        expected_head=head, pr_number=99, foundation_tree="c" * 40)
+
+
+def test_latest_required_ci_failure_blocks_old_success():
+    head = "a" * 40
+    rows = [
+        {"name": "Foundation CI", "headSha": head, "event": "pull_request",
+         "status": "completed", "conclusion": "success", "databaseId": 10,
+         "runAttempt": 1, "prNumbers": [99]},
+        {"name": "Foundation CI", "headSha": head, "event": "pull_request",
+         "status": "completed", "conclusion": "failure", "databaseId": 11,
+         "runAttempt": 1, "prNumbers": [99]},
+    ]
+    with pytest.raises(ValueError, match="latest.*Foundation CI"):
+        _validate_runs(_runs_for_freshness(head, rows), head)
+
+
+def test_latest_required_ci_in_progress_blocks_old_success():
+    head = "a" * 40
+    rows = [
+        {"name": "Foundation CI", "headSha": head, "event": "pull_request",
+         "status": "completed", "conclusion": "success", "databaseId": 10,
+         "runAttempt": 1, "prNumbers": [99]},
+        {"name": "Foundation CI", "headSha": head, "event": "pull_request",
+         "status": "in_progress", "conclusion": None, "databaseId": 11,
+         "runAttempt": 1, "prNumbers": [99]},
+    ]
+    with pytest.raises(ValueError, match="latest.*Foundation CI"):
+        _validate_runs(_runs_for_freshness(head, rows), head)
+
+
+def test_new_success_supersedes_old_failure():
+    head = "a" * 40
+    rows = [
+        {"name": "Foundation CI", "headSha": head, "event": "pull_request",
+         "status": "completed", "conclusion": "failure", "databaseId": 10,
+         "runAttempt": 1, "prNumbers": [99]},
+        {"name": "Foundation CI", "headSha": head, "event": "pull_request",
+         "status": "completed", "conclusion": "success", "databaseId": 11,
+         "runAttempt": 2, "prNumbers": [99]},
+    ]
+    result = _validate_runs(_runs_for_freshness(head, rows), head)
+    assert result["workflows"]["Foundation CI"] == 11
+
+
+def test_ci_from_other_pr_is_not_evidence():
+    head = "a" * 40
+    rows = [
+        {"name": "Foundation CI", "headSha": head, "event": "pull_request",
+         "status": "completed", "conclusion": "success", "databaseId": 11,
+         "runAttempt": 1, "prNumbers": [100]},
+        {"name": "Dependency Security", "headSha": head, "event": "pull_request",
+         "status": "completed", "conclusion": "success", "databaseId": 12,
+         "runAttempt": 1, "prNumbers": [100]},
+        {"name": "Review Source", "headSha": head, "event": "pull_request",
+         "status": "completed", "conclusion": "success", "databaseId": 13,
+         "runAttempt": 1, "prNumbers": [100]},
+    ]
+    with pytest.raises(ValueError, match="PR #99"):
+        _validate_runs(rows, head)
+
+
+def _minimal_scope(package_id, risk="medium", **extra):
+    value = {
+        "package_id": package_id, "base": "a" * 40, "scope_class": "tiny",
+        "risk": risk, "max_files": 4, "allowed": ["tools/*"],
+        "sensitive_approved": ["tools/*"],
+    }
+    value.update(extra)
+    return value
+
+
+@pytest.mark.parametrize("mode", ["missing", "malformed", "empty", "wrong-package", "wrong-risk"])
+def test_active_scope_fails_closed(mode, tmp_path):
+    import project_state as state
+    source = base_plan()
+    scope_dir = tmp_path / "tools" / "scopes"
+    scope_dir.mkdir(parents=True)
+    path = scope_dir / f"{source['active_package'].lower()}.json"
+    if mode == "malformed":
+        path.write_text("{bad-json", encoding="utf-8")
+    elif mode == "empty":
+        path.write_text("{}", encoding="utf-8")
+    elif mode == "wrong-package":
+        path.write_text(json.dumps(_minimal_scope("OTHER-001")), encoding="utf-8")
+    elif mode == "wrong-risk":
+        path.write_text(json.dumps(_minimal_scope(source["active_package"], risk="critical")), encoding="utf-8")
+    with pytest.raises(ValueError, match="scope"):
+        state.active_scope(source, root=tmp_path)
+
+
+@pytest.mark.parametrize("risk", ["low", "medium"])
+def test_valid_low_medium_scope_remains_supported(risk, tmp_path):
+    import project_state as state
+    source = base_plan()
+    scope_dir = tmp_path / "tools" / "scopes"
+    scope_dir.mkdir(parents=True)
+    expected = _minimal_scope(source["active_package"], risk=risk)
+    (scope_dir / f"{source['active_package'].lower()}.json").write_text(
+        json.dumps(expected), encoding="utf-8")
+    assert state.active_scope(source, root=tmp_path) == expected
+
+
+def test_missing_scope_blocks_before_branch_creation(tmp_path, monkeypatch):
+    import project_state as state
+    source = base_plan(); _write_docs(tmp_path, source); calls = []
+
+    def fake_git(*args, root=tmp_path):
+        if args == ("status", "--porcelain"): return ""
+        if args == ("branch", "--show-current"): return source["canonical_lineage"]["working_branch"]
+        if args == ("rev-parse", "HEAD"): return "a" * 40
+        if args[:2] == ("switch", "-c"): calls.append("create"); return ""
+        raise AssertionError(args)
+
+    monkeypatch.setattr(state, "git", fake_git)
+    monkeypatch.setattr(state, "fetch_pr_evidence", lambda *a, **k: evidence())
+    monkeypatch.setattr(state, "fetch_review_evidence",
+                        lambda *a, **k: {"independent_review": "not_required", "owner_waiver": False})
+    with pytest.raises(ValueError, match="scope"):
+        state.begin_decided_next(
+            source, branch="test/dynamic", candidate=candidate(source), verified_pr=99,
+            root=tmp_path)
+    assert calls == []
