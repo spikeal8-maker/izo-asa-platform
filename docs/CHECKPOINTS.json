@@ -1,16 +1,150 @@
 {
   "schema_version": 1,
   "checkpoints": {
-    "DOC-004": {"head":"001edb9953d642f4d06453505809c20512f4b2b3","workflows":{"Foundation CI":34637203126,"Dependency Security":34637203194,"Review Source":34637203153}},
-    "DOC-004B": {"type":"pr_merge_tree","source_head":"fe47e208809b5950b08c7133ba922d7be5742d24","verified_pr":24,"base_head":"001edb9953d642f4d06453505809c20512f4b2b3","tested_merge_tree":"b1c941966ea4fd53fd00322808e90adabbc28077","workflows":{"Foundation CI":34647714472,"Dependency Security":34647714532,"Review Source":34647714613}},
-    "DOC-004C": {"type":"pr_merge_tree","source_head":"e676be04d52dc998072a7779e83b6a78ddd5f601","verified_pr":25,"base_head":"fe47e208809b5950b08c7133ba922d7be5742d24","tested_merge_tree":"63e4d16b181f6e95836cb67f5986245aca166d69","workflows":{"Foundation CI":34657886305,"Dependency Security":34657886265,"Review Source":34657886205}},
-    "DOC-004D": {"type":"pr_merge_tree","source_head":"b53328d5e9e9111196d49062424cd7e386ac1eaa","verified_pr":26,"base_head":"e676be04d52dc998072a7779e83b6a78ddd5f601","tested_merge_tree":"062516b1f4fc22374728780044cb3d603cf0760b","workflows":{"Foundation CI":34676568698,"Dependency Security":34676568660,"Review Source":34676568713}},
-    "LINEAGE-001": {"type":"pr_merge_tree","source_head":"a1de4b8fc551ba9b5ce3d1d88da7f1eaf378cd0e","verified_pr":28,"base_head":"b53328d5e9e9111196d49062424cd7e386ac1eaa","tested_merge_tree":"72cbdccf1b6b7b0954e3124fc97faef2908a1ac6","workflows":{"Foundation CI":34687805633,"Dependency Security":34687805585,"Review Source":34687805595}},
-    "ACCESS-001": {"type":"pr_merge_tree","source_head":"fbb3ba01232c0b31682db0f37a070300d95335ed","verified_pr":29,"base_head":"a1de4b8fc551ba9b5ce3d1d88da7f1eaf378cd0e","tested_merge_tree":"436512463e85a0dd44dfe449ad154065d027cbab","workflows":{"Foundation CI":34710133930,"Dependency Security":34710133920,"Review Source":34710133922}},
-    "SETTINGS-002": {"type":"pr_merge_tree","source_head":"220d302dc238889da066c1799652d4b036007de3","verified_pr":30,"base_head":"fbb3ba01232c0b31682db0f37a070300d95335ed","tested_merge_tree":"5eb13f4f5749f071f977003dfbc71483c73f1fff","workflows":{"Foundation CI":34718746509,"Dependency Security":34718746429,"Review Source":34718746473}},
-    "UX-002": {"type":"pr_merge_tree","source_head":"1ab67632de764ae38842f97888da058d74499c23","verified_pr":32,"base_head":"220d302dc238889da066c1799652d4b036007de3","tested_merge_tree":"bd714eafbd339536127960689d1bb340ce83ad27","workflows":{"Foundation CI":34761737440,"Dependency Security":34761737434,"Review Source":34761737474}},
-    "MAINT-SIZE-001": {"type":"pr_merge_tree","source_head":"731105b1c8d16d9774c987a31b62ee7143383ccc","verified_pr":33,"base_head":"1ab67632de764ae38842f97888da058d74499c23","tested_merge_tree":"75cc59df986cb72c2a129a548674ae4d4060f14d","workflows":{"Foundation CI":34764639890,"Dependency Security":34764639881,"Review Source":34764639891}},
-    "GUEST-001": {"type":"pr_merge_tree","source_head":"d99abc6528f0c460b1b061dbfb9ea583d3c3b553","verified_pr":34,"base_head":"731105b1c8d16d9774c987a31b62ee7143383ccc","tested_merge_tree":"17428fd6facbfb957fe924b7f26bfff487479b64","workflows":{"Foundation CI":34784388584,"Dependency Security":34784388593,"Review Source":34784388587}},
-    "MAINT-AGENT-002": {"type":"pr_merge_tree","source_head":"37baf419c45970d02ce1fab75aea15cc9e8269a0","verified_pr":35,"base_head":"d99abc6528f0c460b1b061dbfb9ea583d3c3b553","tested_merge_tree":"f9f84a7388da310fc7667bb8ec60ac516f130718","workflows":{"Foundation CI":34839225016,"Dependency Security":34839225059,"Review Source":34839225009}}
+    "DOC-004": {
+      "head": "001edb9953d642f4d06453505809c20512f4b2b3",
+      "workflows": {
+        "Foundation CI": 34637203126,
+        "Dependency Security": 34637203194,
+        "Review Source": 34637203153
+      }
+    },
+    "DOC-004B": {
+      "type": "pr_merge_tree",
+      "source_head": "fe47e208809b5950b08c7133ba922d7be5742d24",
+      "verified_pr": 24,
+      "base_head": "001edb9953d642f4d06453505809c20512f4b2b3",
+      "tested_merge_tree": "b1c941966ea4fd53fd00322808e90adabbc28077",
+      "workflows": {
+        "Foundation CI": 34647714472,
+        "Dependency Security": 34647714532,
+        "Review Source": 34647714613
+      }
+    },
+    "DOC-004C": {
+      "type": "pr_merge_tree",
+      "source_head": "e676be04d52dc998072a7779e83b6a78ddd5f601",
+      "verified_pr": 25,
+      "base_head": "fe47e208809b5950b08c7133ba922d7be5742d24",
+      "tested_merge_tree": "63e4d16b181f6e95836cb67f5986245aca166d69",
+      "workflows": {
+        "Foundation CI": 34657886305,
+        "Dependency Security": 34657886265,
+        "Review Source": 34657886205
+      }
+    },
+    "DOC-004D": {
+      "type": "pr_merge_tree",
+      "source_head": "b53328d5e9e9111196d49062424cd7e386ac1eaa",
+      "verified_pr": 26,
+      "base_head": "e676be04d52dc998072a7779e83b6a78ddd5f601",
+      "tested_merge_tree": "062516b1f4fc22374728780044cb3d603cf0760b",
+      "workflows": {
+        "Foundation CI": 34676568698,
+        "Dependency Security": 34676568660,
+        "Review Source": 34676568713
+      }
+    },
+    "LINEAGE-001": {
+      "type": "pr_merge_tree",
+      "source_head": "a1de4b8fc551ba9b5ce3d1d88da7f1eaf378cd0e",
+      "verified_pr": 28,
+      "base_head": "b53328d5e9e9111196d49062424cd7e386ac1eaa",
+      "tested_merge_tree": "72cbdccf1b6b7b0954e3124fc97faef2908a1ac6",
+      "workflows": {
+        "Foundation CI": 34687805633,
+        "Dependency Security": 34687805585,
+        "Review Source": 34687805595
+      }
+    },
+    "ACCESS-001": {
+      "type": "pr_merge_tree",
+      "source_head": "fbb3ba01232c0b31682db0f37a070300d95335ed",
+      "verified_pr": 29,
+      "base_head": "a1de4b8fc551ba9b5ce3d1d88da7f1eaf378cd0e",
+      "tested_merge_tree": "436512463e85a0dd44dfe449ad154065d027cbab",
+      "workflows": {
+        "Foundation CI": 34710133930,
+        "Dependency Security": 34710133920,
+        "Review Source": 34710133922
+      }
+    },
+    "SETTINGS-002": {
+      "type": "pr_merge_tree",
+      "source_head": "220d302dc238889da066c1799652d4b036007de3",
+      "verified_pr": 30,
+      "base_head": "fbb3ba01232c0b31682db0f37a070300d95335ed",
+      "tested_merge_tree": "5eb13f4f5749f071f977003dfbc71483c73f1fff",
+      "workflows": {
+        "Foundation CI": 34718746509,
+        "Dependency Security": 34718746429,
+        "Review Source": 34718746473
+      }
+    },
+    "UX-002": {
+      "type": "pr_merge_tree",
+      "source_head": "1ab67632de764ae38842f97888da058d74499c23",
+      "verified_pr": 32,
+      "base_head": "220d302dc238889da066c1799652d4b036007de3",
+      "tested_merge_tree": "bd714eafbd339536127960689d1bb340ce83ad27",
+      "workflows": {
+        "Foundation CI": 34761737440,
+        "Dependency Security": 34761737434,
+        "Review Source": 34761737474
+      }
+    },
+    "MAINT-SIZE-001": {
+      "type": "pr_merge_tree",
+      "source_head": "731105b1c8d16d9774c987a31b62ee7143383ccc",
+      "verified_pr": 33,
+      "base_head": "1ab67632de764ae38842f97888da058d74499c23",
+      "tested_merge_tree": "75cc59df986cb72c2a129a548674ae4d4060f14d",
+      "workflows": {
+        "Foundation CI": 34764639890,
+        "Dependency Security": 34764639881,
+        "Review Source": 34764639891
+      }
+    },
+    "GUEST-001": {
+      "type": "pr_merge_tree",
+      "source_head": "d99abc6528f0c460b1b061dbfb9ea583d3c3b553",
+      "verified_pr": 34,
+      "base_head": "731105b1c8d16d9774c987a31b62ee7143383ccc",
+      "tested_merge_tree": "17428fd6facbfb957fe924b7f26bfff487479b64",
+      "workflows": {
+        "Foundation CI": 34784388584,
+        "Dependency Security": 34784388593,
+        "Review Source": 34784388587
+      }
+    },
+    "MAINT-AGENT-002": {
+      "type": "pr_merge_tree",
+      "source_head": "37baf419c45970d02ce1fab75aea15cc9e8269a0",
+      "verified_pr": 35,
+      "base_head": "d99abc6528f0c460b1b061dbfb9ea583d3c3b553",
+      "tested_merge_tree": "f9f84a7388da310fc7667bb8ec60ac516f130718",
+      "workflows": {
+        "Foundation CI": 34839225016,
+        "Dependency Security": 34839225059,
+        "Review Source": 34839225009
+      }
+    },
+    "FRONTEND-002": {
+      "type": "pr_merge_tree",
+      "source_head": "380064825f47ecf078b81f9f87d9dcdbd96b76ab",
+      "verified_pr": 221,
+      "base_head": "3f1bfae811b1e0e8b39226c04049d8f9a98c6087",
+      "tested_merge_tree": "3b46e8abf1c83d48597fdab1e3299a52d68977e3",
+      "workflows": {
+        "Foundation CI": 35717764550,
+        "Dependency Security": 35717764418,
+        "Review Source": 35717764468
+      },
+      "independent_review": "unavailable",
+      "owner_waiver": true,
+      "owner_actor": "spikeal8-maker",
+      "owner_waiver_source": "380064825f47ecf078b81f9f87d9dcdbd96b76ab",
+      "owner_waiver_reason": "Only the repository-owner GitHub actor is available through the connected control plane; the owner explicitly authorizes this maintenance-only transition after exact-head technical review and required CI passed."
+    }
   }
 }

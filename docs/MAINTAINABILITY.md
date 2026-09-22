@@ -90,14 +90,16 @@ cross-account access/release-network policy.
 Для `high` package checkpoint нельзя считать технически принятым без:
 1. implementer SELF_REVIEW;
 2. профильных negative/race/idempotency/restart tests;
-3. отдельного independent review evidence;
+3. structured GitHub review `APPROVED`, привязанного к exact source SHA, от actor, отличного от repository owner;
 4. полного required CI.
 
-Самопроверка не заменяет independent review. Evidence хранится вне source в top-level PR comment и привязывается
-к точному frozen source через строку:
-`INDEPENDENT_REVIEW PASS source=<40-char-sha> reviewer=<reviewer-id>`.
-`project_state.py begin-next` обязан fail-closed до создания следующей ветки, если high-risk scope не имеет такого
-PASS для текущего source SHA. Review старого SHA не переносится автоматически на новый commit.
+Обычный PR comment, включая `INDEPENDENT_REVIEW PASS ...`, не доказывает reviewer identity.
+Если независимый GitHub actor недоступен, gate не удаляется: допускается только явный owner waiver transition.
+Waiver требует owner action, exact source SHA, `independent_review=unavailable` и причину; в checkpoint хранится
+как `owner_waiver=true` и не называется independent review. Неверный SHA или failed CI waiver не обходит.
+
+`begin-next` и `begin-decided-next` проверяют source HEAD, required CI и review/waiver до создания новой ветки.
+State/checkpoint пишутся только на новой ветке; ошибка записи откатывает файлы и созданную ветку.
 
 ## 7. Непрерывный audit
 
@@ -131,7 +133,7 @@ Package не получает `technical_pass`, если:
 - новый feature не имеет owner route/README;
 - live local docs содержат историю/ветку/старый SHA;
 - scope расширен без явного основания;
-- high-risk package не получил independent review;
+- high-risk package не получил structured independent review и не имеет допустимого explicit owner waiver;
 - CI стал зелёным после ослабления limit/test вместо исправления архитектуры.
 
 ## 9. MAINT-AGENT-002

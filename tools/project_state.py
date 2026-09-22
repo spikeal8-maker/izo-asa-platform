@@ -4,18 +4,15 @@ from __future__ import annotations
 import argparse
 import json
 from pathlib import Path
-import re
 import subprocess
 import sys
-from urllib.parse import urlparse
 
 from project_state_model import (CHECKPOINTS_PATH, NEXT_PACKAGE_SOURCE_STATUSES, PLAN_PATH,
     READY_DEPENDENCY_STATUSES, RECONCILIATION_GAPS, ROOT, dependency_problems, load_checkpoints,
     load_plan, reconcile_continuation_transition, render_current, serialize_checkpoints,
     serialize_plan, transition, validate_plan, validate_ref, write_state)
-from review_evidence import require_independent_review
-
-REQUIRED_WORKFLOWS = ("Foundation CI", "Dependency Security", "Review Source")
+from project_state_decision import decided_transition, validate_decided_candidate
+from project_state_evidence import fetch_pr_evidence, fetch_review_evidence, validate_pr_evidence
 
 
 def run(args: list[str], *, root: Path = ROOT) -> str:
@@ -29,86 +26,6 @@ def run(args: list[str], *, root: Path = ROOT) -> str:
 def git(*args: str, root: Path = ROOT) -> str:
     return run(["git", *args], root=root)
 
-
-def repo_slug(root: Path = ROOT) -> str:
-    remote = git("remote", "get-url", "origin", root=root).strip()
-    if remote.startswith("git@github.com:"):
-        value = remote.split(":", 1)[1]
-    else:
-        parsed = urlparse(remote)
-        if parsed.hostname != "github.com":
-            raise ValueError("origin must point to github.com")
-        value = parsed.path.lstrip("/")
-    if value.endswith(".git"):
-        value = value[:-4]
-    if value.count("/") != 1:
-        raise ValueError("cannot derive owner/repo from origin")
-    return value
-
-
-def gh_json(args: list[str], *, root: Path = ROOT):
-    return json.loads(run(["gh", *args], root=root))
-
-
-def foundation_tested_sha(run_id: int, slug: str, *, root: Path = ROOT) -> str:
-    log = run(["gh", "run", "view", str(run_id), "--repo", slug, "--log"], root=root)
-    values = set(re.findall(r"IZO_BUILD_SHA:\s*([0-9a-f]{40})", log))
-    if len(values) != 1:
-        raise ValueError(f"Foundation CI {run_id} does not expose one tested IZO_BUILD_SHA: {sorted(values)}")
-    return values.pop()
-
-
-def merge_ref_sha(pr_number: int, *, root: Path = ROOT) -> str:
-    text = git("ls-remote", "origin", f"refs/pull/{pr_number}/merge", root=root)
-    sha = text.split()[0] if text else ""
-    if not re.fullmatch(r"[0-9a-f]{40}", sha):
-        raise ValueError(f"PR #{pr_number} has no resolvable merge ref")
-    return sha
-
-
-def validate_pr_evidence(*, pr: dict, runs: list[dict], merge_sha: str,
-                         merge_commit: dict, expected_head: str, pr_number: int,
-                         foundation_tree: str) -> dict:
-    if pr.get("headRefOid") != expected_head:
-        raise ValueError(f"PR #{pr_number} head {pr.get('headRefOid')} != expected {expected_head}")
-    if str(pr.get("state", "")).upper() != "OPEN":
-        raise ValueError(f"PR #{pr_number} must still be open while used as checkpoint evidence")
-    successful: dict[str, int] = {}
-    for name in REQUIRED_WORKFLOWS:
-        candidates = [item for item in runs if item.get("name") == name and item.get("headSha") == expected_head]
-        passed = [item for item in candidates if item.get("event") == "pull_request" and item.get("conclusion") == "success"]
-        if not passed:
-            raise ValueError(f"required workflow {name!r} is not successful for source head {expected_head}")
-        successful[name] = int(passed[0]["databaseId"])
-    parents = [item.get("sha") for item in merge_commit.get("parents", [])]
-    base_head = pr.get("baseRefOid")
-    if expected_head not in parents or base_head not in parents:
-        raise ValueError(f"PR merge tree {merge_sha} does not contain current source/base parents")
-    if not re.fullmatch(r"[0-9a-f]{40}", merge_sha):
-        raise ValueError("merge tree SHA is invalid")
-    if foundation_tree != merge_sha:
-        raise ValueError(f"Foundation CI tested merge tree {foundation_tree}, current PR merge tree is {merge_sha}")
-    return {"type": "pr_merge_tree", "source_head": expected_head, "verified_pr": pr_number,
-            "base_head": base_head, "tested_merge_tree": merge_sha, "workflows": successful}
-
-
-def fetch_pr_evidence(pr_number: int, expected_head: str, *, root: Path = ROOT) -> dict:
-    slug = repo_slug(root)
-    pr = gh_json(["pr", "view", str(pr_number), "--repo", slug,
-                  "--json", "headRefOid,baseRefOid,isDraft,state,url"], root=root)
-    runs = gh_json(["run", "list", "--repo", slug, "--commit", expected_head,
-                    "--event", "pull_request", "--json",
-                    "databaseId,name,conclusion,headSha,event", "--limit", "30"], root=root)
-    merge_sha = merge_ref_sha(pr_number, root=root)
-    merge_commit = gh_json(["api", f"repos/{slug}/commits/{merge_sha}"], root=root)
-    foundation = next((item for item in runs
-        if item.get("name") == "Foundation CI" and item.get("headSha") == expected_head
-        and item.get("event") == "pull_request" and item.get("conclusion") == "success"), None)
-    if foundation is None:
-        raise ValueError(f"required workflow 'Foundation CI' is not successful for source head {expected_head}")
-    foundation_tree = foundation_tested_sha(int(foundation["databaseId"]), slug, root=root)
-    return validate_pr_evidence(pr=pr, runs=runs, merge_sha=merge_sha, merge_commit=merge_commit,
-        expected_head=expected_head, pr_number=pr_number, foundation_tree=foundation_tree)
 
 
 def active_scope(plan: dict, *, root: Path = ROOT) -> dict:
@@ -136,48 +53,80 @@ def verify_checkout(plan: dict, root: Path = ROOT) -> list[str]:
     return problems
 
 
-def begin_next(plan: dict, *, branch: str, activate: str, next_id: str | None,
-               verified_pr: int, root: Path = ROOT) -> tuple[dict, dict]:
-    validate_plan(plan)
-    if git("status", "--porcelain", root=root):
-        raise ValueError("begin-next requires a clean checkout")
-    current_branch = git("branch", "--show-current", root=root)
-    if current_branch != plan["canonical_lineage"]["working_branch"]:
-        raise ValueError("begin-next must run from the current working_branch")
-    source_head = git("rev-parse", "HEAD", root=root)
-    scope = active_scope(plan, root=root)
-    if scope.get("risk") == "high" or scope.get("independent_review_required") is True:
-        slug = repo_slug(root)
-        comments = gh_json(["api", f"repos/{slug}/issues/{verified_pr}/comments?per_page=100"], root=root)
-        require_independent_review(scope, comments, source_head)
-    evidence = fetch_pr_evidence(verified_pr, source_head, root=root)
-    if branch == current_branch:
-        raise ValueError("next package requires a new branch")
-    updated = transition(plan, activate=activate, next_id=next_id, new_branch=branch,
-                         source_head=source_head, evidence=evidence)
-    checkpoints = load_checkpoints(root)
-    checkpoints = json.loads(json.dumps(checkpoints))
+def _write_transition(plan: dict, updated: dict, evidence: dict, *, branch: str,
+                      current_branch: str, source_head: str, root: Path) -> None:
+    checkpoints = json.loads(json.dumps(load_checkpoints(root)))
     checkpoints.setdefault("checkpoints", {})[plan["active_package"]] = evidence
-    plan_path = root / "docs" / "PLAN.json"
-    current_path = root / "docs" / "CURRENT.md"
-    checkpoint_path = root / "docs" / "CHECKPOINTS.json"
-    originals = {
-        plan_path: plan_path.read_bytes(),
-        current_path: current_path.read_bytes(),
-        checkpoint_path: checkpoint_path.read_bytes() if checkpoint_path.exists() else None,
-    }
+    paths = [root / "docs" / name for name in ("PLAN.json", "CURRENT.md", "CHECKPOINTS.json")]
+    originals = {path: path.read_bytes() if path.exists() else None for path in paths}
     git("switch", "-c", branch, source_head, root=root)
     try:
         write_state(updated, checkpoints, root=root)
     except Exception:
         for path, data in originals.items():
-            if data is None:
-                path.unlink(missing_ok=True)
-            else:
-                path.write_bytes(data)
+            if data is None: path.unlink(missing_ok=True)
+            else: path.write_bytes(data)
         git("switch", current_branch, root=root)
         git("branch", "-D", branch, root=root)
         raise
+
+
+def _transition_evidence(plan: dict, pr: int, source_head: str, review: dict, root: Path) -> dict:
+    evidence = fetch_pr_evidence(pr, source_head, root=root)
+    evidence.update(fetch_review_evidence(active_scope(plan, root=root), pr, source_head,
+                                          root=root, **review))
+    return evidence
+
+
+def begin_next(plan: dict, *, branch: str, activate: str, next_id: str | None,
+               verified_pr: int, owner_waiver: bool = False,
+               independent_review_unavailable: bool = False,
+               owner_waiver_source: str | None = None,
+               owner_waiver_reason: str | None = None, root: Path = ROOT) -> tuple[dict, dict]:
+    validate_plan(plan)
+    if git("status", "--porcelain", root=root):
+        raise ValueError("begin-next requires a clean checkout")
+    current_branch = git("branch", "--show-current", root=root)
+    if current_branch != plan["canonical_lineage"]["working_branch"]:
+        raise ValueError("begin-next must run from current working_branch")
+    source_head = git("rev-parse", "HEAD", root=root)
+    if branch == current_branch:
+        raise ValueError("next package requires a new branch")
+    review = dict(owner_waiver=owner_waiver,
+                  independent_review_unavailable=independent_review_unavailable,
+                  owner_waiver_source=owner_waiver_source, owner_waiver_reason=owner_waiver_reason)
+    evidence = _transition_evidence(plan, verified_pr, source_head, review, root)
+    updated = transition(plan, activate=activate, next_id=next_id, new_branch=branch,
+                         source_head=source_head, evidence=evidence)
+    _write_transition(plan, updated, evidence, branch=branch, current_branch=current_branch,
+                      source_head=source_head, root=root)
+    return updated, evidence
+
+
+def begin_decided_next(plan: dict, *, branch: str, candidate: dict, verified_pr: int,
+                       owner_waiver: bool = False,
+                       independent_review_unavailable: bool = False,
+                       owner_waiver_source: str | None = None,
+                       owner_waiver_reason: str | None = None,
+                       root: Path = ROOT) -> tuple[dict, dict]:
+    validate_plan(plan)
+    if git("status", "--porcelain", root=root):
+        raise ValueError("begin-decided-next requires a clean checkout")
+    current_branch = git("branch", "--show-current", root=root)
+    if current_branch != plan["canonical_lineage"]["working_branch"]:
+        raise ValueError("begin-decided-next must run from current working_branch")
+    source_head = git("rev-parse", "HEAD", root=root)
+    if branch == current_branch:
+        raise ValueError("next package requires a new branch")
+    validate_decided_candidate(plan, candidate)
+    review = dict(owner_waiver=owner_waiver,
+                  independent_review_unavailable=independent_review_unavailable,
+                  owner_waiver_source=owner_waiver_source, owner_waiver_reason=owner_waiver_reason)
+    evidence = _transition_evidence(plan, verified_pr, source_head, review, root)
+    updated = decided_transition(plan, candidate=candidate, new_branch=branch,
+                                 source_head=source_head, evidence=evidence)
+    _write_transition(plan, updated, evidence, branch=branch, current_branch=current_branch,
+                      source_head=source_head, root=root)
     return updated, evidence
 
 
@@ -223,6 +172,18 @@ def main() -> int:
     begin.add_argument("--activate", required=True)
     begin.add_argument("--next", dest="next_id")
     begin.add_argument("--verified-pr", required=True, type=int)
+    decided = sub.add_parser("begin-decided-next")
+    decided.add_argument("--branch", required=True)
+    decided.add_argument("--activate", required=True)
+    decided.add_argument("--goal", required=True)
+    decided.add_argument("--depends-on", dest="depends_on", action="append", required=True)
+    decided.add_argument("--decides-next", action="store_true")
+    decided.add_argument("--verified-pr", required=True, type=int)
+    for p in (begin, decided):
+        p.add_argument("--owner-waiver", action="store_true")
+        p.add_argument("--independent-review-unavailable", action="store_true")
+        p.add_argument("--owner-waiver-source")
+        p.add_argument("--owner-waiver-reason")
     rec = sub.add_parser("reconcile-continuation")
     rec.add_argument("--branch", required=True)
     rec.add_argument("--activate", required=True)
@@ -239,10 +200,23 @@ def main() -> int:
                 raise ValueError("; ".join(problems))
             print("PROJECT STATE OK"); return 0
         if args.command == "begin-next":
-            updated, evidence = begin_next(plan, branch=args.branch, activate=args.activate,
-                next_id=args.next_id, verified_pr=args.verified_pr)
+            updated, evidence = begin_next(
+                plan, branch=args.branch, activate=args.activate, next_id=args.next_id,
+                verified_pr=args.verified_pr, owner_waiver=args.owner_waiver,
+                independent_review_unavailable=args.independent_review_unavailable,
+                owner_waiver_source=args.owner_waiver_source, owner_waiver_reason=args.owner_waiver_reason)
             print(f"STATE STARTED: active={updated['active_package']} branch={args.branch}")
             print(f"EVIDENCE: {evidence['type']} source={evidence['source_head']} merge={evidence['tested_merge_tree']}")
+            return 0
+        if args.command == "begin-decided-next":
+            candidate = {"id": args.activate, "goal": args.goal, "depends_on": args.depends_on,
+                         "decides_next": args.decides_next}
+            updated, evidence = begin_decided_next(
+                plan, branch=args.branch, candidate=candidate, verified_pr=args.verified_pr,
+                owner_waiver=args.owner_waiver,
+                independent_review_unavailable=args.independent_review_unavailable,
+                owner_waiver_source=args.owner_waiver_source, owner_waiver_reason=args.owner_waiver_reason)
+            print(f"STATE STARTED: active={updated['active_package']} branch={args.branch}")
             return 0
         updated = reconcile_continuation(plan, branch=args.branch, activate=args.activate,
             reference_head=args.reference_head, gaps=args.gaps)
@@ -258,7 +232,7 @@ if __name__ == "__main__":
 
 
 __all__ = ["CHECKPOINTS_PATH", "NEXT_PACKAGE_SOURCE_STATUSES", "PLAN_PATH",
-    "READY_DEPENDENCY_STATUSES", "ROOT", "active_scope", "begin_next", "dependency_problems",
-    "fetch_pr_evidence", "git", "load_checkpoints", "load_plan", "render_current",
-    "serialize_checkpoints", "serialize_plan", "transition", "validate_plan",
+    "READY_DEPENDENCY_STATUSES", "ROOT", "active_scope", "begin_decided_next", "begin_next",
+    "dependency_problems", "fetch_pr_evidence", "git", "load_checkpoints", "load_plan",
+    "render_current", "serialize_checkpoints", "serialize_plan", "transition", "validate_plan",
     "validate_pr_evidence", "validate_ref", "verify_checkout", "write_state"]
