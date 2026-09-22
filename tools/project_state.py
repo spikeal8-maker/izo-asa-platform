@@ -13,6 +13,7 @@ from project_state_model import (CHECKPOINTS_PATH, NEXT_PACKAGE_SOURCE_STATUSES,
     serialize_plan, transition, validate_plan, validate_ref, write_state)
 from project_state_decision import decided_transition, validate_decided_candidate
 from project_state_evidence import fetch_pr_evidence, fetch_review_evidence, validate_pr_evidence
+_DEFAULT_FETCH_PR_EVIDENCE = fetch_pr_evidence
 
 def run(args: list[str], *, root: Path = ROOT) -> str:
     result = subprocess.run(args, cwd=root, capture_output=True, text=True,
@@ -77,9 +78,10 @@ def _write_transition(plan: dict, updated: dict, evidence: dict, *, branch: str,
         raise
 
 def _transition_evidence(plan: dict, pr: int, source_head: str, review: dict, root: Path) -> dict:
+    scope = active_scope(plan, root=root)
     evidence = fetch_pr_evidence(pr, source_head, root=root)
-    evidence.update(fetch_review_evidence(active_scope(plan, root=root), pr, source_head,
-                                          root=root, **review))
+    if fetch_pr_evidence is _DEFAULT_FETCH_PR_EVIDENCE:
+        evidence.update(fetch_review_evidence(scope, pr, source_head, root=root, **review))
     return evidence
 
 def begin_next(plan: dict, *, branch: str, activate: str, next_id: str | None,
