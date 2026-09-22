@@ -1,5 +1,7 @@
 import { useCallback, useEffect, useLayoutEffect, useRef, useState, type KeyboardEvent } from 'react'
 
+export const COMPOSER_COLLAPSE_HEADROOM_PX = 12
+
 export function menuKeyboard(event: KeyboardEvent<HTMLElement>, close: () => void, opener: HTMLElement | null) {
   if (event.key === 'Escape') {
     event.preventDefault()
@@ -40,7 +42,7 @@ export function useComposerLayout(value: string, forcedExpanded: boolean) {
     setWrapped(next)
   }, [])
 
-  const measure = useCallback((allowCollapse: boolean) => {
+  const measure = useCallback((reason: 'content' | 'geometry') => {
     const form = formRef.current
     const textarea = textareaRef.current
     const mirror = measureRef.current
@@ -52,18 +54,29 @@ export function useComposerLayout(value: string, forcedExpanded: boolean) {
     const innerWidth = form.clientWidth - px(formStyle.paddingLeft) - px(formStyle.paddingRight)
     const gap = px(formStyle.columnGap)
     const compactWidth = Math.max(48, innerWidth - controlsWidth - gap * controls.length)
-    mirror.style.width = `${compactWidth}px`
-    mirror.textContent = textarea.value || ' '
+    const currentValue = textarea.value
+    mirror.textContent = currentValue || ' '
 
     const mirrorStyle = getComputedStyle(mirror)
     const lineHeight = px(mirrorStyle.lineHeight)
     const oneLine = lineHeight + px(mirrorStyle.paddingTop) + px(mirrorStyle.paddingBottom)
-    const wraps = textarea.value.includes('\n') || mirror.scrollHeight > oneLine + 1
-    const empty = textarea.value.length === 0
+    const overflowsAt = (width: number) => {
+      mirror.style.width = `${Math.max(48, width)}px`
+      return mirror.scrollHeight > oneLine + 1
+    }
+
+    const hardBreak = currentValue.includes('\n')
+    const wraps = hardBreak || overflowsAt(compactWidth)
+    const empty = currentValue.length === 0
     let next = wrappedRef.current
     if (empty) next = false
     else if (wraps) next = true
-    else if (allowCollapse) next = false
+    else if (reason === 'content' || !wrappedRef.current) next = false
+    else {
+      const widthWithHeadroom = compactWidth - COMPOSER_COLLAPSE_HEADROOM_PX
+      next = overflowsAt(widthWithHeadroom)
+    }
+    mirror.style.width = `${compactWidth}px`
     updateWrapped(next)
 
     textarea.style.height = 'auto'
@@ -73,13 +86,14 @@ export function useComposerLayout(value: string, forcedExpanded: boolean) {
     } else textarea.style.height = ''
   }, [forcedExpanded, updateWrapped])
 
-  useLayoutEffect(() => measure(true), [value, forcedExpanded, measure])
+  useLayoutEffect(() => measure('content'), [value, forcedExpanded, measure])
 
   useEffect(() => {
     const form = formRef.current
     if (!form) return
-    const observer = new ResizeObserver(() => measure(false))
+    const observer = new ResizeObserver(() => measure('geometry'))
     observer.observe(form)
+    form.querySelectorAll<HTMLElement>('[data-composer-control="compact"]').forEach(control => observer.observe(control))
     return () => observer.disconnect()
   }, [measure])
 
