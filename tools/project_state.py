@@ -14,7 +14,6 @@ from project_state_model import (CHECKPOINTS_PATH, NEXT_PACKAGE_SOURCE_STATUSES,
 from project_state_decision import decided_transition, validate_decided_candidate
 from project_state_evidence import fetch_pr_evidence, fetch_review_evidence, validate_pr_evidence
 
-
 def run(args: list[str], *, root: Path = ROOT) -> str:
     result = subprocess.run(args, cwd=root, capture_output=True, text=True,
                             encoding="utf-8", errors="strict", timeout=30)
@@ -22,20 +21,28 @@ def run(args: list[str], *, root: Path = ROOT) -> str:
         raise ValueError(result.stderr.strip() or f"command failed: {' '.join(args)}")
     return result.stdout.strip()
 
-
 def git(*args: str, root: Path = ROOT) -> str:
     return run(["git", *args], root=root)
 
 
-
 def active_scope(plan: dict, *, root: Path = ROOT) -> dict:
-    package_id = plan["active_package"].lower()
-    path = root / "tools" / "scopes" / f"{package_id}.json"
-    if not path.exists():
-        return {}
-    value = json.loads(path.read_text(encoding="utf-8"))
-    return value if isinstance(value, dict) else {}
-
+    package = plan["active_package"]
+    base = root if (root / "tools").exists() else ROOT
+    path = base / "tools" / "scopes" / f"{package.lower()}.json"
+    if not path.is_file():
+        raise ValueError("active scope missing")
+    try:
+        value = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError) as exc:
+        raise ValueError("active scope malformed") from exc
+    if not isinstance(value, dict):
+        raise ValueError("active scope invalid")
+    risk, policy = value.get("risk"), value.get("independent_review_required")
+    if (value.get("package_id") != package or risk not in {"low", "medium", "high"}
+            or (policy is not None and type(policy) is not bool)
+            or (risk == "high" and policy is not True)):
+        raise ValueError("active scope invalid")
+    return value
 
 def verify_checkout(plan: dict, root: Path = ROOT) -> list[str]:
     validate_plan(plan)
@@ -51,7 +58,6 @@ def verify_checkout(plan: dict, root: Path = ROOT) -> list[str]:
     if branch != lineage["working_branch"]:
         problems.append(f"checkout branch {branch} != PLAN working_branch {lineage['working_branch']}")
     return problems
-
 
 def _write_transition(plan: dict, updated: dict, evidence: dict, *, branch: str,
                       current_branch: str, source_head: str, root: Path) -> None:
@@ -70,13 +76,11 @@ def _write_transition(plan: dict, updated: dict, evidence: dict, *, branch: str,
         git("branch", "-D", branch, root=root)
         raise
 
-
 def _transition_evidence(plan: dict, pr: int, source_head: str, review: dict, root: Path) -> dict:
     evidence = fetch_pr_evidence(pr, source_head, root=root)
     evidence.update(fetch_review_evidence(active_scope(plan, root=root), pr, source_head,
                                           root=root, **review))
     return evidence
-
 
 def begin_next(plan: dict, *, branch: str, activate: str, next_id: str | None,
                verified_pr: int, owner_waiver: bool = False,
@@ -101,7 +105,6 @@ def begin_next(plan: dict, *, branch: str, activate: str, next_id: str | None,
     _write_transition(plan, updated, evidence, branch=branch, current_branch=current_branch,
                       source_head=source_head, root=root)
     return updated, evidence
-
 
 def begin_decided_next(plan: dict, *, branch: str, candidate: dict, verified_pr: int,
                        owner_waiver: bool = False,
@@ -128,7 +131,6 @@ def begin_decided_next(plan: dict, *, branch: str, candidate: dict, verified_pr:
     _write_transition(plan, updated, evidence, branch=branch, current_branch=current_branch,
                       source_head=source_head, root=root)
     return updated, evidence
-
 
 def reconcile_continuation(plan: dict, *, branch: str, activate: str,
                            reference_head: str, gaps: list[str],
@@ -160,7 +162,6 @@ def reconcile_continuation(plan: dict, *, branch: str, activate: str,
         git("branch", "-D", branch, root=root)
         raise
     return updated
-
 
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
@@ -226,10 +227,8 @@ def main() -> int:
         print(f"PROJECT STATE ERROR: {exc}", file=sys.stderr)
         return 2
 
-
 if __name__ == "__main__":
     raise SystemExit(main())
-
 
 __all__ = ["CHECKPOINTS_PATH", "NEXT_PACKAGE_SOURCE_STATUSES", "PLAN_PATH",
     "READY_DEPENDENCY_STATUSES", "ROOT", "active_scope", "begin_decided_next", "begin_next",

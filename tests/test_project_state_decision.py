@@ -169,85 +169,6 @@ def test_legacy_begin_next_still_works(tmp_path, monkeypatch):
     assert updated["active_package"] == "TEST-LEGACY" and events == ["create"]
 
 
-def _runs_for_freshness(head, foundation_rows):
-    other = [
-        {"name": "Dependency Security", "headSha": head, "event": "pull_request",
-         "status": "completed", "conclusion": "success", "databaseId": 50,
-         "runAttempt": 1, "prNumbers": [99]},
-        {"name": "Review Source", "headSha": head, "event": "pull_request",
-         "status": "completed", "conclusion": "success", "databaseId": 60,
-         "runAttempt": 1, "prNumbers": [99]},
-    ]
-    return [*foundation_rows, *other]
-
-
-def _validate_runs(runs, head="a" * 40):
-    return validate_pr_evidence(
-        pr={"headRefOid": head, "baseRefOid": "b" * 40, "state": "OPEN"},
-        runs=runs, merge_sha="c" * 40,
-        merge_commit={"parents": [{"sha": "b" * 40}, {"sha": head}]},
-        expected_head=head, pr_number=99, foundation_tree="c" * 40)
-
-
-def test_latest_required_ci_failure_blocks_old_success():
-    head = "a" * 40
-    rows = [
-        {"name": "Foundation CI", "headSha": head, "event": "pull_request",
-         "status": "completed", "conclusion": "success", "databaseId": 10,
-         "runAttempt": 1, "prNumbers": [99]},
-        {"name": "Foundation CI", "headSha": head, "event": "pull_request",
-         "status": "completed", "conclusion": "failure", "databaseId": 11,
-         "runAttempt": 1, "prNumbers": [99]},
-    ]
-    with pytest.raises(ValueError, match="latest.*Foundation CI"):
-        _validate_runs(_runs_for_freshness(head, rows), head)
-
-
-def test_latest_required_ci_in_progress_blocks_old_success():
-    head = "a" * 40
-    rows = [
-        {"name": "Foundation CI", "headSha": head, "event": "pull_request",
-         "status": "completed", "conclusion": "success", "databaseId": 10,
-         "runAttempt": 1, "prNumbers": [99]},
-        {"name": "Foundation CI", "headSha": head, "event": "pull_request",
-         "status": "in_progress", "conclusion": None, "databaseId": 11,
-         "runAttempt": 1, "prNumbers": [99]},
-    ]
-    with pytest.raises(ValueError, match="latest.*Foundation CI"):
-        _validate_runs(_runs_for_freshness(head, rows), head)
-
-
-def test_new_success_supersedes_old_failure():
-    head = "a" * 40
-    rows = [
-        {"name": "Foundation CI", "headSha": head, "event": "pull_request",
-         "status": "completed", "conclusion": "failure", "databaseId": 10,
-         "runAttempt": 1, "prNumbers": [99]},
-        {"name": "Foundation CI", "headSha": head, "event": "pull_request",
-         "status": "completed", "conclusion": "success", "databaseId": 11,
-         "runAttempt": 2, "prNumbers": [99]},
-    ]
-    result = _validate_runs(_runs_for_freshness(head, rows), head)
-    assert result["workflows"]["Foundation CI"] == 11
-
-
-def test_ci_from_other_pr_is_not_evidence():
-    head = "a" * 40
-    rows = [
-        {"name": "Foundation CI", "headSha": head, "event": "pull_request",
-         "status": "completed", "conclusion": "success", "databaseId": 11,
-         "runAttempt": 1, "prNumbers": [100]},
-        {"name": "Dependency Security", "headSha": head, "event": "pull_request",
-         "status": "completed", "conclusion": "success", "databaseId": 12,
-         "runAttempt": 1, "prNumbers": [100]},
-        {"name": "Review Source", "headSha": head, "event": "pull_request",
-         "status": "completed", "conclusion": "success", "databaseId": 13,
-         "runAttempt": 1, "prNumbers": [100]},
-    ]
-    with pytest.raises(ValueError, match="PR #99"):
-        _validate_runs(rows, head)
-
-
 def _minimal_scope(package_id, risk="medium", **extra):
     value = {
         "package_id": package_id, "base": "a" * 40, "scope_class": "tiny",
@@ -258,7 +179,7 @@ def _minimal_scope(package_id, risk="medium", **extra):
     return value
 
 
-@pytest.mark.parametrize("mode", ["missing", "malformed", "empty", "wrong-package", "wrong-risk"])
+@pytest.mark.parametrize("mode", ["missing", "malformed", "empty", "wrong-package", "wrong-risk", "wrong-policy"])
 def test_active_scope_fails_closed(mode, tmp_path):
     import project_state as state
     source = base_plan()
@@ -273,6 +194,8 @@ def test_active_scope_fails_closed(mode, tmp_path):
         path.write_text(json.dumps(_minimal_scope("OTHER-001")), encoding="utf-8")
     elif mode == "wrong-risk":
         path.write_text(json.dumps(_minimal_scope(source["active_package"], risk="critical")), encoding="utf-8")
+    elif mode == "wrong-policy":
+        path.write_text(json.dumps(_minimal_scope(source["active_package"], independent_review_required="yes")), encoding="utf-8")
     with pytest.raises(ValueError, match="scope"):
         state.active_scope(source, root=tmp_path)
 
@@ -292,6 +215,7 @@ def test_valid_low_medium_scope_remains_supported(risk, tmp_path):
 def test_missing_scope_blocks_before_branch_creation(tmp_path, monkeypatch):
     import project_state as state
     source = base_plan(); _write_docs(tmp_path, source); calls = []
+    (tmp_path / "tools" / "scopes").mkdir(parents=True)
 
     def fake_git(*args, root=tmp_path):
         if args == ("status", "--porcelain"): return ""

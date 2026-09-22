@@ -7,6 +7,7 @@ ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "tools"))
 from review_evidence import (matching_structured_review, require_independent_review,  # noqa: E402
     review_decision, review_required)
+from project_state_evidence import validate_pr_evidence  # noqa: E402
 
 
 def high_scope():
@@ -153,3 +154,82 @@ def test_review_fetch_keeps_second_page_latest_verdict(monkeypatch):
     result = evidence_module.fetch_review_evidence(high_scope(), 99, head)
     assert result["independent_review"] == "approved"
     assert result["independent_review_id"] == 2
+
+def _runs_for_freshness(head, foundation_rows):
+    other = [
+        {"name": "Dependency Security", "headSha": head, "event": "pull_request",
+         "status": "completed", "conclusion": "success", "databaseId": 50,
+         "runAttempt": 1, "prNumbers": [99]},
+        {"name": "Review Source", "headSha": head, "event": "pull_request",
+         "status": "completed", "conclusion": "success", "databaseId": 60,
+         "runAttempt": 1, "prNumbers": [99]},
+    ]
+    return [*foundation_rows, *other]
+
+
+def _validate_runs(runs, head="a" * 40):
+    return validate_pr_evidence(
+        pr={"headRefOid": head, "baseRefOid": "b" * 40, "state": "OPEN"},
+        runs=runs, merge_sha="c" * 40,
+        merge_commit={"parents": [{"sha": "b" * 40}, {"sha": head}]},
+        expected_head=head, pr_number=99, foundation_tree="c" * 40)
+
+
+def test_latest_required_ci_failure_blocks_old_success():
+    head = "a" * 40
+    rows = [
+        {"name": "Foundation CI", "headSha": head, "event": "pull_request",
+         "status": "completed", "conclusion": "success", "databaseId": 10,
+         "runAttempt": 1, "prNumbers": [99]},
+        {"name": "Foundation CI", "headSha": head, "event": "pull_request",
+         "status": "completed", "conclusion": "failure", "databaseId": 11,
+         "runAttempt": 1, "prNumbers": [99]},
+    ]
+    with pytest.raises(ValueError, match="latest.*Foundation CI"):
+        _validate_runs(_runs_for_freshness(head, rows), head)
+
+
+def test_latest_required_ci_in_progress_blocks_old_success():
+    head = "a" * 40
+    rows = [
+        {"name": "Foundation CI", "headSha": head, "event": "pull_request",
+         "status": "completed", "conclusion": "success", "databaseId": 10,
+         "runAttempt": 1, "prNumbers": [99]},
+        {"name": "Foundation CI", "headSha": head, "event": "pull_request",
+         "status": "in_progress", "conclusion": None, "databaseId": 11,
+         "runAttempt": 1, "prNumbers": [99]},
+    ]
+    with pytest.raises(ValueError, match="latest.*Foundation CI"):
+        _validate_runs(_runs_for_freshness(head, rows), head)
+
+
+def test_new_success_supersedes_old_failure():
+    head = "a" * 40
+    rows = [
+        {"name": "Foundation CI", "headSha": head, "event": "pull_request",
+         "status": "completed", "conclusion": "failure", "databaseId": 10,
+         "runAttempt": 1, "prNumbers": [99]},
+        {"name": "Foundation CI", "headSha": head, "event": "pull_request",
+         "status": "completed", "conclusion": "success", "databaseId": 11,
+         "runAttempt": 2, "prNumbers": [99]},
+    ]
+    result = _validate_runs(_runs_for_freshness(head, rows), head)
+    assert result["workflows"]["Foundation CI"] == 11
+
+
+def test_ci_from_other_pr_is_not_evidence():
+    head = "a" * 40
+    rows = [
+        {"name": "Foundation CI", "headSha": head, "event": "pull_request",
+         "status": "completed", "conclusion": "success", "databaseId": 11,
+         "runAttempt": 1, "prNumbers": [100]},
+        {"name": "Dependency Security", "headSha": head, "event": "pull_request",
+         "status": "completed", "conclusion": "success", "databaseId": 12,
+         "runAttempt": 1, "prNumbers": [100]},
+        {"name": "Review Source", "headSha": head, "event": "pull_request",
+         "status": "completed", "conclusion": "success", "databaseId": 13,
+         "runAttempt": 1, "prNumbers": [100]},
+    ]
+    with pytest.raises(ValueError, match="PR #99"):
+        _validate_runs(rows, head)
+
