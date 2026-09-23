@@ -2,18 +2,19 @@ import { useEffect, useRef, useState } from 'react'
 import type { AuthView } from '../../shared/api'
 import { Icon } from '../../shared/ui/Icon'
 import { AccountMenu } from '../TopBar'
-import type { LocalChat } from './types'
+import type { ChatThread } from './types'
 import './ChatSidebar.css'
 
-export function ChatSidebar({ auth, history, currentChatId, theme, onThemeChange, onLogout, onNewChat, onOpenChat, onClose }: {
+export function ChatSidebar({ auth, history, currentChatId, busy, theme, onThemeChange, onLogout, onNewChat, onOpenChat, onClose }: {
   auth: AuthView | null | undefined
-  history: LocalChat[]
-  currentChatId: number | null
+  history: ChatThread[]
+  currentChatId: string | null
+  busy: boolean
   theme: 'light' | 'dark'
   onThemeChange: (value: 'light' | 'dark') => void
   onLogout: () => void
   onNewChat: () => void
-  onOpenChat: (chat: LocalChat) => void
+  onOpenChat: (chat: ChatThread) => void
   onClose: () => void
 }) {
   const [searchOpen, setSearchOpen] = useState(false)
@@ -71,13 +72,14 @@ export function ChatSidebar({ auth, history, currentChatId, theme, onThemeChange
     </div>
 
     <div className="chat-sidebar-actions">
-      <button onClick={onNewChat}><Icon name="edit" /><span>Новый чат</span></button>
+      <button onClick={onNewChat} disabled={busy}><Icon name="edit" /><span>Новый чат</span></button>
     </div>
 
     <div className="chat-side-section">Чаты</div>
     <div className="chat-history-list" aria-label="Список чатов">
       {visibleHistory.map(chat => <button className={chat.id === currentChatId ? 'chat-history-item active' : 'chat-history-item'}
-        key={chat.id} onClick={() => onOpenChat(chat)} title={chat.title}>{chat.title}</button>)}
+        key={chat.id} onClick={() => onOpenChat(chat)} disabled={busy}
+        title={chat.title}>{chat.title}</button>)}
     </div>
 
     {auth && <div className="chat-sidebar-bottom">
