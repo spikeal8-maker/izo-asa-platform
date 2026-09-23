@@ -3,12 +3,23 @@ export type FoundationStatus = components['schemas']['FoundationStatus']
 export type AuthView = components['schemas']['AuthView']
 export type GuestView = components['schemas']['GuestView']
 export type SessionList = components['schemas']['SessionList']
+export type ChatPolicyView = components['schemas']['ChatPolicyView']
+export type CredentialView = components['schemas']['CredentialView']
+export type ThreadView = components['schemas']['ThreadView']
+export type ThreadList = components['schemas']['ThreadList']
+export type MessageView = components['schemas']['MessageView']
+export type ThreadDetail = components['schemas']['ThreadDetail']
+export type ChatRequestView = components['schemas']['RequestView']
 
 export class ApiError extends Error {
   constructor(public status: number, public code: string) { super(code) }
 }
 type Options = {
-  method?: 'GET' | 'POST' | 'DELETE'; data?: unknown; csrf?: string; signal?: AbortSignal
+  method?: 'GET' | 'POST' | 'DELETE'
+  data?: unknown
+  csrf?: string
+  signal?: AbortSignal
+  timeoutMs?: number
 }
 async function responseFor(path: string, options: Options): Promise<Response> {
   if (!path.startsWith('/api/v1/') || /[\\\r\n#]/.test(path)
@@ -21,8 +32,8 @@ async function responseFor(path: string, options: Options): Promise<Response> {
     headers['X-IZO-Request'] = 'web'
     if (options.csrf) headers['X-CSRF-Token'] = options.csrf
   }
-  const signal = options.signal
-    ? AbortSignal.any([options.signal, AbortSignal.timeout(15000)]) : AbortSignal.timeout(15000)
+  const timeout = AbortSignal.timeout(options.timeoutMs ?? 15000)
+  const signal = options.signal ? AbortSignal.any([options.signal, timeout]) : timeout
   const response = await fetch(path, { method, headers, credentials: 'same-origin',
     cache: 'no-store', redirect: 'error', referrerPolicy: 'no-referrer', signal,
     body: method === 'GET' ? undefined : JSON.stringify(options.data ?? {}) })
@@ -36,6 +47,12 @@ async function responseFor(path: string, options: Options): Promise<Response> {
 export async function apiRequest<T>(path: string, options: Options = {}): Promise<T> {
   const response = await responseFor(path, options)
   return response.status === 204 ? undefined as T : await response.json() as T
+}
+export async function apiStream(path: string, signal?: AbortSignal): Promise<Response> {
+  const response = await responseFor(path, { signal, timeoutMs: 90000 })
+  if (response.headers.get('content-type')?.split(';')[0] !== 'text/event-stream' || !response.body)
+    throw new Error('Invalid event stream')
+  return response
 }
 
 /** Read one authenticated PNG with a hard bound. Never prefetch a gallery's originals. */
