@@ -21,6 +21,7 @@ from .settings.routes import attach_settings
 from .media.routes import attach_media
 from .jobs.routes import attach_jobs
 from .guest import attach_guest
+from .chat import attach_chat
 
 logger = logging.getLogger("izo.http")
 
@@ -51,6 +52,7 @@ def create_app(config: Settings | None = None,
     attach_media(app, accounts_service, config)
     attach_jobs(app, accounts_service)
     attach_guest(app, accounts_service, config)
+    attach_chat(app, config, accounts_service)
 
     @app.middleware("http")
     async def request_context(request: Request, call_next):
