@@ -226,8 +226,9 @@ jobs:
       - name: Windows preview guard
         shell: python
         run: |
-          import base64, subprocess as sp, tempfile
+          import base64, os, subprocess as sp, sys, tempfile
           from pathlib import Path
+          sys.path.insert(0, str(Path.cwd()))
           from tools import build_preview
           script = build_preview.start_cmd()
           volume_guard = "docker volume inspect izo-chat-preview_postgres-data"
@@ -243,4 +244,10 @@ jobs:
               (p/".env").write_text("\n".join(x for x in first.decode().splitlines() if not x.startswith("IZO_CHAT_LOCAL_PREVIEW_ENABLED="))+"\n",encoding="ascii")
               sp.run(c,cwd=p,check=True); v=dict(x.split("=",1) for x in (p/".env").read_text().splitlines())
               assert v["IZO_CHAT_ROOT_KEY"]==key and v["IZO_CHAT_LOCAL_PREVIEW_ENABLED"]=="true"
-          print("WINDOWS_PREVIEW_GUARD_OK; ROOT_PRESERVED; LOST_ENV_DB_GUARD_PRESENT")
+              (p/".env").unlink()
+              (p/"docker.cmd").write_text("@echo off\r\nexit /b 0\r\n",encoding="ascii")
+              env=os.environ.copy(); env["PATH"]=str(p)+os.pathsep+env["PATH"]
+              stopped=sp.run(["cmd","/d","/c","call","start.cmd"],cwd=p,env=env,capture_output=True,text=True)
+              assert stopped.returncode==2 and not (p/".env").exists()
+              assert "No new key was generated" in stopped.stdout
+          print("WINDOWS_PREVIEW_GUARD_OK; ROOT_PRESERVED; LOST_ENV_DB_GUARD_EXECUTED")
