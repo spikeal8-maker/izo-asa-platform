@@ -12,7 +12,7 @@ from izo.accounts.schemas import RegisterInput
 from izo.accounts.service import AuthService
 from izo.accounts.settings import AuthSettings
 from izo.chat import tables as chat
-from izo.chat.crypto import decrypt, encrypt
+from izo.chat.credentials import decrypt, encrypt
 from izo.chat.provider import FakeDeepSeekProvider
 from izo.chat.schemas import (
     CredentialCommand, CredentialWrite, RequestCreate,

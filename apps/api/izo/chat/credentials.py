@@ -1,12 +1,31 @@
 """Account-owned DeepSeek credential lifecycle."""
-from uuid import uuid4
+import hashlib
+import hmac
+import os
+from uuid import UUID, uuid4
 import sqlalchemy as sa
 from cryptography.exceptions import InvalidTag
+from cryptography.hazmat.primitives.ciphers.aead import AESGCM
 from . import tables as t
-from .crypto import decrypt, encrypt, operation_fingerprint
 from .provider import ProviderFailure
 from .schemas import CredentialView
 from .settings import CREDENTIAL_WINDOW_LIMIT
+def aad(account_id: UUID, connection_id: UUID, generation: int) -> bytes:
+	return f"izo-chat|deepseek|{account_id}|{connection_id}|{generation}".encode("ascii")
+def encrypt(root_key: bytes, account_id: UUID, connection_id: UUID,
+			generation: int, plaintext: str) -> tuple[bytes, bytes]:
+	nonce = os.urandom(12)
+	ciphertext = AESGCM(root_key).encrypt(
+		nonce, plaintext.encode("utf-8"), aad(account_id, connection_id, generation))
+	return nonce, ciphertext
+def decrypt(root_key: bytes, account_id: UUID, connection_id: UUID,
+			generation: int, nonce: bytes, ciphertext: bytes) -> str:
+	value = AESGCM(root_key).decrypt(
+		nonce, ciphertext, aad(account_id, connection_id, generation))
+	return value.decode("utf-8")
+def operation_fingerprint(root_key: bytes, action: str, payload: bytes) -> str:
+	return hmac.new(root_key, action.encode("ascii") + b"\0" + payload,
+		hashlib.sha256).hexdigest()
 class ChatError(Exception):
 	def __init__(self, status: int, code: str):
 		self.status, self.code = status, code

@@ -35,7 +35,6 @@
     "apps/api/izo/chat/settings.py",
     "apps/api/izo/chat/tables.py",
     "apps/api/izo/chat/schemas.py",
-    "apps/api/izo/chat/crypto.py",
     "apps/api/izo/chat/provider.py",
     "apps/api/izo/chat/service.py",
     "apps/api/izo/chat/routes.py",
@@ -72,10 +71,10 @@
     "apps/web/src/shell/chat/useChatRuntime.ts",
     "apps/web/src/shell/chat/ChatCredentialPanel.tsx",
     "apps/api/izo/chat/execution.py",
-    "apps/web/src/shell/chat/ChatRuntime.css"
+    "apps/web/src/shell/chat/ChatRuntime.css",
+    "apps/web/e2e/shell.spec.ts"
   ],
   "sensitive_approved": [
-    "apps/api/izo/chat/crypto.py",
     "apps/api/izo/chat/provider.py",
     "apps/api/izo/chat/service.py",
     "apps/api/izo/chat/routes.py",
