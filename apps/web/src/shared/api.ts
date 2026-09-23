@@ -3,12 +3,52 @@ export type FoundationStatus = components['schemas']['FoundationStatus']
 export type AuthView = components['schemas']['AuthView']
 export type GuestView = components['schemas']['GuestView']
 export type SessionList = components['schemas']['SessionList']
+export type ChatPolicyView = components['schemas']['ChatPolicyView']
+export type CredentialView = components['schemas']['CredentialView']
+export type ThreadView = components['schemas']['ThreadView']
+export type ThreadList = components['schemas']['ThreadList']
+export type MessageView = components['schemas']['MessageView']
+export type ThreadDetail = components['schemas']['ThreadDetail']
+export type ChatRequestView = components['schemas']['RequestView']
 
 export class ApiError extends Error {
   constructor(public status: number, public code: string) { super(code) }
 }
+export const chatErrors: Record<string, string> = {
+  chat_preview_not_enabled: 'Этот аккаунт не допущен к локальному Chat preview.',
+  credential_not_verified: 'Подключите и проверьте ключ DeepSeek.',
+  credential_rejected: 'DeepSeek отклонил этот ключ.',
+  credential_storage_unavailable: 'Хранилище ключей недоступно. Проверьте локальный root key.',
+  credential_unavailable: 'Сохранённый ключ недоступен или был отключён.',
+  credential_revision_conflict: 'Настройки ключа уже изменились. Обновите страницу.',
+  credential_in_use: 'Сначала остановите активный ответ, затем замените ключ.',
+  model_not_allowed: 'Выбранная модель не разрешена сервером.',
+  active_request_exists: 'В этом чате уже выполняется ответ.',
+  request_conflict: 'Повторный запрос имеет другие параметры.',
+  chat_rate_limited: 'Достигнут временный лимит Chat. Повторите позднее.',
+  provider_rate_limited: 'DeepSeek ограничил частоту запросов.',
+  provider_balance: 'DeepSeek не разрешил запрос для этого ключа.',
+  provider_empty_response: '????????? ???????? ?????? ??? ?????? ??????.',
+  provider_output_limit: '????? ?????? ?????? ?????. ????????? ????? ????????.',
+  provider_incomplete_response: '????????? ?? ?????????? ?????? ?????. ????????? ????? ????????.',
+  provider_unavailable: 'DeepSeek сейчас недоступен.',
+  provider_overloaded: 'DeepSeek перегружен. Автоматический повтор не выполнялся.',
+  provider_stream_interrupted: 'Поток DeepSeek прервался. Частичный ответ сохранён.',
+  request_expired: 'Время выполнения запроса истекло.',
+  executor_restarted: 'Исполнитель был перезапущен. Частичный ответ сохранён.',
+}
+export function chatProblem(reason: unknown): string {
+  if (reason instanceof ApiError) return chatErrors[reason.code]
+    ?? (reason.status === 401 ? 'Войдите в аккаунт.' : 'Сервер отклонил Chat-запрос.')
+  if (reason instanceof DOMException && reason.name === 'AbortError') return ''
+  return 'Связь с Chat прервалась. Новый платный запрос автоматически не запускался.'
+}
 type Options = {
-  method?: 'GET' | 'POST' | 'DELETE'; data?: unknown; csrf?: string; signal?: AbortSignal
+  method?: 'GET' | 'POST' | 'DELETE'
+  data?: unknown
+  csrf?: string
+  signal?: AbortSignal
+  timeoutMs?: number
 }
 async function responseFor(path: string, options: Options): Promise<Response> {
   if (!path.startsWith('/api/v1/') || /[\\\r\n#]/.test(path)
@@ -21,8 +61,8 @@ async function responseFor(path: string, options: Options): Promise<Response> {
     headers['X-IZO-Request'] = 'web'
     if (options.csrf) headers['X-CSRF-Token'] = options.csrf
   }
-  const signal = options.signal
-    ? AbortSignal.any([options.signal, AbortSignal.timeout(15000)]) : AbortSignal.timeout(15000)
+  const timeout = AbortSignal.timeout(options.timeoutMs ?? 15000)
+  const signal = options.signal ? AbortSignal.any([options.signal, timeout]) : timeout
   const response = await fetch(path, { method, headers, credentials: 'same-origin',
     cache: 'no-store', redirect: 'error', referrerPolicy: 'no-referrer', signal,
     body: method === 'GET' ? undefined : JSON.stringify(options.data ?? {}) })
@@ -36,6 +76,12 @@ async function responseFor(path: string, options: Options): Promise<Response> {
 export async function apiRequest<T>(path: string, options: Options = {}): Promise<T> {
   const response = await responseFor(path, options)
   return response.status === 204 ? undefined as T : await response.json() as T
+}
+export async function apiStream(path: string, signal?: AbortSignal): Promise<Response> {
+  const response = await responseFor(path, { signal, timeoutMs: 90000 })
+  if (response.headers.get('content-type')?.split(';')[0] !== 'text/event-stream' || !response.body)
+    throw new Error('Invalid event stream')
+  return response
 }
 
 /** Read one authenticated PNG with a hard bound. Never prefetch a gallery's originals. */

@@ -16,9 +16,11 @@ jobs:
       IZO_ENVIRONMENT: test
       IZO_JOBS_ENABLED: 'true'
       IZO_BUILD_SHA: ${{ github.sha }}
+      IZO_SOURCE_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
       AWS_EC2_METADATA_DISABLED: 'true'
     steps:
-      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd
+      - &source-checkout
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd
         with: {persist-credentials: false, fetch-depth: 0}
       - uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1
         with: {python-version: '3.13'}
@@ -76,6 +78,7 @@ jobs:
           IZO_IMAGE_ACCEPTANCE=isolated node apps/web/acceptance/image-live.mjs "$RUNNER_TEMP/izo-image-state.json" before
           docker compose run --rm -T -e IZO_ENVIRONMENT=test -e IZO_JOBS_ACCEPTANCE=isolated api python tools/jobs_acceptance.py before > "$RUNNER_TEMP/izo-jobs-state.json"
           docker compose run --rm -T -e IZO_ENVIRONMENT=test -e IZO_GUEST_ACCEPTANCE=isolated -e IZO_GUEST_ENABLED=true -e IZO_JOBS_ENABLED=true api python tools/guest_acceptance.py before > "$RUNNER_TEMP/izo-guest-state.json"
+          IZO_CHAT_ACCEPTANCE=isolated node apps/web/acceptance/chat-live.mjs "$RUNNER_TEMP/izo-chat-state.json" before
           docker compose run --rm api python tools/persistence.py write
           docker compose down
           docker compose up --wait --wait-timeout 180
@@ -93,6 +96,8 @@ jobs:
           docker compose run --rm -T -e IZO_ENVIRONMENT=test -e IZO_IMAGE_ACCEPTANCE=isolated api python tools/image_acceptance.py after < "$RUNNER_TEMP/izo-image-state.json"
           IZO_IMAGE_ACCEPTANCE=isolated node apps/web/acceptance/image-live.mjs "$RUNNER_TEMP/izo-image-state.json" after
           docker compose run --rm -T -e IZO_ENVIRONMENT=test -e IZO_GUEST_ACCEPTANCE=isolated -e IZO_GUEST_ENABLED=true -e IZO_JOBS_ENABLED=true api python tools/guest_acceptance.py after < "$RUNNER_TEMP/izo-guest-state.json"
+          IZO_CHAT_ACCEPTANCE=isolated node apps/web/acceptance/chat-live.mjs "$RUNNER_TEMP/izo-chat-state.json" after
+          rm -f "$RUNNER_TEMP/izo-chat-state.json"
           rm -f "$RUNNER_TEMP/izo-guest-state.json"
           rm -f "$RUNNER_TEMP/izo-image-state.json"
           rm -f "$RUNNER_TEMP/izo-jobs-state.json"
@@ -107,6 +112,75 @@ jobs:
           docker compose stop storage
           docker compose exec -T api python -c "import urllib.request, urllib.error; r=urllib.request.urlopen('http://127.0.0.1:8000/api/health/live'); assert r.status==200"
           docker compose exec -T api python -c "import http.client; c=http.client.HTTPConnection('localhost',8000,timeout=10); c.request('GET','/api/health/ready'); assert c.getresponse().status==503"
+      - name: Build and clean-test offline Chat preview
+        run: |
+          set -euo pipefail
+          api_tag="izo-asa-chat-api:${GITHUB_SHA::12}"
+          web_tag="izo-asa-chat-web:${GITHUB_SHA::12}"
+          docker tag "$(docker compose images -q api | head -n1)" "$api_tag"
+          docker tag "$(docker compose images -q web | head -n1)" "$web_tag"
+          rm -rf "$RUNNER_TEMP/izo-preview" "$RUNNER_TEMP/izo-preview-clean"
+          mkdir -p "$RUNNER_TEMP/izo-preview"
+          .venv/bin/python tools/build_preview.py \
+            --output "$RUNNER_TEMP/izo-preview" --sha "$GITHUB_SHA" --source-sha "$IZO_SOURCE_SHA" \
+            --api-image "$api_tag" --web-image "$web_tag" \
+            --live-status "NOT_RUN/BLOCKED" > "$RUNNER_TEMP/izo-preview/result.json"
+          unzip -q "$RUNNER_TEMP/izo-preview/IZO-ASA-Chat-Preview.zip" \
+            -d "$RUNNER_TEMP/izo-preview-clean"
+          bundle="$RUNNER_TEMP/izo-preview-clean/IZO-ASA-Chat-Preview"
+          test -f "$bundle/start.cmd" -a -f "$bundle/stop.cmd" -a -f "$bundle/compose.yaml"
+          test -f "$bundle/images.tar" -a -f "$bundle/build-info.json"
+          test -f "$bundle/checksums.sha256" -a -f "$bundle/README-RU.txt"
+          if grep -q 'build:' "$bundle/compose.yaml"; then echo "Preview must not build"; exit 1; fi
+          (cd "$bundle" && sha256sum -c checksums.sha256)
+          docker image rm "$api_tag" "$web_tag"
+          docker load -i "$bundle/images.tar" >/dev/null
+          docker image inspect "$api_tag" "$web_tag" >/dev/null
+          chat_root="$(.venv/bin/python -c "import base64; print(base64.urlsafe_b64encode(b'x'*32).decode().rstrip('='))")"
+          cat > "$bundle/.env" <<EOF
+          IZO_ENVIRONMENT=test
+          IZO_PG_PASSWORD=ci-preview-pg-password-2026
+          IZO_S3_ACCESS_KEY=izopreviewaccess
+          IZO_S3_SECRET_KEY=ci-preview-storage-secret-2026-0000
+          IZO_HTTP_PORT=18080
+          IZO_AUTH_RATE_SECRET=rrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrr
+          IZO_AUTH_REGISTRATION=open
+          IZO_RECOVERY_SECRET=ssssssssssssssssssssssssssssssssssssssssssssssss
+          IZO_RECOVERY_DELIVERY=test
+          IZO_CHAT_ROOT_KEY=$chat_root
+          IZO_CHAT_PREVIEW_ACCOUNT_EMAILS=preview@local.izo
+          EOF
+          preview="docker compose -f $bundle/compose.yaml -p izo-chat-preview-clean --env-file $bundle/.env"
+          $preview up -d --wait --wait-timeout 240
+          test "$(docker network inspect izo-chat-preview-clean_private --format '{{.Internal}}')" = true
+          test "$(docker network inspect izo-chat-preview-clean_chat-egress --format '{{.Internal}}')" = false
+          for service in postgres storage; do
+            container="$($preview ps -q "$service")"
+            test "$(docker inspect "$container" --format '{{len .NetworkSettings.Networks}}')" = 1
+            test "$(docker inspect "$container" --format '{{len .HostConfig.PortBindings}}')" = 0
+          done
+          echo PREVIEW_NETWORK_POLICY_OK
+          .venv/bin/python -c "import urllib.request; assert urllib.request.urlopen('http://127.0.0.1:18080/api/health/ready',timeout=10).status==200"
+          IZO_CHAT_ACCEPTANCE=isolated IZO_CHAT_ORIGIN=http://127.0.0.1:18080 \
+            node apps/web/acceptance/chat-live.mjs "$RUNNER_TEMP/izo-preview-chat.json" before
+          $preview down
+          $preview up -d --wait --wait-timeout 180
+          .venv/bin/python -c "import urllib.request; assert urllib.request.urlopen('http://127.0.0.1:18080/api/health/ready',timeout=10).status==200"
+          IZO_CHAT_ACCEPTANCE=isolated IZO_CHAT_ORIGIN=http://127.0.0.1:18080 \
+            node apps/web/acceptance/chat-live.mjs "$RUNNER_TEMP/izo-preview-chat.json" after
+          $preview down -v --remove-orphans
+          rm -f "$RUNNER_TEMP/izo-preview-chat.json"
+      - name: Save tested Chat preview
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: chat-deepseek-preview
+          path: |
+            ${{ runner.temp }}/izo-preview/IZO-ASA-Chat-Preview.zip
+            ${{ runner.temp }}/izo-preview/IZO-ASA-Chat-Preview.zip.sha256
+            ${{ runner.temp }}/izo-preview/result.json
+          retention-days: 7
+          compression-level: 0
+          if-no-files-found: error
       - name: Safe status on failure
         if: failure()
         run: if [ -f .env ]; then docker compose ps; fi
@@ -123,6 +197,11 @@ jobs:
       - name: Remove isolated CI stack
         if: always()
         run: |
+          rm -f "$RUNNER_TEMP/izo-chat-state.json" "$RUNNER_TEMP/izo-preview-chat.json"
+          preview_bundle="$RUNNER_TEMP/izo-preview-clean/IZO-ASA-Chat-Preview"
+          if [ -f "$preview_bundle/.env" ]; then
+            docker compose -f "$preview_bundle/compose.yaml" -p izo-chat-preview-clean               --env-file "$preview_bundle/.env" down -v --remove-orphans || true
+          fi
           rm -f "$RUNNER_TEMP/izo-guest-state.json"
           rm -f "$RUNNER_TEMP/izo-image-state.json"
           rm -f "$RUNNER_TEMP/izo-jobs-state.json"
@@ -135,3 +214,32 @@ jobs:
           rm -f "$RUNNER_TEMP/izo-auth-session.json"
           rm -f "$RUNNER_TEMP/izo-email-proof.json"
           if [ -f .env ]; then docker compose down -v --remove-orphans; fi
+
+  bootstrap-windows:
+    runs-on: windows-latest
+    timeout-minutes: 8
+    steps:
+      - *source-checkout
+      - uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1
+        with: {python-version: '3.13'}
+      - name: First-run Windows configuration and root-key preservation
+        shell: python
+        run: |
+          import base64, subprocess, sys, tempfile
+          from pathlib import Path
+          sys.path.insert(0, str(Path.cwd()))
+          from tools import build_preview
+          with tempfile.TemporaryDirectory(prefix="izo-chat-bootstrap-") as directory:
+              root = Path(directory)
+              (root / "start.cmd").write_text(build_preview.start_cmd(), encoding="utf-8", newline="\r\n")
+              command = ["cmd.exe", "/d", "/c", "start.cmd", "--check-config"]
+              subprocess.run(command, cwd=root, check=True, capture_output=True, timeout=30)
+              first = (root / ".env").read_bytes()
+              values = dict(line.split("=", 1) for line in first.decode("ascii").splitlines())
+              assert len(values) == 11 and values["IZO_ENVIRONMENT"] == "development"
+              key = base64.urlsafe_b64decode(values["IZO_CHAT_ROOT_KEY"] + "=")
+              assert len(key) == 32 and key != b"\0" * 32
+              assert values["IZO_RECOVERY_DELIVERY"] == "disabled"
+              subprocess.run(command, cwd=root, check=True, capture_output=True, timeout=30)
+              assert (root / ".env").read_bytes() == first
+          print("WINDOWS_BOOTSTRAP_OK; ROOT_PRESERVED; DOCKER_NOT_INVOKED")

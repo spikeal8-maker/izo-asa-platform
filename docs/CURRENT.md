@@ -1,9 +1,9 @@
 # IZO ASA · текущая точка разработки
 
 <!-- runtime_base=api/fal-klein-001@faec39d6ae0b4f035ef0f86114494789acde3b46 -->
-<!-- current_package_base=ux/frontend-continuation@380064825f47ecf078b81f9f87d9dcdbd96b76ab -->
-<!-- working_branch=maint/state-decision-003 -->
-<!-- active_package=MAINT-STATE-003 -->
+<!-- current_package_base=maint/state-decision-003@1120121c0fd1f6d9279aa3e95523bb48d5b906f8 -->
+<!-- working_branch=feat/chat-deepseek-001 -->
+<!-- active_package=CHAT-DEEPSEEK-001 -->
 <!-- next_package=NONE -->
 
 Это короткая точка входа после `AGENTS.md`. Machine source of truth — `PLAN.json`.
@@ -16,5 +16,5 @@
 `begin-decided-next`: exact HEAD/CI/review или explicit owner waiver проверяются до новой ветки, state пишется только
 на ней. Для непринятого active package используется только `reconcile-continuation`.
 
-Активный пакет: **MAINT-STATE-003**. Следующий: **NONE**.
+Активный пакет: **CHAT-DEEPSEEK-001**. Следующий: **NONE**.
 Параллельные lineages из PLAN нельзя использовать как base без reconciliation.

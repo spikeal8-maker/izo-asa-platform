@@ -6,4 +6,5 @@ psycopg[binary]==3.3.5
 SQLAlchemy==2.0.50
 alembic==1.19.2
 boto3==1.43.18
+cryptography==50.0.1
 Pillow==12.3.0

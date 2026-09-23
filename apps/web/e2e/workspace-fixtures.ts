@@ -40,6 +40,15 @@ export async function workspace(page: Page) {
       balance: { balance: state.balance, available: state.balance - state.reserved, reserved: state.reserved, sequence: 1 }, entries: [], next_before: null })
     if (path === '/api/v1/entitlements') return answer({ account_id: owner, configured: state.configured,
       policy: { capability_ids: state.capabilities, executors: ['api'], image_sizes: [{ width: 64, height: 64 }, { width: 128, height: 64 }] } })
+    if (path === '/api/v1/chat/policy') return answer({
+      revision: 'browser-fixture', default_model: 'deepseek-flash',
+      models: [{ id: 'deepseek-flash', label: 'DeepSeek Flash' }, { id: 'deepseek-v4-pro', label: 'DeepSeek V4 Pro' }],
+      max_input_chars: 6000, max_output_tokens: 2048,
+    })
+    if (path === '/api/v1/chat/credential') return answer({
+      configured: true, enabled: true, verified: true, revision: 1, generation: 1, provider: 'deepseek',
+    })
+    if (path === '/api/v1/chat/threads' && req.method() === 'GET') return answer({ threads: [] })
     if (req.method() === 'POST') {
       expect(req.headers()['x-csrf-token']).toBe('workspace-csrf')
       expect(req.headers()['x-izo-request']).toBe('web')

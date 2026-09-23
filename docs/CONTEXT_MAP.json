@@ -24,6 +24,11 @@
       "intent": "not_backend",
       "all_any": [["guest", "гостев", "гость"], ["studio", "студи", "первая", "первый", "генерац", "проб"]],
       "scores": {"web.guest": 6, "web.studio": -2}
+    },
+    {
+      "name": "deepseek_text_chat",
+      "all_any": [["deepseek"], ["chat", "чат", "byok"]],
+      "scores": {"api.chat": 12, "ops.runtime": -4, "web.gallery": -4}
     }
   ],
   "routes": {
@@ -152,6 +157,13 @@
       "tests": ["tests/test_fal_provider.py", "tests/test_provider_jobs.py"],
       "expand_if_needed": ["apps/api/izo/providers/fal.py", "apps/api/izo/jobs/provider_execution.py", "apps/api/izo/jobs/README.md", "docs/AI_RUNTIME.md", "apps/api/izo/jobs/execution.py", "compose.yaml"],
       "do_not_read_by_default": ["docs/PRODUCT.md", "docs/ADMIN.md", "apps/web/src/features/accounts"]
+    },
+    "api.chat": {
+      "keywords": ["deepseek", "chat backend", "чат backend", "streaming chat", "credential", "byok", "thread", "chat request"],
+      "read_first": ["apps/api/AGENTS.md", "apps/api/izo/chat/README.md"],
+      "tests": ["tests/test_chat.py", "tests/test_chat_http.py"],
+      "expand_if_needed": ["apps/api/izo/chat/service.py", "apps/api/izo/chat/credentials.py", "apps/api/izo/chat/conversations.py", "apps/api/izo/chat/execution.py", "apps/api/izo/chat/provider.py", "apps/web/src/shell/ChatPage.tsx", "compose.yaml"],
+      "do_not_read_by_default": ["docs/ADMIN.md", "apps/api/izo/jobs", "apps/api/izo/media"]
     },
     "ops.runtime": {
       "keywords": ["docker", "compose", "deploy", "release", "backup", "restore", "health", "network", "egress", "развертывание", "релиз", "бэкап"],
