@@ -74,8 +74,24 @@ async function responseFor(path: string, options: Options): Promise<Response> {
   return response
 }
 export async function apiRequest<T>(path: string, options: Options = {}): Promise<T> {
-  const response = await responseFor(path, options)
-  return response.status === 204 ? undefined as T : await response.json() as T
+  try {
+    const response = await responseFor(path, options)
+    return response.status === 204 ? undefined as T : await response.json() as T
+  } catch (reason) {
+    if (path === '/api/v1/auth/me'
+        && reason instanceof ApiError && reason.status === 401) {
+      const response = await responseFor('/api/v1/auth/local-preview', {
+        method: 'POST', data: {}, signal: options.signal,
+      })
+      const preview = await response.json() as T
+      if (['/login', '/register'].includes(window.location.pathname)) {
+        window.history.replaceState(null, '', '/')
+        window.dispatchEvent(new Event('izo:navigate'))
+      }
+      return preview
+    }
+    throw reason
+  }
 }
 export async function apiStream(path: string, signal?: AbortSignal): Promise<Response> {
   const response = await responseFor(path, { signal, timeoutMs: 90000 })

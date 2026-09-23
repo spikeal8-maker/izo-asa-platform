@@ -52,7 +52,8 @@ def http_env(tmp_path):
     )
     policy = ChatSettings(
         root_key=root_key(),
-        preview_account_emails="alice@example.invalid,bob@example.invalid",
+        preview_account_emails="alice@example.invalid,bob@example.invalid,preview@local.izo",
+        local_preview_enabled=True,
     )
     service = ChatService(
         auth, policy, FakeDeepSeekProvider(), clock=lambda: clock[0])
@@ -74,6 +75,22 @@ def signup(auth, client, email):
         headers={"Origin": ORIGIN, "X-IZO-Request": "web"},
     )
     assert response.status_code == 201, response.text
+    client.headers.update({
+        "Origin": ORIGIN,
+        "X-IZO-Request": "web",
+        "X-CSRF-Token": response.json()["csrf_token"],
+    })
+    return response.json()
+
+
+def preview_login(client):
+    client.cookies.clear()
+    client.headers.pop("X-CSRF-Token", None)
+    response = client.post(
+        "/api/v1/auth/local-preview", json={},
+        headers={"Origin": ORIGIN, "X-IZO-Request": "web"},
+    )
+    assert response.status_code == 200, response.text
     client.headers.update({
         "Origin": ORIGIN,
         "X-IZO-Request": "web",
@@ -260,6 +277,63 @@ def test_http_stop_pending_is_terminal_and_idempotent(http_env):
     assert "message.interrupted" in stream
     assert "text.delta" not in stream
 
+def test_local_preview_reuses_account_history_and_credential(http_env):
+    _, _, client = http_env
+    legacy = signup(None, client, "preview@local.izo")
+    credential = save_and_verify(client)
+    thread = client.post("/api/v1/chat/threads", json={"title": "preview"}).json()
+    request_id = str(uuid4())
+    assert client.post(
+        f"/api/v1/chat/threads/{thread['id']}/requests",
+        json={"request_id": request_id, "text": "persist me",
+              "model": "deepseek-flash"}).status_code == 202
+    with client.stream(
+            "GET", f"/api/v1/chat/requests/{request_id}/events") as response:
+        assert "message.done" in "".join(response.iter_text())
+    second = preview_login(client)
+    assert second["account"]["id"] == legacy["account"]["id"]
+    current = client.get("/api/v1/chat/credential").json()
+    assert current["revision"] == credential["revision"]
+    reverified = client.post(
+        "/api/v1/chat/credential/verify",
+        json={"operation_id": str(uuid4()),
+              "expected_revision": current["revision"]},
+    )
+    assert reverified.status_code == 200 and reverified.json()["verified"]
+    detail = client.get(f"/api/v1/chat/threads/{thread['id']}").json()
+    assert any(m["content"] == "persist me" for m in detail["messages"])
+
+
+def test_local_preview_off_keeps_normal_auth_and_chat_closed(http_env):
+    _, service, client = http_env
+    service.policy.local_preview_enabled = False
+    client.cookies.clear()
+    client.headers.pop("X-CSRF-Token", None)
+
+    assert client.get("/api/v1/auth/me").status_code == 401
+    assert client.get("/api/v1/chat/policy").status_code == 401
+    blocked = client.post(
+        "/api/v1/auth/local-preview", json={},
+        headers={"Origin": ORIGIN, "X-IZO-Request": "web"},
+    )
+    assert blocked.status_code == 404
+
+    registered = client.post(
+        "/api/v1/auth/register",
+        json={"email": "normal@example.invalid", "password": PASSWORD,
+              "display_name": "normal"},
+        headers={"Origin": ORIGIN, "X-IZO-Request": "web"},
+    )
+    assert registered.status_code == 201
+    client.cookies.clear()
+    logged_in = client.post(
+        "/api/v1/auth/login",
+        json={"email": "normal@example.invalid", "password": PASSWORD},
+        headers={"Origin": ORIGIN, "X-IZO-Request": "web"},
+    )
+    assert logged_in.status_code == 200
+
+
 def test_preview_compression_metadata_and_secret_exclusion(tmp_path, monkeypatch):
     import gzip
     import zipfile
@@ -269,6 +343,10 @@ def test_preview_compression_metadata_and_secret_exclusion(tmp_path, monkeypatch
         if args[1] == 'save':
             Path(args[3]).write_bytes(b'synthetic image archive')
     monkeypatch.setattr(builder, 'run', fake_run)
+    script = builder.start_cmd()
+    assert "docker volume inspect izo-chat-preview_postgres-data" in script
+    assert "No new key was generated" in script
+    assert "IZO_CHAT_LOCAL_PREVIEW_ENABLED=true" in script
     bundle, info = builder.write_bundle(tmp_path, sha='a' * 40, source_sha='b' * 40,
         api_image='test-api:local', web_image='test-web:local', live_status='NOT_RUN')
     assert (info['build_sha'], info['source_sha']) == ('a' * 40, 'b' * 40)

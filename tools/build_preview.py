@@ -82,6 +82,7 @@ services:
       <<: *api-environment
       IZO_CHAT_ROOT_KEY: ${IZO_CHAT_ROOT_KEY:?Missing IZO_CHAT_ROOT_KEY}
       IZO_CHAT_PREVIEW_ACCOUNT_EMAILS: ${IZO_CHAT_PREVIEW_ACCOUNT_EMAILS:-preview@local.izo}
+      IZO_CHAT_LOCAL_PREVIEW_ENABLED: ${IZO_CHAT_LOCAL_PREVIEW_ENABLED:-true}
     networks: [private, chat-egress]
     read_only: true
     tmpfs: [/tmp]
@@ -122,20 +123,35 @@ def start_cmd() -> str:
     return r"""@echo off
 setlocal
 cd /d "%~dp0"
-if /I "%~1"=="--check-config" goto configure
-where docker >nul 2>nul || (echo Docker Desktop not found.& exit /b 1)
-docker info >nul 2>nul || (echo Docker Desktop is not running.& exit /b 1)
-:configure
+set "CHECK_CONFIG=0"
+if /I "%~1"=="--check-config" set "CHECK_CONFIG=1"
+if "%CHECK_CONFIG%"=="0" (
+  where docker >nul 2>nul || (echo Docker Desktop not found.& exit /b 1)
+  call docker info >nul 2>nul || (echo Docker Desktop is not running.& exit /b 1)
+)
 if not exist .env (
-  powershell -NoProfile -ExecutionPolicy Bypass -Command "$ErrorActionPreference='Stop'; function New-HexSecret([int]$n){$b=New-Object byte[] $n; $r=[Security.Cryptography.RandomNumberGenerator]::Create(); $r.GetBytes($b); $r.Dispose(); ([BitConverter]::ToString($b)).Replace('-','').ToLowerInvariant()}; function New-Base64Secret([int]$n){$b=New-Object byte[] $n; $r=[Security.Cryptography.RandomNumberGenerator]::Create(); $r.GetBytes($b); $r.Dispose(); ([Convert]::ToBase64String($b)).TrimEnd('=').Replace('+','-').Replace('/','_')}; $v=@('IZO_ENVIRONMENT=development',('IZO_PG_PASSWORD='+(New-HexSecret 24)),('IZO_S3_ACCESS_KEY=izo'+(New-HexSecret 8)),('IZO_S3_SECRET_KEY='+(New-HexSecret 32)),'IZO_HTTP_PORT=8080',('IZO_AUTH_RATE_SECRET='+(New-HexSecret 32)),'IZO_AUTH_REGISTRATION=open',('IZO_RECOVERY_SECRET='+(New-HexSecret 32)),'IZO_RECOVERY_DELIVERY=disabled',('IZO_CHAT_ROOT_KEY='+(New-Base64Secret 32)),'IZO_CHAT_PREVIEW_ACCOUNT_EMAILS=preview@local.izo'); [IO.File]::WriteAllLines((Join-Path (Get-Location) '.env'),$v,[Text.Encoding]::ASCII)"
+  if "%CHECK_CONFIG%"=="0" (
+    call docker volume inspect izo-chat-preview_postgres-data >nul 2>nul
+    if not errorlevel 1 (
+      echo Existing preview database volume found but .env is missing.
+      echo Restore the original .env with its IZO_CHAT_ROOT_KEY. No new key was generated.
+      exit /b 2
+    )
+  )
+  powershell -NoProfile -ExecutionPolicy Bypass -Command "$ErrorActionPreference='Stop'; function New-HexSecret([int]$n){$b=New-Object byte[] $n; $r=[Security.Cryptography.RandomNumberGenerator]::Create(); $r.GetBytes($b); $r.Dispose(); ([BitConverter]::ToString($b)).Replace('-','').ToLowerInvariant()}; function New-Base64Secret([int]$n){$b=New-Object byte[] $n; $r=[Security.Cryptography.RandomNumberGenerator]::Create(); $r.GetBytes($b); $r.Dispose(); ([Convert]::ToBase64String($b)).TrimEnd('=').Replace('+','-').Replace('/','_')}; $v=@('IZO_ENVIRONMENT=development',('IZO_PG_PASSWORD='+(New-HexSecret 24)),('IZO_S3_ACCESS_KEY=izo'+(New-HexSecret 8)),('IZO_S3_SECRET_KEY='+(New-HexSecret 32)),'IZO_HTTP_PORT=8080',('IZO_AUTH_RATE_SECRET='+(New-HexSecret 32)),'IZO_AUTH_REGISTRATION=open',('IZO_RECOVERY_SECRET='+(New-HexSecret 32)),'IZO_RECOVERY_DELIVERY=disabled',('IZO_CHAT_ROOT_KEY='+(New-Base64Secret 32)),'IZO_CHAT_PREVIEW_ACCOUNT_EMAILS=preview@local.izo','IZO_CHAT_LOCAL_PREVIEW_ENABLED=true'); [IO.File]::WriteAllLines((Join-Path (Get-Location) '.env'),$v,[Text.Encoding]::ASCII)"
   if errorlevel 1 exit /b 1
 )
-if /I "%~1"=="--check-config" exit /b 0
-docker load -i images.tar || exit /b 1
-docker compose -p izo-chat-preview --env-file .env -f compose.yaml up -d --no-build --pull never --wait --wait-timeout 240 || (docker compose -p izo-chat-preview --env-file .env -f compose.yaml ps & exit /b 1)
+findstr /R /B /C:"IZO_CHAT_ROOT_KEY=." .env >nul || (
+  echo Existing .env has no IZO_CHAT_ROOT_KEY. Refusing to generate a replacement.
+  exit /b 2
+)
+findstr /B /C:"IZO_CHAT_LOCAL_PREVIEW_ENABLED=" .env >nul || >>.env echo IZO_CHAT_LOCAL_PREVIEW_ENABLED=true
+if "%CHECK_CONFIG%"=="1" exit /b 0
+call docker load -i images.tar || exit /b 1
+call docker compose -p izo-chat-preview --env-file .env -f compose.yaml up -d --no-build --pull never --wait --wait-timeout 240 || (call docker compose -p izo-chat-preview --env-file .env -f compose.yaml ps & exit /b 1)
 echo.
 echo IZO ASA preview: http://127.0.0.1:8080
-echo Register with preview@local.izo, then connect your DeepSeek key in Chat.
+echo Local preview session is created automatically. Connect and verify your DeepSeek key in Chat.
 endlocal
 """
 
@@ -157,11 +173,13 @@ def readme(live_status: str) -> str:
 
 1. Распакуйте архив целиком в отдельную папку.
 2. Запустите start.cmd. Первый запуск загрузит локальные образы из images.tar и выполнит миграции.
-3. Откройте http://127.0.0.1:8080
-4. Создайте аккаунт с почтой preview@local.izo, именем и паролем не короче 8 символов.
-5. В Chat нажмите «Подключить DeepSeek», введите свой API key и выполните проверку.
-6. Выберите «Авто», DeepSeek Flash или DeepSeek V4 Pro и отправьте сообщение.
-7. stop.cmd останавливает контейнеры, но сохраняет PostgreSQL/S3 volumes. Следующий start.cmd использует те же данные.
+3. Откройте http://127.0.0.1:8080 — локальная preview-session создаётся автоматически.
+4. В Chat откройте DeepSeek, введите свой API key и нажмите «Сохранить и проверить».
+5. Выберите «Авто», DeepSeek Flash или DeepSeek V4 Pro и отправьте сообщение.
+6. stop.cmd останавливает контейнеры, но сохраняет PostgreSQL/S3 volumes. Следующий start.cmd использует те же данные.
+
+Если PostgreSQL volume уже есть, а .env потерян, start.cmd остановится и не создаст новый root key.
+Восстановите старый .env: сохранённый DeepSeek key требует прежний IZO_CHAT_ROOT_KEY.
 
 API key не находится в архиве и не отправляется в GitHub/CI. Он шифруется сервером с локальным root key из .env.
 Файл .env создаётся только на вашем компьютере при первом start.cmd. Не публикуйте и не пересылайте его.
