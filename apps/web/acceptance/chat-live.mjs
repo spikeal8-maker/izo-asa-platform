@@ -68,9 +68,7 @@ try {
     await page.waitForURL(url => url.origin === origin && url.pathname === '/')
 
     const tokenInput = page.getByLabel('API ключ DeepSeek')
-    if (!await tokenInput.isVisible()) {
-      await page.getByRole('button', { name: 'Подключить DeepSeek' }).click()
-    }
+    await expect(tokenInput).toBeVisible({ timeout: 15000 })
     await tokenInput.fill('x'.repeat(32))
     await page.getByRole('button', {
       name: /Сохранить и проверить|Заменить и проверить/,
