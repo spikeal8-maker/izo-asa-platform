@@ -1,27 +1,16 @@
-import type { Plan } from '../../shared/workspace-api'
-import type { IconName } from '../../shared/ui/Icon'
+import type { ChatPolicyView } from '../../shared/api'
+import type { ChatModel } from './types'
 
-export type ModelCategory = 'text' | 'image' | 'video' | 'audio' | '3d'
-export type ChatModel = { id: string; label: string; category: ModelCategory | null }
-
-export const autoModel: ChatModel = { id: 'auto', label: 'Авто', category: null }
-
-export const modelCategories: { id: ModelCategory; label: string; icon: IconName }[] = [
-  { id: 'text', label: 'Текст', icon: 'chat' },
-  { id: 'image', label: 'Изображения', icon: 'image' },
-  { id: 'video', label: 'Видео', icon: 'video' },
-  { id: 'audio', label: 'Звук', icon: 'audio' },
-  { id: '3d', label: '3D', icon: 'cube' },
-]
-
-const capabilityRegistry: Record<string, Omit<ChatModel, 'id'>> = {
-  'fal.flux2.klein.4b': { label: 'FLUX.2 [klein] 4B', category: 'image' },
+export function configuredModels(policy: ChatPolicyView | null): ChatModel[] {
+  return policy?.models ?? []
 }
 
-export function configuredModels(plan: Plan): ChatModel[] {
-  if (!plan.configured || !plan.policy) return []
-  return plan.policy.capability_ids.flatMap(id => {
-    const registered = capabilityRegistry[id]
-    return registered ? [{ id, ...registered }] : []
-  })
+export function selectedModel(
+  policy: ChatPolicyView | null, currentId: string | null,
+): ChatModel | null {
+  const models = configuredModels(policy)
+  return models.find(item => item.id === currentId)
+    ?? models.find(item => item.id === policy?.default_model)
+    ?? models[0]
+    ?? null
 }
