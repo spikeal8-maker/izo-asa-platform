@@ -260,6 +260,30 @@ def test_http_stop_pending_is_terminal_and_idempotent(http_env):
     assert "message.interrupted" in stream
     assert "text.delta" not in stream
 
+def test_local_preview_upgrade_and_normal_auth(http_env):
+    auth, service, client = http_env
+    client.cookies.clear(); client.headers.pop("X-CSRF-Token", None)
+    h={"Origin": ORIGIN, "X-IZO-Request": "web"}
+    assert client.get("/api/v1/auth/me").status_code == 401
+    assert client.post("/api/v1/auth/local-preview",json={},headers=h).status_code == 404
+    legacy=signup(auth,client,"preview@local.izo")
+    service.policy.local_preview_enabled=True
+    service.policy.preview_account_emails="preview@local.izo"
+    cred=save_and_verify(client)
+    thread=client.post("/api/v1/chat/threads",json={"title":"upgrade"}).json()
+    client.app.state.chat_service = ChatService(
+        auth, service.policy, FakeDeepSeekProvider(), clock=service.clock)
+    client.cookies.clear(); client.headers.pop("X-CSRF-Token", None)
+    preview=client.post("/api/v1/auth/local-preview",json={},headers=h).json()
+    assert preview["account"]["id"] == legacy["account"]["id"]
+    client.headers.update({**h,"X-CSRF-Token":preview["csrf_token"]})
+    cur=client.get("/api/v1/chat/credential").json()
+    assert cur["revision"] == cred["revision"]
+    assert client.post("/api/v1/chat/credential/verify",json={
+        "operation_id":str(uuid4()),"expected_revision":cur["revision"]}).json()["verified"]
+    assert client.get("/api/v1/chat/threads").json()["threads"][0]["id"] == thread["id"]
+
+
 def test_preview_compression_metadata_and_secret_exclusion(tmp_path, monkeypatch):
     import gzip
     import zipfile
@@ -269,6 +293,10 @@ def test_preview_compression_metadata_and_secret_exclusion(tmp_path, monkeypatch
         if args[1] == 'save':
             Path(args[3]).write_bytes(b'synthetic image archive')
     monkeypatch.setattr(builder, 'run', fake_run)
+    script = builder.start_cmd()
+    assert "docker volume inspect izo-chat-preview_postgres-data" in script
+    assert "No new key was generated" in script
+    assert "IZO_CHAT_LOCAL_PREVIEW_ENABLED=true" in script
     bundle, info = builder.write_bundle(tmp_path, sha='a' * 40, source_sha='b' * 40,
         api_image='test-api:local', web_image='test-web:local', live_status='NOT_RUN')
     assert (info['build_sha'], info['source_sha']) == ('a' * 40, 'b' * 40)

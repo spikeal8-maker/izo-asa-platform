@@ -1,8 +1,12 @@
 """Compose bounded Chat owners into one request-scoped API service."""
 import time
+from uuid import uuid4
 from threading import Event, Lock
 
 import sqlalchemy as sa
+from sqlalchemy.exc import IntegrityError
+
+from ..accounts import repository as account_repo, tables as account_tables
 
 from . import tables as t
 from .conversations import ConversationMixin
@@ -44,6 +48,31 @@ class ChatService(CredentialMixin, ConversationMixin, ExecutionMixin):
         except Exception:
             # OpenAPI composition stays side-effect free when no DB is running.
             pass
+
+    def local_preview_session(self, label: str):
+        email, now = "preview@local.izo", self.auth.now()
+        try:
+            with self.engine.begin() as conn:
+                account = account_repo.account_by_email(conn, email)
+                if account is None:
+                    account_id, identity_id = uuid4(), uuid4()
+                    conn.execute(account_tables.accounts.insert().values(
+                        id=account_id, public_code=uuid4().hex[:16],
+                        display_name="Local Preview", state="active", created_at=now))
+                    conn.execute(account_tables.identities.insert().values(
+                        id=identity_id, account_id=account_id, provider="email",
+                        subject=email, verified_at=now))
+                    account_repo.event(conn, account_id, "account.local_preview_created", now)
+                    account = account_repo.account_by_id(conn, account_id, lock=True)
+                if not account or account["state"] != "active":
+                    raise ChatError(403, "local_preview_account_unavailable")
+                return self.auth._new_session(conn, account, label, now)
+        except IntegrityError:
+            with self.engine.begin() as conn:
+                account = account_repo.account_by_email(conn, email)
+                if not account or account["state"] != "active":
+                    raise ChatError(403, "local_preview_account_unavailable") from None
+                return self.auth._new_session(conn, account, label, self.auth.now())
 
     def _account(self, conn, raw, csrf=None, mutation=False):
         account, session = self.auth._session(conn, raw, csrf, mutation=mutation)

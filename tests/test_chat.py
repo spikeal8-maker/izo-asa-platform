@@ -2,16 +2,19 @@
 from __future__ import annotations
 
 import base64
+from types import SimpleNamespace
 from uuid import uuid4
 
 import pytest
 import sqlalchemy as sa
+from fastapi import FastAPI
+from fastapi.testclient import TestClient
 
 from izo.accounts import tables as accounts
 from izo.accounts.schemas import RegisterInput
 from izo.accounts.service import AuthService
 from izo.accounts.settings import AuthSettings
-from izo.chat import tables as chat
+from izo.chat import attach_chat, tables as chat
 from izo.chat.credentials import decrypt, encrypt
 from izo.chat.provider import FakeDeepSeekProvider
 from izo.chat.schemas import (
@@ -296,3 +299,16 @@ def test_late_stream_finish_cannot_report_success_over_durable_interruption(chat
     events = ''.join(stream)
     assert 'message.done' not in events and 'message.interrupted' in events
     assert service.request(alice.bearer, created.id).state == 'interrupted'
+
+
+def test_production_local_preview_bootstrap_is_rejected(chat_env):
+    service, _, _, _ = chat_env
+    app = FastAPI()
+    attach_chat(app, SimpleNamespace(environment="production"), lambda _: service.auth)
+    app.state.chat_service = ChatService(
+        service.auth, ChatSettings(root_key=root_key(), local_preview_enabled=True),
+        FakeDeepSeekProvider(), clock=service.clock)
+    with TestClient(app, base_url="http://localhost:8080") as client:
+        blocked = client.post("/api/v1/auth/local-preview")
+    assert (blocked.status_code, blocked.json()["error"]["code"]) == (
+        403, "local_preview_forbidden")

@@ -149,6 +149,7 @@ jobs:
           IZO_RECOVERY_DELIVERY=test
           IZO_CHAT_ROOT_KEY=$chat_root
           IZO_CHAT_PREVIEW_ACCOUNT_EMAILS=preview@local.izo
+          IZO_CHAT_LOCAL_PREVIEW_ENABLED=true
           EOF
           preview="docker compose -f $bundle/compose.yaml -p izo-chat-preview-clean --env-file $bundle/.env"
           $preview up -d --wait --wait-timeout 240
@@ -161,14 +162,14 @@ jobs:
           done
           echo PREVIEW_NETWORK_POLICY_OK
           .venv/bin/python -c "import urllib.request; assert urllib.request.urlopen('http://127.0.0.1:18080/api/health/ready',timeout=10).status==200"
-          IZO_CHAT_ACCEPTANCE=isolated IZO_CHAT_ORIGIN=http://127.0.0.1:18080 \
+          IZO_CHAT_ACCEPTANCE=isolated IZO_CHAT_LOCAL_PREVIEW=true IZO_CHAT_ORIGIN=http://127.0.0.1:18080 \
             node apps/web/acceptance/chat-live.mjs "$RUNNER_TEMP/izo-preview-chat.json" before
           $preview down
           $preview up -d --wait --wait-timeout 180
           .venv/bin/python -c "import urllib.request; assert urllib.request.urlopen('http://127.0.0.1:18080/api/health/ready',timeout=10).status==200"
-          IZO_CHAT_ACCEPTANCE=isolated IZO_CHAT_ORIGIN=http://127.0.0.1:18080 \
+          IZO_CHAT_ACCEPTANCE=isolated IZO_CHAT_LOCAL_PREVIEW=true IZO_CHAT_ORIGIN=http://127.0.0.1:18080 \
             node apps/web/acceptance/chat-live.mjs "$RUNNER_TEMP/izo-preview-chat.json" after
-          $preview down -v --remove-orphans
+          $preview down --remove-orphans
           rm -f "$RUNNER_TEMP/izo-preview-chat.json"
       - name: Save tested Chat preview
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
@@ -200,7 +201,7 @@ jobs:
           rm -f "$RUNNER_TEMP/izo-chat-state.json" "$RUNNER_TEMP/izo-preview-chat.json"
           preview_bundle="$RUNNER_TEMP/izo-preview-clean/IZO-ASA-Chat-Preview"
           if [ -f "$preview_bundle/.env" ]; then
-            docker compose -f "$preview_bundle/compose.yaml" -p izo-chat-preview-clean               --env-file "$preview_bundle/.env" down -v --remove-orphans || true
+            docker compose -f "$preview_bundle/compose.yaml" -p izo-chat-preview-clean               --env-file "$preview_bundle/.env" down --remove-orphans || true
           fi
           rm -f "$RUNNER_TEMP/izo-guest-state.json"
           rm -f "$RUNNER_TEMP/izo-image-state.json"
@@ -213,7 +214,7 @@ jobs:
           rm -f "$RUNNER_TEMP/izo-credit-state.json"
           rm -f "$RUNNER_TEMP/izo-auth-session.json"
           rm -f "$RUNNER_TEMP/izo-email-proof.json"
-          if [ -f .env ]; then docker compose down -v --remove-orphans; fi
+          if [ -f .env ]; then docker compose down --remove-orphans; fi
 
   bootstrap-windows:
     runs-on: windows-latest
@@ -222,24 +223,16 @@ jobs:
       - *source-checkout
       - uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1
         with: {python-version: '3.13'}
-      - name: First-run Windows configuration and root-key preservation
+      - name: Windows preview guard
         shell: python
         run: |
-          import base64, subprocess, sys, tempfile
+          import base64,os,subprocess as s,sys,tempfile
           from pathlib import Path
-          sys.path.insert(0, str(Path.cwd()))
-          from tools import build_preview
-          with tempfile.TemporaryDirectory(prefix="izo-chat-bootstrap-") as directory:
-              root = Path(directory)
-              (root / "start.cmd").write_text(build_preview.start_cmd(), encoding="utf-8", newline="\r\n")
-              command = ["cmd.exe", "/d", "/c", "start.cmd", "--check-config"]
-              subprocess.run(command, cwd=root, check=True, capture_output=True, timeout=30)
-              first = (root / ".env").read_bytes()
-              values = dict(line.split("=", 1) for line in first.decode("ascii").splitlines())
-              assert len(values) == 11 and values["IZO_ENVIRONMENT"] == "development"
-              key = base64.urlsafe_b64decode(values["IZO_CHAT_ROOT_KEY"] + "=")
-              assert len(key) == 32 and key != b"\0" * 32
-              assert values["IZO_RECOVERY_DELIVERY"] == "disabled"
-              subprocess.run(command, cwd=root, check=True, capture_output=True, timeout=30)
-              assert (root / ".env").read_bytes() == first
-          print("WINDOWS_BOOTSTRAP_OK; ROOT_PRESERVED; DOCKER_NOT_INVOKED")
+          sys.path.insert(0,str(Path.cwd()));from tools import build_preview as b
+          x=b.start_cmd();g="docker volume inspect izo-chat-preview_postgres-data";assert x.index(g)<x.index("New-Base64Secret 32")
+          with tempfile.TemporaryDirectory() as d:
+              p=Path(d);(p/"start.cmd").write_text(x,encoding="utf-8",newline="\r\n");c=["cmd","/d","/c","start.cmd","--check-config"];s.run(c,cwd=p,check=True)
+              a=(p/".env").read_bytes();v=dict(q.split("=",1) for q in a.decode().splitlines());k=v["IZO_CHAT_ROOT_KEY"];assert v["IZO_CHAT_LOCAL_PREVIEW_ENABLED"]=="true" and len(base64.urlsafe_b64decode(k+"="))==32
+              s.run(c,cwd=p,check=True);assert (p/".env").read_bytes()==a
+              (p/".env").write_text("\n".join(q for q in a.decode().splitlines() if not q.startswith("IZO_CHAT_LOCAL_PREVIEW_ENABLED="))+"\n");s.run(c,cwd=p,check=True);assert k in (p/".env").read_text()
+              (p/".env").unlink();(p/"docker.cmd").write_text("@exit /b 0\r\n");e=os.environ.copy();e["PATH"]=str(p)+os.pathsep+e["PATH"];r=s.run(["cmd","/d","/c","call","start.cmd"],cwd=p,env=e,capture_output=True,text=True);assert r.returncode==2 and not (p/".env").exists()

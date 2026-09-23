@@ -26,6 +26,7 @@ class ChatSettings(BaseSettings):
         env_prefix="IZO_CHAT_", extra="ignore", hide_input_in_errors=True)
     root_key: SecretStr = SecretStr("")
     preview_account_emails: str = "preview@local.izo"
+    local_preview_enabled: bool = False
     request_deadline_seconds: int = Field(default=75, ge=10, le=180)
 
     def root_key_bytes(self) -> bytes:

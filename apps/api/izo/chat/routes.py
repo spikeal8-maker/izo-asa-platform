@@ -4,7 +4,7 @@ from __future__ import annotations
 from threading import Lock
 from uuid import UUID
 
-from fastapi import APIRouter, Request
+from fastapi import APIRouter, Request, Response
 from fastapi.exceptions import RequestValidationError
 from fastapi.exception_handlers import request_validation_exception_handler
 from fastapi.responses import JSONResponse, StreamingResponse
@@ -111,6 +111,22 @@ def attach_chat(app, database_config, accounts_provider) -> None:
                 status_code=422)
         return await request_validation_exception_handler(
             request, exc)
+
+    @app.post("/api/v1/auth/local-preview", include_in_schema=False)
+    def local_preview(request: Request, response: Response):
+        service = runtime_service(request)
+        if not service.policy.local_preview_enabled:
+            raise ChatError(404, "not_found")
+        if database_config.environment not in {"development", "test"}:
+            raise ChatError(403, "local_preview_forbidden")
+        same_origin(request, service.auth)
+        receipt = service.local_preview_session(
+            request.headers.get("user-agent", "Local preview"))
+        policy = service.auth.policy
+        response.set_cookie(policy.cookie_name, receipt.bearer, httponly=True,
+            secure=policy.secure_cookie, samesite="lax", path="/",
+            max_age=policy.absolute_seconds)
+        return receipt.view
 
     router = APIRouter(
         prefix="/api/v1/chat", tags=["chat"])

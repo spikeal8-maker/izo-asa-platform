@@ -8,6 +8,7 @@ const phase = process.argv[3]
 if (!['before', 'after'].includes(phase)) throw new Error('Expected before or after')
 const file = process.argv[2]
 const origin = process.env.IZO_CHAT_ORIGIN ?? 'http://localhost:8080'
+const localPreview = process.env.IZO_CHAT_LOCAL_PREVIEW === 'true'
 const evidence = 'apps/web/test-results/chat-live'
 await mkdir(evidence, { recursive: true })
 const browser = await chromium.launch()
@@ -27,6 +28,33 @@ async function login(page, email, passphrase) {
   await page.getByLabel('Пароль', { exact: true }).fill(passphrase)
   await page.getByRole('button', { name: 'Войти', exact: true }).click()
   await page.waitForURL(url => url.origin === origin && url.pathname === '/')
+}
+
+async function previewSession(page) {
+  const bootstrap = page.waitForResponse(response =>
+    response.url().endsWith('/api/v1/auth/local-preview'))
+  await page.goto('/')
+  const response = await bootstrap
+  expect(response.status()).toBe(200)
+  await expect(page).toHaveURL(url => url.origin === origin && url.pathname === '/')
+  await expect(page.getByLabel('Электронная почта')).toHaveCount(0)
+  const auth = await page.evaluate(async () => {
+    const result = await fetch('/api/v1/auth/me', {
+      credentials: 'same-origin', cache: 'no-store',
+    })
+    if (!result.ok) throw new Error('auth me failed')
+    return result.json()
+  })
+  expect(auth.account.email).toBe('preview@local.izo')
+  return auth
+}
+
+async function chooseFlash(page) {
+  const selector = page.locator('button.chat-model-selector')
+  await selector.click()
+  await page.locator('.chat-model-category summary').first().click()
+  await page.getByRole('menuitemradio', { name: 'DeepSeek Flash' }).click()
+  await expect(selector).toContainText('DeepSeek Flash')
 }
 
 async function send(page, text) {
@@ -60,12 +88,18 @@ try {
   if (phase === 'before') {
     const ctx = await context()
     const page = await ctx.newPage()
-    await page.goto('/register')
-    await page.getByLabel('Имя', { exact: true }).fill('Preview Chat')
-    await page.getByLabel('Электронная почта').fill(email)
-    await page.getByLabel('Пароль', { exact: true }).fill(passphrase)
-    await page.getByRole('button', { name: 'Создать аккаунт' }).click()
-    await page.waitForURL(url => url.origin === origin && url.pathname === '/')
+    let auth
+    if (localPreview) {
+      auth = await previewSession(page)
+    } else {
+      await page.goto('/register')
+      await page.getByLabel('Имя', { exact: true }).fill('Preview Chat')
+      await page.getByLabel('Электронная почта').fill(email)
+      await page.getByLabel('Пароль', { exact: true }).fill(passphrase)
+      await page.getByRole('button', { name: 'Создать аккаунт' }).click()
+      await page.waitForURL(url => url.origin === origin && url.pathname === '/')
+      auth = await page.evaluate(async () => (await fetch('/api/v1/auth/me')).json())
+    }
 
     const tokenInput = page.getByLabel('API ключ DeepSeek')
     await expect(tokenInput).toBeVisible({ timeout: 15000 })
@@ -76,6 +110,7 @@ try {
     await expect(page.getByRole('button', { name: 'DeepSeek подключён' }))
       .toBeVisible({ timeout: 15000 })
 
+    await chooseFlash(page)
     await send(page, 'Первый вопрос D1')
     await expect(page.locator('.chat-assistant-message').last())
       .toContainText('Первый вопрос D1')
@@ -88,8 +123,8 @@ try {
     const list = await serverThreads(page)
     expect(list.threads).toHaveLength(1)
     const state = {
-      email, passphrase, thread_id: list.threads[0].id,
-      title: list.threads[0].title,
+      email, passphrase, account_id: auth.account.id,
+      thread_id: list.threads[0].id, title: list.threads[0].title,
       first: 'Ответ DeepSeek test: Первый вопрос D1',
       follow: 'Контекст: Первый вопрос D1',
     }
@@ -98,16 +133,22 @@ try {
       path: evidence + '/chat-before-restart.png', fullPage: true,
     })
     await ctx.close()
-    console.log(
-      'CHAT_BROWSER_BEFORE_OK: register -> encrypted BYOK verify -> SSE -> contextual follow-up',
-    )
+    console.log(localPreview
+      ? 'CHAT_BROWSER_BEFORE_OK: auto-session -> encrypted BYOK verify -> model -> SSE -> contextual follow-up'
+      : 'CHAT_BROWSER_BEFORE_OK: register -> encrypted BYOK verify -> SSE -> contextual follow-up')
   } else {
     const raw = await readFile(file, 'utf8')
     if (raw.length > 65536) throw new Error('Chat acceptance state exceeds limit')
     const state = JSON.parse(raw)
     const ctx = await context()
     const page = await ctx.newPage()
-    await login(page, state.email, state.passphrase)
+    let auth
+    if (localPreview) auth = await previewSession(page)
+    else {
+      await login(page, state.email, state.passphrase)
+      auth = await page.evaluate(async () => (await fetch('/api/v1/auth/me')).json())
+    }
+    expect(auth.account.id).toBe(state.account_id)
 
     await expect(page.getByRole('button', { name: 'DeepSeek подключён' })).toBeVisible()
     const item = page.getByRole('button', { name: state.title, exact: true })
@@ -117,11 +158,17 @@ try {
     await expect(page.locator('.chat-assistant-message').first()).toContainText(state.first)
     await expect(page.locator('.chat-assistant-message').last()).toContainText(state.follow)
 
+    if (localPreview) {
+      await send(page, 'После restart')
+      await expect(page.locator('.chat-assistant-message').last()).toContainText('После restart')
+    }
+
     await page.reload()
     await expect(page.getByRole('button', { name: 'DeepSeek подключён' })).toBeVisible()
     await page.getByRole('button', { name: state.title, exact: true }).click()
-    await expect(page.locator('.chat-assistant-message')).toHaveCount(2)
-    await expect(page.locator('.chat-assistant-message').last()).toContainText(state.follow)
+    await expect(page.locator('.chat-assistant-message')).toHaveCount(localPreview ? 3 : 2)
+    await expect(page.locator('.chat-assistant-message').last())
+      .toContainText(localPreview ? 'После restart' : state.follow)
     await page.screenshot({
       path: evidence + '/chat-after-restart.png', fullPage: true,
     })
@@ -133,9 +180,9 @@ try {
       path: evidence + '/chat-after-restart-phone.png', fullPage: true,
     })
     await ctx.close()
-    console.log(
-      'CHAT_BROWSER_AFTER_OK: login -> credential -> durable thread -> reload after Compose restart',
-    )
+    console.log(localPreview
+      ? 'CHAT_BROWSER_AFTER_OK: auto-session reused account -> credential -> durable thread -> F5'
+      : 'CHAT_BROWSER_AFTER_OK: login -> credential -> durable thread -> reload after Compose restart')
   }
 } finally {
   await browser.close()
