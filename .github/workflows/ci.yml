@@ -19,7 +19,8 @@ jobs:
       IZO_SOURCE_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
       AWS_EC2_METADATA_DISABLED: 'true'
     steps:
-      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd
+      - &source-checkout
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd
         with: {persist-credentials: false, fetch-depth: 0}
       - uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1
         with: {python-version: '3.13'}
@@ -218,8 +219,7 @@ jobs:
     runs-on: windows-latest
     timeout-minutes: 8
     steps:
-      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd
-        with: {persist-credentials: false}
+      - *source-checkout
       - uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1
         with: {python-version: '3.13'}
       - name: First-run Windows configuration and root-key preservation

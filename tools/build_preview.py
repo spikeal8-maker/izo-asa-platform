@@ -151,7 +151,7 @@ endlocal
 
 
 def readme(live_status: str) -> str:
-    return f"""ИЗО АСА — локальный Chat preview
+    return rf"""ИЗО АСА — локальный Chat preview
 
 Требование: установлен и запущен Docker Desktop. Git, Python и Node.js не нужны.
 
