@@ -92,10 +92,10 @@ class ExecutionMixin:
 		event = self._register_stop(request_id)
 		content, saved_at, saved_len = "", time.monotonic(), 0
 		sequence = 0
-		yield self._event(
-			"message.start",
-			{"request_id": str(request_id), "sequence": sequence})
 		try:
+			yield self._event(
+				"message.start",
+				{"request_id": str(request_id), "sequence": sequence})
 			key, messages = self._context_and_key(
 				account_id, request_row)
 			for chunk in self.provider.stream(

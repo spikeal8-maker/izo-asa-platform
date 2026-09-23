@@ -189,7 +189,12 @@ class ConversationMixin:
 	def _register_stop(self, request_id: UUID) -> Event:
 		with self._stop_lock:
 			event = self._stops.setdefault(request_id, Event())
-			return event
+		with self.engine.begin() as conn:
+			requested = conn.execute(sa.select(t.requests.c.stop_requested_at).where(
+				t.requests.c.id == request_id)).scalar_one()
+		if requested is not None:
+			event.set()
+		return event
 	def _unregister_stop(self, request_id: UUID) -> None:
 		with self._stop_lock:
 			self._stops.pop(request_id, None)

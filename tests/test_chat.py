@@ -276,3 +276,28 @@ def test_provider_wire_terminal_contract(text, finish, error):
             list(stream)
     else:
         assert ''.join(stream) == text
+
+@pytest.mark.parametrize('boundary', ['start', 'partial', 'stop-before', 'stop-partial'])
+def test_stream_stop_and_disconnect_boundaries(chat_env, boundary):
+    service, alice, _, _ = chat_env
+    connect_key(service, alice)
+    thread = service.create_thread(alice.bearer, alice.view.csrf_token, None)
+    created = request(service, alice, thread.id, 'bounded disconnect and Stop')
+    stream = service.stream_events(alice.bearer, created.id)
+    if boundary == 'stop-before':
+        service.stop(alice.bearer, alice.view.csrf_token, created.id)
+    else:
+        assert 'message.start' in next(stream)
+        if boundary in {'partial', 'stop-partial'}:
+            assert 'text.delta' in next(stream)
+    if boundary.startswith('stop'):
+        service.stop(alice.bearer, alice.view.csrf_token, created.id)
+        assert 'message.interrupted' in ''.join(stream)
+        expected = 'stopped'
+    else:
+        stream.close()
+        expected = 'interrupted'
+    assert service.request(alice.bearer, created.id).state == expected
+    assistant = service.thread_detail(alice.bearer, thread.id).messages[-1]
+    assert assistant.state == expected
+    assert bool(assistant.content) == (boundary in {'partial', 'stop-partial'})

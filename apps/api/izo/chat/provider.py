@@ -61,6 +61,8 @@ class DeepSeekProvider:
 
     def stream(self, key: str, model: str, messages: list[dict[str, str]],
                max_tokens: int, timeout: int, stop: Event) -> Iterable[str]:
+        if stop.is_set():
+            return
         body = json.dumps({
             "model": model,
             "messages": messages,
