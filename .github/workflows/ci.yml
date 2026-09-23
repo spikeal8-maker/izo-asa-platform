@@ -16,6 +16,7 @@ jobs:
       IZO_ENVIRONMENT: test
       IZO_JOBS_ENABLED: 'true'
       IZO_BUILD_SHA: ${{ github.sha }}
+      IZO_SOURCE_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
       AWS_EC2_METADATA_DISABLED: 'true'
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd
@@ -120,7 +121,7 @@ jobs:
           rm -rf "$RUNNER_TEMP/izo-preview" "$RUNNER_TEMP/izo-preview-clean"
           mkdir -p "$RUNNER_TEMP/izo-preview"
           .venv/bin/python tools/build_preview.py \
-            --output "$RUNNER_TEMP/izo-preview" --sha "$GITHUB_SHA" \
+            --output "$RUNNER_TEMP/izo-preview" --sha "$GITHUB_SHA" --source-sha "$IZO_SOURCE_SHA" \
             --api-image "$api_tag" --web-image "$web_tag" \
             --live-status "NOT_RUN/BLOCKED" > "$RUNNER_TEMP/izo-preview/result.json"
           unzip -q "$RUNNER_TEMP/izo-preview/IZO-ASA-Chat-Preview.zip" \
@@ -150,6 +151,14 @@ jobs:
           EOF
           preview="docker compose -f $bundle/compose.yaml -p izo-chat-preview-clean --env-file $bundle/.env"
           $preview up -d --wait --wait-timeout 240
+          test "$(docker network inspect izo-chat-preview-clean_private --format '{{.Internal}}')" = true
+          test "$(docker network inspect izo-chat-preview-clean_chat-egress --format '{{.Internal}}')" = false
+          for service in postgres storage; do
+            container="$($preview ps -q "$service")"
+            test "$(docker inspect "$container" --format '{{len .NetworkSettings.Networks}}')" = 1
+            test "$(docker inspect "$container" --format '{{len .HostConfig.PortBindings}}')" = 0
+          done
+          echo PREVIEW_NETWORK_POLICY_OK
           .venv/bin/python -c "import urllib.request; assert urllib.request.urlopen('http://127.0.0.1:18080/api/health/ready',timeout=10).status==200"
           IZO_CHAT_ACCEPTANCE=isolated IZO_CHAT_ORIGIN=http://127.0.0.1:18080 \
             node apps/web/acceptance/chat-live.mjs "$RUNNER_TEMP/izo-preview-chat.json" before
@@ -204,3 +213,33 @@ jobs:
           rm -f "$RUNNER_TEMP/izo-auth-session.json"
           rm -f "$RUNNER_TEMP/izo-email-proof.json"
           if [ -f .env ]; then docker compose down -v --remove-orphans; fi
+
+  bootstrap-windows:
+    runs-on: windows-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd
+        with: {persist-credentials: false}
+      - uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1
+        with: {python-version: '3.13'}
+      - name: First-run Windows configuration and root-key preservation
+        shell: python
+        run: |
+          import base64, subprocess, sys, tempfile
+          from pathlib import Path
+          sys.path.insert(0, str(Path.cwd()))
+          from tools import build_preview
+          with tempfile.TemporaryDirectory(prefix="izo-chat-bootstrap-") as directory:
+              root = Path(directory)
+              (root / "start.cmd").write_text(build_preview.start_cmd(), encoding="utf-8", newline="\r\n")
+              command = ["cmd.exe", "/d", "/c", "start.cmd", "--check-config"]
+              subprocess.run(command, cwd=root, check=True, capture_output=True, timeout=30)
+              first = (root / ".env").read_bytes()
+              values = dict(line.split("=", 1) for line in first.decode("ascii").splitlines())
+              assert len(values) == 11 and values["IZO_ENVIRONMENT"] == "development"
+              key = base64.urlsafe_b64decode(values["IZO_CHAT_ROOT_KEY"] + "=")
+              assert len(key) == 32 and key != b"\0" * 32
+              assert values["IZO_RECOVERY_DELIVERY"] == "disabled"
+              subprocess.run(command, cwd=root, check=True, capture_output=True, timeout=30)
+              assert (root / ".env").read_bytes() == first
+          print("WINDOWS_BOOTSTRAP_OK; ROOT_PRESERVED; DOCKER_NOT_INVOKED")

@@ -65,6 +65,7 @@ class DeepSeekProvider:
             "model": model,
             "messages": messages,
             "stream": True,
+            "thinking": {"type": "disabled"},
             "max_tokens": max_tokens,
         }, ensure_ascii=False, separators=(",", ":")).encode("utf-8")
         request = Request(BASE_URL + "/chat/completions", data=body, method="POST", headers={
@@ -74,6 +75,7 @@ class DeepSeekProvider:
             "User-Agent": "IZO-ASA/1",
         })
         total = 0
+        finish_reason = None
         try:
             with self.opener.open(request, timeout=timeout) as response:
                 if response.status != 200:
@@ -89,10 +91,20 @@ class DeepSeekProvider:
                         continue
                     data = line[5:].strip()
                     if data == "[DONE]":
+                        if not total:
+                            raise ProviderFailure("provider_empty_response")
+                        if finish_reason != "stop":
+                            code = ("provider_output_limit" if finish_reason == "length"
+                                    else "provider_incomplete_response")
+                            raise ProviderFailure(code)
                         return
                     payload = json.loads(data)
                     choices = payload.get("choices") if isinstance(payload, dict) else None
-                    delta = choices[0].get("delta", {}) if isinstance(choices, list) and choices else {}
+                    choice = choices[0] if isinstance(choices, list) and choices else {}
+                    if not isinstance(choice, dict):
+                        raise ProviderFailure("provider_invalid_response")
+                    finish_reason = choice.get("finish_reason") or finish_reason
+                    delta = choice.get("delta", {})
                     text = delta.get("content") if isinstance(delta, dict) else None
                     if not isinstance(text, str) or not text:
                         continue

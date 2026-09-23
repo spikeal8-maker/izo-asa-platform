@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import argparse
+import gzip
 import hashlib
 import json
 import shutil
@@ -16,7 +17,7 @@ STORAGE = "chrislusf/seaweedfs:4.29"
 
 
 def run(*args: str) -> None:
-    subprocess.run(args, check=True, timeout=600)
+    subprocess.run(args, check=True, timeout=600, stdout=subprocess.DEVNULL)
 
 
 def sha256(path: Path) -> str:
@@ -27,7 +28,7 @@ def sha256(path: Path) -> str:
     return digest.hexdigest()
 
 
-def compose_text(api_image: str, web_image: str) -> str:
+def compose_text(api_image: str, web_image: str, build_sha: str = "unreleased") -> str:
     text = """name: izo-chat-preview
 x-api-environment: &api-environment
   IZO_ENVIRONMENT: ${IZO_ENVIRONMENT:-development}
@@ -36,7 +37,7 @@ x-api-environment: &api-environment
   IZO_S3_ENDPOINT: http://storage:8333
   IZO_S3_ACCESS_KEY: ${IZO_S3_ACCESS_KEY:?Missing IZO_S3_ACCESS_KEY}
   IZO_S3_SECRET_KEY: ${IZO_S3_SECRET_KEY:?Missing IZO_S3_SECRET_KEY}
-  IZO_BUILD_SHA: ${IZO_BUILD_SHA:-preview}
+  IZO_BUILD_SHA: '@BUILD_SHA@'
   IZO_AUTH_RATE_SECRET: ${IZO_AUTH_RATE_SECRET:?Missing IZO_AUTH_RATE_SECRET}
   IZO_AUTH_REGISTRATION: ${IZO_AUTH_REGISTRATION:-open}
   IZO_AUTH_ORIGINS: '["http://localhost:${IZO_HTTP_PORT:-8080}","http://127.0.0.1:${IZO_HTTP_PORT:-8080}"]'
@@ -114,21 +115,24 @@ networks:
   chat-egress: {}
   edge: {}
 """
-    return text.replace("@API@", api_image).replace("@WEB@", web_image)
+    return text.replace("@API@", api_image).replace("@WEB@", web_image).replace("@BUILD_SHA@", build_sha)
 
 
 def start_cmd() -> str:
     return r"""@echo off
 setlocal
 cd /d "%~dp0"
+if /I "%~1"=="--check-config" goto configure
 where docker >nul 2>nul || (echo Docker Desktop not found.& exit /b 1)
 docker info >nul 2>nul || (echo Docker Desktop is not running.& exit /b 1)
+:configure
 if not exist .env (
-  powershell -NoProfile -ExecutionPolicy Bypass -Command "$ErrorActionPreference='Stop'; function H([int]$n){$b=New-Object byte[] $n; $r=[Security.Cryptography.RandomNumberGenerator]::Create(); $r.GetBytes($b); $r.Dispose(); ([BitConverter]::ToString($b)).Replace('-','').ToLowerInvariant()}; function R([int]$n){$b=New-Object byte[] $n; $r=[Security.Cryptography.RandomNumberGenerator]::Create(); $r.GetBytes($b); $r.Dispose(); ([Convert]::ToBase64String($b)).TrimEnd('=').Replace('+','-').Replace('/','_')}; $v=@('IZO_ENVIRONMENT=development','IZO_PG_PASSWORD='+(H 24),'IZO_S3_ACCESS_KEY=izo'+(H 8),'IZO_S3_SECRET_KEY='+(H 32),'IZO_HTTP_PORT=8080','IZO_AUTH_RATE_SECRET='+(H 32),'IZO_AUTH_REGISTRATION=open','IZO_RECOVERY_SECRET='+(H 32),'IZO_RECOVERY_DELIVERY=test','IZO_CHAT_ROOT_KEY='+(R 32),'IZO_CHAT_PREVIEW_ACCOUNT_EMAILS=preview@local.izo'); [IO.File]::WriteAllLines((Join-Path (Get-Location) '.env'),$v,[Text.Encoding]::ASCII)"
+  powershell -NoProfile -ExecutionPolicy Bypass -Command "$ErrorActionPreference='Stop'; function New-HexSecret([int]$n){$b=New-Object byte[] $n; $r=[Security.Cryptography.RandomNumberGenerator]::Create(); $r.GetBytes($b); $r.Dispose(); ([BitConverter]::ToString($b)).Replace('-','').ToLowerInvariant()}; function New-Base64Secret([int]$n){$b=New-Object byte[] $n; $r=[Security.Cryptography.RandomNumberGenerator]::Create(); $r.GetBytes($b); $r.Dispose(); ([Convert]::ToBase64String($b)).TrimEnd('=').Replace('+','-').Replace('/','_')}; $v=@('IZO_ENVIRONMENT=development',('IZO_PG_PASSWORD='+(New-HexSecret 24)),('IZO_S3_ACCESS_KEY=izo'+(New-HexSecret 8)),('IZO_S3_SECRET_KEY='+(New-HexSecret 32)),'IZO_HTTP_PORT=8080',('IZO_AUTH_RATE_SECRET='+(New-HexSecret 32)),'IZO_AUTH_REGISTRATION=open',('IZO_RECOVERY_SECRET='+(New-HexSecret 32)),'IZO_RECOVERY_DELIVERY=disabled',('IZO_CHAT_ROOT_KEY='+(New-Base64Secret 32)),'IZO_CHAT_PREVIEW_ACCOUNT_EMAILS=preview@local.izo'); [IO.File]::WriteAllLines((Join-Path (Get-Location) '.env'),$v,[Text.Encoding]::ASCII)"
   if errorlevel 1 exit /b 1
 )
+if /I "%~1"=="--check-config" exit /b 0
 docker load -i images.tar || exit /b 1
-docker compose --env-file .env up -d --wait --wait-timeout 240 || (docker compose ps & exit /b 1)
+docker compose -p izo-chat-preview --env-file .env -f compose.yaml up -d --no-build --pull never --wait --wait-timeout 240 || (docker compose -p izo-chat-preview --env-file .env -f compose.yaml ps & exit /b 1)
 echo.
 echo IZO ASA preview: http://127.0.0.1:8080
 echo Register with preview@local.izo, then connect your DeepSeek key in Chat.
@@ -141,7 +145,7 @@ def stop_cmd() -> str:
 setlocal
 cd /d "%~dp0"
 if not exist .env (echo .env not found.& exit /b 1)
-docker compose --env-file .env down
+docker compose -p izo-chat-preview --env-file .env -f compose.yaml down
 endlocal
 """
 
@@ -173,31 +177,41 @@ API key не находится в архиве и не отправляется
 
 
 def write_bundle(root: Path, *, sha: str, api_image: str, web_image: str,
-                 live_status: str) -> tuple[Path, dict]:
+                 live_status: str, source_sha: str | None = None) -> tuple[Path, dict]:
     bundle = root / BUNDLE
     if bundle.exists():
         shutil.rmtree(bundle)
     bundle.mkdir(parents=True)
     (bundle / "compose.yaml").write_text(
-        compose_text(api_image, web_image), encoding="utf-8", newline="\n")
+        compose_text(api_image, web_image, sha), encoding="utf-8", newline="\n")
     (bundle / "start.cmd").write_text(start_cmd(), encoding="utf-8", newline="\r\n")
     (bundle / "stop.cmd").write_text(stop_cmd(), encoding="utf-8", newline="\r\n")
     (bundle / "README-RU.txt").write_text(
         readme(live_status), encoding="utf-8", newline="\r\n")
     info = {
         "package": "CHAT-DEEPSEEK-001",
-        "source_sha": sha,
+        "source_sha": source_sha or sha,
+        "build_sha": sha,
         "source_base": "1120121c0fd1f6d9279aa3e95523bb48d5b906f8",
         "live_deepseek": live_status,
         "built_at_utc": datetime.now(timezone.utc).isoformat(),
         "images": [api_image, web_image, POSTGRES, STORAGE],
+        "images_archive_compression": "gzip",
         "published_port": "127.0.0.1:8080",
     }
     (bundle / "build-info.json").write_text(
         json.dumps(info, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
     for image in info["images"]:
         run("docker", "image", "inspect", image)
-    run("docker", "save", "-o", str(bundle / "images.tar"), *info["images"])
+    raw_images = bundle / "images.raw.tar"
+    images_archive = bundle / "images.tar"
+    run("docker", "save", "-o", str(raw_images), *info["images"])
+    try:
+        with raw_images.open("rb") as source, images_archive.open("wb") as target:
+            with gzip.GzipFile(fileobj=target, mode="wb", compresslevel=6, mtime=0) as compressed:
+                shutil.copyfileobj(source, compressed, length=1024 * 1024)
+    finally:
+        raw_images.unlink(missing_ok=True)
 
     files = ["start.cmd", "stop.cmd", "compose.yaml", "images.tar",
              "build-info.json", "README-RU.txt"]
@@ -212,7 +226,9 @@ def archive(root: Path, bundle: Path) -> tuple[Path, int, str]:
     if target.exists():
         target.unlink()
     with zipfile.ZipFile(target, "w") as out:
-        for path in sorted(bundle.iterdir()):
+        for name in ("start.cmd", "stop.cmd", "compose.yaml", "images.tar",
+                     "build-info.json", "checksums.sha256", "README-RU.txt"):
+            path = bundle / name
             method = zipfile.ZIP_STORED if path.name == "images.tar" else zipfile.ZIP_DEFLATED
             out.write(path, f"{BUNDLE}/{path.name}", compress_type=method)
     digest = sha256(target)
@@ -225,16 +241,18 @@ def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--output", type=Path, required=True)
     parser.add_argument("--sha", required=True)
+    parser.add_argument("--source-sha")
     parser.add_argument("--api-image", required=True)
     parser.add_argument("--web-image", required=True)
     parser.add_argument("--live-status", default="NOT_RUN")
     args = parser.parse_args()
-    if len(args.sha) != 40 or any(c not in "0123456789abcdef" for c in args.sha):
+    if any(len(value) != 40 or any(c not in "0123456789abcdef" for c in value)
+           for value in (args.sha, args.source_sha or args.sha)):
         raise SystemExit("full lowercase SHA required")
     args.output.mkdir(parents=True, exist_ok=True)
     bundle, info = write_bundle(
         args.output, sha=args.sha, api_image=args.api_image,
-        web_image=args.web_image, live_status=args.live_status)
+        web_image=args.web_image, live_status=args.live_status, source_sha=args.source_sha)
     target, size, digest = archive(args.output, bundle)
     print(json.dumps({
         "zip": str(target), "size_bytes": size, "sha256": digest,

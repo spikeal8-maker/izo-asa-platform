@@ -83,6 +83,12 @@
     ".github/workflows/ci.yml",
     ".github/workflows/preview.yml",
     "apps/api/izo/chat/credentials.py",
-    "apps/api/izo/chat/execution.py"
+    "apps/api/izo/chat/execution.py",
+    "apps/web/package.json",
+    "apps/web/package-lock.json",
+    "requirements.in",
+    "requirements.lock",
+    "tools/build_preview.py",
+    "tools/scopes/chat-deepseek-001.json"
   ]
 }

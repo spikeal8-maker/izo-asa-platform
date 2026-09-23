@@ -259,3 +259,22 @@ def test_http_stop_pending_is_terminal_and_idempotent(http_env):
         stream = "".join(response.iter_text())
     assert "message.interrupted" in stream
     assert "text.delta" not in stream
+
+def test_preview_compression_metadata_and_secret_exclusion(tmp_path, monkeypatch):
+    import gzip
+    import zipfile
+    from pathlib import Path
+    from tools import build_preview as builder
+    def fake_run(*args):
+        if args[1] == 'save':
+            Path(args[3]).write_bytes(b'synthetic image archive')
+    monkeypatch.setattr(builder, 'run', fake_run)
+    bundle, info = builder.write_bundle(tmp_path, sha='a' * 40, source_sha='b' * 40,
+        api_image='test-api:local', web_image='test-web:local', live_status='NOT_RUN')
+    assert (info['build_sha'], info['source_sha']) == ('a' * 40, 'b' * 40)
+    assert gzip.decompress((bundle / 'images.tar').read_bytes()) == b'synthetic image archive'
+    (bundle / '.env').write_text('synthetic-private-config', encoding='ascii')
+    archive, _, digest = builder.archive(tmp_path, bundle)
+    with zipfile.ZipFile(archive) as checked:
+        assert len(checked.namelist()) == 7 and not any(n.endswith('.env') for n in checked.namelist())
+    assert digest == builder.sha256(archive)

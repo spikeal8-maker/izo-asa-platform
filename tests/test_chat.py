@@ -245,3 +245,34 @@ def test_encrypt_roundtrip_requires_exact_owner_context():
     assert decrypt(root, account, connection, 3, nonce, ciphertext) == KEY
     with pytest.raises(Exception):
         decrypt(root, uuid4(), connection, 3, nonce, ciphertext)
+
+@pytest.mark.parametrize(('text', 'finish', 'error'), [
+    ('answer', 'stop', None), ('', 'stop', 'provider_empty_response'),
+    ('partial', 'length', 'provider_output_limit'),
+    ('partial', None, 'provider_incomplete_response'),
+    ('partial', 'tool_calls', 'provider_incomplete_response'),
+])
+def test_provider_wire_terminal_contract(text, finish, error):
+    import io
+    import json
+    from threading import Event
+    from types import SimpleNamespace
+    from izo.chat.provider import DeepSeekProvider, ProviderFailure
+
+    def open_response(outbound, timeout):
+        body = json.loads(outbound.data)
+        assert body['thinking'] == {'type': 'disabled'}
+        assert body['stream'] is True and body['max_tokens'] == 2048
+        payload = {'choices': [{'delta': {'content': text}, 'finish_reason': finish}]}
+        response = io.BytesIO(('data: ' + json.dumps(payload) + '\n\ndata: [DONE]\n\n').encode())
+        response.status = 200
+        return response
+
+    provider = DeepSeekProvider()
+    provider.opener = SimpleNamespace(open=open_response)
+    stream = provider.stream(KEY, 'deepseek-flash', [], 2048, 75, Event())
+    if error:
+        with pytest.raises(ProviderFailure, match=error):
+            list(stream)
+    else:
+        assert ''.join(stream) == text
