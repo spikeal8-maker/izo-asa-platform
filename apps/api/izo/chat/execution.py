@@ -79,13 +79,19 @@ class ExecutionMixin:
 	def _finish(self, request_id, state, error_code, content):
 		now = self.now()
 		with self.engine.begin() as conn:
-			current = conn.execute(sa.select(t.requests.c.state).where(
-				t.requests.c.id == request_id).with_for_update()).scalar_one()
-			if current in {
-					"completed", "interrupted", "error", "stopped"}:
+			current, stopped_at, deadline = conn.execute(sa.select(
+				t.requests.c.state, t.requests.c.stop_requested_at, t.requests.c.deadline_at
+			).where(t.requests.c.id == request_id).with_for_update()).one()
+			if current in {"completed", "interrupted", "error", "stopped"}:
 				return current
+			if stopped_at is not None:
+				state, error_code = "stopped", None
+			elif state == "completed" and now >= deadline:
+				state, error_code = "interrupted", "request_expired"
 			self._terminal(
 				conn, request_id, state, error_code, now, content)
+		if state != "completed":
+			self._signal_stop(request_id)
 		return state
 	def _execute(self, account_id, request_row):
 		request_id = request_row["id"]
@@ -98,10 +104,11 @@ class ExecutionMixin:
 				{"request_id": str(request_id), "sequence": sequence})
 			key, messages = self._context_and_key(
 				account_id, request_row)
+			remaining = request_row["deadline_at"] - self.now()
+			if remaining <= 0:
+				raise ProviderFailure("request_expired")
 			for chunk in self.provider.stream(
-					key, request_row["model"], messages,
-					MAX_OUTPUT_TOKENS,
-					self.policy.request_deadline_seconds, event):
+					key, request_row["model"], messages, MAX_OUTPUT_TOKENS, remaining, event):
 				if event.is_set():
 					break
 				content += chunk
@@ -117,36 +124,17 @@ class ExecutionMixin:
 						or current - saved_at >= 0.5):
 					self._save_partial(request_id, content)
 					saved_len, saved_at = len(content), current
-			if event.is_set():
-				self._finish(
-					request_id, "stopped", None, content)
-				sequence += 1
-				yield self._event(
-					"message.interrupted", {
-						"request_id": str(request_id),
-						"sequence": sequence,
-						"reason": "stopped",
-					})
-			else:
-				self._finish(
-					request_id, "completed", None, content)
-				sequence += 1
-				yield self._event(
-					"message.done", {
-						"request_id": str(request_id),
-						"sequence": sequence,
-						"text_length": len(content),
-					})
-		except ChatError as exc:
-			self._finish(request_id, "error", exc.code, content)
+			state = self._finish(request_id,
+				"stopped" if event.is_set() else "completed", None, content)
 			sequence += 1
-			yield self._event(
-				"message.error", {
-					"request_id": str(request_id),
-					"sequence": sequence,
-					"code": exc.code,
-				})
-		except ProviderFailure as exc:
+			payload = {"request_id": str(request_id), "sequence": sequence}
+			if state == "completed":
+				payload["text_length"] = len(content)
+			else:
+				payload["reason"] = state
+			yield self._event("message.done" if state == "completed"
+				else "message.interrupted", payload)
+		except (ChatError, ProviderFailure) as exc:
 			self._finish(request_id, "error", exc.code, content)
 			sequence += 1
 			yield self._event(
@@ -228,8 +216,13 @@ class ExecutionMixin:
 				"sequence": sequence,
 			})
 		while True:
-			row, content = self._snapshot(
-				account_id, request_id)
+			row, content = self._snapshot(account_id, request_id)
+			if row["state"] in {"pending", "streaming"} and (
+					row["stop_requested_at"] is not None or self.now() >= row["deadline_at"]):
+				stopped = row["stop_requested_at"] is not None
+				self._finish(request_id, "stopped" if stopped else "interrupted",
+					None if stopped else "request_expired", content)
+				continue
 			if len(content) > sent:
 				sequence += 1
 				yield self._event(
@@ -266,7 +259,5 @@ class ExecutionMixin:
 						"sequence": sequence,
 						"code": row["error_code"] or "chat_execution_failed",
 					})
-				return
-			if self.now() > row["deadline_at"] + 5:
 				return
 			time.sleep(0.2)

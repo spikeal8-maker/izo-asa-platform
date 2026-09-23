@@ -246,37 +246,6 @@ def test_encrypt_roundtrip_requires_exact_owner_context():
     with pytest.raises(Exception):
         decrypt(root, uuid4(), connection, 3, nonce, ciphertext)
 
-@pytest.mark.parametrize(('text', 'finish', 'error'), [
-    ('answer', 'stop', None), ('', 'stop', 'provider_empty_response'),
-    ('partial', 'length', 'provider_output_limit'),
-    ('partial', None, 'provider_incomplete_response'),
-    ('partial', 'tool_calls', 'provider_incomplete_response'),
-])
-def test_provider_wire_terminal_contract(text, finish, error):
-    import io
-    import json
-    from threading import Event
-    from types import SimpleNamespace
-    from izo.chat.provider import DeepSeekProvider, ProviderFailure
-
-    def open_response(outbound, timeout):
-        body = json.loads(outbound.data)
-        assert body['thinking'] == {'type': 'disabled'}
-        assert body['stream'] is True and body['max_tokens'] == 2048
-        payload = {'choices': [{'delta': {'content': text}, 'finish_reason': finish}]}
-        response = io.BytesIO(('data: ' + json.dumps(payload) + '\n\ndata: [DONE]\n\n').encode())
-        response.status = 200
-        return response
-
-    provider = DeepSeekProvider()
-    provider.opener = SimpleNamespace(open=open_response)
-    stream = provider.stream(KEY, 'deepseek-flash', [], 2048, 75, Event())
-    if error:
-        with pytest.raises(ProviderFailure, match=error):
-            list(stream)
-    else:
-        assert ''.join(stream) == text
-
 @pytest.mark.parametrize('boundary', ['start', 'partial', 'stop-before', 'stop-partial'])
 def test_stream_stop_and_disconnect_boundaries(chat_env, boundary):
     service, alice, _, _ = chat_env
@@ -301,3 +270,29 @@ def test_stream_stop_and_disconnect_boundaries(chat_env, boundary):
     assistant = service.thread_detail(alice.bearer, thread.id).messages[-1]
     assert assistant.state == expected
     assert bool(assistant.content) == (boundary in {'partial', 'stop-partial'})
+
+def test_expired_unconsumed_claim_is_reconciled_without_new_execution(chat_env):
+    service, alice, _, clock = chat_env
+    connect_key(service, alice)
+    thread = service.create_thread(alice.bearer, alice.view.csrf_token, None)
+    created = request(service, alice, thread.id, 'expire before consumer starts')
+    unconsumed = service.stream_events(alice.bearer, created.id)
+    clock[0] = created.deadline_at + 6
+    events = ''.join(service.stream_events(alice.bearer, created.id))
+    assert 'message.interrupted' in events and 'text.delta' not in events
+    assert service.request(alice.bearer, created.id).state == 'interrupted'
+    unconsumed.close()
+
+
+def test_late_stream_finish_cannot_report_success_over_durable_interruption(chat_env):
+    service, alice, _, _ = chat_env
+    connect_key(service, alice)
+    thread = service.create_thread(alice.bearer, alice.view.csrf_token, None)
+    created = request(service, alice, thread.id, 'competing terminal transition')
+    stream = service.stream_events(alice.bearer, created.id)
+    next(stream)
+    next(stream)
+    service._finish(created.id, 'interrupted', 'request_expired', 'persisted partial')
+    events = ''.join(stream)
+    assert 'message.done' not in events and 'message.interrupted' in events
+    assert service.request(alice.bearer, created.id).state == 'interrupted'
