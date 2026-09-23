@@ -66,13 +66,13 @@
     "docs/CONTEXT_MAP.json",
     "apps/api/izo/chat/credentials.py",
     "apps/api/izo/chat/conversations.py",
-    "apps/api/izo/chat/streaming.py",
     "apps/web/src/shell/chat/stream.ts",
     "apps/web/src/shell/chat/useChatRuntime.ts",
     "apps/web/src/shell/chat/ChatCredentialPanel.tsx",
     "apps/api/izo/chat/execution.py",
     "apps/web/src/shell/chat/ChatRuntime.css",
-    "apps/web/e2e/shell.spec.ts"
+    "apps/web/e2e/shell.spec.ts",
+    "apps/web/e2e/workspace-fixtures.ts"
   ],
   "sensitive_approved": [
     "apps/api/izo/chat/provider.py",
@@ -84,7 +84,6 @@
     ".github/workflows/ci.yml",
     ".github/workflows/preview.yml",
     "apps/api/izo/chat/credentials.py",
-    "apps/api/izo/chat/streaming.py",
     "apps/api/izo/chat/execution.py"
   ]
 }

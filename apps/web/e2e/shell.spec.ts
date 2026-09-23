@@ -19,6 +19,7 @@ await p.route('**/api/v1/chat/policy',r=>r.fulfill({json:{revision:'test',defaul
 await p.route('**/api/v1/chat/credential',r=>r.fulfill({json:{configured:true,enabled:true,verified:true,revision:1,generation:1,provider:'deepseek'}}))
 await p.route('**/api/v1/chat/threads',r=>r.fulfill({json:{threads:[]}}));return s}
 async function M(m:J){await V(...['Аккаунт','Токены','Настройки','Помощь'].map(x=>I(m,x)),m.getByText('Тема',{exact:true}),R(m,'Светлая'),R(m,'Тёмная'),I(m,'Выйти'));await C(Q(m,'.social-link'),4)}
+async function O(p:Z){const x=B(p,N.n);if(await x.isVisible())await x.click()}
 test.beforeEach(async({page})=>page.route('**/api/v1/auth/me',r=>r.fulfill({status:401,json:{error:{code:'auth_required'}}})))
 test('r',async({page})=>{
 for(const path of ['/','/image','/video','/audio','/3d','/feed','/gallery']){await page.goto(path);await Promise.all([
@@ -35,7 +36,7 @@ await A(Q(h,'.brand-favicon'),'src','/favicon.svg');await V(L(h,N.l),L(v,'Лен
 await G(page);await page.reload();h=H(page);t=D(page,'global-token-group');await Promise.all([C(L(h,N.l),0),T(D(t,'token-main'),'123'),C(Q(page,'.chat-sidebar-bottom'),1),X(Q(page,'.chat-profile-name'),'Александр')])
 await B(h,N.p).click();let m=page.getByRole('menu');await M(m);await R(m,'Тёмная').click();await A(Q(page,'html'),'data-theme','dark')
 if(info.project.name!=='laptop')return
-await page.keyboard.press('Escape');const model=Q(page,'.chat-model-selector');await V(model);await T(model,'DeepSeek Flash');await model.click();m=page.getByRole('menu',{name:N.o});await V(R(m,'DeepSeek Flash'));await C(R(m,N.x),0)
+await page.keyboard.press('Escape');const model=Q(page,'.chat-model-selector');await V(model);await T(model,'Авто');await model.click();m=page.getByRole('menu',{name:N.o});const text=Q(m,'.chat-model-category').filter({hasText:'Текст'});await Q(text,'summary').click();await V(R(text,'DeepSeek Flash'));await C(R(m,N.x),0)
 })
 test('d',async({page},i)=>{
 test.skip(i.project.name!=='laptop');await F(page);const h=await H(page).boundingBox(),c=await Q(page,'.chat-page').boundingBox(),s=await S(page).boundingBox()
@@ -52,12 +53,12 @@ e([m.b>=34,m.p>=28,m.h>=72,m.s>=600,m.c>=2100,m.c<m.v/2]).toEqual([true,true,tru
 e([await g.evaluate(x=>getComputedStyle(x).gridTemplateColumns.split(' ').length)>=8,(await g.boundingBox())!.width>4000,((await Q(page,'.feed-hero-copy').boundingBox())?.width??9999)<1000]).toEqual([true,true,true]);await Y(page)
 })
 test('c',async({page})=>{
-await F(page);let c=P(page);await X(page.getByRole('heading',{level:1}),'Чем я могу помочь?');await e(E(c,N.m)).toBeDisabled();await e(B(c,'Вложения пока недоступны')).toBeDisabled();await e(B(c,'Микрофон пока недоступен')).toBeDisabled();await e(B(c,N.s)).toBeDisabled()
-await G(page);await page.reload();c=P(page);await e(E(c,N.m)).toBeEnabled();await T(B(c,N.c),'DeepSeek Flash');await e(B(c,'Вложения пока недоступны')).toBeDisabled();await e(B(c,'Микрофон пока недоступен')).toBeDisabled();await E(c,N.m).fill('Проверка');await e(B(c,N.s)).toBeEnabled()
+await F(page);let c=P(page);await X(page.getByRole('heading',{level:1}),'Чем я могу помочь?');await e(E(c,N.m)).toBeDisabled();await e(B(c,N.a)).toBeEnabled();await e(B(c,'Микрофон')).toBeEnabled();await e(B(c,N.s)).toBeDisabled()
+await G(page);await page.reload();c=P(page);await e(E(c,N.m)).toBeEnabled();await T(B(c,N.c),'Авто');await e(B(c,N.a)).toBeEnabled();await e(B(c,'Микрофон')).toBeEnabled();await E(c,N.m).fill('Проверка');await e(B(c,N.s)).toBeEnabled()
 })
 test('s',async({page})=>{
 await G(page);const rows=[{id:'11111111-1111-4111-8111-111111111112',title:'Первый проект',created_at:1,updated_at:2},{id:'11111111-1111-4111-8111-111111111113',title:'Второй проект',created_at:1,updated_at:3}]
-await page.route('**/api/v1/chat/threads',r=>r.fulfill({json:{threads:rows}}));await F(page);const s=S(page);await V(B(s,'Первый проект'),B(s,'Второй проект'));await B(s,N.q).click();const q=E(s,N.b);await q.fill('Первый');await V(B(s,'Первый проект'));await C(B(s,'Второй проект'),0)
+await page.route('**/api/v1/chat/threads',r=>r.fulfill({json:{threads:rows}}));await F(page);const s=S(page);await O(page);await V(B(s,'Первый проект'),B(s,'Второй проект'));await B(s,N.q).click();const q=E(s,N.b);await q.fill('Первый');await V(B(s,'Первый проект'));await C(B(s,'Второй проект'),0)
 })
 test('p',async({page},i)=>{
 test.skip(!i.project.name.startsWith('phone'));await F(page);if(i.project.name==='phone'){await E(page,N.m).focus();await page.setViewportSize({width:390,height:560});await page.waitForTimeout(80)

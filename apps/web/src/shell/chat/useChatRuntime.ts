@@ -124,8 +124,9 @@ export function useChatRuntime(auth: AuthView | null | undefined) {
     catch (reason) { setError(chatProblem(reason)) }
   }
 
-  async function send(text: string): Promise<boolean> {
-    if (!auth || !model || busy || !credential?.verified) return false
+  async function send(text: string, selectedModelId?: string): Promise<boolean> {
+    const selectedModel = policy?.models.find(item => item.id === selectedModelId) ?? model
+    if (!auth || !selectedModel || busy || !credential?.verified) return false
     setError(''); setBusy(true)
     let threadId = currentChatId
     try {
@@ -145,7 +146,7 @@ export function useChatRuntime(auth: AuthView | null | undefined) {
       accepted = await apiRequest<ChatRequestView>(
         `/api/v1/chat/threads/${threadId}/requests`, {
           method: 'POST', csrf: auth.csrf_token,
-          data: { request_id: requestId, text, model: model.id }, timeoutMs: 20000,
+          data: { request_id: requestId, text, model: selectedModel.id }, timeoutMs: 20000,
         })
     } catch (reason) {
       if (reason instanceof ApiError) {

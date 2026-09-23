@@ -44,10 +44,10 @@ export function ChatPage({ auth, theme, onThemeChange, onLogout }: {
   const empty = runtime.messages.length === 0
   const disabled = !auth || !runtime.policy || !runtime.credential?.verified
   const composer = <ChatComposer
-    models={runtime.policy?.models ?? []} model={runtime.model}
+    auth={auth} policy={runtime.policy}
     busy={runtime.busy} stoppable={Boolean(runtime.activeRequestId)} disabled={disabled}
-    onModelChange={next => runtime.setModelId(next.id)}
-    onSend={runtime.send} onStop={() => void runtime.stop()} />
+    onSend={runtime.send} onStop={() => void runtime.stop()}
+    onUnsupported={() => runtime.setError('Этот инструмент ещё не подключён к текстовому Chat D1.')} />
 
   return <section
     className={`chat-page ${empty ? 'is-empty' : ''} ${sidebarOpen ? 'sidebar-open' : ''}`}

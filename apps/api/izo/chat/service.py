@@ -13,10 +13,9 @@ from .settings import (
     MODELS, REQUEST_WINDOW_SECONDS,
 )
 from .execution import ExecutionMixin
-from .streaming import StreamingMixin
 
 
-class ChatService(CredentialMixin, ConversationMixin, ExecutionMixin, StreamingMixin):
+class ChatService(CredentialMixin, ConversationMixin, ExecutionMixin):
     def __init__(self, auth, policy, provider, clock=time.time):
         self.auth, self.engine, self.policy = auth, auth.engine, policy
         self.provider, self.clock = provider, clock
