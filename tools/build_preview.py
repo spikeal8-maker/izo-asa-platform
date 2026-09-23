@@ -1,4 +1,4 @@
-"""Build the offline Windows Docker preview archive from already-built images."""
+"""Build the offline Windows preview bundle."""
 from __future__ import annotations
 
 import argparse
