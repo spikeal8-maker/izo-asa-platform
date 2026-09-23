@@ -9,17 +9,17 @@
       "pr": 22,
       "state": "technical_ci_pass_draft"
     },
-    "working_branch": "maint/state-decision-003",
+    "working_branch": "feat/chat-deepseek-001",
     "provider_direction": "fal.ai / fal-ai/flux-2/klein/4b",
     "merge_deployed": false,
     "current_package_base": {
-      "branch": "ux/frontend-continuation",
-      "sha": "380064825f47ecf078b81f9f87d9dcdbd96b76ab",
+      "branch": "maint/state-decision-003",
+      "sha": "1120121c0fd1f6d9279aa3e95523bb48d5b906f8",
       "state": "verified_pr_merge_tree_checkpoint"
     },
     "next_branch_source": "verified_working_head"
   },
-  "active_package": "MAINT-STATE-003",
+  "active_package": "CHAT-DEEPSEEK-001",
   "next_package": null,
   "rules": {
     "one_active_package": true,
@@ -100,7 +100,8 @@
     "DOC-004B": {"status":"technical_pass","depends_on":["DOC-004"],"checkpoint":"DOC-004B"},
     "DOC-004C": {"status":"technical_pass","depends_on":["DOC-004B"],"checkpoint":"DOC-004C"},
     "DOC-004D": {"status":"technical_pass","depends_on":["DOC-004C"],"checkpoint":"DOC-004D"},
-    "MAINT-STATE-003": {"status":"active","depends_on":["FRONTEND-002"],"decides_next":true,"goal":"Repair decides_next control-plane transitions with structured review evidence and explicit exact-SHA owner waiver when no independent GitHub actor is available.","issues":[166,188]}
+    "MAINT-STATE-003": {"status":"technical_pass","depends_on":["FRONTEND-002"],"decides_next":true,"goal":"Repair decides_next control-plane transitions with structured review evidence and explicit exact-SHA owner waiver when no independent GitHub actor is available.","issues":[166,188],"checkpoint":"MAINT-STATE-003"},
+    "CHAT-DEEPSEEK-001": {"status":"active","depends_on":["MAINT-STATE-003"],"decides_next":true,"goal":"D1: account-owned DeepSeek BYOK, durable streamed chat, safe rendering, and Docker preview"}
   },
   "status_meaning": {
     "active": "The only package a new coding agent may continue by default.",
