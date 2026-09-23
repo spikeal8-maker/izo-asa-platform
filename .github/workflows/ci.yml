@@ -224,4 +224,15 @@ jobs:
       - uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1
         with: {python-version: '3.13'}
       - name: Windows preview guard
-        run: python tools/preview_guard_acceptance.py
+        shell: python
+        run: |
+          import base64,os,subprocess as s,sys,tempfile
+          from pathlib import Path
+          sys.path.insert(0,str(Path.cwd()));from tools import build_preview as b
+          x=b.start_cmd();g="docker volume inspect izo-chat-preview_postgres-data";assert x.index(g)<x.index("New-Base64Secret 32")
+          with tempfile.TemporaryDirectory() as d:
+              p=Path(d);(p/"start.cmd").write_text(x,encoding="utf-8",newline="\r\n");c=["cmd","/d","/c","start.cmd","--check-config"];s.run(c,cwd=p,check=True)
+              a=(p/".env").read_bytes();v=dict(q.split("=",1) for q in a.decode().splitlines());k=v["IZO_CHAT_ROOT_KEY"];assert v["IZO_CHAT_LOCAL_PREVIEW_ENABLED"]=="true" and len(base64.urlsafe_b64decode(k+"="))==32
+              s.run(c,cwd=p,check=True);assert (p/".env").read_bytes()==a
+              (p/".env").write_text("\n".join(q for q in a.decode().splitlines() if not q.startswith("IZO_CHAT_LOCAL_PREVIEW_ENABLED="))+"\n");s.run(c,cwd=p,check=True);assert k in (p/".env").read_text()
+              (p/".env").unlink();(p/"docker.cmd").write_text("@exit /b 0\r\n");e=os.environ.copy();e["PATH"]=str(p)+os.pathsep+e["PATH"];r=s.run(["cmd","/d","/c","call","start.cmd"],cwd=p,env=e,capture_output=True,text=True);assert r.returncode==2 and not (p/".env").exists()

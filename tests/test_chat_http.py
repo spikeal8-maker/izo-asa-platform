@@ -82,22 +82,6 @@ def signup(auth, client, email):
     return response.json()
 
 
-def preview_login(client):
-    client.cookies.clear()
-    client.headers.pop("X-CSRF-Token", None)
-    response = client.post(
-        "/api/v1/auth/local-preview", json={},
-        headers={"Origin": ORIGIN, "X-IZO-Request": "web"},
-    )
-    assert response.status_code == 200, response.text
-    client.headers.update({
-        "Origin": ORIGIN,
-        "X-IZO-Request": "web",
-        "X-CSRF-Token": response.json()["csrf_token"],
-    })
-    return response.json()
-
-
 def save_and_verify(client):
     saved = client.post(
         "/api/v1/chat/credential",
@@ -275,6 +259,30 @@ def test_http_stop_pending_is_terminal_and_idempotent(http_env):
         stream = "".join(response.iter_text())
     assert "message.interrupted" in stream
     assert "text.delta" not in stream
+
+def test_local_preview_upgrade_and_normal_auth(http_env):
+    auth, service, client = http_env
+    client.cookies.clear(); client.headers.pop("X-CSRF-Token", None)
+    h={"Origin": ORIGIN, "X-IZO-Request": "web"}
+    assert client.get("/api/v1/auth/me").status_code == 401
+    assert client.post("/api/v1/auth/local-preview",json={},headers=h).status_code == 404
+    legacy=signup(auth,client,"preview@local.izo")
+    service.policy.local_preview_enabled=True
+    service.policy.preview_account_emails="preview@local.izo"
+    cred=save_and_verify(client)
+    thread=client.post("/api/v1/chat/threads",json={"title":"upgrade"}).json()
+    client.app.state.chat_service = ChatService(
+        auth, service.policy, FakeDeepSeekProvider(), clock=service.clock)
+    client.cookies.clear(); client.headers.pop("X-CSRF-Token", None)
+    preview=client.post("/api/v1/auth/local-preview",json={},headers=h).json()
+    assert preview["account"]["id"] == legacy["account"]["id"]
+    client.headers.update({**h,"X-CSRF-Token":preview["csrf_token"]})
+    cur=client.get("/api/v1/chat/credential").json()
+    assert cur["revision"] == cred["revision"]
+    assert client.post("/api/v1/chat/credential/verify",json={
+        "operation_id":str(uuid4()),"expected_revision":cur["revision"]}).json()["verified"]
+    assert client.get("/api/v1/chat/threads").json()["threads"][0]["id"] == thread["id"]
+
 
 def test_preview_compression_metadata_and_secret_exclusion(tmp_path, monkeypatch):
     import gzip
