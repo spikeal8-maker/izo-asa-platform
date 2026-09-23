@@ -4,13 +4,14 @@ import type { ChatModel } from './types'
 import { menuKeyboard, useComposerLayout } from './composerLayout'
 import './ChatComposer.css'
 
-export function ChatComposer({ models, model, busy, disabled, onModelChange, onSend, onStop }: {
+export function ChatComposer({ models, model, busy, stoppable, disabled, onModelChange, onSend, onStop }: {
   models: ChatModel[]
   model: ChatModel | null
   busy: boolean
+  stoppable: boolean
   disabled: boolean
   onModelChange: (model: ChatModel) => void
-  onSend: (text: string) => void
+  onSend: (text: string) => Promise<boolean>
   onStop: () => void
 }) {
   const [draft, setDraft] = useState('')
@@ -40,11 +41,11 @@ export function ChatComposer({ models, model, busy, disabled, onModelChange, onS
     }
   }, [modelOpen])
 
-  function submit(event: FormEvent) {
+  async function submit(event: FormEvent) {
     event.preventDefault()
     const text = draft.trim()
     if (!text || busy || disabled || !model) return
-    onSend(text)
+    if (!await onSend(text)) return
     setDraft('')
     requestAnimationFrame(() => layout.textareaRef.current?.focus())
   }
@@ -84,7 +85,8 @@ export function ChatComposer({ models, model, busy, disabled, onModelChange, onS
 
       {busy
         ? <button type="button" className="chat-send-button" data-composer-control="compact"
-            aria-label="Остановить ответ" onClick={onStop}><Icon name="close" /></button>
+            aria-label="Остановить ответ" disabled={!stoppable}
+            onClick={onStop}><Icon name="close" /></button>
         : <button type="submit" className="chat-send-button" data-composer-control="compact"
             aria-label="Отправить" disabled={disabled || !draft.trim() || !model}>
             <Icon name="send" />

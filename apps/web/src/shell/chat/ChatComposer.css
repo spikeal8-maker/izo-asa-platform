@@ -286,3 +286,9 @@ line-height:1.3;
 .chat-popover { max-width:calc(100cqw - 12px); }
 .chat-composer-note { display:none; }
 }
+
+.chat-circle-button:disabled,
+.chat-model-selector:disabled {
+opacity:.45;
+cursor:default;
+}
