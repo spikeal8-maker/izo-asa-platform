@@ -8,7 +8,7 @@ from . import tables as t
 from .conversations import ConversationMixin
 from .credentials import ChatError, CredentialMixin
 from .schemas import ChatPolicyView, ModelView
-from .settings import (
+from .schemas import (
     DEFAULT_MODEL, MAX_INPUT_CHARS, MAX_OUTPUT_TOKENS, MODEL_REVISION,
     MODELS, REQUEST_WINDOW_SECONDS,
 )

@@ -76,6 +76,7 @@ jobs:
           IZO_IMAGE_ACCEPTANCE=isolated node apps/web/acceptance/image-live.mjs "$RUNNER_TEMP/izo-image-state.json" before
           docker compose run --rm -T -e IZO_ENVIRONMENT=test -e IZO_JOBS_ACCEPTANCE=isolated api python tools/jobs_acceptance.py before > "$RUNNER_TEMP/izo-jobs-state.json"
           docker compose run --rm -T -e IZO_ENVIRONMENT=test -e IZO_GUEST_ACCEPTANCE=isolated -e IZO_GUEST_ENABLED=true -e IZO_JOBS_ENABLED=true api python tools/guest_acceptance.py before > "$RUNNER_TEMP/izo-guest-state.json"
+          IZO_CHAT_ACCEPTANCE=isolated node apps/web/acceptance/chat-live.mjs "$RUNNER_TEMP/izo-chat-state.json" before
           docker compose run --rm api python tools/persistence.py write
           docker compose down
           docker compose up --wait --wait-timeout 180
@@ -93,6 +94,8 @@ jobs:
           docker compose run --rm -T -e IZO_ENVIRONMENT=test -e IZO_IMAGE_ACCEPTANCE=isolated api python tools/image_acceptance.py after < "$RUNNER_TEMP/izo-image-state.json"
           IZO_IMAGE_ACCEPTANCE=isolated node apps/web/acceptance/image-live.mjs "$RUNNER_TEMP/izo-image-state.json" after
           docker compose run --rm -T -e IZO_ENVIRONMENT=test -e IZO_GUEST_ACCEPTANCE=isolated -e IZO_GUEST_ENABLED=true -e IZO_JOBS_ENABLED=true api python tools/guest_acceptance.py after < "$RUNNER_TEMP/izo-guest-state.json"
+          IZO_CHAT_ACCEPTANCE=isolated node apps/web/acceptance/chat-live.mjs "$RUNNER_TEMP/izo-chat-state.json" after
+          rm -f "$RUNNER_TEMP/izo-chat-state.json"
           rm -f "$RUNNER_TEMP/izo-guest-state.json"
           rm -f "$RUNNER_TEMP/izo-image-state.json"
           rm -f "$RUNNER_TEMP/izo-jobs-state.json"
@@ -107,6 +110,67 @@ jobs:
           docker compose stop storage
           docker compose exec -T api python -c "import urllib.request, urllib.error; r=urllib.request.urlopen('http://127.0.0.1:8000/api/health/live'); assert r.status==200"
           docker compose exec -T api python -c "import http.client; c=http.client.HTTPConnection('localhost',8000,timeout=10); c.request('GET','/api/health/ready'); assert c.getresponse().status==503"
+      - name: Build and clean-test offline Chat preview
+        run: |
+          set -euo pipefail
+          api_tag="izo-asa-chat-api:${GITHUB_SHA::12}"
+          web_tag="izo-asa-chat-web:${GITHUB_SHA::12}"
+          docker tag "$(docker compose images -q api | head -n1)" "$api_tag"
+          docker tag "$(docker compose images -q web | head -n1)" "$web_tag"
+          rm -rf "$RUNNER_TEMP/izo-preview" "$RUNNER_TEMP/izo-preview-clean"
+          mkdir -p "$RUNNER_TEMP/izo-preview"
+          .venv/bin/python tools/build_preview.py \
+            --output "$RUNNER_TEMP/izo-preview" --sha "$GITHUB_SHA" \
+            --api-image "$api_tag" --web-image "$web_tag" \
+            --live-status "NOT_RUN/BLOCKED" > "$RUNNER_TEMP/izo-preview/result.json"
+          unzip -q "$RUNNER_TEMP/izo-preview/IZO-ASA-Chat-Preview.zip" \
+            -d "$RUNNER_TEMP/izo-preview-clean"
+          bundle="$RUNNER_TEMP/izo-preview-clean/IZO-ASA-Chat-Preview"
+          test -f "$bundle/start.cmd" -a -f "$bundle/stop.cmd" -a -f "$bundle/compose.yaml"
+          test -f "$bundle/images.tar" -a -f "$bundle/build-info.json"
+          test -f "$bundle/checksums.sha256" -a -f "$bundle/README-RU.txt"
+          if grep -q 'build:' "$bundle/compose.yaml"; then echo "Preview must not build"; exit 1; fi
+          (cd "$bundle" && sha256sum -c checksums.sha256)
+          docker image rm "$api_tag" "$web_tag"
+          docker load -i "$bundle/images.tar" >/dev/null
+          docker image inspect "$api_tag" "$web_tag" >/dev/null
+          chat_root="$(.venv/bin/python -c "import base64; print(base64.urlsafe_b64encode(b'x'*32).decode().rstrip('='))")"
+          cat > "$bundle/.env" <<EOF
+          IZO_ENVIRONMENT=test
+          IZO_PG_PASSWORD=ci-preview-pg-password-2026
+          IZO_S3_ACCESS_KEY=izopreviewaccess
+          IZO_S3_SECRET_KEY=ci-preview-storage-secret-2026-0000
+          IZO_HTTP_PORT=18080
+          IZO_AUTH_RATE_SECRET=rrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrr
+          IZO_AUTH_REGISTRATION=open
+          IZO_RECOVERY_SECRET=ssssssssssssssssssssssssssssssssssssssssssssssss
+          IZO_RECOVERY_DELIVERY=test
+          IZO_CHAT_ROOT_KEY=$chat_root
+          IZO_CHAT_PREVIEW_ACCOUNT_EMAILS=preview@local.izo
+          EOF
+          preview="docker compose -f $bundle/compose.yaml -p izo-chat-preview-clean --env-file $bundle/.env"
+          $preview up -d --wait --wait-timeout 240
+          .venv/bin/python -c "import urllib.request; assert urllib.request.urlopen('http://127.0.0.1:18080/api/health/ready',timeout=10).status==200"
+          IZO_CHAT_ACCEPTANCE=isolated IZO_CHAT_ORIGIN=http://127.0.0.1:18080 \
+            node apps/web/acceptance/chat-live.mjs "$RUNNER_TEMP/izo-preview-chat.json" before
+          $preview down
+          $preview up -d --wait --wait-timeout 180
+          .venv/bin/python -c "import urllib.request; assert urllib.request.urlopen('http://127.0.0.1:18080/api/health/ready',timeout=10).status==200"
+          IZO_CHAT_ACCEPTANCE=isolated IZO_CHAT_ORIGIN=http://127.0.0.1:18080 \
+            node apps/web/acceptance/chat-live.mjs "$RUNNER_TEMP/izo-preview-chat.json" after
+          $preview down -v --remove-orphans
+          rm -f "$RUNNER_TEMP/izo-preview-chat.json"
+      - name: Save tested Chat preview
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: chat-deepseek-preview
+          path: |
+            ${{ runner.temp }}/izo-preview/IZO-ASA-Chat-Preview.zip
+            ${{ runner.temp }}/izo-preview/IZO-ASA-Chat-Preview.zip.sha256
+            ${{ runner.temp }}/izo-preview/result.json
+          retention-days: 7
+          compression-level: 0
+          if-no-files-found: error
       - name: Safe status on failure
         if: failure()
         run: if [ -f .env ]; then docker compose ps; fi
@@ -123,6 +187,11 @@ jobs:
       - name: Remove isolated CI stack
         if: always()
         run: |
+          rm -f "$RUNNER_TEMP/izo-chat-state.json" "$RUNNER_TEMP/izo-preview-chat.json"
+          preview_bundle="$RUNNER_TEMP/izo-preview-clean/IZO-ASA-Chat-Preview"
+          if [ -f "$preview_bundle/.env" ]; then
+            docker compose -f "$preview_bundle/compose.yaml" -p izo-chat-preview-clean               --env-file "$preview_bundle/.env" down -v --remove-orphans || true
+          fi
           rm -f "$RUNNER_TEMP/izo-guest-state.json"
           rm -f "$RUNNER_TEMP/izo-image-state.json"
           rm -f "$RUNNER_TEMP/izo-jobs-state.json"

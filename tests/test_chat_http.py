@@ -17,11 +17,11 @@ from izo.accounts.settings import AuthSettings
 from izo.chat import tables as chat
 from izo.chat.provider import FakeDeepSeekProvider
 from izo.chat.service import ChatService
-from izo.chat.settings import ChatSettings
+from izo.chat.schemas import ChatSettings
 
 ORIGIN = "http://localhost:8080"
 PASSWORD = "synthetic-chat-http-password"
-KEY = "sk-test-valid-deepseek-key"
+KEY = "x" * 32
 
 
 def root_key() -> str:

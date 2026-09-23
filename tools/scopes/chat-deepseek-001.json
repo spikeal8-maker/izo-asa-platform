@@ -32,7 +32,6 @@
     "apps/api/izo/app.py",
     "apps/api/izo/chat/__init__.py",
     "apps/api/izo/chat/README.md",
-    "apps/api/izo/chat/settings.py",
     "apps/api/izo/chat/tables.py",
     "apps/api/izo/chat/schemas.py",
     "apps/api/izo/chat/provider.py",

@@ -9,7 +9,7 @@ from threading import Event
 from urllib.error import HTTPError, URLError
 from urllib.request import HTTPRedirectHandler, Request, build_opener
 
-from .settings import MAX_ASSISTANT_CHARS, MAX_SSE_LINE
+from .schemas import MAX_ASSISTANT_CHARS, MAX_SSE_LINE
 
 BASE_URL = "https://api.deepseek.com"
 MAX_ERROR_BODY = 64 * 1024
@@ -113,7 +113,7 @@ class DeepSeekProvider:
 class FakeDeepSeekProvider:
     """CI-only provider. It never opens a socket and exposes deterministic chunks."""
     def verify(self, key: str, timeout: int = 15) -> None:
-        if key != "sk-test-valid-deepseek-key":
+        if key != "x" * 32:
             raise ProviderFailure("credential_rejected")
 
     def stream(self, key: str, model: str, messages: list[dict[str, str]],

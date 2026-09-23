@@ -9,7 +9,7 @@ from cryptography.hazmat.primitives.ciphers.aead import AESGCM
 from . import tables as t
 from .provider import ProviderFailure
 from .schemas import CredentialView
-from .settings import CREDENTIAL_WINDOW_LIMIT
+from .schemas import CREDENTIAL_WINDOW_LIMIT
 def aad(account_id: UUID, connection_id: UUID, generation: int) -> bytes:
 	return f"izo-chat|deepseek|{account_id}|{connection_id}|{generation}".encode("ascii")
 def encrypt(root_key: bytes, account_id: UUID, connection_id: UUID,

@@ -17,7 +17,7 @@ from .schemas import (
     ThreadList, ThreadView,
 )
 from .service import ChatError, ChatService
-from .settings import ChatSettings
+from .schemas import ChatSettings
 
 class ChatBodyLimit:
     """Bound mutating Chat JSON before FastAPI parses it."""

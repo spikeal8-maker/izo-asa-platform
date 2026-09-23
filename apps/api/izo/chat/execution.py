@@ -7,7 +7,7 @@ from cryptography.exceptions import InvalidTag
 from . import tables as t
 from .credentials import ChatError, decrypt
 from .provider import ProviderFailure
-from .settings import MAX_CONTEXT_CHARS, MAX_CONTEXT_MESSAGES, MAX_OUTPUT_TOKENS
+from .schemas import MAX_CONTEXT_CHARS, MAX_CONTEXT_MESSAGES, MAX_OUTPUT_TOKENS
 class ExecutionMixin:
 	def _context_and_key(self, account_id, request_row):
 		root = self._root()

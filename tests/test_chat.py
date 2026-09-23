@@ -18,10 +18,10 @@ from izo.chat.schemas import (
     CredentialCommand, CredentialWrite, RequestCreate,
 )
 from izo.chat.service import ChatError, ChatService
-from izo.chat.settings import ChatSettings
+from izo.chat.schemas import ChatSettings
 
 PASSWORD = "synthetic-chat-password-only"
-KEY = "sk-test-valid-deepseek-key"
+KEY = "x" * 32
 
 
 def root_key() -> str:

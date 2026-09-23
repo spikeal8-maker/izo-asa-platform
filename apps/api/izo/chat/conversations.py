@@ -8,7 +8,7 @@ from sqlalchemy.exc import IntegrityError
 from . import tables as t
 from .credentials import ChatError
 from .schemas import MessageView, RequestView, ThreadDetail, ThreadList, ThreadView
-from .settings import MESSAGE_PAGE_LIMIT, MODEL_REVISION, REQUEST_WINDOW_LIMIT, THREAD_PAGE_LIMIT
+from .schemas import MESSAGE_PAGE_LIMIT, MODEL_REVISION, REQUEST_WINDOW_LIMIT, THREAD_PAGE_LIMIT
 def _sha(value: dict) -> str:
 	raw = json.dumps(value, ensure_ascii=False, sort_keys=True,
                      separators=(",", ":")).encode("utf-8")
