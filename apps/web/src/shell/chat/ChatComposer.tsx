@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState, type FormEvent } from 'react'
+import type { ChatPolicyView } from '../../shared/api'
 import { Icon } from '../../shared/ui/Icon'
-import type { ChatModel } from './types'
+type ChatModel = ChatPolicyView['models'][number]
 import { menuKeyboard, useComposerLayout } from './composerLayout'
 import './ChatComposer.css'
 

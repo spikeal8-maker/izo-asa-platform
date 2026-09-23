@@ -1,0 +1,144 @@
+.chat-credential-toggle {
+  margin-left: auto;
+  margin-right: var(--chat-gap-md);
+  min-height: 36px;
+  padding: 6px 10px;
+  border: 0;
+  border-radius: 10px;
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  background: transparent;
+  color: var(--color-text-secondary);
+  font-size: var(--chat-meta-size);
+}
+.chat-credential-toggle:hover { background: color-mix(in srgb, var(--color-text) 6%, transparent); }
+.chat-credential-toggle > span {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--color-warning);
+}
+.chat-credential-toggle > span.is-ok { background: var(--color-success); }
+.chat-credential-popover {
+  position: absolute;
+  z-index: 55;
+  top: calc(100% - 2px);
+  right: var(--chat-gap-md);
+  width: min(420px, calc(100% - var(--chat-gap-md) * 2));
+  padding: 16px;
+  border: 1px solid var(--color-border);
+  border-radius: 14px;
+  background: var(--color-surface);
+  box-shadow: var(--shadow);
+}
+.chat-credential-popover h2 { margin: 0 0 6px; font-size: 16px; font-weight: 600; }
+.chat-credential-popover p,
+.chat-start-note {
+  margin: 0 0 12px;
+  color: var(--color-text-secondary);
+  font-size: 13px;
+  line-height: 1.45;
+}
+.chat-start-note a { color: var(--color-brand); }
+.chat-credential-popover input {
+  width: 100%;
+  min-height: 40px;
+  padding: 8px 10px;
+  border: 1px solid var(--color-border);
+  border-radius: 10px;
+  background: var(--color-bg);
+  color: var(--color-text);
+}
+.chat-credential-actions { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 10px; }
+.chat-credential-actions button {
+  min-height: 36px;
+  padding: 7px 11px;
+  border: 1px solid transparent;
+  border-radius: 9px;
+  background: var(--color-text);
+  color: var(--color-surface);
+}
+.chat-credential-actions button.secondary {
+  border-color: var(--color-border);
+  background: transparent;
+  color: var(--color-text);
+}
+.chat-credential-actions button:disabled { opacity: .5; }
+
+.chat-turn-assistant { justify-content: flex-start; }
+.chat-assistant-message {
+  min-width: 0;
+  width: min(100%, 900px);
+  color: var(--color-text);
+  overflow-wrap: anywhere;
+}
+.chat-assistant-message > :first-child { margin-top: 0; }
+.chat-assistant-message > :last-child { margin-bottom: 0; }
+.chat-assistant-message p,
+.chat-assistant-message ul,
+.chat-assistant-message ol,
+.chat-assistant-message blockquote { margin: 0 0 1em; }
+.chat-assistant-message ul,
+.chat-assistant-message ol { padding-left: 1.5em; }
+.chat-assistant-message li + li { margin-top: .3em; }
+.chat-assistant-message a { color: var(--color-brand); text-underline-offset: 2px; }
+.chat-assistant-message blockquote {
+  padding-left: 12px;
+  border-left: 3px solid var(--color-border);
+  color: var(--color-text-secondary);
+}
+.chat-assistant-message code {
+  padding: .12em .32em;
+  border-radius: 5px;
+  background: color-mix(in srgb, var(--color-text) 7%, var(--color-surface));
+  font-family: ui-monospace, SFMono-Regular, Consolas, monospace;
+  font-size: .92em;
+}
+.chat-code-block {
+  margin: 0 0 1em;
+  border: 1px solid var(--color-border);
+  border-radius: 12px;
+  overflow: hidden;
+  background: var(--color-bg);
+}
+.chat-code-toolbar {
+  min-height: 34px;
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  padding: 4px 8px;
+  border-bottom: 1px solid var(--color-border);
+}
+.chat-code-toolbar button {
+  min-height: 28px;
+  padding: 4px 8px;
+  border: 0;
+  border-radius: 7px;
+  background: transparent;
+  color: var(--color-text-secondary);
+  font-size: 12px;
+}
+.chat-code-toolbar button:hover { background: color-mix(in srgb, var(--color-text) 6%, transparent); }
+.chat-code-block pre {
+  margin: 0;
+  padding: 14px;
+  overflow-x: auto;
+  white-space: pre;
+}
+.chat-code-block pre code {
+  padding: 0;
+  border-radius: 0;
+  background: transparent;
+  font-size: .9em;
+}
+.chat-message-state {
+  margin-top: 6px;
+  color: var(--color-text-secondary);
+  font-size: 12px;
+}
+
+@media (max-width: 520px) {
+  .chat-credential-toggle { margin-right: 8px; }
+  .chat-credential-popover { left: 8px; right: 8px; width: auto; }
+}

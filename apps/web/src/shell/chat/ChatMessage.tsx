@@ -1,6 +1,6 @@
 import { isValidElement, useState, type ReactNode } from 'react'
 import ReactMarkdown from 'react-markdown'
-import type { ChatMessage as Message } from './types'
+import type { MessageView as Message } from '../../shared/api'
 
 function textOf(node: ReactNode): string {
   if (typeof node === 'string' || typeof node === 'number') return String(node)

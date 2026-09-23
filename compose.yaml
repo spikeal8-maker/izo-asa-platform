@@ -53,7 +53,7 @@ services:
       <<: *api-environment
       IZO_CHAT_ROOT_KEY: ${IZO_CHAT_ROOT_KEY:?Run python tools/bootstrap.py --chat-only first}
       IZO_CHAT_PREVIEW_ACCOUNT_EMAILS: ${IZO_CHAT_PREVIEW_ACCOUNT_EMAILS:-preview@local.izo}
-    networks: [private, provider-egress]
+    networks: [private, chat-egress]
     read_only: true
     tmpfs: [/tmp]
     cap_drop: [ALL]
@@ -116,4 +116,5 @@ volumes:
 networks:
   private: {internal: true}
   provider-egress: {}
+  chat-egress: {}
   edge:

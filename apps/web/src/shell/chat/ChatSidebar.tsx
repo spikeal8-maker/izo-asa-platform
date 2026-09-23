@@ -1,20 +1,19 @@
 import { useEffect, useRef, useState } from 'react'
-import type { AuthView } from '../../shared/api'
+import type { AuthView, ThreadView } from '../../shared/api'
 import { Icon } from '../../shared/ui/Icon'
 import { AccountMenu } from '../TopBar'
-import type { ChatThread } from './types'
 import './ChatSidebar.css'
 
 export function ChatSidebar({ auth, history, currentChatId, busy, theme, onThemeChange, onLogout, onNewChat, onOpenChat, onClose }: {
   auth: AuthView | null | undefined
-  history: ChatThread[]
+  history: ThreadView[]
   currentChatId: string | null
   busy: boolean
   theme: 'light' | 'dark'
   onThemeChange: (value: 'light' | 'dark') => void
   onLogout: () => void
   onNewChat: () => void
-  onOpenChat: (chat: ChatThread) => void
+  onOpenChat: (chat: ThreadView) => void
   onClose: () => void
 }) {
   const [searchOpen, setSearchOpen] = useState(false)

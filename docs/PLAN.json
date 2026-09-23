@@ -101,7 +101,7 @@
     "DOC-004C": {"status":"technical_pass","depends_on":["DOC-004B"],"checkpoint":"DOC-004C"},
     "DOC-004D": {"status":"technical_pass","depends_on":["DOC-004C"],"checkpoint":"DOC-004D"},
     "MAINT-STATE-003": {"status":"technical_pass","depends_on":["FRONTEND-002"],"decides_next":true,"goal":"Repair decides_next control-plane transitions with structured review evidence and explicit exact-SHA owner waiver when no independent GitHub actor is available.","issues":[166,188],"checkpoint":"MAINT-STATE-003"},
-    "CHAT-DEEPSEEK-001": {"status":"active","depends_on":["MAINT-STATE-003"],"decides_next":true,"goal":"D1: account-owned DeepSeek BYOK, durable streamed chat, safe rendering, and Docker preview"}
+    "CHAT-DEEPSEEK-001": {"status":"active","depends_on":["MAINT-STATE-003"],"decides_next":true,"goal":"DeepSeek BYOK durable chat and Docker preview."}
   },
   "status_meaning": {
     "active": "The only package a new coding agent may continue by default.",
