@@ -11,7 +11,9 @@ def bootstrap(path: Path = Path(".env")) -> bool:
               "IZO_S3_ACCESS_KEY": "izo" + secrets.token_hex(8),
               "IZO_S3_SECRET_KEY": secrets.token_hex(32), "IZO_HTTP_PORT": "8080",
               "IZO_AUTH_RATE_SECRET": secrets.token_hex(32), "IZO_AUTH_REGISTRATION": "open",
-              "IZO_RECOVERY_SECRET": secrets.token_hex(32), "IZO_RECOVERY_DELIVERY": "test"}
+              "IZO_RECOVERY_SECRET": secrets.token_hex(32), "IZO_RECOVERY_DELIVERY": "test",
+              "IZO_CHAT_ROOT_KEY": secrets.token_urlsafe(32),
+              "IZO_CHAT_PREVIEW_ACCOUNT_EMAILS": "preview@local.izo"}
     try:
         fd = os.open(path, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o600)
     except FileExistsError:
@@ -46,11 +48,22 @@ def add_recovery_settings(path: Path = Path(".env")) -> bool:
     return _append_missing(path, {"IZO_RECOVERY_SECRET": secrets.token_hex(32), "IZO_RECOVERY_DELIVERY": "test"})
 
 
+def add_chat_settings(path: Path = Path(".env")) -> bool:
+    return _append_missing(path, {
+        "IZO_CHAT_ROOT_KEY": secrets.token_urlsafe(32),
+        "IZO_CHAT_PREVIEW_ACCOUNT_EMAILS": "preview@local.izo",
+    })
+
+
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description=__doc__)
     group = parser.add_mutually_exclusive_group()
     group.add_argument("--auth-only", action="store_true")
     group.add_argument("--recovery-only", action="store_true")
+    group.add_argument("--chat-only", action="store_true")
     args = parser.parse_args()
-    changed = add_auth_settings() if args.auth_only else add_recovery_settings() if args.recovery_only else bootstrap()
+    changed = (add_auth_settings() if args.auth_only
+               else add_recovery_settings() if args.recovery_only
+               else add_chat_settings() if args.chat_only
+               else bootstrap())
     print("Local configuration added; values not displayed" if changed else "Existing .env preserved")
