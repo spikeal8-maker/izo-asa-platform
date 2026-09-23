@@ -5,6 +5,8 @@ annotated-types==0.8.0
 anyio==4.15.1
 boto3==1.43.18
 botocore==1.43.89
+cffi==2.1.1
+cryptography==50.0.1
 click==8.5.0
 fastapi==0.141.1
 greenlet==3.5.5
@@ -18,6 +20,7 @@ psycopg-binary==3.3.5
 pydantic==2.13.4
 pydantic-core==2.46.4
 pydantic-settings==2.14.1
+pycparser==3.0
 python-dateutil==2.9.0.post0
 python-dotenv==1.2.3
 s3transfer==0.18.0
