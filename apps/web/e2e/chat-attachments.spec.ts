@@ -41,7 +41,7 @@ test('Anthropic attachment composer keeps five ordered image drafts', async ({ p
   const remove = page.getByRole('button', { name: 'Удалить изображение owner-1.png' })
   expect(await remove.evaluate(node => getComputedStyle(node).opacity)).toBe('0')
   await first.hover()
-  expect(await remove.evaluate(node => getComputedStyle(node).opacity)).toBe('1')
+  await expect(remove).toHaveCSS('opacity', '1')
   await remove.click()
   await expect(page.getByTestId('chat-attachment-preview')).toHaveCount(0)
   await chooser.setInputFiles(files.slice(0, 3))
