@@ -8,7 +8,7 @@ padding:clamp(22px,2.2vw,46px) clamp(12px,1.2vw,28px) clamp(8px,.7vw,16px);
 background:linear-gradient(to bottom,transparent 0%,var(--color-surface) 28%,var(--color-surface) 100%);
 }
 .chat-composer-wrap {
-width:min(100%,var(--chat-content-width,860px));
+width:min(100%,42rem);
 margin:0 auto;
 container-type:inline-size;
 }
@@ -25,7 +25,7 @@ grid-template-areas:'plus input model mic send';
 align-items:center;
 column-gap:var(--composer-gap);
 border:1px solid var(--color-border);
-border-radius:clamp(24px,2.1cqw,46px);
+border-radius:20px;
 background:var(--color-surface);
 box-shadow:
 0 18px 44px color-mix(in srgb,var(--color-text) 12%,transparent),
@@ -38,7 +38,13 @@ grid-template-areas:
 'input input input input input'
 'plus state model mic send';
 row-gap:clamp(5px,.5cqw,11px);
-border-radius:clamp(22px,1.55cqw,36px);
+border-radius:20px;
+}
+.chat-composer.has-attachments {
+grid-template-areas:
+'attachments attachments attachments attachments attachments'
+'input input input input input'
+'plus state model mic send';
 }
 .chat-composer:focus-within { border-color:color-mix(in srgb,var(--color-text) 34%,var(--color-border)); }
 .chat-composer textarea,

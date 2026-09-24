@@ -49,7 +49,7 @@ export async function workspace(page: Page) {
           description: 'Текст' },
       ],
       max_input_chars: 6000, max_output_tokens: 2048,
-      max_image_bytes: 12 * 1024 * 1024, max_attachments: 1,
+      max_image_bytes: 12 * 1024 * 1024, max_attachments: 5,
     })
     if (path === '/api/v1/chat/credential') return answer({
       configured: true, enabled: true, verified: true, revision: 1, generation: 1, provider: 'deepseek',

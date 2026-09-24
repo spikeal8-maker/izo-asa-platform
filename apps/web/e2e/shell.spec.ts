@@ -15,7 +15,7 @@ c:'Выбрать модель',n:'Открыть панель',q:'Поиск ч
 w:'Поиск в интернете'}
 const F=(p:Z)=>p.goto('/')
 async function G(p:Z){await p.unroute('**/api/v1/auth/me');const s=await W(p);s.account.display_name='Александр';s.balance=123
-await p.route('**/api/v1/chat/policy',r=>r.fulfill({json:{revision:'test',default_model:'deepseek-flash',models:[{id:'deepseek-flash',label:'DeepSeek Flash',text:true,vision:true,description:'Текст · Изображения'},{id:'deepseek-v4-pro',label:'DeepSeek V4 Pro',text:true,vision:false,description:'Текст'}],max_input_chars:6000,max_output_tokens:2048,max_image_bytes:12*1024*1024,max_attachments:1}}))
+await p.route('**/api/v1/chat/policy',r=>r.fulfill({json:{revision:'test',default_model:'deepseek-flash',models:[{id:'deepseek-flash',label:'DeepSeek Flash',text:true,vision:true,description:'Текст · Изображения'},{id:'deepseek-v4-pro',label:'DeepSeek V4 Pro',text:true,vision:false,description:'Текст'}],max_input_chars:6000,max_output_tokens:2048,max_image_bytes:12*1024*1024,max_attachments:5}}))
 await p.route('**/api/v1/chat/credential',r=>r.fulfill({json:{configured:true,enabled:true,verified:true,revision:1,generation:1,provider:'deepseek'}}))
 await p.route('**/api/v1/chat/threads',r=>r.fulfill({json:{threads:[]}}));return s}
 async function M(m:J){await V(...['Аккаунт','Токены','Настройки','Помощь'].map(x=>I(m,x)),m.getByText('Тема',{exact:true}),R(m,'Светлая'),R(m,'Тёмная'),I(m,'Выйти'));await C(Q(m,'.social-link'),4)}
@@ -49,7 +49,7 @@ return{collision:a.some((x,j)=>a.slice(j+1).some(y=>o(x,y))),overflow:document.d
 test('8K shell',async({page},i)=>{
 test.skip(i.project.name!=='eight-k');await F(page);const m=await page.evaluate(()=>{const f=(s:K)=>parseFloat(getComputedStyle(document.querySelector(s)!).fontSize),w=(s:K)=>document.querySelector(s)!.getBoundingClientRect().width
 return{b:f('.global-brand'),p:f('.product-tab'),h:f('.chat-start-state h1'),s:w('.chat-sidebar'),c:w('.chat-composer-wrap'),v:innerWidth}})
-e([m.b>=34,m.p>=28,m.h>=72,m.s>=600,m.c>=760,m.c<=900,m.c<m.v/4]).toEqual([true,true,true,true,true,true,true]);await page.goto('/feed');const g=Q(page,'.feed-grid')
+e([m.b>=34,m.p>=28,m.h>=72,m.s>=600,m.c>=660,m.c<=680,m.c<m.v/4]).toEqual([true,true,true,true,true,true,true]);await page.goto('/feed');const g=Q(page,'.feed-grid')
 e([await g.evaluate(x=>getComputedStyle(x).gridTemplateColumns.split(' ').length)>=8,(await g.boundingBox())!.width>4000,((await Q(page,'.feed-hero-copy').boundingBox())?.width??9999)<1000]).toEqual([true,true,true]);await Y(page)
 })
 test('c',async({page})=>{

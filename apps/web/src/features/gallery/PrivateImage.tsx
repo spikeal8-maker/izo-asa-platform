@@ -1,10 +1,16 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import type { AuthView } from '../../shared/api'
 import { type Asset, imageBlob, problem } from '../../shared/workspace-api'
 
 /** Own one decoded object URL and release it on route/session changes. No persistent pixel cache. */
-export function PrivateImage({ asset, auth }: { asset: Asset; auth: AuthView }) {
+export function PrivateImage({ asset, auth, onSettled }: {
+  asset: Asset
+  auth: AuthView
+  onSettled?: () => void
+}) {
   const [url, setUrl] = useState('')
+  const settledRef = useRef(onSettled)
+  settledRef.current = onSettled
   const [error, setError] = useState('')
   const [version, setVersion] = useState(0)
   useEffect(() => {
@@ -21,10 +27,12 @@ export function PrivateImage({ asset, auth }: { asset: Asset; auth: AuthView }) 
       if (image.naturalWidth !== asset.width || image.naturalHeight !== asset.height)
         throw new Error('Image dimensions mismatch')
       setUrl(ownedUrl)
+      settledRef.current?.()
     }).catch(reason => {
       if (controller.signal.aborted) return
       if (ownedUrl) { URL.revokeObjectURL(ownedUrl); ownedUrl = '' }
       setError(problem(reason))
+      settledRef.current?.()
     })
     return () => { controller.abort(); if (ownedUrl) URL.revokeObjectURL(ownedUrl) }
   }, [asset.id, asset.sha256, asset.byte_size, asset.width, asset.height, auth.account.id, auth.csrf_token, version])

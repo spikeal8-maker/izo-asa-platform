@@ -4,6 +4,12 @@ import { Icon } from '../../shared/ui/Icon'
 import { CHAT_IMAGE_ACCEPT, chatImageProblem, prepareChatImage } from './chatAttachments'
 import './AttachmentControl.css'
 
+export type ChatAttachmentDraft = {
+  id: string
+  file: File
+  url: string
+}
+
 export function useChatAttachment({
   policy, selectedVision, visionModel, onModelChange,
 }: {
@@ -12,30 +18,34 @@ export function useChatAttachment({
   visionModel: { id: string; label: string } | null
   onModelChange: (modelId: string) => void
 }) {
-  const [attachment, setAttachment] = useState<File | null>(null)
-  const [attachmentUrl, setAttachmentUrl] = useState('')
+  const [attachments, setAttachments] = useState<ChatAttachmentDraft[]>([])
   const [message, setMessage] = useState('')
   const inputRef = useRef<HTMLInputElement>(null)
+  const current = useRef<ChatAttachmentDraft[]>([])
 
-  useEffect(() => {
-    if (!attachment) { setAttachmentUrl(''); return }
-    const url = URL.createObjectURL(attachment)
-    setAttachmentUrl(url)
-    return () => URL.revokeObjectURL(url)
-  }, [attachment])
+  useEffect(() => () => {
+    current.current.forEach(item => URL.revokeObjectURL(item.url))
+  }, [])
 
-  async function add(file: File) {
+  function replace(next: ChatAttachmentDraft[]) {
+    current.current = next
+    setAttachments(next)
+  }
+
+  async function add(value: File | File[]) {
     if (!policy) return
-    if (attachment) {
-      setMessage('В этом Chat пока можно прикрепить одно изображение.')
+    const files = Array.isArray(value) ? value : [value]
+    if (!files.length) return
+    const maximum = policy.max_attachments
+    const slots = Math.max(0, maximum - current.current.length)
+    if (!slots) {
+      setMessage(`Можно прикрепить не больше ${maximum} изображений.`)
       return
     }
-    setMessage('')
+    const candidates = files.slice(0, slots)
     try {
-      await prepareChatImage(file, policy.max_image_bytes)
+      for (const file of candidates) await prepareChatImage(file, policy.max_image_bytes)
     } catch (reason) {
-      setAttachment(null)
-      if (inputRef.current) inputRef.current.value = ''
       setMessage(chatImageProblem(reason))
       return
     }
@@ -45,31 +55,56 @@ export function useChatAttachment({
         return
       }
       onModelChange(visionModel.id)
-      setMessage(`Для изображения выбрана ${visionModel.label}.`)
     }
-    setAttachment(file)
+    const created = candidates.map(file => ({
+      id: crypto.randomUUID(),
+      file,
+      url: URL.createObjectURL(file),
+    }))
+    replace([...current.current, ...created])
+    if (files.length > slots) {
+      setMessage(`Можно прикрепить не больше ${maximum} изображений.`)
+    } else if (!selectedVision && visionModel) {
+      setMessage(`Для изображения выбрана ${visionModel.label}.`)
+    } else {
+      setMessage('')
+    }
   }
 
-  function remove() {
-    setAttachment(null)
+  function remove(id: string) {
+    const removed = current.current.find(item => item.id === id)
+    if (removed) URL.revokeObjectURL(removed.url)
+    replace(current.current.filter(item => item.id !== id))
+    setMessage('')
+  }
+
+  function clear() {
+    current.current.forEach(item => URL.revokeObjectURL(item.url))
+    replace([])
     setMessage('')
     if (inputRef.current) inputRef.current.value = ''
   }
 
-  const input = <input ref={inputRef} className="chat-file-input" type="file"
-    accept={CHAT_IMAGE_ACCEPT} aria-label="Выбрать изображение"
+  const input = <input ref={inputRef} className="chat-file-input" type="file" multiple
+    accept={CHAT_IMAGE_ACCEPT} aria-label="Выбрать изображения"
     onChange={event => {
-      const file = event.currentTarget.files?.[0]
-      if (file) void add(file)
+      const files = Array.from(event.currentTarget.files ?? [])
+      event.currentTarget.value = ''
+      if (files.length) void add(files)
     }} />
 
-  const preview = attachment && <div className="chat-attachment-preview" data-testid="chat-attachment-preview">
-    {attachmentUrl && <img src={attachmentUrl} alt="Прикреплённое изображение" />}
-    <span title={attachment.name}>{attachment.name}</span>
-    <button type="button" aria-label="Удалить вложение" onClick={remove}>
-      <Icon name="close" />
-    </button>
+  const preview = attachments.length > 0 && <div className="chat-attachment-strip"
+      data-testid="chat-attachment-strip" aria-label="Прикреплённые изображения">
+    {attachments.map(item => <div key={item.id} className="chat-attachment-tile"
+        data-testid="chat-attachment-preview">
+      <img src={item.url} alt="" />
+      <span className="chat-attachment-sr">{item.file.name}</span>
+      <button type="button" aria-label={`Удалить изображение ${item.file.name}`}
+        onClick={() => remove(item.id)}>
+        <Icon name="close" />
+      </button>
+    </div>)}
   </div>
 
-  return { attachment, message, inputRef, input, preview, add, remove }
+  return { attachments, message, inputRef, input, preview, add, remove, clear }
 }

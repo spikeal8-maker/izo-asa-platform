@@ -197,7 +197,8 @@ test('composer resize hysteresis is bounded by real geometry and attachments for
   const file = await chooser
   await file.setFiles({ name: 'reference.png', mimeType: 'image/png', buffer: png })
   await expect(composer(page)).toHaveAttribute('data-layout', 'expanded')
-  await page.getByRole('button', { name: 'Удалить вложение' }).click()
+  await page.getByTestId('chat-attachment-preview').hover()
+  await page.getByRole('button', { name: 'Удалить изображение reference.png' }).click()
   await expect(composer(page)).toHaveAttribute('data-layout', 'compact')
 })
 
