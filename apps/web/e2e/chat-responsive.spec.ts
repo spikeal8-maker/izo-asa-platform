@@ -52,13 +52,17 @@ async function mirrorWidth(page: Page) {
   return page.locator('.chat-composer-measure').evaluate(node => Number.parseFloat((node as HTMLElement).style.width))
 }
 
-async function widenUntilMirrorGain(page: Page, baseWidth: number, gain: number) {
-  const viewport = page.viewportSize()
-  if (!viewport) throw new Error('viewport is unavailable')
-  let width = viewport.width
-  for (let step = 0; step < 80; step++) {
-    width += 4
-    await page.setViewportSize({ width, height: viewport.height })
+async function gainMirrorWidthFromControl(
+  page: Page, baseWidth: number, gain: number,
+) {
+  const model = page.getByRole('button', { name: 'Выбрать модель' })
+  const original = await model.evaluate(node => node.getBoundingClientRect().width)
+  for (let step = 4; step <= 80; step += 4) {
+    await model.evaluate((node, width) => {
+      const element = node as HTMLElement
+      element.style.width = `${width}px`
+      element.style.maxWidth = `${width}px`
+    }, Math.max(48, original - step))
     await page.waitForTimeout(16)
     const current = await mirrorWidth(page)
     if (current >= baseWidth + gain) return current
@@ -178,10 +182,10 @@ test('composer resize hysteresis is bounded by real geometry and attachments for
   await expect(composer(page)).toHaveAttribute('data-layout', 'expanded')
   const baseMirrorWidth = await mirrorWidth(page)
 
-  await widenUntilMirrorGain(page, baseMirrorWidth, COMPOSER_COLLAPSE_HEADROOM_PX - 4)
+  await gainMirrorWidthFromControl(page, baseMirrorWidth, COMPOSER_COLLAPSE_HEADROOM_PX - 4)
   await expect(composer(page)).toHaveAttribute('data-layout', 'expanded')
 
-  await widenUntilMirrorGain(page, baseMirrorWidth, COMPOSER_COLLAPSE_HEADROOM_PX + 8)
+  await gainMirrorWidthFromControl(page, baseMirrorWidth, COMPOSER_COLLAPSE_HEADROOM_PX + 8)
   await expect(composer(page)).toHaveAttribute('data-layout', 'compact')
 
   await input(page).fill('')
