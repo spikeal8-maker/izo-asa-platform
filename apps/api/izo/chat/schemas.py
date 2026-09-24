@@ -1,13 +1,18 @@
-"""Public Chat DTOs: no provider secret, endpoint, ciphertext or raw response."""
+"""Public Chat DTOs: no provider secret, endpoint, ciphertext, object key or raw response."""
 from __future__ import annotations
 
 import base64
+from typing import Literal
 from uuid import UUID
+
 from pydantic import BaseModel, ConfigDict, Field, SecretStr, field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
-MODEL_REVISION = "deepseek-2026-09-d1"
-MODELS = (("deepseek-flash", "DeepSeek Flash"), ("deepseek-v4-pro", "DeepSeek V4 Pro"))
+MODEL_REVISION = "deepseek-2026-09-vision-1"
+MODELS = (
+    ("deepseek-flash", "DeepSeek Flash", True, True, "Текст · Изображения"),
+    ("deepseek-v4-pro", "DeepSeek V4 Pro", True, False, "Текст"),
+)
 DEFAULT_MODEL = MODELS[0][0]
 MAX_INPUT_CHARS = 6_000
 MAX_CONTEXT_MESSAGES = 40
@@ -15,11 +20,15 @@ MAX_CONTEXT_CHARS = 24_000
 MAX_OUTPUT_TOKENS = 2_048
 MAX_ASSISTANT_CHARS = 64_000
 MAX_SSE_LINE = 256 * 1024
+MAX_CHAT_ATTACHMENTS = 1
+MAX_CHAT_IMAGE_BYTES = 12 * 1024 * 1024
+MAX_CONTEXT_IMAGE_BYTES = 24 * 1024 * 1024
 REQUEST_WINDOW_SECONDS = 300
 REQUEST_WINDOW_LIMIT = 20
 CREDENTIAL_WINDOW_LIMIT = 6
 THREAD_PAGE_LIMIT = 50
 MESSAGE_PAGE_LIMIT = 100
+
 
 class ChatSettings(BaseSettings):
     model_config = SettingsConfigDict(
@@ -45,14 +54,24 @@ class ChatSettings(BaseSettings):
 
     @staticmethod
     def model_allowed(model: str) -> bool:
-        return any(model == model_id for model_id, _ in MODELS)
+        return any(model == model_id for model_id, *_ in MODELS)
+
+    @staticmethod
+    def model_supports_vision(model: str) -> bool:
+        return any(model == model_id and vision for model_id, _, _, vision, _ in MODELS)
+
 
 class StrictInput(BaseModel):
     model_config = ConfigDict(extra="forbid", hide_input_in_errors=True)
 
+
 class ModelView(BaseModel):
     id: str
     label: str
+    text: bool
+    vision: bool
+    description: str
+
 
 class ChatPolicyView(BaseModel):
     revision: str
@@ -60,6 +79,9 @@ class ChatPolicyView(BaseModel):
     models: list[ModelView]
     max_input_chars: int
     max_output_tokens: int
+    max_image_bytes: int
+    max_attachments: int
+
 
 class CredentialView(BaseModel):
     configured: bool
@@ -68,6 +90,7 @@ class CredentialView(BaseModel):
     revision: int | None = None
     generation: int | None = None
     provider: str = "deepseek"
+
 
 class CredentialWrite(StrictInput):
     operation_id: UUID
@@ -82,12 +105,15 @@ class CredentialWrite(StrictInput):
             raise ValueError("Invalid credential")
         return value
 
+
 class CredentialCommand(StrictInput):
     operation_id: UUID
     expected_revision: int = Field(ge=1)
 
+
 class ThreadCreate(StrictInput):
     title: str | None = Field(default=None, max_length=120)
+
 
 class ThreadView(BaseModel):
     id: UUID
@@ -95,8 +121,21 @@ class ThreadView(BaseModel):
     created_at: int
     updated_at: int
 
+
 class ThreadList(BaseModel):
     threads: list[ThreadView]
+
+
+class AttachmentView(BaseModel):
+    id: UUID
+    asset_id: UUID
+    media_type: Literal["image/png"]
+    byte_size: int
+    width: int
+    height: int
+    sha256: str
+    created_at: int
+
 
 class MessageView(BaseModel):
     id: UUID
@@ -105,17 +144,21 @@ class MessageView(BaseModel):
     sequence: int
     content: str
     state: str
+    attachments: list[AttachmentView] = Field(default_factory=list)
     created_at: int
     updated_at: int
+
 
 class ThreadDetail(BaseModel):
     thread: ThreadView
     messages: list[MessageView]
 
+
 class RequestCreate(StrictInput):
     request_id: UUID
     text: str = Field(min_length=1, max_length=MAX_INPUT_CHARS)
     model: str = Field(min_length=1, max_length=64)
+    attachment_ids: list[UUID] = Field(default_factory=list, max_length=MAX_CHAT_ATTACHMENTS)
 
     @field_validator("text")
     @classmethod
@@ -124,6 +167,14 @@ class RequestCreate(StrictInput):
         if not value or "\x00" in value:
             raise ValueError("Invalid message")
         return value
+
+    @field_validator("attachment_ids")
+    @classmethod
+    def unique_attachments(cls, value: list[UUID]) -> list[UUID]:
+        if len(set(value)) != len(value):
+            raise ValueError("Duplicate attachment")
+        return value
+
 
 class RequestView(BaseModel):
     id: UUID

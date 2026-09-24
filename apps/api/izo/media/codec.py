@@ -12,7 +12,10 @@ from threading import BoundedSemaphore
 
 from .schemas import MAX_INPUT, MAX_OUTPUT, MAX_PIXELS, MediaError
 
-FORMATS = {"image/png": "PNG", "image/jpeg": "JPEG", "image/webp": "WEBP"}
+FORMATS = {
+    "image/png": "PNG", "image/jpeg": "JPEG",
+    "image/webp": "WEBP", "image/gif": "GIF",
+}
 SLOTS = BoundedSemaphore(2)
 
 
@@ -45,8 +48,10 @@ def rewrite(data, content_type, width, height, bound):
     with warnings.catch_warnings():
         warnings.simplefilter("error", Image.DecompressionBombWarning)
         with Image.open(io.BytesIO(data), formats=list(FORMATS.values())) as check:
+            frames = getattr(check, "n_frames", 1)
             if (check.format != FORMATS[content_type] or check.size != (width, height)
-                    or width * height > MAX_PIXELS or getattr(check, "n_frames", 1) != 1):
+                    or width * height > MAX_PIXELS
+                    or (check.format != "GIF" and frames != 1)):
                 raise ValueError("image_mismatch")
             check.verify()
         with Image.open(io.BytesIO(data), formats=[FORMATS[content_type]]) as image:

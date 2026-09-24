@@ -1,6 +1,8 @@
 import { isValidElement, useState, type ReactNode } from 'react'
 import ReactMarkdown from 'react-markdown'
-import type { MessageView as Message } from '../../shared/api'
+import { PrivateImage } from '../../features/gallery/PrivateImage'
+import type { AuthView, ChatAttachmentView, MessageView as Message } from '../../shared/api'
+import type { Asset } from '../../shared/workspace-api'
 
 function textOf(node: ReactNode): string {
   if (typeof node === 'string' || typeof node === 'number') return String(node)
@@ -33,6 +35,7 @@ function CodeBlock({ children }: { children?: ReactNode }) {
       setCopied(false)
     }
   }
+
   return <div className="chat-code-block">
     <div className="chat-code-toolbar">
       <button type="button" onClick={() => void copy()}>
@@ -43,10 +46,35 @@ function CodeBlock({ children }: { children?: ReactNode }) {
   </div>
 }
 
-export function ChatMessage({ message }: { message: Message }) {
+function ChatAttachment({ attachment, auth }: {
+  attachment: ChatAttachmentView
+  auth: AuthView
+}) {
+  const asset: Asset = {
+    id: attachment.asset_id,
+    kind: 'image',
+    content_type: 'image/png',
+    byte_size: attachment.byte_size,
+    width: attachment.width,
+    height: attachment.height,
+    sha256: attachment.sha256,
+    created_at: attachment.created_at,
+  }
+  return <div className="chat-message-image">
+    <PrivateImage asset={asset} auth={auth} />
+  </div>
+}
+
+export function ChatMessage({ message, auth }: { message: Message; auth: AuthView }) {
   if (message.role === 'user') {
     return <div className="chat-turn chat-turn-user" data-message-id={message.id}>
-      <div className="chat-user-bubble">{message.content}</div>
+      <div className="chat-user-bubble">
+        {(message.attachments?.length ?? 0) > 0 && <div className="chat-message-attachments">
+          {message.attachments?.map(attachment =>
+            <ChatAttachment key={attachment.id} attachment={attachment} auth={auth} />)}
+        </div>}
+        <div className="chat-user-text">{message.content}</div>
+      </div>
     </div>
   }
 

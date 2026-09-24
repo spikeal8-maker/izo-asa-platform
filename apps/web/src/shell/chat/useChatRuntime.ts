@@ -4,6 +4,7 @@ apiRequest, apiStream, ApiError, chatErrors, chatProblem,
 type AuthView, type ChatPolicyView, type ChatRequestView, type CredentialView,
 type MessageView, type ThreadDetail, type ThreadList, type ThreadView,
 } from '../../shared/api'
+import { chatImageProblem, uploadChatImage } from './chatAttachments'
 type ChatModel = ChatPolicyView['models'][number]
 type StreamPayload = Record<string, unknown>
 async function consumeSse(
@@ -140,10 +141,25 @@ setError('')
 try { await loadThread(chat.id) }
 catch (reason) { setError(chatProblem(reason)) }
 }
-async function send(text: string, selectedModelId?: string): Promise<boolean> {
+async function send(
+  text: string, selectedModelId?: string, attachment: File | null = null,
+): Promise<boolean> {
 const selectedModel = policy?.models.find(item => item.id === selectedModelId) ?? model
-if (!auth || !selectedModel || busy || !credential?.verified) return false
+if (!auth || !policy || !selectedModel || busy || !credential?.verified) return false
+if (attachment && !selectedModel.vision) {
+setError('Модель не поддерживает изображения.')
+return false
+}
 setError(''); setBusy(true)
+let attachmentIds: string[] = []
+if (attachment) {
+try {
+const asset = await uploadChatImage(attachment, auth, policy.max_image_bytes)
+attachmentIds = [asset.id]
+} catch (reason) {
+setBusy(false); setError(chatImageProblem(reason)); return false
+}
+}
 let threadId = currentChatId
 try {
 if (!threadId) {
@@ -162,7 +178,10 @@ try {
 accepted = await apiRequest<ChatRequestView>(
 `/api/v1/chat/threads/${threadId}/requests`, {
 method: 'POST', csrf: auth.csrf_token,
-data: { request_id: requestId, text, model: selectedModel.id }, timeoutMs: 20000,
+data: {
+request_id: requestId, text, model: selectedModel.id,
+attachment_ids: attachmentIds,
+}, timeoutMs: 20000,
 })
 } catch (reason) {
 if (reason instanceof ApiError) {

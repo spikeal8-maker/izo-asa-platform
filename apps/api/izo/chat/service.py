@@ -13,16 +13,16 @@ from .conversations import ConversationMixin
 from .credentials import ChatError, CredentialMixin
 from .schemas import ChatPolicyView, ModelView
 from .schemas import (
-    DEFAULT_MODEL, MAX_INPUT_CHARS, MAX_OUTPUT_TOKENS, MODEL_REVISION,
-    MODELS, REQUEST_WINDOW_SECONDS,
+    DEFAULT_MODEL, MAX_CHAT_ATTACHMENTS, MAX_CHAT_IMAGE_BYTES, MAX_INPUT_CHARS,
+    MAX_OUTPUT_TOKENS, MODEL_REVISION, MODELS, REQUEST_WINDOW_SECONDS,
 )
 from .execution import ExecutionMixin
 
 
 class ChatService(CredentialMixin, ConversationMixin, ExecutionMixin):
-    def __init__(self, auth, policy, provider, clock=time.time):
+    def __init__(self, auth, policy, provider, clock=time.time, media_store=None):
         self.auth, self.engine, self.policy = auth, auth.engine, policy
-        self.provider, self.clock = provider, clock
+        self.provider, self.clock, self.media_store = provider, clock, media_store
         self._stops: dict[object, Event] = {}
         self._stop_lock = Lock()
         self._recover_stale()
@@ -110,9 +110,17 @@ class ChatService(CredentialMixin, ConversationMixin, ExecutionMixin):
         return ChatPolicyView(
             revision=MODEL_REVISION,
             default_model=DEFAULT_MODEL,
-            models=[ModelView(id=model, label=label) for model, label in MODELS],
+            models=[
+                ModelView(
+                    id=model, label=label, text=text, vision=vision,
+                    description=description,
+                )
+                for model, label, text, vision, description in MODELS
+            ],
             max_input_chars=MAX_INPUT_CHARS,
             max_output_tokens=MAX_OUTPUT_TOKENS,
+            max_image_bytes=MAX_CHAT_IMAGE_BYTES,
+            max_attachments=MAX_CHAT_ATTACHMENTS,
         )
 
     def _root(self) -> bytes:

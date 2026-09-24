@@ -199,6 +199,24 @@ def test_declared_type_and_dimensions_are_not_trusted(env, change):
         monkey.undo()
 
 
+@pytest.mark.parametrize(('fmt', 'content_type'), [
+    ('PNG', 'image/png'),
+    ('JPEG', 'image/jpeg'),
+    ('WEBP', 'image/webp'),
+    ('GIF', 'image/gif'),
+])
+def test_supported_chat_image_formats_are_canonicalized_to_private_png(
+        env, fmt, content_type):
+    data = image_bytes(fmt=fmt)
+    result, _, _ = finish(env, data, content_type=content_type)
+    stored = env[-1].data[next(iter(env[-1].data))]
+    assert result.status == 'ready'
+    assert stored.startswith(b'\x89PNG\r\n\x1a\n')
+    with Image.open(io.BytesIO(stored)) as image:
+        image.load()
+        assert image.size == (8, 6)
+
+
 def test_mismatched_checksum_does_not_write_or_consume_intent(env):
     svc, users, *_ = env
     upload, _, data = start(env)

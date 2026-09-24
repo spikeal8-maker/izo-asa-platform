@@ -12,10 +12,10 @@ const L=(x:U,s:K)=>x.getByRole('link',{name:s,exact:true})
 const H=(p:Z)=>D(p,'global-header'),P=(p:Z)=>Q(p,'.chat-composer'),S=(p:Z)=>Q(p,'.chat-sidebar')
 const N={l:'Войти',p:'Профиль',m:'Сообщение',a:'Добавить',s:'Отправить',t:'Инструменты',o:'Модели',
 c:'Выбрать модель',n:'Открыть панель',q:'Поиск чатов',f:'Новый чат',b:'Поиск по чатам',i:'Создать изображение',
-w:'Поиск в интернете',x:'FLUX.2 [klein] 4B'}
+w:'Поиск в интернете'}
 const F=(p:Z)=>p.goto('/')
 async function G(p:Z){await p.unroute('**/api/v1/auth/me');const s=await W(p);s.account.display_name='Александр';s.balance=123
-await p.route('**/api/v1/chat/policy',r=>r.fulfill({json:{revision:'test',default_model:'deepseek-flash',models:[{id:'deepseek-flash',label:'DeepSeek Flash'}],max_input_chars:6000,max_output_tokens:2048}}))
+await p.route('**/api/v1/chat/policy',r=>r.fulfill({json:{revision:'test',default_model:'deepseek-flash',models:[{id:'deepseek-flash',label:'DeepSeek Flash',text:true,vision:true,description:'Текст · Изображения'},{id:'deepseek-v4-pro',label:'DeepSeek V4 Pro',text:true,vision:false,description:'Текст'}],max_input_chars:6000,max_output_tokens:2048,max_image_bytes:12*1024*1024,max_attachments:1}}))
 await p.route('**/api/v1/chat/credential',r=>r.fulfill({json:{configured:true,enabled:true,verified:true,revision:1,generation:1,provider:'deepseek'}}))
 await p.route('**/api/v1/chat/threads',r=>r.fulfill({json:{threads:[]}}));return s}
 async function M(m:J){await V(...['Аккаунт','Токены','Настройки','Помощь'].map(x=>I(m,x)),m.getByText('Тема',{exact:true}),R(m,'Светлая'),R(m,'Тёмная'),I(m,'Выйти'));await C(Q(m,'.social-link'),4)}
@@ -36,7 +36,7 @@ await A(Q(h,'.brand-favicon'),'src','/favicon.svg');await V(L(h,N.l),L(v,'Лен
 await G(page);await page.reload();h=H(page);t=D(page,'global-token-group');await Promise.all([C(L(h,N.l),0),T(D(t,'token-main'),'123'),C(Q(page,'.chat-sidebar-bottom'),1),X(Q(page,'.chat-profile-name'),'Александр')])
 await B(h,N.p).click();let m=page.getByRole('menu');await M(m);await R(m,'Тёмная').click();await A(Q(page,'html'),'data-theme','dark')
 if(info.project.name!=='laptop')return
-await page.keyboard.press('Escape');const model=Q(page,'.chat-model-selector');await V(model);await T(model,'Авто');await model.click();m=page.getByRole('menu',{name:N.o});const text=Q(m,'.chat-model-category').filter({hasText:'Текст'});await Q(text,'summary').click();await V(R(text,'DeepSeek Flash'));await C(R(m,N.x),0)
+await page.keyboard.press('Escape');const model=Q(page,'.chat-model-selector');await V(model);await T(model,'DeepSeek Flash');await model.click();m=page.getByRole('menu',{name:N.o});await V(R(m,'DeepSeek Flash'),R(m,'DeepSeek V4 Pro'));await C(R(m,'Авто'),0);await C(Q(m,'.chat-model-category'),0)
 })
 test('d',async({page},i)=>{
 test.skip(i.project.name!=='laptop');await F(page);const h=await H(page).boundingBox(),c=await Q(page,'.chat-page').boundingBox(),s=await S(page).boundingBox()
@@ -49,12 +49,12 @@ return{collision:a.some((x,j)=>a.slice(j+1).some(y=>o(x,y))),overflow:document.d
 test('8K shell',async({page},i)=>{
 test.skip(i.project.name!=='eight-k');await F(page);const m=await page.evaluate(()=>{const f=(s:K)=>parseFloat(getComputedStyle(document.querySelector(s)!).fontSize),w=(s:K)=>document.querySelector(s)!.getBoundingClientRect().width
 return{b:f('.global-brand'),p:f('.product-tab'),h:f('.chat-start-state h1'),s:w('.chat-sidebar'),c:w('.chat-composer-wrap'),v:innerWidth}})
-e([m.b>=34,m.p>=28,m.h>=72,m.s>=600,m.c>=2100,m.c<m.v/2]).toEqual([true,true,true,true,true,true]);await page.goto('/feed');const g=Q(page,'.feed-grid')
+e([m.b>=34,m.p>=28,m.h>=72,m.s>=600,m.c>=760,m.c<=900,m.c<m.v/4]).toEqual([true,true,true,true,true,true,true]);await page.goto('/feed');const g=Q(page,'.feed-grid')
 e([await g.evaluate(x=>getComputedStyle(x).gridTemplateColumns.split(' ').length)>=8,(await g.boundingBox())!.width>4000,((await Q(page,'.feed-hero-copy').boundingBox())?.width??9999)<1000]).toEqual([true,true,true]);await Y(page)
 })
 test('c',async({page})=>{
 await F(page);let c=P(page);await X(page.getByRole('heading',{level:1}),'Чем я могу помочь?');await e(E(c,N.m)).toBeDisabled();await e(B(c,N.a)).toBeEnabled();await e(B(c,'Микрофон')).toBeEnabled();await e(B(c,N.s)).toBeDisabled()
-await G(page);await page.reload();c=P(page);await e(E(c,N.m)).toBeEnabled();await T(B(c,N.c),'Авто');await e(B(c,N.a)).toBeEnabled();await e(B(c,'Микрофон')).toBeEnabled();await E(c,N.m).fill('Проверка');await e(B(c,N.s)).toBeEnabled()
+await G(page);await page.reload();c=P(page);await e(E(c,N.m)).toBeEnabled();await T(B(c,N.c),'DeepSeek Flash');await e(B(c,N.a)).toBeEnabled();await e(B(c,'Микрофон')).toBeEnabled();await E(c,N.m).fill('Проверка');await e(B(c,N.s)).toBeEnabled()
 })
 test('s',async({page})=>{
 await G(page);const rows=[{id:'11111111-1111-4111-8111-111111111112',title:'Первый проект',created_at:1,updated_at:2},{id:'11111111-1111-4111-8111-111111111113',title:'Второй проект',created_at:1,updated_at:3}]

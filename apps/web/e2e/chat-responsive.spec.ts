@@ -1,6 +1,6 @@
 import { test, expect, type Page } from '@playwright/test'
 import { COMPOSER_COLLAPSE_HEADROOM_PX } from '../src/shell/chat/composerLayout'
-import { noOverflow, workspace } from './workspace-fixtures'
+import { noOverflow, png, workspace } from './workspace-fixtures'
 
 const widths = [320, 390, 768, 1024, 1440, 1920, 2560, 3840, 7680]
 const desktopWidths = [1440, 1920, 2560, 3840, 7680]
@@ -189,9 +189,9 @@ test('composer resize hysteresis is bounded by real geometry and attachments for
 
   const chooser = page.waitForEvent('filechooser')
   await page.getByRole('button', { name: 'Добавить', exact: true }).click()
-  await page.getByRole('menu', { name: 'Инструменты' }).getByRole('menuitem', { name: 'Добавить файл' }).click()
+  await page.getByRole('menu', { name: 'Инструменты' }).getByRole('menuitem', { name: 'Изображение' }).click()
   const file = await chooser
-  await file.setFiles({ name: 'reference.txt', mimeType: 'text/plain', buffer: Buffer.from('reference') })
+  await file.setFiles({ name: 'reference.png', mimeType: 'image/png', buffer: png })
   await expect(composer(page)).toHaveAttribute('data-layout', 'expanded')
   await page.getByRole('button', { name: 'Удалить вложение' }).click()
   await expect(composer(page)).toHaveAttribute('data-layout', 'compact')
@@ -208,19 +208,11 @@ test('composer remeasures when compact control geometry changes', async ({ page 
   await expect(composer(page)).toHaveAttribute('data-layout', 'compact')
 
   const modelButton = page.getByRole('button', { name: 'Выбрать модель' })
-  const autoWidth = (await modelButton.boundingBox())!.width
-  await modelButton.click()
-  const imageCategory = page.locator('.chat-model-category').filter({ hasText: 'Изображения' })
-  await expect(imageCategory).toContainText('1')
-  await imageCategory.locator('summary').click()
-  await page.getByRole('menuitemradio', { name: 'FLUX.2 [klein] 4B' }).click()
-  await expect(modelButton).toContainText('FLUX.2 [klein] 4B')
-  expect((await modelButton.boundingBox())!.width).toBeGreaterThan(autoWidth)
+  await expect(modelButton).toContainText('DeepSeek Flash')
+  await modelButton.evaluate(node => { (node as HTMLElement).style.paddingInline = '42px' })
   await expect(composer(page)).toHaveAttribute('data-layout', 'expanded')
 
-  await modelButton.click()
-  await page.getByRole('menuitemradio', { name: 'Авто' }).click()
-  await expect(modelButton).toContainText('Авто')
+  await modelButton.evaluate(node => { (node as HTMLElement).style.removeProperty('padding-inline') })
   await expect(composer(page)).toHaveAttribute('data-layout', 'compact')
 })
 
