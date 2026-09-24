@@ -81,7 +81,8 @@ def attach_chat(app, database_config, accounts_provider) -> None:
                     accounts_provider(request),
                     ChatSettings(),
                     provider,
-                    media_store=MediaStore(database_config))
+                    media_store=MediaStore(database_config),
+                    environment=database_config.environment)
                 request.app.state._chat_runtime_service = current
             return current
 

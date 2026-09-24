@@ -72,6 +72,7 @@ export function chatImageProblem(reason: unknown): string {
     return 'Неподдерживаемый формат.'
   }
   if (reason instanceof ApiError) {
+    if (reason.code === 'upload_not_allowed') return 'Загрузка изображений недоступна.'
     if (['upload_too_large', 'canonical_image_too_large', 'request_too_large', 'image_too_large'].includes(reason.code))
       return 'Файл слишком большой.'
     if (['invalid_image', 'upload_content_mismatch', 'content_type_rejected'].includes(reason.code))

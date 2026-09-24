@@ -1,46 +1,76 @@
-.chat-attachment-preview {
-min-height:52px;
-max-width:min(320px,100%);
-display:grid;
-grid-template-columns:44px minmax(0,1fr) 28px;
-align-items:center;
-gap:8px;
-padding:5px 6px;
+.chat-attachment-strip {
+grid-area:attachments;
+min-width:0;
+display:flex;
+flex-direction:row;
+align-items:flex-start;
+gap:.75rem;
+overflow-x:auto;
+overflow-y:visible;
+padding:.5rem .5rem .35rem;
+scrollbar-width:thin;
+}
+.chat-attachment-tile {
+position:relative;
+width:7.5rem;
+height:7.5rem;
+flex:0 0 7.5rem;
 border:1px solid var(--color-border);
-border-radius:12px;
+border-radius:14px;
 background:var(--color-bg);
 }
-.chat-attachment-preview img {
-width:44px;
-height:44px;
-object-fit:cover;
-border-radius:8px;
+.chat-attachment-tile img {
 display:block;
+width:100%;
+height:100%;
+object-fit:contain;
+border-radius:13px;
 }
-.chat-attachment-preview > span {
-min-width:0;
-overflow:hidden;
-text-overflow:ellipsis;
-white-space:nowrap;
-font-size:12px;
-}
-.chat-attachment-preview > button {
-width:28px;
-height:28px;
-min-height:28px;
+.chat-attachment-tile > button {
+position:absolute;
+top:-.5rem;
+inset-inline-end:-.5rem;
+width:1.25rem;
+height:1.25rem;
+min-height:1.25rem;
 padding:0;
-border:0;
-border-radius:7px;
+border:1px solid var(--color-border);
+border-radius:50%;
 display:grid;
 place-items:center;
-background:transparent;
+background:var(--color-surface);
+color:var(--color-text);
+box-shadow:0 1px 5px color-mix(in srgb,var(--color-text) 18%,transparent);
+opacity:0;
+pointer-events:none;
+transition:opacity .12s ease;
 }
-.chat-attachment-preview > button:hover { background:color-mix(in srgb,var(--color-text) 7%,transparent); }
-.chat-attachment-preview > button .icon { width:16px; height:16px; }
+.chat-attachment-tile:hover > button,
+.chat-attachment-tile:focus-within > button {
+opacity:1;
+pointer-events:auto;
+}
+.chat-attachment-tile > button .icon { width:12px; height:12px; }
+.chat-attachment-sr {
+position:absolute;
+width:1px;
+height:1px;
+padding:0;
+margin:-1px;
+overflow:hidden;
+clip:rect(0,0,0,0);
+white-space:nowrap;
+border:0;
+}
 .chat-attachment-note {
-grid-column:1 / -1;
-margin:0 6px;
+margin:0 6px 7px;
 color:var(--color-text-secondary);
 font-size:12px;
 line-height:1.35;
+}
+@media (hover:none), (pointer:coarse) {
+.chat-attachment-tile > button {
+opacity:1;
+pointer-events:auto;
+}
 }

@@ -89,3 +89,50 @@ def test_provider_wire_multimodal_contract_preserves_image_parts():
     result = "".join(provider.stream(
         "x" * 32, "deepseek-flash", messages, 2048, 75, Event()))
     assert result == "vision-ok"
+
+
+def test_five_images_preserve_db_and_provider_order(chat_env):
+    import base64
+    service, alice, _, _ = chat_env
+    connect_key(service, alice)
+    thread = service.create_thread(alice.bearer, alice.view.csrf_token, None)
+    payloads = [
+        b"\x89PNG\r\n\x1a\nordered-" + str(index).encode()
+        for index in range(5)
+    ]
+    asset_ids = [media_asset(service, alice, data) for data in payloads]
+    created = request(
+        service, alice, thread.id, "Проверь порядок",
+        attachment_ids=asset_ids,
+    )
+    with service.engine.begin() as conn:
+        request_row = conn.execute(sa.select(chat.requests).where(
+            chat.requests.c.id == created.id)).mappings().one()
+    _, provider_messages = service._context_and_key(
+        alice.view.account.id, request_row)
+    parts = provider_messages[-1]["content"]
+    assert [part["type"] for part in parts] == [
+        "text", "image_url", "image_url", "image_url", "image_url", "image_url"]
+    encoded = [
+        part["image_url"]["url"].split(",", 1)[1]
+        for part in parts[1:]
+    ]
+    assert [base64.b64decode(item) for item in encoded] == payloads
+    detail = service.thread_detail(alice.bearer, thread.id)
+    assert [item.asset_id for item in detail.messages[0].attachments] == asset_ids
+
+
+def test_six_images_and_duplicate_ids_are_rejected_by_request_schema():
+    from pydantic import ValidationError
+    from izo.chat.schemas import RequestCreate
+
+    ids = [uuid4() for _ in range(6)]
+    with pytest.raises(ValidationError):
+        RequestCreate(
+            request_id=uuid4(), text="too many",
+            model="deepseek-flash", attachment_ids=ids)
+    duplicate = uuid4()
+    with pytest.raises(ValidationError):
+        RequestCreate(
+            request_id=uuid4(), text="duplicate",
+            model="deepseek-flash", attachment_ids=[duplicate, duplicate])

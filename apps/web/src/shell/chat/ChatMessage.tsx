@@ -1,4 +1,4 @@
-import { isValidElement, useState, type ReactNode } from 'react'
+import { isValidElement, useEffect, useState, type ReactNode } from 'react'
 import ReactMarkdown from 'react-markdown'
 import { PrivateImage } from '../../features/gallery/PrivateImage'
 import type { AuthView, ChatAttachmentView, MessageView as Message } from '../../shared/api'
@@ -46,9 +46,10 @@ function CodeBlock({ children }: { children?: ReactNode }) {
   </div>
 }
 
-function ChatAttachment({ attachment, auth }: {
+function ChatAttachment({ attachment, auth, onSettled }: {
   attachment: ChatAttachmentView
   auth: AuthView
+  onSettled?: () => void
 }) {
   const asset: Asset = {
     id: attachment.asset_id,
@@ -61,7 +62,23 @@ function ChatAttachment({ attachment, auth }: {
     created_at: attachment.created_at,
   }
   return <div className="chat-message-image">
-    <PrivateImage asset={asset} auth={auth} />
+    <PrivateImage asset={asset} auth={auth} onSettled={onSettled} />
+  </div>
+}
+
+function ChatAttachments({ attachments, auth }: {
+  attachments: ChatAttachmentView[]
+  auth: AuthView
+}) {
+  const [mounted, setMounted] = useState(Math.min(1, attachments.length))
+  const identity = attachments.map(item => item.id).join('|')
+  useEffect(() => setMounted(Math.min(1, attachments.length)), [identity, attachments.length])
+  return <div className="chat-message-attachments">
+    {attachments.slice(0, mounted).map((attachment, index) =>
+      <ChatAttachment key={attachment.id} attachment={attachment} auth={auth}
+        onSettled={index === mounted - 1 && mounted < attachments.length
+          ? () => setMounted(value => Math.min(attachments.length, value + 1))
+          : undefined} />)}
   </div>
 }
 
@@ -69,10 +86,8 @@ export function ChatMessage({ message, auth }: { message: Message; auth: AuthVie
   if (message.role === 'user') {
     return <div className="chat-turn chat-turn-user" data-message-id={message.id}>
       <div className="chat-user-bubble">
-        {(message.attachments?.length ?? 0) > 0 && <div className="chat-message-attachments">
-          {message.attachments?.map(attachment =>
-            <ChatAttachment key={attachment.id} attachment={attachment} auth={auth} />)}
-        </div>}
+        {(message.attachments?.length ?? 0) > 0
+          && <ChatAttachments attachments={message.attachments ?? []} auth={auth} />}
         <div className="chat-user-text">{message.content}</div>
       </div>
     </div>

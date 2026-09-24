@@ -7,6 +7,8 @@ import sqlalchemy as sa
 from sqlalchemy.exc import IntegrityError
 
 from ..accounts import repository as account_repo, tables as account_tables
+from ..entitlements.local_preview import ensure_local_preview_media
+from ..entitlements.schemas import EntitlementError
 
 from . import tables as t
 from .conversations import ConversationMixin
@@ -20,9 +22,12 @@ from .execution import ExecutionMixin
 
 
 class ChatService(CredentialMixin, ConversationMixin, ExecutionMixin):
-    def __init__(self, auth, policy, provider, clock=time.time, media_store=None):
+    def __init__(
+            self, auth, policy, provider, clock=time.time, media_store=None,
+            environment="test"):
         self.auth, self.engine, self.policy = auth, auth.engine, policy
         self.provider, self.clock, self.media_store = provider, clock, media_store
+        self.environment = environment
         self._stops: dict[object, Event] = {}
         self._stop_lock = Lock()
         self._recover_stale()
@@ -49,6 +54,17 @@ class ChatService(CredentialMixin, ConversationMixin, ExecutionMixin):
             # OpenAPI composition stays side-effect free when no DB is running.
             pass
 
+    def _ensure_local_preview_entitlement(self, conn, account) -> None:
+        if (account.get("email") or "").lower() != "preview@local.izo":
+            return
+        try:
+            ensure_local_preview_media(
+                conn, account["id"], environment=self.environment,
+                local_preview_enabled=self.policy.local_preview_enabled,
+                now=self.auth.now())
+        except EntitlementError as exc:
+            raise ChatError(exc.status, exc.code) from None
+
     def local_preview_session(self, label: str):
         email, now = "preview@local.izo", self.auth.now()
         try:
@@ -66,12 +82,14 @@ class ChatService(CredentialMixin, ConversationMixin, ExecutionMixin):
                     account = account_repo.account_by_id(conn, account_id, lock=True)
                 if not account or account["state"] != "active":
                     raise ChatError(403, "local_preview_account_unavailable")
+                self._ensure_local_preview_entitlement(conn, account)
                 return self.auth._new_session(conn, account, label, now)
         except IntegrityError:
             with self.engine.begin() as conn:
                 account = account_repo.account_by_email(conn, email)
                 if not account or account["state"] != "active":
                     raise ChatError(403, "local_preview_account_unavailable") from None
+                self._ensure_local_preview_entitlement(conn, account)
                 return self.auth._new_session(conn, account, label, self.auth.now())
 
     def _account(self, conn, raw, csrf=None, mutation=False):
@@ -80,6 +98,7 @@ class ChatService(CredentialMixin, ConversationMixin, ExecutionMixin):
             raise ChatError(403, "chat_unavailable")
         if not self.policy.admitted(account.get("email")):
             raise ChatError(403, "chat_preview_not_enabled")
+        self._ensure_local_preview_entitlement(conn, account)
         return account, session
 
     def _consume_rate(self, conn, account_id, kind: str, maximum: int) -> None:

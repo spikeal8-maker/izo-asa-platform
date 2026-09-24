@@ -19,7 +19,7 @@ export function ChatComposer({
   disabled: boolean
   selectedModelId: string | null
   onModelChange: (modelId: string) => void
-  onSend: (text: string, modelId: string, attachment: File | null) => Promise<boolean>
+  onSend: (text: string, modelId: string, attachments: File[]) => Promise<boolean>
   onStop: () => void
   onUnsupported: () => void
 }) {
@@ -69,12 +69,12 @@ export function ChatComposer({
     visionModel,
     onModelChange,
   })
-  const attachment = attachmentControl.attachment
-  const forcedExpanded = voice.active || Boolean(tool) || Boolean(attachment)
+  const attachments = attachmentControl.attachments
+  const forcedExpanded = voice.active || Boolean(tool) || attachments.length > 0
   const layout = useComposerLayout(draft, forcedExpanded)
-  const attachImage = async (file: File) => {
+  const attachImages = async (files: File[]) => {
     setTool(null)
-    await attachmentControl.add(file)
+    await attachmentControl.add(files)
   }
 
   async function submit(event: FormEvent) {
@@ -85,10 +85,10 @@ export function ChatComposer({
       onUnsupported()
       return
     }
-    if (attachment && !selectedModel.vision) return
-    if (!await onSend(text, selectedModel.id, attachment)) return
+    if (attachments.length && !selectedModel.vision) return
+    if (!await onSend(text, selectedModel.id, attachments.map(item => item.file))) return
     setDraft('')
-    attachmentControl.remove()
+    attachmentControl.clear()
     requestAnimationFrame(() => layout.textareaRef.current?.focus())
   }
 
@@ -101,22 +101,23 @@ export function ChatComposer({
   function selectModel(modelId: string) {
     const next = models.find(item => item.id === modelId)
     if (!next) return
-    if (attachment && !next.vision) return
+    if (attachments.length && !next.vision) return
     onModelChange(next.id)
     setModelOpen(false)
     requestAnimationFrame(() => modelButton.current?.focus())
   }
 
   return <div className="chat-composer-wrap">
+    {attachmentControl.message && <div className="chat-attachment-note" role="status">{attachmentControl.message}</div>}
     <form ref={layout.formRef}
-      className={`chat-composer ${layout.expanded ? 'is-expanded' : 'is-compact'} ${voice.active ? 'voice-active' : ''}`}
+      className={`chat-composer ${layout.expanded ? 'is-expanded' : 'is-compact'} ${attachments.length ? 'has-attachments' : ''} ${voice.active ? 'voice-active' : ''}`}
       data-layout={layout.expanded ? 'expanded' : 'compact'}
       onSubmit={event => void submit(event)}
       onPaste={event => {
-        const file = Array.from(event.clipboardData.files).find(item => item.type.startsWith('image/'))
-        if (!file) return
+        const files = Array.from(event.clipboardData.files).filter(item => item.type.startsWith('image/'))
+        if (!files.length) return
         event.preventDefault()
-        void attachImage(file)
+        void attachImages(files)
       }}
       onDragOver={event => {
         if (Array.from(event.dataTransfer.types).includes('Files')) event.preventDefault()
@@ -124,9 +125,7 @@ export function ChatComposer({
       onDrop={event => {
         if (!event.dataTransfer.files.length) return
         event.preventDefault()
-        const file = Array.from(event.dataTransfer.files).find(item => item.type.startsWith('image/'))
-          ?? event.dataTransfer.files[0]
-        void attachImage(file)
+        void attachImages(Array.from(event.dataTransfer.files))
       }}
       onKeyDown={event => {
         if (event.key !== 'Escape') return
@@ -140,6 +139,7 @@ export function ChatComposer({
         }
       }}>
       <div ref={layout.measureRef} className="chat-composer-measure" aria-hidden="true" />
+      {attachmentControl.preview}
       {voice.active
         ? <div className="chat-voice-capture" role="status" aria-label="Микрофон активен">
             <span className="chat-voice-label">Слушаю</span>
@@ -165,13 +165,12 @@ export function ChatComposer({
         onClick={() => { setToolsOpen(value => !value); setModelOpen(false) }}>
         <Icon name="plus" />
       </button>
-      {(tool || attachment) && <div className="chat-composer-state">
+      {tool && <div className="chat-composer-state">
         {tool && <button type="button" className="chat-state-chip selected"
           aria-label={`Убрать инструмент: ${toolById[tool].label}`}
           onClick={() => setTool(null)}>
           <Icon name={toolById[tool].icon} /><span>{toolById[tool].label}</span><Icon name="close" />
         </button>}
-        {attachmentControl.preview}
       </div>}
       <button ref={modelButton} type="button" className="chat-model-selector"
         data-composer-control="compact" aria-label="Выбрать модель" aria-expanded={modelOpen}
@@ -192,7 +191,6 @@ export function ChatComposer({
             <Icon name="send" />
           </button>}
       {voice.error && <div className="chat-voice-error" role="alert">{voice.error}</div>}
-      {attachmentControl.message && <div className="chat-attachment-note" role="status">{attachmentControl.message}</div>}
       <ComposerMenus
         toolsOpen={toolsOpen} modelOpen={modelOpen} tool={tool}
         models={models} selectedModelId={selectedModel?.id ?? null}

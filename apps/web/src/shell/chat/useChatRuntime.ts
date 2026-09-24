@@ -142,23 +142,27 @@ try { await loadThread(chat.id) }
 catch (reason) { setError(chatProblem(reason)) }
 }
 async function send(
-  text: string, selectedModelId?: string, attachment: File | null = null,
+  text: string, selectedModelId?: string, attachments: File[] = [],
 ): Promise<boolean> {
 const selectedModel = policy?.models.find(item => item.id === selectedModelId) ?? model
 if (!auth || !policy || !selectedModel || busy || !credential?.verified) return false
-if (attachment && !selectedModel.vision) {
+if (attachments.length > policy.max_attachments) {
+setError(`Можно прикрепить не больше ${policy.max_attachments} изображений.`)
+return false
+}
+if (attachments.length && !selectedModel.vision) {
 setError('Модель не поддерживает изображения.')
 return false
 }
 setError(''); setBusy(true)
-let attachmentIds: string[] = []
-if (attachment) {
+const attachmentIds: string[] = []
 try {
+for (const attachment of attachments) {
 const asset = await uploadChatImage(attachment, auth, policy.max_image_bytes)
-attachmentIds = [asset.id]
+attachmentIds.push(asset.id)
+}
 } catch (reason) {
 setBusy(false); setError(chatImageProblem(reason)); return false
-}
 }
 let threadId = currentChatId
 try {
