@@ -1,19 +1,17 @@
 """Durable Thread/Message/Request ownership, attachments and idempotency."""
 import hashlib
 import json
-from threading import Event
 from uuid import UUID, uuid4
 
 import sqlalchemy as sa
 from sqlalchemy.exc import IntegrityError
 
 from . import tables as t
+from .attachments import AttachmentMixin
 from .credentials import ChatError
-from .schemas import AttachmentView, MessageView, RequestView, ThreadDetail, ThreadList, ThreadView
-from .schemas import (
-    MAX_CHAT_IMAGE_BYTES, MESSAGE_PAGE_LIMIT, MODEL_REVISION,
-    REQUEST_WINDOW_LIMIT, THREAD_PAGE_LIMIT,
-)
+from .request_state import RequestStateMixin
+from .schemas import MessageView, RequestView, ThreadDetail, ThreadList, ThreadView
+from .schemas import MESSAGE_PAGE_LIMIT, MODEL_REVISION, REQUEST_WINDOW_LIMIT, THREAD_PAGE_LIMIT
 
 
 def _sha(value: dict) -> str:
@@ -23,10 +21,10 @@ def _sha(value: dict) -> str:
     return hashlib.sha256(raw).hexdigest()
 
 
-class ConversationMixin:
+class ConversationMixin(AttachmentMixin, RequestStateMixin):
     def create_thread(self, raw, csrf, title: str | None) -> ThreadView:
         now, thread_id = self.now(), uuid4()
-        safe = (title or "Новый чат").strip()[:120] or "Новый чат"
+        safe = (title or "РќРѕРІС‹Р№ С‡Р°С‚").strip()[:120] or "РќРѕРІС‹Р№ С‡Р°С‚"
         with self.engine.begin() as conn:
             account, _ = self._account(conn, raw, csrf, mutation=True)
             conn.execute(sa.insert(t.threads).values(
@@ -50,14 +48,6 @@ class ConversationMixin:
                 THREAD_PAGE_LIMIT)).mappings().all()
         return ThreadList(threads=[self._thread_view(row) for row in rows])
 
-    @staticmethod
-    def _attachment_view(row) -> AttachmentView:
-        return AttachmentView(
-            id=row["id"], asset_id=row["asset_id"],
-            media_type=row["media_type"], byte_size=row["byte_size"],
-            width=row["width"], height=row["height"], sha256=row["sha256"],
-            created_at=row["created_at"])
-
     @classmethod
     def _message_view(cls, row, attachment_rows=()) -> MessageView:
         return MessageView(
@@ -80,28 +70,14 @@ class ConversationMixin:
                 MESSAGE_PAGE_LIMIT)).mappings().all()
             ordered = list(reversed(rows))
             ids = [row["id"] for row in ordered]
-            attachment_rows = conn.execute(sa.select(t.attachments).where(
-                t.attachments.c.account_id == account["id"],
-                t.attachments.c.message_id.in_(ids)).order_by(
-                t.attachments.c.message_id, t.attachments.c.ordinal)
-            ).mappings().all() if ids else []
-        grouped: dict[UUID, list] = {}
-        for item in attachment_rows:
-            grouped.setdefault(item["message_id"], []).append(item)
+            grouped = self._attachments_for_messages(
+                conn, account["id"], ids)
         return ThreadDetail(
             thread=self._thread_view(thread),
             messages=[
                 self._message_view(row, grouped.get(row["id"], ()))
                 for row in ordered
             ])
-
-    @staticmethod
-    def _request_view(row) -> RequestView:
-        return RequestView(
-            id=row["id"], thread_id=row["thread_id"], model=row["model"],
-            state=row["state"], error_code=row["error_code"],
-            created_at=row["created_at"], updated_at=row["updated_at"],
-            deadline_at=row["deadline_at"])
 
     @staticmethod
     def _request_fingerprint(
@@ -114,22 +90,6 @@ class ConversationMixin:
             "connection": str(connection_id),
             "credential_generation": generation,
         })
-
-    def _attachment_assets(self, conn, account_id, command):
-        if not command.attachment_ids:
-            return []
-        if not self.policy.model_supports_vision(command.model):
-            raise ChatError(422, "model_vision_unsupported")
-        rows = conn.execute(sa.select(t.media_assets).where(
-            t.media_assets.c.account_id == account_id,
-            t.media_assets.c.id.in_(command.attachment_ids))).mappings().all()
-        by_id = {row["id"]: row for row in rows}
-        if len(by_id) != len(command.attachment_ids):
-            raise ChatError(404, "attachment_not_found")
-        ordered = [by_id[item] for item in command.attachment_ids]
-        if any(row["byte_size"] > MAX_CHAT_IMAGE_BYTES for row in ordered):
-            raise ChatError(413, "image_too_large")
-        return ordered
 
     def create_request(self, raw, csrf, thread_id: UUID, command) -> RequestView:
         now = self.now()
@@ -199,21 +159,12 @@ class ConversationMixin:
                         content="", state="partial",
                         created_at=now, updated_at=now),
                 ])
-                if assets:
-                    conn.execute(sa.insert(t.attachments), [
-                        dict(
-                            id=uuid4(), message_id=user_message_id,
-                            request_id=request_id, account_id=account["id"],
-                            asset_id=asset["id"], ordinal=index,
-                            media_type="image/png", byte_size=asset["byte_size"],
-                            width=asset["width"], height=asset["height"],
-                            sha256=asset["sha256"], created_at=now,
-                        )
-                        for index, asset in enumerate(assets)
-                    ])
+                self._insert_attachments(
+                    conn, account["id"], request_id,
+                    user_message_id, assets, now)
 
                 title = thread["title"]
-                if sequence == 1 and title == "Новый чат":
+                if sequence == 1 and title == "РќРѕРІС‹Р№ С‡Р°С‚":
                     title = command.text.replace("\n", " ").strip()[:72] or title
                 conn.execute(sa.update(t.threads).where(
                     t.threads.c.id == thread_id).values(
@@ -224,61 +175,3 @@ class ConversationMixin:
                 return self._request_view(row)
         except IntegrityError as exc:
             raise ChatError(409, "active_request_exists") from exc
-
-    def request(self, raw, request_id: UUID) -> RequestView:
-        with self.engine.begin() as conn:
-            account, _ = self._account(conn, raw)
-            row = conn.execute(sa.select(t.requests).where(
-                t.requests.c.id == request_id,
-                t.requests.c.account_id == account["id"])).mappings().first()
-            if not row:
-                raise ChatError(404, "request_not_found")
-            return self._request_view(row)
-
-    def stop(self, raw, csrf, request_id: UUID) -> RequestView:
-        now = self.now()
-        with self.engine.begin() as conn:
-            account, _ = self._account(conn, raw, csrf, mutation=True)
-            row = conn.execute(sa.select(t.requests).where(
-                t.requests.c.id == request_id,
-                t.requests.c.account_id == account["id"]
-            ).with_for_update()).mappings().first()
-            if not row:
-                raise ChatError(404, "request_not_found")
-            if row["state"] in {
-                    "completed", "interrupted", "error", "stopped"}:
-                return self._request_view(row)
-            if row["state"] == "pending":
-                conn.execute(sa.update(t.requests).where(
-                    t.requests.c.id == request_id).values(
-                    state="stopped", stop_requested_at=now, updated_at=now))
-                conn.execute(sa.update(t.messages).where(
-                    t.messages.c.request_id == request_id,
-                    t.messages.c.role == "assistant").values(
-                    state="stopped", updated_at=now))
-            else:
-                conn.execute(sa.update(t.requests).where(
-                    t.requests.c.id == request_id).values(
-                    stop_requested_at=now, updated_at=now))
-        self._signal_stop(request_id)
-        return self.request(raw, request_id)
-
-    def _signal_stop(self, request_id: UUID) -> None:
-        with self._stop_lock:
-            event = self._stops.get(request_id)
-            if event:
-                event.set()
-
-    def _register_stop(self, request_id: UUID) -> Event:
-        with self._stop_lock:
-            event = self._stops.setdefault(request_id, Event())
-        with self.engine.begin() as conn:
-            requested = conn.execute(sa.select(t.requests.c.stop_requested_at).where(
-                t.requests.c.id == request_id)).scalar_one()
-        if requested is not None:
-            event.set()
-        return event
-
-    def _unregister_stop(self, request_id: UUID) -> None:
-        with self._stop_lock:
-            self._stops.pop(request_id, None)

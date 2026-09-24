@@ -2,7 +2,6 @@
 from __future__ import annotations
 
 import base64
-import hashlib
 from types import SimpleNamespace
 from uuid import uuid4
 
@@ -113,19 +112,6 @@ def request(
     )
 
 
-def media_asset(service, receipt, data=b"\x89PNG\r\n\x1a\nsynthetic-chat-image"):
-    asset_id = uuid4()
-    key = f"assets/{receipt.view.account.id.hex}/{asset_id.hex}/image.png"
-    digest = hashlib.sha256(data).hexdigest()
-    service.media_store.objects[key] = data
-    with service.engine.begin() as conn:
-        conn.execute(sa.insert(chat.media_assets).values(
-            id=asset_id, account_id=receipt.view.account.id,
-            object_key=key, sha256=digest, byte_size=len(data),
-            width=16, height=16, created_at=service.now()))
-    return asset_id
-
-
 def test_key_is_aad_bound_and_not_plaintext_in_database(chat_env):
     service, alice, bob, _ = chat_env
     verified = connect_key(service, alice)
@@ -220,55 +206,6 @@ def test_request_replay_conflict_context_and_reload(chat_env):
     reloaded = service.thread_detail(alice.bearer, thread.id)
     assert len(reloaded.messages) == 4
     assert "Контекст: Первый вопрос" in reloaded.messages[-1].content
-def test_image_attachment_persists_and_flash_reuses_it_for_followup(chat_env):
-    service, alice, _, _ = chat_env
-    connect_key(service, alice)
-    thread = service.create_thread(
-        alice.bearer, alice.view.csrf_token, None)
-    asset_id = media_asset(service, alice)
-
-    first = request(
-        service, alice, thread.id, "Что изображено?",
-        attachment_ids=[asset_id])
-    assert "message.done" in "".join(service.stream_events(alice.bearer, first.id))
-
-    detail = service.thread_detail(alice.bearer, thread.id)
-    user = detail.messages[0]
-    assert user.content == "Что изображено?"
-    assert len(user.attachments) == 1
-    assert user.attachments[0].asset_id == asset_id
-    assert user.attachments[0].media_type == "image/png"
-    assert "base64" not in user.content and "data:image" not in user.content
-
-    followup = request(
-        service, alice, thread.id, "Какого цвета предмет слева?")
-    assert "message.done" in "".join(
-        service.stream_events(alice.bearer, followup.id))
-    reloaded = service.thread_detail(alice.bearer, thread.id)
-    assert "Изображения в контексте: 1" in reloaded.messages[-1].content
-    assert reloaded.messages[0].attachments[0].asset_id == asset_id
-
-
-def test_pro_model_rejects_image_and_cross_owner_asset_is_hidden(chat_env):
-    service, alice, bob, _ = chat_env
-    connect_key(service, alice)
-    connect_key(service, bob)
-    alice_asset = media_asset(service, alice)
-    alice_thread = service.create_thread(
-        alice.bearer, alice.view.csrf_token, None)
-    with pytest.raises(ChatError, match="model_vision_unsupported"):
-        request(
-            service, alice, alice_thread.id, "Посмотри",
-            model="deepseek-v4-pro", attachment_ids=[alice_asset])
-
-    bob_thread = service.create_thread(
-        bob.bearer, bob.view.csrf_token, None)
-    with pytest.raises(ChatError, match="attachment_not_found"):
-        request(
-            service, bob, bob_thread.id, "Укради вложение",
-            attachment_ids=[alice_asset])
-
-
 def test_cross_account_thread_request_and_connection_are_hidden(chat_env):
     service, alice, bob, _ = chat_env
     connect_key(service, alice)

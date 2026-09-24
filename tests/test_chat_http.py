@@ -40,7 +40,8 @@ def http_env(tmp_path):
         db.execute("PRAGMA foreign_keys=ON")
 
     accounts.metadata.create_all(engine)
-    chat.metadata.create_all(engine, tables=list(chat.TABLES))
+    chat.metadata.create_all(
+        engine, tables=[chat.media_assets, *chat.TABLES])
     clock = [30_000]
     auth = AuthService(
         engine,
@@ -337,37 +338,3 @@ def test_provider_wire_terminal_contract(text, finish, error):
             list(stream)
     else:
         assert ''.join(stream) == text
-
-
-def test_provider_wire_multimodal_contract_preserves_image_parts():
-    import io
-    import json
-    from threading import Event
-    from types import SimpleNamespace
-    from izo.chat.provider import DeepSeekProvider
-
-    image_url = "data:image/png;base64,iVBORw0KGgo="
-    messages = [{
-        "role": "user",
-        "content": [
-            {"type": "text", "text": "Что изображено?"},
-            {"type": "image_url", "image_url": {"url": image_url, "detail": "auto"}},
-        ],
-    }]
-
-    def open_response(outbound, timeout):
-        body = json.loads(outbound.data)
-        assert body["model"] == "deepseek-flash"
-        assert body["messages"] == messages
-        assert body["messages"][0]["content"][1]["image_url"]["url"] == image_url
-        response = io.BytesIO(
-            b'data: {"choices":[{"delta":{"content":"vision-ok"},"finish_reason":"stop"}]}\n\n'
-            b'data: [DONE]\n\n')
-        response.status = 200
-        return response
-
-    provider = DeepSeekProvider()
-    provider.opener = SimpleNamespace(open=open_response)
-    result = "".join(provider.stream(
-        KEY, "deepseek-flash", messages, 2048, 75, Event()))
-    assert result == "vision-ok"

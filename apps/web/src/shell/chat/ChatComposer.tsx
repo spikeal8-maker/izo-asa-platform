@@ -1,11 +1,13 @@
 import { useEffect, useRef, useState, type FormEvent } from 'react'
 import type { ChatPolicyView } from '../../shared/api'
 import { Icon } from '../../shared/ui/Icon'
-import { textModels, toolById, tools, type Tool } from './modelCatalog'
-import { CHAT_IMAGE_ACCEPT, chatImageProblem, prepareChatImage } from './chatAttachments'
-import { menuKeyboard, useComposerLayout } from './composerLayout'
+import { selectedTextModel, textModels, toolById, type Tool } from './modelCatalog'
+import { ComposerMenus } from './ComposerMenus'
+import { useChatAttachment } from './AttachmentControl'
+import { useComposerLayout } from './composerLayout'
 import { useVoiceCapture } from './useVoiceCapture'
 import './ChatComposer.css'
+import './ModelMenu.css'
 
 export function ChatComposer({
   policy, busy, stoppable, disabled, selectedModelId,
@@ -25,27 +27,11 @@ export function ChatComposer({
   const [toolsOpen, setToolsOpen] = useState(false)
   const [modelOpen, setModelOpen] = useState(false)
   const [tool, setTool] = useState<Tool | null>(null)
-  const [attachment, setAttachment] = useState<File | null>(null)
-  const [attachmentUrl, setAttachmentUrl] = useState('')
-  const [attachmentMessage, setAttachmentMessage] = useState('')
-  const fileInput = useRef<HTMLInputElement>(null)
   const plusButton = useRef<HTMLButtonElement>(null)
   const modelButton = useRef<HTMLButtonElement>(null)
   const voice = useVoiceCapture()
-  const forcedExpanded = voice.active || Boolean(tool) || Boolean(attachment)
-  const layout = useComposerLayout(draft, forcedExpanded)
   const models = textModels(policy)
-  const selectedModel = models.find(item => item.id === selectedModelId)
-    ?? models.find(item => item.id === policy?.default_model)
-    ?? models[0]
-    ?? null
-
-  useEffect(() => {
-    if (!attachment) { setAttachmentUrl(''); return }
-    const url = URL.createObjectURL(attachment)
-    setAttachmentUrl(url)
-    return () => URL.revokeObjectURL(url)
-  }, [attachment])
+  const selectedModel = selectedTextModel(policy, selectedModelId)
 
   useEffect(() => {
     const dismiss = (event: PointerEvent) => {
@@ -76,39 +62,19 @@ export function ChatComposer({
     return () => document.removeEventListener('keydown', escape)
   }, [modelOpen, toolsOpen])
 
-  async function attachImage(file: File) {
-    if (!policy) return
-    if (attachment) {
-      setAttachmentMessage('В этом Chat пока можно прикрепить одно изображение.')
-      return
-    }
-    setAttachmentMessage('')
-    try {
-      await prepareChatImage(file, policy.max_image_bytes)
-    } catch (reason) {
-      setAttachment(null)
-      if (fileInput.current) fileInput.current.value = ''
-      setAttachmentMessage(chatImageProblem(reason))
-      return
-    }
-    const current = selectedModel
-    if (current && !current.vision) {
-      const vision = models.find(item => item.vision)
-      if (!vision) {
-        setAttachmentMessage('Модель не поддерживает изображения.')
-        return
-      }
-      onModelChange(vision.id)
-      setAttachmentMessage(`Для изображения выбрана ${vision.label}.`)
-    }
+  const visionModel = models.find(item => item.vision) ?? null
+  const attachmentControl = useChatAttachment({
+    policy,
+    selectedVision: selectedModel?.vision ?? false,
+    visionModel,
+    onModelChange,
+  })
+  const attachment = attachmentControl.attachment
+  const forcedExpanded = voice.active || Boolean(tool) || Boolean(attachment)
+  const layout = useComposerLayout(draft, forcedExpanded)
+  const attachImage = async (file: File) => {
     setTool(null)
-    setAttachment(file)
-  }
-
-  function removeAttachment() {
-    setAttachment(null)
-    setAttachmentMessage('')
-    if (fileInput.current) fileInput.current.value = ''
+    await attachmentControl.add(file)
   }
 
   async function submit(event: FormEvent) {
@@ -119,13 +85,10 @@ export function ChatComposer({
       onUnsupported()
       return
     }
-    if (attachment && !selectedModel.vision) {
-      setAttachmentMessage('Модель не поддерживает изображения.')
-      return
-    }
+    if (attachment && !selectedModel.vision) return
     if (!await onSend(text, selectedModel.id, attachment)) return
     setDraft('')
-    removeAttachment()
+    attachmentControl.remove()
     requestAnimationFrame(() => layout.textareaRef.current?.focus())
   }
 
@@ -138,12 +101,8 @@ export function ChatComposer({
   function selectModel(modelId: string) {
     const next = models.find(item => item.id === modelId)
     if (!next) return
-    if (attachment && !next.vision) {
-      setAttachmentMessage('Модель не поддерживает изображения.')
-      return
-    }
+    if (attachment && !next.vision) return
     onModelChange(next.id)
-    setAttachmentMessage('')
     setModelOpen(false)
     requestAnimationFrame(() => modelButton.current?.focus())
   }
@@ -199,12 +158,7 @@ export function ChatComposer({
                 event.currentTarget.form?.requestSubmit()
               }
             }} />}
-      <input ref={fileInput} className="chat-file-input" type="file"
-        accept={CHAT_IMAGE_ACCEPT} aria-label="Выбрать изображение"
-        onChange={event => {
-          const file = event.currentTarget.files?.[0]
-          if (file) void attachImage(file)
-        }} />
+      {attachmentControl.input}
       <button ref={plusButton} type="button" className="chat-circle-button chat-composer-plus"
         data-composer-control="compact" aria-label="Добавить" aria-expanded={toolsOpen}
         disabled={busy}
@@ -217,13 +171,7 @@ export function ChatComposer({
           onClick={() => setTool(null)}>
           <Icon name={toolById[tool].icon} /><span>{toolById[tool].label}</span><Icon name="close" />
         </button>}
-        {attachment && <div className="chat-attachment-preview" data-testid="chat-attachment-preview">
-          {attachmentUrl && <img src={attachmentUrl} alt="Прикреплённое изображение" />}
-          <span title={attachment.name}>{attachment.name}</span>
-          <button type="button" aria-label="Удалить вложение" onClick={removeAttachment}>
-            <Icon name="close" />
-          </button>
-        </div>}
+        {attachmentControl.preview}
       </div>}
       <button ref={modelButton} type="button" className="chat-model-selector"
         data-composer-control="compact" aria-label="Выбрать модель" aria-expanded={modelOpen}
@@ -244,32 +192,16 @@ export function ChatComposer({
             <Icon name="send" />
           </button>}
       {voice.error && <div className="chat-voice-error" role="alert">{voice.error}</div>}
-      {attachmentMessage && <div className="chat-attachment-note" role="status">{attachmentMessage}</div>}
-      {toolsOpen && <div className="chat-popover chat-tools-menu" role="menu" aria-label="Инструменты"
-        onKeyDown={event => menuKeyboard(event, () => setToolsOpen(false), plusButton.current)}>
-        <button type="button" role="menuitem" onClick={() => {
-          setToolsOpen(false)
-          fileInput.current?.click()
-        }}><Icon name="image" /><span>Изображение</span></button>
-        {tools.map(item => <button type="button" role="menuitem" key={item.id}
-          className={tool === item.id ? 'selected' : ''} aria-pressed={tool === item.id}
-          onClick={() => selectTool(item.id)}>
-          <Icon name={item.icon} /><span>{item.label}</span>
-        </button>)}
-      </div>}
-      {modelOpen && <div className="chat-popover chat-model-menu" role="menu" aria-label="Модели"
-        onKeyDown={event => menuKeyboard(event, () => setModelOpen(false), modelButton.current)}>
-        {models.map(item => <button type="button" role="menuitemradio"
-          aria-checked={selectedModel?.id === item.id}
-          className={selectedModel?.id === item.id ? 'selected' : ''}
-          key={item.id} onClick={() => selectModel(item.id)}>
-          <span className="chat-model-option">
-            <strong>{item.label}</strong>
-            <small>{item.description}</small>
-          </span>
-          {selectedModel?.id === item.id && <Icon name="check" />}
-        </button>)}
-      </div>}
+      {attachmentControl.message && <div className="chat-attachment-note" role="status">{attachmentControl.message}</div>}
+      <ComposerMenus
+        toolsOpen={toolsOpen} modelOpen={modelOpen} tool={tool}
+        models={models} selectedModelId={selectedModel?.id ?? null}
+        plusButton={plusButton} modelButton={modelButton}
+        inputRef={attachmentControl.inputRef}
+        onCloseTools={() => setToolsOpen(false)}
+        onCloseModels={() => setModelOpen(false)}
+        onSelectTool={selectTool} onSelectModel={selectModel}
+      />
     </form>
     <div className="chat-composer-note">ИЗО АСА может ошибаться. Проверяйте важную информацию.</div>
   </div>

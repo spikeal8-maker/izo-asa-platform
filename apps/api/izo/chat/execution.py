@@ -1,6 +1,4 @@
 """Outbound execution and durable partial/final persistence."""
-import base64
-import hashlib
 import json
 import time
 from uuid import UUID
@@ -9,10 +7,9 @@ from cryptography.exceptions import InvalidTag
 from . import tables as t
 from .credentials import ChatError, decrypt
 from .provider import ProviderFailure
-from .schemas import (
-    MAX_CONTEXT_CHARS, MAX_CONTEXT_IMAGE_BYTES, MAX_CONTEXT_MESSAGES, MAX_OUTPUT_TOKENS,
-)
-class ExecutionMixin:
+from .schemas import MAX_CONTEXT_CHARS, MAX_CONTEXT_MESSAGES, MAX_OUTPUT_TOKENS
+from .vision import VisionContextMixin
+class ExecutionMixin(VisionContextMixin):
 	def _context_and_key(self, account_id, request_row):
 		root = self._root()
 		with self.engine.begin() as conn:
@@ -40,68 +37,12 @@ class ExecutionMixin:
 				t.messages.c.state == "complete").order_by(
 				t.messages.c.sequence.desc()).limit(
 				MAX_CONTEXT_MESSAGES)).mappings().all()
-			candidates = list(prior) + [user]
-			message_ids = [item["id"] for item in candidates]
-			vision = self.policy.model_supports_vision(request_row["model"])
-			rows = []
-			if vision and message_ids:
-				rows = conn.execute(sa.select(
-					t.attachments, t.media_assets.c.object_key).select_from(
-						t.attachments.join(
-							t.media_assets,
-							t.attachments.c.asset_id == t.media_assets.c.id)).where(
-						t.attachments.c.account_id == account_id,
-						t.media_assets.c.account_id == account_id,
-						t.attachments.c.message_id.in_(message_ids)).order_by(
-						t.attachments.c.message_id,
-						t.attachments.c.ordinal)).mappings().all()
-			grouped = {}
-			for row in rows:
-				grouped.setdefault(row["message_id"], []).append(dict(row))
-
-		used_chars = len(user["content"])
-		used_images = sum(
-			item["byte_size"] for item in grouped.get(user["id"], ()))
-		chosen = []
-		for item in prior:
-			image_bytes = sum(
-				entry["byte_size"] for entry in grouped.get(item["id"], ()))
-			if (used_chars + len(item["content"]) > MAX_CONTEXT_CHARS
-					or used_images + image_bytes > MAX_CONTEXT_IMAGE_BYTES):
-				break
-			chosen.append(dict(item))
-			used_chars += len(item["content"])
-			used_images += image_bytes
-		chosen.reverse()
-		chosen.append(dict(user))
-
-		def provider_message(item):
-			attached = grouped.get(item["id"], ())
-			if not attached:
-				return {"role": item["role"], "content": item["content"]}
-			if self.media_store is None:
-				raise ChatError(503, "attachment_unavailable")
-			parts = [{"type": "text", "text": item["content"]}]
-			for attachment in attached:
-				try:
-					data = self.media_store.read(
-						attachment["object_key"], attachment["byte_size"])
-				except Exception:
-					raise ChatError(503, "attachment_unavailable") from None
-				if (len(data) != attachment["byte_size"]
-						or hashlib.sha256(data).hexdigest() != attachment["sha256"]):
-					raise ChatError(503, "attachment_integrity_error")
-				encoded = base64.b64encode(data).decode("ascii")
-				parts.append({
-					"type": "image_url",
-					"image_url": {
-						"url": f"data:image/png;base64,{encoded}",
-						"detail": "auto",
-					},
-				})
-			return {"role": item["role"], "content": parts}
-
-		return key, [provider_message(item) for item in chosen]
+			message_ids = [item["id"] for item in [*prior, user]]
+			grouped = self._vision_rows(
+				conn, account_id, message_ids, request_row["model"])
+		chosen = self._bounded_context(
+			prior, user, grouped, MAX_CONTEXT_CHARS)
+		return key, [self._provider_message(item, grouped) for item in chosen]
 	def _save_partial(self, request_id, content: str) -> None:
 		now = self.now()
 		with self.engine.begin() as conn:

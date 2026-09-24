@@ -19,3 +19,13 @@ export const toolById = Object.fromEntries(
 export function textModels(policy: ChatPolicyView | null): ChatModel[] {
   return policy?.models ?? []
 }
+
+export function selectedTextModel(
+  policy: ChatPolicyView | null, selectedModelId: string | null,
+): ChatModel | null {
+  const models = textModels(policy)
+  return models.find(item => item.id === selectedModelId)
+    ?? models.find(item => item.id === policy?.default_model)
+    ?? models[0]
+    ?? null
+}
