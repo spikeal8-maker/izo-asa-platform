@@ -49,6 +49,15 @@ async function previewSession(page) {
   return auth
 }
 
+async function expectDeepSeekConnected(page) {
+  const settings = page.getByRole('button', { name: 'Настройки DeepSeek' })
+  await expect(settings).toBeVisible({ timeout: 15000 })
+  await settings.click()
+  await expect(page.locator('.chat-credential-status'))
+    .toContainText('Статус: подключён', { timeout: 15000 })
+  await settings.click()
+}
+
 async function chooseFlash(page) {
   const selector = page.locator('button.chat-model-selector')
   await expect(selector).toContainText('DeepSeek Flash')
@@ -156,7 +165,7 @@ try {
     }
     expect(auth.account.id).toBe(state.account_id)
 
-    await expect(page.getByRole('button', { name: 'DeepSeek подключён' })).toBeVisible()
+    await expectDeepSeekConnected(page)
     const item = page.getByRole('button', { name: state.title, exact: true })
     await item.click()
     await expect(page.locator('.chat-turn-user')).toHaveCount(2)
@@ -170,7 +179,7 @@ try {
     }
 
     await page.reload()
-    await expect(page.getByRole('button', { name: 'DeepSeek подключён' })).toBeVisible()
+    await expectDeepSeekConnected(page)
     await page.getByRole('button', { name: state.title, exact: true }).click()
     await expect(page.locator('.chat-assistant-message')).toHaveCount(localPreview ? 3 : 2)
     await expect(page.locator('.chat-assistant-message').last())
