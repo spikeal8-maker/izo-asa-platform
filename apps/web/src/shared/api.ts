@@ -8,6 +8,7 @@ export type CredentialView = components['schemas']['CredentialView']
 export type ThreadView = components['schemas']['ThreadView']
 export type ThreadList = components['schemas']['ThreadList']
 export type MessageView = components['schemas']['MessageView']
+export type ChatAttachmentView = components['schemas']['AttachmentView']
 export type ThreadDetail = components['schemas']['ThreadDetail']
 export type ChatRequestView = components['schemas']['RequestView']
 
@@ -23,6 +24,11 @@ export const chatErrors: Record<string, string> = {
   credential_revision_conflict: 'Настройки ключа уже изменились. Обновите страницу.',
   credential_in_use: 'Сначала остановите активный ответ, затем замените ключ.',
   model_not_allowed: 'Выбранная модель не разрешена сервером.',
+  model_vision_unsupported: 'Модель не поддерживает изображения.',
+  attachment_not_found: 'Вложение недоступно этому аккаунту.',
+  attachment_unavailable: 'Изображение временно недоступно.',
+  attachment_integrity_error: 'Не удалось безопасно прочитать сохранённое изображение.',
+  image_too_large: 'Файл слишком большой для Chat.',
   active_request_exists: 'В этом чате уже выполняется ответ.',
   request_conflict: 'Повторный запрос имеет другие параметры.',
   chat_rate_limited: 'Достигнут временный лимит Chat. Повторите позднее.',
@@ -46,6 +52,8 @@ export function chatProblem(reason: unknown): string {
 type Options = {
   method?: 'GET' | 'POST' | 'DELETE'
   data?: unknown
+  binary?: ArrayBuffer
+  contentType?: string
   csrf?: string
   signal?: AbortSignal
   timeoutMs?: number
@@ -57,7 +65,9 @@ async function responseFor(path: string, options: Options): Promise<Response> {
   const method = options.method ?? 'GET'
   const headers: Record<string, string> = {}
   if (method !== 'GET') {
-    headers['Content-Type'] = 'application/json'
+    headers['Content-Type'] = options.binary
+      ? (options.contentType ?? 'application/octet-stream')
+      : 'application/json'
     headers['X-IZO-Request'] = 'web'
     if (options.csrf) headers['X-CSRF-Token'] = options.csrf
   }
@@ -65,7 +75,8 @@ async function responseFor(path: string, options: Options): Promise<Response> {
   const signal = options.signal ? AbortSignal.any([options.signal, timeout]) : timeout
   const response = await fetch(path, { method, headers, credentials: 'same-origin',
     cache: 'no-store', redirect: 'error', referrerPolicy: 'no-referrer', signal,
-    body: method === 'GET' ? undefined : JSON.stringify(options.data ?? {}) })
+    body: method === 'GET' ? undefined
+      : options.binary ?? JSON.stringify(options.data ?? {}) })
   if (!response.ok) {
     if (response.status === 401) window.dispatchEvent(new Event('izo:session-invalid'))
     const body = await response.json().catch(() => null)
@@ -93,6 +104,16 @@ export async function apiRequest<T>(path: string, options: Options = {}): Promis
     throw reason
   }
 }
+export async function apiBinaryRequest<T>(
+  path: string, binary: ArrayBuffer, csrf: string, signal?: AbortSignal,
+): Promise<T> {
+  const response = await responseFor(path, {
+    method: 'POST', binary, contentType: 'application/octet-stream',
+    csrf, signal, timeoutMs: 30000,
+  })
+  return await response.json() as T
+}
+
 export async function apiStream(path: string, signal?: AbortSignal): Promise<Response> {
   const response = await responseFor(path, { signal, timeoutMs: 90000 })
   if (response.headers.get('content-type')?.split(';')[0] !== 'text/event-stream' || !response.body)

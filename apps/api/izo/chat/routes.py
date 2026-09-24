@@ -76,10 +76,12 @@ def attach_chat(app, database_config, accounts_provider) -> None:
                     if database_config.environment == "test"
                     else DeepSeekProvider()
                 )
+                from ..media.objects import MediaStore
                 current = ChatService(
                     accounts_provider(request),
                     ChatSettings(),
-                    provider)
+                    provider,
+                    media_store=MediaStore(database_config))
                 request.app.state._chat_runtime_service = current
             return current
 

@@ -40,7 +40,8 @@ def http_env(tmp_path):
         db.execute("PRAGMA foreign_keys=ON")
 
     accounts.metadata.create_all(engine)
-    chat.metadata.create_all(engine, tables=list(chat.TABLES))
+    chat.metadata.create_all(
+        engine, tables=[chat.media_assets, *chat.TABLES])
     clock = [30_000]
     auth = AuthService(
         engine,

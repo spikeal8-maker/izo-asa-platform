@@ -43,7 +43,8 @@ def chat_env(tmp_path):
         db.execute("PRAGMA foreign_keys=ON")
 
     accounts.metadata.create_all(engine)
-    chat.metadata.create_all(engine, tables=list(chat.TABLES))
+    chat.metadata.create_all(
+        engine, tables=[chat.media_assets, *chat.TABLES])
     clock = [20_000]
     auth = AuthService(
         engine,
@@ -71,7 +72,19 @@ def chat_env(tmp_path):
         root_key=root_key(),
         preview_account_emails="alice@example.invalid,bob@example.invalid",
     )
-    service = ChatService(auth, policy, FakeDeepSeekProvider(), clock=lambda: clock[0])
+    class FakeMediaStore:
+        def __init__(self):
+            self.objects = {}
+
+        def read(self, key, maximum):
+            data = self.objects[key]
+            if len(data) > maximum:
+                raise ValueError("object exceeds bound")
+            return data
+
+    service = ChatService(
+        auth, policy, FakeDeepSeekProvider(), clock=lambda: clock[0],
+        media_store=FakeMediaStore())
     yield service, alice, bob, clock
     engine.dispose()
 
@@ -87,11 +100,14 @@ def connect_key(service, receipt):
             operation_id=uuid4(), expected_revision=saved.revision,
         ),
     )
-def request(service, receipt, thread_id, text, model="deepseek-flash", request_id=None):
+def request(
+        service, receipt, thread_id, text, model="deepseek-flash",
+        request_id=None, attachment_ids=None):
     return service.create_request(
         receipt.bearer, receipt.view.csrf_token, thread_id,
         RequestCreate(
             request_id=request_id or uuid4(), text=text, model=model,
+            attachment_ids=attachment_ids or [],
         ),
     )
 

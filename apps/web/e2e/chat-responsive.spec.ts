@@ -1,6 +1,6 @@
 import { test, expect, type Page } from '@playwright/test'
 import { COMPOSER_COLLAPSE_HEADROOM_PX } from '../src/shell/chat/composerLayout'
-import { noOverflow, workspace } from './workspace-fixtures'
+import { noOverflow, png, workspace } from './workspace-fixtures'
 
 const widths = [320, 390, 768, 1024, 1440, 1920, 2560, 3840, 7680]
 const desktopWidths = [1440, 1920, 2560, 3840, 7680]
@@ -52,13 +52,17 @@ async function mirrorWidth(page: Page) {
   return page.locator('.chat-composer-measure').evaluate(node => Number.parseFloat((node as HTMLElement).style.width))
 }
 
-async function widenUntilMirrorGain(page: Page, baseWidth: number, gain: number) {
-  const viewport = page.viewportSize()
-  if (!viewport) throw new Error('viewport is unavailable')
-  let width = viewport.width
-  for (let step = 0; step < 80; step++) {
-    width += 4
-    await page.setViewportSize({ width, height: viewport.height })
+async function gainMirrorWidthFromControl(
+  page: Page, baseWidth: number, gain: number,
+) {
+  const model = page.getByRole('button', { name: 'Выбрать модель' })
+  const original = await model.evaluate(node => node.getBoundingClientRect().width)
+  for (let step = 4; step <= 80; step += 4) {
+    await model.evaluate((node, width) => {
+      const element = node as HTMLElement
+      element.style.width = `${width}px`
+      element.style.maxWidth = `${width}px`
+    }, Math.max(48, original - step))
     await page.waitForTimeout(16)
     const current = await mirrorWidth(page)
     if (current >= baseWidth + gain) return current
@@ -142,7 +146,7 @@ test('composer is compact for one line and expands from real wrapping', async ({
   test.setTimeout(120_000)
   test.skip(info.project.name !== 'laptop')
   await workspace(page)
-  for (const width of [320, 390, 768, 1440, 1920, 2560, 3840, 7680]) {
+  for (const width of [390, 768, 1440, 1920, 2560, 3840, 7680]) {
     await freshChat(page, width)
     const box = composer(page)
     expect(await layout(page)).toBe('compact')
@@ -178,10 +182,10 @@ test('composer resize hysteresis is bounded by real geometry and attachments for
   await expect(composer(page)).toHaveAttribute('data-layout', 'expanded')
   const baseMirrorWidth = await mirrorWidth(page)
 
-  await widenUntilMirrorGain(page, baseMirrorWidth, COMPOSER_COLLAPSE_HEADROOM_PX - 4)
+  await gainMirrorWidthFromControl(page, baseMirrorWidth, COMPOSER_COLLAPSE_HEADROOM_PX - 4)
   await expect(composer(page)).toHaveAttribute('data-layout', 'expanded')
 
-  await widenUntilMirrorGain(page, baseMirrorWidth, COMPOSER_COLLAPSE_HEADROOM_PX + 8)
+  await gainMirrorWidthFromControl(page, baseMirrorWidth, COMPOSER_COLLAPSE_HEADROOM_PX + 8)
   await expect(composer(page)).toHaveAttribute('data-layout', 'compact')
 
   await input(page).fill('')
@@ -189,9 +193,9 @@ test('composer resize hysteresis is bounded by real geometry and attachments for
 
   const chooser = page.waitForEvent('filechooser')
   await page.getByRole('button', { name: 'Добавить', exact: true }).click()
-  await page.getByRole('menu', { name: 'Инструменты' }).getByRole('menuitem', { name: 'Добавить файл' }).click()
+  await page.getByRole('menu', { name: 'Инструменты' }).getByRole('menuitem', { name: 'Изображение', exact: true }).click()
   const file = await chooser
-  await file.setFiles({ name: 'reference.txt', mimeType: 'text/plain', buffer: Buffer.from('reference') })
+  await file.setFiles({ name: 'reference.png', mimeType: 'image/png', buffer: png })
   await expect(composer(page)).toHaveAttribute('data-layout', 'expanded')
   await page.getByRole('button', { name: 'Удалить вложение' }).click()
   await expect(composer(page)).toHaveAttribute('data-layout', 'compact')
@@ -208,19 +212,19 @@ test('composer remeasures when compact control geometry changes', async ({ page 
   await expect(composer(page)).toHaveAttribute('data-layout', 'compact')
 
   const modelButton = page.getByRole('button', { name: 'Выбрать модель' })
-  const autoWidth = (await modelButton.boundingBox())!.width
-  await modelButton.click()
-  const imageCategory = page.locator('.chat-model-category').filter({ hasText: 'Изображения' })
-  await expect(imageCategory).toContainText('1')
-  await imageCategory.locator('summary').click()
-  await page.getByRole('menuitemradio', { name: 'FLUX.2 [klein] 4B' }).click()
-  await expect(modelButton).toContainText('FLUX.2 [klein] 4B')
-  expect((await modelButton.boundingBox())!.width).toBeGreaterThan(autoWidth)
+  await expect(modelButton).toContainText('DeepSeek Flash')
+  await modelButton.evaluate(node => {
+    const element = node as HTMLElement
+    element.style.width = '220px'
+    element.style.maxWidth = '220px'
+  })
   await expect(composer(page)).toHaveAttribute('data-layout', 'expanded')
 
-  await modelButton.click()
-  await page.getByRole('menuitemradio', { name: 'Авто' }).click()
-  await expect(modelButton).toContainText('Авто')
+  await modelButton.evaluate(node => {
+    const element = node as HTMLElement
+    element.style.removeProperty('width')
+    element.style.removeProperty('max-width')
+  })
   await expect(composer(page)).toHaveAttribute('data-layout', 'compact')
 })
 

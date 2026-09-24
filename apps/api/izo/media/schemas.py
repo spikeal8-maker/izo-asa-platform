@@ -15,7 +15,7 @@ class MediaInput(BaseModel):
 
 class UploadIntent(MediaInput):
     operation_id: UUID
-    content_type: Literal["image/png", "image/jpeg", "image/webp"]
+    content_type: Literal["image/png", "image/jpeg", "image/webp", "image/gif"]
     byte_size: int = Field(strict=True, ge=1, le=MAX_INPUT)
     sha256: str = Field(pattern=r"^[a-f0-9]{64}$")
     width: int = Field(strict=True, ge=1, le=8192)

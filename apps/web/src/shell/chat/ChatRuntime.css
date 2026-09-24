@@ -20,6 +20,8 @@
   background: var(--color-warning);
 }
 .chat-credential-toggle > span.is-ok { background: var(--color-success); }
+.chat-credential-toggle > span.is-error { background: var(--color-danger); }
+.chat-credential-toggle > span.is-off { background: var(--color-text-secondary); opacity:.55; }
 .chat-credential-popover {
   position: absolute;
   z-index: 55;
@@ -33,6 +35,10 @@
   box-shadow: var(--shadow);
 }
 .chat-credential-popover h2 { margin: 0 0 6px; font-size: 16px; font-weight: 600; }
+.chat-credential-status { font-weight:600; }
+.chat-credential-status.is-ok { color:var(--color-success); }
+.chat-credential-status.is-error { color:var(--color-danger); }
+.chat-credential-key { display:grid; gap:6px; color:var(--color-text-secondary); font-size:12px; }
 .chat-credential-popover p,
 .chat-start-note {
   margin: 0 0 12px;
@@ -69,7 +75,7 @@
 .chat-turn-assistant { justify-content: flex-start; }
 .chat-assistant-message {
   min-width: 0;
-  width: min(100%, 900px);
+  width: min(100%, 82ch);
   color: var(--color-text);
   overflow-wrap: anywhere;
 }
@@ -137,6 +143,19 @@
   color: var(--color-text-secondary);
   font-size: 12px;
 }
+.chat-message-attachments { display:flex; flex-wrap:wrap; gap:8px; margin-bottom:8px; }
+.chat-message-image { width:min(320px,72vw); overflow:hidden; border-radius:14px; }
+.chat-message-image .private-image { margin:0; }
+.chat-message-image .private-image img {
+  display:block;
+  width:100%;
+  height:auto;
+  max-height:360px;
+  object-fit:contain;
+  border-radius:14px;
+}
+.chat-message-image .private-image p { margin:0; padding:10px; font-size:12px; }
+.chat-user-text { white-space:pre-wrap; overflow-wrap:anywhere; }
 
 @media (max-width: 520px) {
   .chat-credential-toggle { margin-right: 8px; }

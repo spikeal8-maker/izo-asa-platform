@@ -8,7 +8,8 @@ from . import tables as t
 from .credentials import ChatError, decrypt
 from .provider import ProviderFailure
 from .schemas import MAX_CONTEXT_CHARS, MAX_CONTEXT_MESSAGES, MAX_OUTPUT_TOKENS
-class ExecutionMixin:
+from .vision import VisionContextMixin
+class ExecutionMixin(VisionContextMixin):
 	def _context_and_key(self, account_id, request_row):
 		root = self._root()
 		with self.engine.begin() as conn:
@@ -26,6 +27,7 @@ class ExecutionMixin:
 					connection["ciphertext"])
 			except (InvalidTag, UnicodeError, ValueError):
 				raise ChatError(503, "credential_unavailable") from None
+
 			user = conn.execute(sa.select(t.messages).where(
 				t.messages.c.request_id == request_row["id"],
 				t.messages.c.role == "user")).mappings().one()
@@ -35,16 +37,12 @@ class ExecutionMixin:
 				t.messages.c.state == "complete").order_by(
 				t.messages.c.sequence.desc()).limit(
 				MAX_CONTEXT_MESSAGES)).mappings().all()
-		chosen, used = [], len(user["content"])
-		for item in prior:
-			if used + len(item["content"]) > MAX_CONTEXT_CHARS:
-				break
-			chosen.append({
-				"role": item["role"], "content": item["content"]})
-			used += len(item["content"])
-		chosen.reverse()
-		chosen.append({"role": "user", "content": user["content"]})
-		return key, chosen
+			message_ids = [item["id"] for item in [*prior, user]]
+			grouped = self._vision_rows(
+				conn, account_id, message_ids, request_row["model"])
+		chosen = self._bounded_context(
+			prior, user, grouped, MAX_CONTEXT_CHARS)
+		return key, [self._provider_message(item, grouped) for item in chosen]
 	def _save_partial(self, request_id, content: str) -> None:
 		now = self.now()
 		with self.engine.begin() as conn:

@@ -59,7 +59,7 @@ class DeepSeekProvider:
         except (URLError, TimeoutError, socket.timeout, OSError, ValueError, json.JSONDecodeError):
             raise ProviderFailure("provider_unavailable") from None
 
-    def stream(self, key: str, model: str, messages: list[dict[str, str]],
+    def stream(self, key: str, model: str, messages: list[dict[str, object]],
                max_tokens: int, timeout: int, stop: Event) -> Iterable[str]:
         if stop.is_set():
             return
@@ -130,14 +130,28 @@ class FakeDeepSeekProvider:
         if key != "x" * 32:
             raise ProviderFailure("credential_rejected")
 
-    def stream(self, key: str, model: str, messages: list[dict[str, str]],
+    def stream(self, key: str, model: str, messages: list[dict[str, object]],
                max_tokens: int, timeout: int, stop: Event) -> Iterable[str]:
         self.verify(key)
+        def text(content):
+            if isinstance(content, str):
+                return content
+            if isinstance(content, list):
+                return "".join(
+                    part.get("text", "") for part in content
+                    if isinstance(part, dict) and part.get("type") == "text")
+            return ""
+
         users = [item["content"] for item in messages if item.get("role") == "user"]
-        previous = users[-2] if len(users) > 1 else ""
-        current = users[-1] if users else ""
+        previous = text(users[-2]) if len(users) > 1 else ""
+        current = text(users[-1]) if users else ""
+        image_count = sum(
+            1 for content in users if isinstance(content, list)
+            for part in content if isinstance(part, dict)
+            and part.get("type") == "image_url")
         answer = f"Ответ DeepSeek test: {current}" + (
-            f" | Контекст: {previous}" if previous else "")
+            f" | Контекст: {previous}" if previous else "") + (
+            f" | Изображения в контексте: {image_count}" if image_count else "")
         for index in range(0, len(answer), 7):
             if stop.is_set():
                 return
