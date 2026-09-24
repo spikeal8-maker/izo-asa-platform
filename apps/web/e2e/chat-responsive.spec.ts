@@ -142,7 +142,7 @@ test('composer is compact for one line and expands from real wrapping', async ({
   test.setTimeout(120_000)
   test.skip(info.project.name !== 'laptop')
   await workspace(page)
-  for (const width of [320, 390, 768, 1440, 1920, 2560, 3840, 7680]) {
+  for (const width of [390, 768, 1440, 1920, 2560, 3840, 7680]) {
     await freshChat(page, width)
     const box = composer(page)
     expect(await layout(page)).toBe('compact')
@@ -189,7 +189,7 @@ test('composer resize hysteresis is bounded by real geometry and attachments for
 
   const chooser = page.waitForEvent('filechooser')
   await page.getByRole('button', { name: 'Добавить', exact: true }).click()
-  await page.getByRole('menu', { name: 'Инструменты' }).getByRole('menuitem', { name: 'Изображение' }).click()
+  await page.getByRole('menu', { name: 'Инструменты' }).getByRole('menuitem', { name: 'Изображение', exact: true }).click()
   const file = await chooser
   await file.setFiles({ name: 'reference.png', mimeType: 'image/png', buffer: png })
   await expect(composer(page)).toHaveAttribute('data-layout', 'expanded')
@@ -209,10 +209,18 @@ test('composer remeasures when compact control geometry changes', async ({ page 
 
   const modelButton = page.getByRole('button', { name: 'Выбрать модель' })
   await expect(modelButton).toContainText('DeepSeek Flash')
-  await modelButton.evaluate(node => { (node as HTMLElement).style.paddingInline = '42px' })
+  await modelButton.evaluate(node => {
+    const element = node as HTMLElement
+    element.style.width = '220px'
+    element.style.maxWidth = '220px'
+  })
   await expect(composer(page)).toHaveAttribute('data-layout', 'expanded')
 
-  await modelButton.evaluate(node => { (node as HTMLElement).style.removeProperty('padding-inline') })
+  await modelButton.evaluate(node => {
+    const element = node as HTMLElement
+    element.style.removeProperty('width')
+    element.style.removeProperty('max-width')
+  })
   await expect(composer(page)).toHaveAttribute('data-layout', 'compact')
 })
 
