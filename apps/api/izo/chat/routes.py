@@ -11,10 +11,8 @@ from fastapi.responses import JSONResponse, StreamingResponse
 
 from ..accounts.http_security import same_origin
 from .credential_routes import attach_credential_routes
-from .provider import (
-    DeepSeekProvider, FakeDeepSeekProvider,
-    OpenRouterProvider, FakeOpenRouterProvider,
-)
+from .provider import DeepSeekProvider, FakeDeepSeekProvider
+from .provider_openrouter import OpenRouterProvider, FakeOpenRouterProvider
 from .schemas import (
     ChatPolicyView, RequestCreate, RequestView, ThreadCreate, ThreadDetail,
     ThreadList, ThreadView,
