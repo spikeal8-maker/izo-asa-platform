@@ -23,6 +23,8 @@ export const chatErrors: Record<string, string> = {
   credential_unavailable: 'Сохранённый ключ недоступен или был отключён.',
   credential_revision_conflict: 'Настройки ключа уже изменились. Обновите страницу.',
   credential_in_use: 'Сначала остановите активный ответ, затем замените ключ.',
+  credential_check_failed: 'DeepSeek не подтвердил подключение. Повторите проверку.',
+  provider_rejected: 'DeepSeek отклонил проверку подключения.',
   model_not_allowed: 'Выбранная модель не разрешена сервером.',
   model_vision_unsupported: 'Модель не поддерживает изображения.',
   attachment_not_found: 'Вложение недоступно этому аккаунту.',
