@@ -889,6 +889,22 @@
         "title": "CredentialCommand",
         "type": "object"
       },
+      "CredentialListView": {
+        "properties": {
+          "credentials": {
+            "items": {
+              "$ref": "#/components/schemas/CredentialView"
+            },
+            "title": "Credentials",
+            "type": "array"
+          }
+        },
+        "required": [
+          "credentials"
+        ],
+        "title": "CredentialListView",
+        "type": "object"
+      },
       "CredentialView": {
         "properties": {
           "configured": {
@@ -912,6 +928,10 @@
           },
           "provider": {
             "default": "deepseek",
+            "enum": [
+              "deepseek",
+              "openrouter"
+            ],
             "title": "Provider",
             "type": "string"
           },
@@ -1756,6 +1776,14 @@
             "title": "Label",
             "type": "string"
           },
+          "provider": {
+            "enum": [
+              "deepseek",
+              "openrouter"
+            ],
+            "title": "Provider",
+            "type": "string"
+          },
           "text": {
             "title": "Text",
             "type": "boolean"
@@ -1768,6 +1796,7 @@
         "required": [
           "id",
           "label",
+          "provider",
           "text",
           "vision",
           "description"
@@ -4465,6 +4494,239 @@
         ]
       }
     },
+    "/api/v1/chat/credentials": {
+      "get": {
+        "operationId": "credentials_api_v1_chat_credentials_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CredentialListView"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Credentials",
+        "tags": [
+          "chat"
+        ]
+      }
+    },
+    "/api/v1/chat/credentials/{provider}": {
+      "get": {
+        "operationId": "provider_credential_api_v1_chat_credentials__provider__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "provider",
+            "required": true,
+            "schema": {
+              "enum": [
+                "deepseek",
+                "openrouter"
+              ],
+              "title": "Provider",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CredentialView"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Provider Credential",
+        "tags": [
+          "chat"
+        ]
+      },
+      "post": {
+        "operationId": "save_provider_credential_api_v1_chat_credentials__provider__post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "provider",
+            "required": true,
+            "schema": {
+              "enum": [
+                "deepseek",
+                "openrouter"
+              ],
+              "title": "Provider",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CredentialWrite"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CredentialView"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Save Provider Credential",
+        "tags": [
+          "chat"
+        ]
+      }
+    },
+    "/api/v1/chat/credentials/{provider}/disable": {
+      "post": {
+        "operationId": "disable_provider_credential_api_v1_chat_credentials__provider__disable_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "provider",
+            "required": true,
+            "schema": {
+              "enum": [
+                "deepseek",
+                "openrouter"
+              ],
+              "title": "Provider",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CredentialCommand"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CredentialView"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Disable Provider Credential",
+        "tags": [
+          "chat"
+        ]
+      }
+    },
+    "/api/v1/chat/credentials/{provider}/verify": {
+      "post": {
+        "operationId": "verify_provider_credential_api_v1_chat_credentials__provider__verify_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "provider",
+            "required": true,
+            "schema": {
+              "enum": [
+                "deepseek",
+                "openrouter"
+              ],
+              "title": "Provider",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CredentialCommand"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CredentialView"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Verify Provider Credential",
+        "tags": [
+          "chat"
+        ]
+      }
+    },
     "/api/v1/chat/policy": {
       "get": {
         "operationId": "policy_api_v1_chat_policy_get",
@@ -4886,7 +5148,7 @@
                 }
               }
             },
-            "description": "Unprocessable Content"
+            "description": "Unprocessable Entity"
           },
           "4XX": {
             "content": {
@@ -4950,7 +5212,7 @@
                 }
               }
             },
-            "description": "Unprocessable Content"
+            "description": "Unprocessable Entity"
           },
           "4XX": {
             "content": {
@@ -5011,7 +5273,7 @@
                 }
               }
             },
-            "description": "Unprocessable Content"
+            "description": "Unprocessable Entity"
           },
           "4XX": {
             "content": {
@@ -5062,7 +5324,7 @@
                 }
               }
             },
-            "description": "Unprocessable Content"
+            "description": "Unprocessable Entity"
           },
           "4XX": {
             "content": {
@@ -5121,7 +5383,7 @@
                 }
               }
             },
-            "description": "Unprocessable Content"
+            "description": "Unprocessable Entity"
           },
           "4XX": {
             "content": {
@@ -5184,7 +5446,7 @@
                 }
               }
             },
-            "description": "Unprocessable Content"
+            "description": "Unprocessable Entity"
           },
           "4XX": {
             "content": {
@@ -5235,7 +5497,7 @@
                 }
               }
             },
-            "description": "Unprocessable Content"
+            "description": "Unprocessable Entity"
           },
           "4XX": {
             "content": {
@@ -5296,7 +5558,7 @@
                 }
               }
             },
-            "description": "Unprocessable Content"
+            "description": "Unprocessable Entity"
           },
           "4XX": {
             "content": {
@@ -5357,7 +5619,7 @@
                 }
               }
             },
-            "description": "Unprocessable Content"
+            "description": "Unprocessable Entity"
           },
           "4XX": {
             "content": {
@@ -5434,7 +5696,7 @@
                 }
               }
             },
-            "description": "Unprocessable Content"
+            "description": "Unprocessable Entity"
           },
           "4XX": {
             "content": {
@@ -5493,7 +5755,7 @@
                 }
               }
             },
-            "description": "Unprocessable Content"
+            "description": "Unprocessable Entity"
           },
           "4XX": {
             "content": {
@@ -5554,7 +5816,7 @@
                 }
               }
             },
-            "description": "Unprocessable Content"
+            "description": "Unprocessable Entity"
           },
           "4XX": {
             "content": {
@@ -5617,7 +5879,7 @@
                 }
               }
             },
-            "description": "Unprocessable Content"
+            "description": "Unprocessable Entity"
           },
           "4XX": {
             "content": {
@@ -5690,7 +5952,7 @@
                 }
               }
             },
-            "description": "Unprocessable Content"
+            "description": "Unprocessable Entity"
           },
           "4XX": {
             "content": {
@@ -5767,7 +6029,7 @@
                 }
               }
             },
-            "description": "Unprocessable Content"
+            "description": "Unprocessable Entity"
           },
           "4XX": {
             "content": {
@@ -5830,7 +6092,7 @@
                 }
               }
             },
-            "description": "Unprocessable Content"
+            "description": "Unprocessable Entity"
           },
           "4XX": {
             "content": {
@@ -5905,7 +6167,7 @@
                 }
               }
             },
-            "description": "Unprocessable Content"
+            "description": "Unprocessable Entity"
           },
           "4XX": {
             "content": {
@@ -5978,7 +6240,7 @@
                 }
               }
             },
-            "description": "Unprocessable Content"
+            "description": "Unprocessable Entity"
           },
           "4XX": {
             "content": {
@@ -6039,7 +6301,7 @@
                 }
               }
             },
-            "description": "Unprocessable Content"
+            "description": "Unprocessable Entity"
           },
           "4XX": {
             "content": {
@@ -6102,7 +6364,7 @@
                 }
               }
             },
-            "description": "Unprocessable Content"
+            "description": "Unprocessable Entity"
           },
           "4XX": {
             "content": {
@@ -6175,7 +6437,7 @@
                 }
               }
             },
-            "description": "Unprocessable Content"
+            "description": "Unprocessable Entity"
           },
           "4XX": {
             "content": {
@@ -6248,7 +6510,7 @@
                 }
               }
             },
-            "description": "Unprocessable Content"
+            "description": "Unprocessable Entity"
           },
           "4XX": {
             "content": {
@@ -6323,7 +6585,7 @@
                 }
               }
             },
-            "description": "Unprocessable Content"
+            "description": "Unprocessable Entity"
           },
           "4XX": {
             "content": {
