@@ -1,8 +1,13 @@
-import type { ChatPolicyView } from '../../shared/api'
+import type { ChatPolicyView, CredentialView } from '../../shared/api'
 import type { IconName } from '../../shared/ui/Icon'
 
 export type ChatModel = ChatPolicyView['models'][number]
 export type Tool = 'image' | 'video' | 'audio' | '3d' | 'web'
+
+export const providerLabels: Record<string, string> = {
+  deepseek: 'DeepSeek',
+  openrouter: 'OpenRouter',
+}
 
 export const tools: { id: Tool; label: string; icon: IconName }[] = [
   { id: 'image', label: 'Создать изображение', icon: 'image' },
@@ -28,4 +33,25 @@ export function selectedTextModel(
     ?? models.find(item => item.id === policy?.default_model)
     ?? models[0]
     ?? null
+}
+
+export function providerCredential(
+  credentials: CredentialView[], provider: string,
+): CredentialView | null {
+  return credentials.find(item => item.provider === provider) ?? null
+}
+
+export function modelAvailable(
+  model: ChatModel, credentials: CredentialView[],
+): boolean {
+  return Boolean(providerCredential(credentials, model.provider)?.verified)
+}
+
+export function groupedTextModels(models: ChatModel[]) {
+  const order = ['deepseek', 'openrouter']
+  return order.map(provider => ({
+    provider,
+    label: providerLabels[provider] ?? provider,
+    models: models.filter(item => item.provider === provider),
+  })).filter(group => group.models.length > 0)
 }
