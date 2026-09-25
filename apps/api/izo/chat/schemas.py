@@ -8,11 +8,18 @@ from uuid import UUID
 from pydantic import BaseModel, ConfigDict, Field, SecretStr, field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
-MODEL_REVISION = "deepseek-2026-09-vision-1"
+ProviderId = Literal["deepseek", "openrouter"]
+MODEL_REVISION = "multi-provider-2026-09-1"
+# public id, label, provider, provider model, text, vision, description
 MODELS = (
-    ("deepseek-flash", "DeepSeek Flash", True, True, "Текст · Изображения"),
-    ("deepseek-v4-pro", "DeepSeek V4 Pro", True, False, "Текст"),
+    ("deepseek-flash", "DeepSeek Flash", "deepseek", "deepseek-flash",
+     True, True, "Текст · Изображения"),
+    ("deepseek-v4-pro", "DeepSeek V4 Pro", "deepseek", "deepseek-v4-pro",
+     True, False, "Текст"),
+    ("openrouter-auto", "OpenRouter Auto", "openrouter", "openrouter/auto",
+     True, False, "Текст"),
 )
+PROVIDERS: tuple[ProviderId, ...] = ("deepseek", "openrouter")
 DEFAULT_MODEL = MODELS[0][0]
 MAX_INPUT_CHARS = 6_000
 MAX_CONTEXT_MESSAGES = 40
@@ -53,12 +60,31 @@ class ChatSettings(BaseSettings):
         return bool(email and email.lower() in allowed)
 
     @staticmethod
-    def model_allowed(model: str) -> bool:
-        return any(model == model_id for model_id, *_ in MODELS)
+    def provider_allowed(provider: str) -> bool:
+        return provider in PROVIDERS
 
     @staticmethod
-    def model_supports_vision(model: str) -> bool:
-        return any(model == model_id and vision for model_id, _, _, vision, _ in MODELS)
+    def model_spec(model: str):
+        return next((item for item in MODELS if item[0] == model), None)
+
+    @classmethod
+    def model_allowed(cls, model: str) -> bool:
+        return cls.model_spec(model) is not None
+
+    @classmethod
+    def model_provider(cls, model: str) -> ProviderId | None:
+        spec = cls.model_spec(model)
+        return spec[2] if spec else None
+
+    @classmethod
+    def provider_model(cls, model: str) -> str | None:
+        spec = cls.model_spec(model)
+        return spec[3] if spec else None
+
+    @classmethod
+    def model_supports_vision(cls, model: str) -> bool:
+        spec = cls.model_spec(model)
+        return bool(spec and spec[5])
 
 
 class StrictInput(BaseModel):
@@ -68,6 +94,7 @@ class StrictInput(BaseModel):
 class ModelView(BaseModel):
     id: str
     label: str
+    provider: ProviderId
     text: bool
     vision: bool
     description: str
@@ -89,7 +116,11 @@ class CredentialView(BaseModel):
     verified: bool
     revision: int | None = None
     generation: int | None = None
-    provider: str = "deepseek"
+    provider: ProviderId = "deepseek"
+
+
+class CredentialListView(BaseModel):
+    credentials: list[CredentialView]
 
 
 class CredentialWrite(StrictInput):
