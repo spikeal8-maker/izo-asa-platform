@@ -63,7 +63,8 @@ test('saved DeepSeek credential remains visible when verification fails', async 
     .toContainText('Статус: сохранён, не проверен')
 
   verifyFails = false
-  await page.getByRole('button', { name: 'Проверить' }).click()
+  await page.locator('.chat-credential-popover')
+    .getByRole('button', { name: 'Проверить', exact: true }).click()
   await expect(page.locator('.chat-credential-status'))
     .toContainText('Статус: подключён')
 })
