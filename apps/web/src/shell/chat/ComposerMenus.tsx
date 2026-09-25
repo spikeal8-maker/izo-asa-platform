@@ -1,10 +1,14 @@
 import type { RefObject } from 'react'
+import type { CredentialView } from '../../shared/api'
 import { Icon } from '../../shared/ui/Icon'
-import { tools, type ChatModel, type Tool } from './modelCatalog'
+import {
+  groupedTextModels, modelAvailable, tools,
+  type ChatModel, type Tool,
+} from './modelCatalog'
 import { menuKeyboard } from './composerLayout'
 
 export function ComposerMenus({
-  toolsOpen, modelOpen, tool, models, selectedModelId,
+  toolsOpen, modelOpen, tool, models, credentials, selectedModelId,
   plusButton, modelButton, inputRef,
   onCloseTools, onCloseModels, onSelectTool, onSelectModel,
 }: {
@@ -12,6 +16,7 @@ export function ComposerMenus({
   modelOpen: boolean
   tool: Tool | null
   models: ChatModel[]
+  credentials: CredentialView[]
   selectedModelId: string | null
   plusButton: RefObject<HTMLButtonElement | null>
   modelButton: RefObject<HTMLButtonElement | null>
@@ -36,16 +41,27 @@ export function ComposerMenus({
     </div>}
     {modelOpen && <div className="chat-popover chat-model-menu" role="menu" aria-label="Модели"
       onKeyDown={event => menuKeyboard(event, onCloseModels, modelButton.current)}>
-      {models.map(item => <button type="button" role="menuitemradio"
-        aria-checked={selectedModelId === item.id}
-        className={selectedModelId === item.id ? 'selected' : ''}
-        key={item.id} onClick={() => onSelectModel(item.id)}>
-        <span className="chat-model-option">
-          <strong>{item.label}</strong>
-          <small>{item.description}</small>
-        </span>
-        {selectedModelId === item.id && <Icon name="check" />}
-      </button>)}
+      {groupedTextModels(models).map(group =>
+        <section className="chat-model-provider" key={group.provider} aria-label={group.label}>
+          <div className="chat-model-provider-title">{group.label}</div>
+          {group.models.map(item => {
+            const available = modelAvailable(item, credentials)
+            return <button type="button" role="menuitemradio"
+              aria-checked={selectedModelId === item.id}
+              aria-disabled={!available}
+              disabled={!available}
+              className={selectedModelId === item.id ? 'selected' : ''}
+              key={item.id} onClick={() => onSelectModel(item.id)}>
+              <span className="chat-model-option">
+                <strong>{item.label}</strong>
+                <small>{available
+                  ? item.description
+                  : `Подключите ${group.label} API key`}</small>
+              </span>
+              {selectedModelId === item.id && <Icon name="check" />}
+            </button>
+          })}
+        </section>)}
     </div>}
   </>
 }
