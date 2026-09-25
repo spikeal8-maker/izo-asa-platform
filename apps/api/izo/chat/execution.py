@@ -24,7 +24,7 @@ class ExecutionMixin(VisionContextMixin):
 				key = decrypt(
 					root, account_id, connection["id"],
 					connection["generation"], connection["nonce"],
-					connection["ciphertext"])
+					connection["ciphertext"], connection["provider"])
 			except (InvalidTag, UnicodeError, ValueError):
 				raise ChatError(503, "credential_unavailable") from None
 
@@ -42,7 +42,15 @@ class ExecutionMixin(VisionContextMixin):
 				conn, account_id, message_ids, request_row["model"])
 		chosen = self._bounded_context(
 			prior, user, grouped, MAX_CONTEXT_CHARS)
-		return key, [self._provider_message(item, grouped) for item in chosen]
+		provider = connection["provider"]
+		provider_model = self.policy.provider_model(request_row["model"])
+		if (not provider_model
+				or self.policy.model_provider(request_row["model"]) != provider):
+			raise ChatError(503, "model_provider_mismatch")
+		return (
+			key, provider, provider_model,
+			[self._provider_message(item, grouped) for item in chosen],
+		)
 	def _save_partial(self, request_id, content: str) -> None:
 		now = self.now()
 		with self.engine.begin() as conn:
@@ -100,13 +108,13 @@ class ExecutionMixin(VisionContextMixin):
 			yield self._event(
 				"message.start",
 				{"request_id": str(request_id), "sequence": sequence})
-			key, messages = self._context_and_key(
+			key, provider, provider_model, messages = self._context_and_key(
 				account_id, request_row)
 			remaining = request_row["deadline_at"] - self.now()
 			if remaining <= 0:
 				raise ProviderFailure("request_expired")
-			for chunk in self.provider.stream(
-					key, request_row["model"], messages, MAX_OUTPUT_TOKENS, remaining, event):
+			for chunk in self.provider_for(provider).stream(
+					key, provider_model, messages, MAX_OUTPUT_TOKENS, remaining, event):
 				if event.is_set():
 					break
 				content += chunk
