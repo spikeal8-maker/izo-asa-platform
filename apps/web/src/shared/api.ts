@@ -6,6 +6,7 @@ export type SessionList = components['schemas']['SessionList']
 export type ChatPolicyView = components['schemas']['ChatPolicyView']
 export type CredentialView = components['schemas']['CredentialView']
 export type CredentialListView = components['schemas']['CredentialListView']
+export type OpenRouterCatalogView = components['schemas']['OpenRouterCatalogView']
 export type ThreadView = components['schemas']['ThreadView']
 export type ThreadList = components['schemas']['ThreadList']
 export type MessageView = components['schemas']['MessageView']
@@ -35,17 +36,28 @@ export const chatErrors: Record<string, string> = {
   active_request_exists: 'В этом чате уже выполняется ответ.',
   request_conflict: 'Повторный запрос имеет другие параметры.',
   chat_rate_limited: 'Достигнут временный лимит Chat. Повторите позднее.',
-  provider_rate_limited: 'DeepSeek ограничил частоту запросов.',
-  provider_balance: 'DeepSeek не разрешил запрос для этого ключа.',
+  provider_rate_limited: 'Провайдер ограничил частоту запросов.',
+  provider_balance: 'Провайдер не разрешил запрос для этого ключа.',
   provider_empty_response: '????????? ???????? ?????? ??? ?????? ??????.',
   provider_output_limit: '????? ?????? ?????? ?????. ????????? ????? ????????.',
   provider_incomplete_response: '????????? ?? ?????????? ?????? ?????. ????????? ????? ????????.',
-  provider_unavailable: 'DeepSeek сейчас недоступен.',
-  provider_overloaded: 'DeepSeek перегружен. Автоматический повтор не выполнялся.',
-  provider_stream_interrupted: 'Поток DeepSeek прервался. Частичный ответ сохранён.',
+  provider_unavailable: 'Провайдер сейчас недоступен.',
+  provider_overloaded: 'Провайдер перегружен. Автоматический повтор не выполнялся.',
+  provider_stream_interrupted: 'Поток провайдера прервался. Частичный ответ сохранён.',
   request_expired: 'Время выполнения запроса истекло.',
   executor_restarted: 'Исполнитель был перезапущен. Частичный ответ сохранён.',
 }
+export function chatProviderProblem(code: string, provider?: string): string {
+  const label = provider === 'openrouter'
+    ? 'OpenRouter' : provider === 'deepseek' ? 'DeepSeek' : 'Провайдер'
+  if (code === 'provider_unavailable') return `${label} сейчас недоступен.`
+  if (code === 'provider_rate_limited') return `${label} ограничил частоту запросов.`
+  if (code === 'provider_overloaded') return `${label} перегружен. Автоматический повтор не выполнялся.`
+  if (code === 'provider_balance') return `${label} не разрешил запрос для этого ключа.`
+  if (code === 'provider_stream_interrupted') return `Поток ${label} прервался. Частичный ответ сохранён.`
+  return chatErrors[code] ?? 'Ответ завершился с ошибкой.'
+}
+
 export function chatProblem(reason: unknown): string {
   if (reason instanceof ApiError) return chatErrors[reason.code]
     ?? (reason.status === 401 ? 'Войдите в аккаунт.' : 'Сервер отклонил Chat-запрос.')
