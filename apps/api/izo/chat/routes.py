@@ -10,13 +10,13 @@ from fastapi.exception_handlers import request_validation_exception_handler
 from fastapi.responses import JSONResponse, StreamingResponse
 
 from ..accounts.http_security import same_origin
+from .credential_routes import attach_credential_routes
 from .provider import (
     DeepSeekProvider, FakeDeepSeekProvider,
     OpenRouterProvider, FakeOpenRouterProvider,
 )
 from .schemas import (
-    ChatPolicyView, CredentialCommand, CredentialListView, CredentialView,
-    CredentialWrite, ProviderId, RequestCreate, RequestView, ThreadCreate, ThreadDetail,
+    ChatPolicyView, RequestCreate, RequestView, ThreadCreate, ThreadDetail,
     ThreadList, ThreadView,
 )
 from .service import ChatError, ChatService
@@ -150,84 +150,8 @@ def attach_chat(app, database_config, accounts_provider) -> None:
         return service.public_policy(
             bearer(request, service))
 
-    @router.get(
-        "/credentials", response_model=CredentialListView)
-    def credentials(request: Request):
-        service = runtime_service(request)
-        return service.credentials(
-            bearer(request, service))
-
-    @router.get(
-        "/credentials/{provider}", response_model=CredentialView)
-    def provider_credential(provider: ProviderId, request: Request):
-        service = runtime_service(request)
-        return service.credential(
-            bearer(request, service), provider)
-
-    @router.post(
-        "/credentials/{provider}", response_model=CredentialView)
-    def save_provider_credential(
-            provider: ProviderId, data: CredentialWrite, request: Request):
-        service = runtime_service(request)
-        raw, csrf = mutation(request, service)
-        return service.save_credential(
-            raw, csrf, data, provider)
-
-    @router.post(
-        "/credentials/{provider}/verify",
-        response_model=CredentialView)
-    def verify_provider_credential(
-            provider: ProviderId, data: CredentialCommand, request: Request):
-        service = runtime_service(request)
-        raw, csrf = mutation(request, service)
-        return service.verify_credential(
-            raw, csrf, data, provider)
-
-    @router.post(
-        "/credentials/{provider}/disable",
-        response_model=CredentialView)
-    def disable_provider_credential(
-            provider: ProviderId, data: CredentialCommand, request: Request):
-        service = runtime_service(request)
-        raw, csrf = mutation(request, service)
-        return service.disable_credential(
-            raw, csrf, data, provider)
-
-    @router.get(
-        "/credential", response_model=CredentialView)
-    def credential(request: Request):
-        service = runtime_service(request)
-        return service.credential(
-            bearer(request, service))
-
-    @router.post(
-        "/credential", response_model=CredentialView)
-    def save_credential(
-            data: CredentialWrite, request: Request):
-        service = runtime_service(request)
-        raw, csrf = mutation(request, service)
-        return service.save_credential(
-            raw, csrf, data)
-
-    @router.post(
-        "/credential/verify",
-        response_model=CredentialView)
-    def verify_credential(
-            data: CredentialCommand, request: Request):
-        service = runtime_service(request)
-        raw, csrf = mutation(request, service)
-        return service.verify_credential(
-            raw, csrf, data)
-
-    @router.post(
-        "/credential/disable",
-        response_model=CredentialView)
-    def disable_credential(
-            data: CredentialCommand, request: Request):
-        service = runtime_service(request)
-        raw, csrf = mutation(request, service)
-        return service.disable_credential(
-            raw, csrf, data)
+    attach_credential_routes(
+        router, runtime_service, bearer, mutation)
 
     @router.get(
         "/threads", response_model=ThreadList)
