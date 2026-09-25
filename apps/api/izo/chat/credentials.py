@@ -1,60 +1,15 @@
 """Account-owned provider-aware Chat credential lifecycle."""
-import hashlib
-import hmac
-import os
 from uuid import UUID, uuid4
 
 import sqlalchemy as sa
 from cryptography.exceptions import InvalidTag
-from cryptography.hazmat.primitives.ciphers.aead import AESGCM
 
 from . import tables as t
+from .credential_crypto import decrypt, encrypt, operation_fingerprint
 from .provider import ProviderFailure
 from .schemas import (
     CREDENTIAL_WINDOW_LIMIT, PROVIDERS, CredentialListView, CredentialView,
 )
-
-
-def aad(
-        account_id: UUID, connection_id: UUID, generation: int,
-        provider: str = "deepseek") -> bytes:
-    # DeepSeek ciphertext created before multi-provider support must keep the
-    # exact original AAD forever. New providers include provider identity.
-    if provider == "deepseek":
-        value = f"izo-chat|deepseek|{account_id}|{connection_id}|{generation}"
-    else:
-        value = f"izo-chat|provider:{provider}|{account_id}|{connection_id}|{generation}"
-    return value.encode("ascii")
-
-
-def encrypt(
-        root_key: bytes, account_id: UUID, connection_id: UUID,
-        generation: int, plaintext: str, provider: str = "deepseek",
-) -> tuple[bytes, bytes]:
-    nonce = os.urandom(12)
-    ciphertext = AESGCM(root_key).encrypt(
-        nonce, plaintext.encode("utf-8"),
-        aad(account_id, connection_id, generation, provider))
-    return nonce, ciphertext
-
-
-def decrypt(
-        root_key: bytes, account_id: UUID, connection_id: UUID,
-        generation: int, nonce: bytes, ciphertext: bytes,
-        provider: str = "deepseek",
-) -> str:
-    value = AESGCM(root_key).decrypt(
-        nonce, ciphertext,
-        aad(account_id, connection_id, generation, provider))
-    return value.decode("utf-8")
-
-
-def operation_fingerprint(root_key: bytes, action: str, payload: bytes) -> str:
-    return hmac.new(
-        root_key, action.encode("ascii") + b"\0" + payload,
-        hashlib.sha256).hexdigest()
-
-
 class ChatError(Exception):
     def __init__(self, status: int, code: str):
         self.status, self.code = status, code
