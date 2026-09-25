@@ -127,6 +127,7 @@ try {
     await expect(deepSeekCard.locator('.chat-credential-status'))
       .toContainText('подключён', { timeout: 15000 })
     await expect(tokenInput).toHaveValue('')
+    await settings.click()
 
     await chooseFlash(page)
     await send(page, 'Первый вопрос D1')
