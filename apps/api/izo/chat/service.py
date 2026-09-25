@@ -11,6 +11,7 @@ from ..entitlements.local_preview import ensure_local_preview_media
 from ..entitlements.schemas import EntitlementError
 
 from . import tables as t
+from .catalog import CatalogMixin, OpenRouterCatalogCache
 from .conversations import ConversationMixin
 from .credentials import ChatError, CredentialMixin
 from .schemas import ChatPolicyView, ModelView
@@ -21,13 +22,14 @@ from .schemas import (
 from .execution import ExecutionMixin
 
 
-class ChatService(CredentialMixin, ConversationMixin, ExecutionMixin):
+class ChatService(CatalogMixin, CredentialMixin, ConversationMixin, ExecutionMixin):
     def __init__(
             self, auth, policy, provider, clock=time.time, media_store=None,
-            environment="test", providers=None):
+            environment="test", providers=None, openrouter_catalog=None):
         self.auth, self.engine, self.policy = auth, auth.engine, policy
         self.provider, self.clock, self.media_store = provider, clock, media_store
         self.providers = {"deepseek": provider, **(providers or {})}
+        self._openrouter_catalog = openrouter_catalog or OpenRouterCatalogCache(clock=self.clock)
         self.environment = environment
         self._stops: dict[object, Event] = {}
         self._stop_lock = Lock()
