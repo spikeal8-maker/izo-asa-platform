@@ -108,8 +108,10 @@ def test_five_images_preserve_db_and_provider_order(chat_env):
     with service.engine.begin() as conn:
         request_row = conn.execute(sa.select(chat.requests).where(
             chat.requests.c.id == created.id)).mappings().one()
-    _, provider_messages = service._context_and_key(
+    _, provider, provider_model, provider_messages = service._context_and_key(
         alice.view.account.id, request_row)
+    assert provider == "deepseek"
+    assert provider_model == "deepseek-flash"
     parts = provider_messages[-1]["content"]
     assert [part["type"] for part in parts] == [
         "text", "image_url", "image_url", "image_url", "image_url", "image_url"]
