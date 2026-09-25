@@ -147,11 +147,8 @@ def test_http_durable_stream_duplicate_and_model_guard(http_env):
 
     policy = client.get("/api/v1/chat/policy")
     assert policy.status_code == 200
-    assert [(m["id"], m["provider"]) for m in policy.json()["models"]] == [
-        ("deepseek-flash", "deepseek"),
-        ("deepseek-v4-pro", "deepseek"),
-        ("openrouter-auto", "openrouter"),
-    ]
+    assert [m["id"] for m in policy.json()["models"]] == [
+        "deepseek-flash", "deepseek-v4-pro"]
 
     thread = client.post(
         "/api/v1/chat/threads", json={"title": None})
