@@ -6,16 +6,11 @@ from cryptography.exceptions import InvalidTag
 
 from . import tables as t
 from .credential_crypto import decrypt, encrypt, operation_fingerprint
+from .errors import ChatError
 from .provider import ProviderFailure
 from .schemas import (
     CREDENTIAL_WINDOW_LIMIT, PROVIDERS, CredentialListView, CredentialView,
 )
-class ChatError(Exception):
-    def __init__(self, status: int, code: str):
-        self.status, self.code = status, code
-        super().__init__(code)
-
-
 class CredentialMixin:
     def _provider_id(self, provider: str) -> str:
         if not self.policy.provider_allowed(provider):
@@ -90,8 +85,6 @@ class CredentialMixin:
                 if row["last_operation_hash"] != operation_hash:
                     raise ChatError(409, "operation_conflict")
                 return self._credential_view(row, provider)
-            # One Save+Verify user action needs two slots. Reject before
-            # mutating if the immediate verify could not consume its slot.
             self._consume_rate(
                 conn, account["id"], "credential",
                 CREDENTIAL_WINDOW_LIMIT, required_slots=2)
