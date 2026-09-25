@@ -17,8 +17,9 @@ from izo.chat import tables as chat
 from izo.chat.credentials import (
     ChatError, decrypt, encrypt,
 )
-from izo.chat.provider import (
-    FakeOpenRouterProvider, OpenRouterProvider, ProviderFailure,
+from izo.chat.provider import ProviderFailure
+from izo.chat.provider_openrouter import (
+    FakeOpenRouterProvider, OpenRouterProvider,
 )
 from izo.chat.schemas import (
     CREDENTIAL_WINDOW_LIMIT, CredentialCommand, CredentialWrite,
