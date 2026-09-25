@@ -43,9 +43,10 @@ export function ChatPage({ auth, theme, onThemeChange, onLogout }: {
   }
 
   const empty = runtime.messages.length === 0
-  const disabled = !auth || !runtime.policy || !runtime.credential?.verified
+  const disabled = !auth || !runtime.policy || !runtime.modelCredential?.verified
   const composer = <ChatComposer
     policy={runtime.policy}
+    credentials={runtime.credentials}
     busy={runtime.busy}
     stoppable={Boolean(runtime.activeRequestId)}
     disabled={disabled}
@@ -82,7 +83,7 @@ export function ChatPage({ auth, theme, onThemeChange, onLogout }: {
         </button>}
         {auth && <ChatCredentialPanel
           auth={auth}
-          credential={runtime.credential}
+          credentials={runtime.credentials}
           onChange={runtime.setCredential}
           onDisabled={runtime.credentialDisabled}
           onError={runtime.setError}
@@ -97,8 +98,8 @@ export function ChatPage({ auth, theme, onThemeChange, onLogout }: {
                 ? <p className="chat-start-note">
                     Для сохранённого разговора нужен аккаунт. <Link href="/login">Войти</Link>
                   </p>
-                : !runtime.credential?.verified
-                  ? <p className="chat-start-note">Подключите и проверьте свой ключ DeepSeek.</p>
+                : !runtime.modelCredential?.verified
+                  ? <p className="chat-start-note">Подключите и проверьте API key выбранного провайдера.</p>
                   : null}
             {runtime.error && <div className="chat-runtime-note" role="alert">
               <Icon name="info" /><span>{runtime.error}</span>
