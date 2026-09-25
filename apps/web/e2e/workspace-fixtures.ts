@@ -43,14 +43,20 @@ export async function workspace(page: Page) {
     if (path === '/api/v1/chat/policy') return answer({
       revision: 'browser-fixture', default_model: 'deepseek-flash',
       models: [
-        { id: 'deepseek-flash', label: 'DeepSeek Flash', text: true, vision: true,
-          description: 'Текст · Изображения' },
-        { id: 'deepseek-v4-pro', label: 'DeepSeek V4 Pro', text: true, vision: false,
-          description: 'Текст' },
+        { id: 'deepseek-flash', label: 'DeepSeek Flash', provider: 'deepseek',
+          text: true, vision: true, description: 'Текст · Изображения' },
+        { id: 'deepseek-v4-pro', label: 'DeepSeek V4 Pro', provider: 'deepseek',
+          text: true, vision: false, description: 'Текст' },
+        { id: 'openrouter-auto', label: 'OpenRouter Auto', provider: 'openrouter',
+          text: true, vision: false, description: 'Текст' },
       ],
       max_input_chars: 6000, max_output_tokens: 2048,
       max_image_bytes: 12 * 1024 * 1024, max_attachments: 5,
     })
+    if (path === '/api/v1/chat/credentials') return answer({ credentials: [
+      { configured: true, enabled: true, verified: true, revision: 1, generation: 1, provider: 'deepseek' },
+      { configured: false, enabled: false, verified: false, revision: null, generation: null, provider: 'openrouter' },
+    ] })
     if (path === '/api/v1/chat/credential') return answer({
       configured: true, enabled: true, verified: true, revision: 1, generation: 1, provider: 'deepseek',
     })
