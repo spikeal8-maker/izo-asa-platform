@@ -4,149 +4,202 @@ import {
 } from '../../shared/api'
 import { Icon } from '../../shared/ui/Icon'
 
+const providers = [
+  { id: 'deepseek', label: 'DeepSeek' },
+  { id: 'openrouter', label: 'OpenRouter' },
+] as const
+type Provider = (typeof providers)[number]['id']
+
+function credentialFor(credentials: CredentialView[], provider: Provider) {
+  return credentials.find(item => item.provider === provider) ?? null
+}
+
+function credentialStatus(
+  credential: CredentialView | null, verifyFailed: boolean,
+) {
+  const savedUnverified = Boolean(
+    credential?.configured && credential.enabled && !credential.verified)
+  if (credential?.verified) return { text: 'подключён', className: 'is-ok' }
+  if (savedUnverified) return verifyFailed
+    ? { text: 'проверка не пройдена', className: 'is-error' }
+    : { text: 'сохранён, не проверен', className: 'is-saved' }
+  return { text: 'не подключён', className: 'is-off' }
+}
+
 export function ChatCredentialPanel({
-  auth, credential, onChange, onDisabled, onError,
+  auth, credentials, onChange, onDisabled, onError,
 }: {
   auth: AuthView
-  credential: CredentialView | null
+  credentials: CredentialView[]
   onChange: (value: CredentialView) => void
   onDisabled: (value: CredentialView) => void
   onError: (message: string) => void
 }) {
   const [open, setOpen] = useState(false)
-  const [busy, setBusy] = useState(false)
-  const [key, setKey] = useState('')
-  const [verifyFailed, setVerifyFailed] = useState(false)
-  const savedUnverified = Boolean(
-    credential?.configured && credential.enabled && !credential.verified)
-  const status = credential?.verified
-    ? 'подключён'
-    : savedUnverified
-      ? (verifyFailed ? 'проверка не пройдена' : 'сохранён, не проверен')
-      : 'не подключён'
-  const statusClass = credential?.verified
-    ? 'is-ok'
-    : savedUnverified
-      ? (verifyFailed ? 'is-error' : 'is-saved')
-      : 'is-off'
+  const [busyProvider, setBusyProvider] = useState<Provider | null>(null)
+  const [keys, setKeys] = useState<Record<Provider, string>>({
+    deepseek: '', openrouter: '',
+  })
+  const [verifyFailed, setVerifyFailed] = useState<Record<Provider, boolean>>({
+    deepseek: false, openrouter: false,
+  })
+  const connected = providers.filter(
+    item => credentialFor(credentials, item.id)?.verified).length
 
-  async function verify(view: CredentialView) {
-    if (!view.revision) return
-    const next = await apiRequest<CredentialView>('/api/v1/chat/credential/verify', {
-      method: 'POST',
-      csrf: auth.csrf_token,
-      timeoutMs: 20000,
-      data: {
-        operation_id: crypto.randomUUID(),
-        expected_revision: view.revision,
-      },
-    })
-    onChange(next)
-    setVerifyFailed(false)
+  function markVerifyFailed(provider: Provider, value: boolean) {
+    setVerifyFailed(current => ({ ...current, [provider]: value }))
   }
 
-  async function save(event: FormEvent) {
-    event.preventDefault()
-    if (!key.trim() || busy) return
-    setBusy(true)
-    setVerifyFailed(false)
-    onError('')
-    try {
-      const saved = await apiRequest<CredentialView>('/api/v1/chat/credential', {
+  async function verify(provider: Provider, view: CredentialView) {
+    if (!view.revision) return
+    const next = await apiRequest<CredentialView>(
+      `/api/v1/chat/credentials/${provider}/verify`, {
         method: 'POST',
         csrf: auth.csrf_token,
+        timeoutMs: 20000,
         data: {
           operation_id: crypto.randomUUID(),
-          key: key.trim(),
-          expected_revision: credential?.revision ?? null,
+          expected_revision: view.revision,
         },
       })
-      setKey('')
+    onChange(next)
+    markVerifyFailed(provider, false)
+  }
+
+  async function save(provider: Provider, event: FormEvent) {
+    event.preventDefault()
+    const key = keys[provider].trim()
+    const credential = credentialFor(credentials, provider)
+    if (!key || busyProvider) return
+    setBusyProvider(provider)
+    markVerifyFailed(provider, false)
+    onError('')
+    try {
+      const saved = await apiRequest<CredentialView>(
+        `/api/v1/chat/credentials/${provider}`, {
+          method: 'POST',
+          csrf: auth.csrf_token,
+          data: {
+            operation_id: crypto.randomUUID(),
+            key,
+            expected_revision: credential?.revision ?? null,
+          },
+        })
+      setKeys(current => ({ ...current, [provider]: '' }))
       onChange(saved)
       try {
-        await verify(saved)
+        await verify(provider, saved)
       } catch (reason) {
-        setVerifyFailed(true)
-        onError(`Ключ сохранён. Проверка не пройдена. ${chatProblem(reason)}`)
+        markVerifyFailed(provider, true)
+        onError(`Ключ ${provider === 'deepseek' ? 'DeepSeek' : 'OpenRouter'} сохранён. Проверка не пройдена. ${chatProblem(reason)}`)
       }
     } catch (reason) {
-      setKey('')
+      setKeys(current => ({ ...current, [provider]: '' }))
       onError(chatProblem(reason))
     } finally {
-      setBusy(false)
+      setBusyProvider(null)
     }
   }
 
-  async function verifyAgain() {
-    if (!credential || busy) return
-    setBusy(true)
-    setVerifyFailed(false)
+  async function verifyAgain(provider: Provider) {
+    const credential = credentialFor(credentials, provider)
+    if (!credential || busyProvider) return
+    setBusyProvider(provider)
+    markVerifyFailed(provider, false)
     onError('')
     try {
-      await verify(credential)
+      await verify(provider, credential)
     } catch (reason) {
-      setVerifyFailed(true)
-      onError(`Ключ сохранён. Проверка не пройдена. ${chatProblem(reason)}`)
+      markVerifyFailed(provider, true)
+      onError(`Ключ ${provider === 'deepseek' ? 'DeepSeek' : 'OpenRouter'} сохранён. Проверка не пройдена. ${chatProblem(reason)}`)
     } finally {
-      setBusy(false)
+      setBusyProvider(null)
     }
   }
 
-  async function disable() {
-    if (!credential?.revision || busy) return
-    setBusy(true)
+  async function disable(provider: Provider) {
+    const credential = credentialFor(credentials, provider)
+    if (!credential?.revision || busyProvider) return
+    setBusyProvider(provider)
     onError('')
     try {
-      const next = await apiRequest<CredentialView>('/api/v1/chat/credential/disable', {
-        method: 'POST',
-        csrf: auth.csrf_token,
-        data: {
-          operation_id: crypto.randomUUID(),
-          expected_revision: credential.revision,
-        },
-      })
-      setVerifyFailed(false)
+      const next = await apiRequest<CredentialView>(
+        `/api/v1/chat/credentials/${provider}/disable`, {
+          method: 'POST',
+          csrf: auth.csrf_token,
+          data: {
+            operation_id: crypto.randomUUID(),
+            expected_revision: credential.revision,
+          },
+        })
+      markVerifyFailed(provider, false)
       onDisabled(next)
     } catch (reason) {
       onError(chatProblem(reason))
     } finally {
-      setBusy(false)
+      setBusyProvider(null)
     }
   }
 
   return <>
     <button type="button" className="chat-credential-toggle"
-      aria-label="Настройки DeepSeek" aria-expanded={open}
+      aria-label="Настройки DeepSeek и OpenRouter" aria-expanded={open}
       onClick={() => setOpen(value => !value)}>
       <Icon name="sliders" />
-      <span className={statusClass} aria-hidden="true" />
-      <strong>DeepSeek</strong>
+      <span className={connected === providers.length
+        ? 'is-ok' : connected ? 'is-saved' : 'is-off'} aria-hidden="true" />
+      <strong>Провайдеры</strong>
     </button>
-    {open && <form className="chat-credential-popover" onSubmit={event => void save(event)}>
-      <h2>DeepSeek API</h2>
-      <p className={`chat-credential-status ${statusClass}`}>
-        Статус: {status}
-      </p>
-      <p>Ключ хранится зашифрованным в аккаунте и никогда не показывается после сохранения.</p>
-      <label className="chat-credential-key">
-        <span>Новый API key</span>
-        <input type="password" autoComplete="off" value={key}
-          onChange={event => setKey(event.target.value)}
-          aria-label="Новый API key" placeholder="Введите новый API key" />
-      </label>
-      <div className="chat-credential-actions">
-        <button type="submit" disabled={busy || !key.trim()}>
-          {credential?.configured ? 'Заменить и проверить' : 'Сохранить и проверить'}
-        </button>
-        {credential?.configured && <button type="button" className="secondary"
-          disabled={busy} onClick={() => void verifyAgain()}>
-          Проверить
-        </button>}
-        {credential?.configured && <button type="button" className="secondary"
-          disabled={busy} onClick={() => void disable()}>
-          Отключить
-        </button>}
+    {open && <div className="chat-credential-popover" role="dialog"
+      aria-label="Провайдеры">
+      <h2>Провайдеры</h2>
+      <p>API keys хранятся зашифрованными в аккаунте и никогда не показываются после сохранения.</p>
+      <div className="chat-provider-list">
+        {providers.map(provider => {
+          const credential = credentialFor(credentials, provider.id)
+          const status = credentialStatus(
+            credential, verifyFailed[provider.id])
+          const busy = busyProvider === provider.id
+          return <form className="chat-provider-card" key={provider.id}
+            onSubmit={event => void save(provider.id, event)}>
+            <div className="chat-provider-card-head">
+              <strong>{provider.label}</strong>
+              <span className={`chat-credential-status ${status.className}`}>
+                {status.text}
+              </span>
+            </div>
+            <label className="chat-credential-key">
+              <span>Новый API key {provider.label}</span>
+              <input type="password" autoComplete="off"
+                value={keys[provider.id]}
+                onChange={event => setKeys(current => ({
+                  ...current, [provider.id]: event.target.value,
+                }))}
+                aria-label={`Новый API key ${provider.label}`}
+                placeholder={`Введите ${provider.label} API key`} />
+            </label>
+            <div className="chat-credential-actions">
+              <button type="submit"
+                disabled={Boolean(busyProvider) || !keys[provider.id].trim()}>
+                {credential?.configured
+                  ? `Заменить и проверить ${provider.label}`
+                  : `Сохранить и проверить ${provider.label}`}
+              </button>
+              {credential?.configured && <button type="button" className="secondary"
+                disabled={Boolean(busyProvider)}
+                onClick={() => void verifyAgain(provider.id)}>
+                Проверить
+              </button>}
+              {credential?.configured && <button type="button" className="secondary"
+                disabled={Boolean(busyProvider)}
+                onClick={() => void disable(provider.id)}>
+                Отключить
+              </button>}
+              {busy && <span className="chat-provider-busy" role="status">Проверяем…</span>}
+            </div>
+          </form>
+        })}
       </div>
-    </form>}
+    </div>}
   </>
 }
