@@ -132,15 +132,18 @@ function ChatCredentialPanel({ auth, credential, onChange, onDisabled, onError }
   const [open, setOpen] = useState(false)
   const [busy, setBusy] = useState(false)
   const [key, setKey] = useState('')
+  const [verifyFailed, setVerifyFailed] = useState(false)
+  const savedUnverified = Boolean(
+    credential?.configured && credential.enabled && !credential.verified)
   const status = credential?.verified
     ? 'подключён'
-    : credential?.configured && credential.enabled
-      ? 'ошибка ключа'
+    : savedUnverified
+      ? (verifyFailed ? 'проверка не пройдена' : 'сохранён, не проверен')
       : 'не подключён'
   const statusClass = credential?.verified
     ? 'is-ok'
-    : credential?.configured && credential.enabled
-      ? 'is-error'
+    : savedUnverified
+      ? (verifyFailed ? 'is-error' : 'is-saved')
       : 'is-off'
 
   async function verify(view: CredentialView) {
@@ -155,12 +158,14 @@ function ChatCredentialPanel({ auth, credential, onChange, onDisabled, onError }
       },
     })
     onChange(next)
+    setVerifyFailed(false)
   }
 
   async function save(event: FormEvent) {
     event.preventDefault()
     if (!key.trim() || busy) return
     setBusy(true)
+    setVerifyFailed(false)
     onError('')
     try {
       const saved = await apiRequest<CredentialView>('/api/v1/chat/credential', {
@@ -174,7 +179,12 @@ function ChatCredentialPanel({ auth, credential, onChange, onDisabled, onError }
       })
       setKey('')
       onChange(saved)
-      await verify(saved)
+      try {
+        await verify(saved)
+      } catch (reason) {
+        setVerifyFailed(true)
+        onError(`Ключ сохранён. Проверка не пройдена. ${chatProblem(reason)}`)
+      }
     } catch (reason) {
       setKey('')
       onError(chatProblem(reason))
@@ -186,11 +196,13 @@ function ChatCredentialPanel({ auth, credential, onChange, onDisabled, onError }
   async function verifyAgain() {
     if (!credential || busy) return
     setBusy(true)
+    setVerifyFailed(false)
     onError('')
     try {
       await verify(credential)
     } catch (reason) {
-      onError(chatProblem(reason))
+      setVerifyFailed(true)
+      onError(`Ключ сохранён. Проверка не пройдена. ${chatProblem(reason)}`)
     } finally {
       setBusy(false)
     }
@@ -209,6 +221,7 @@ function ChatCredentialPanel({ auth, credential, onChange, onDisabled, onError }
           expected_revision: credential.revision,
         },
       })
+      setVerifyFailed(false)
       onDisabled(next)
     } catch (reason) {
       onError(chatProblem(reason))
