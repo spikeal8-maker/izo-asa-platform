@@ -86,6 +86,33 @@ def test_repeated_save_verify_keeps_rate_limit_and_no_half_state(chat_env):
     assert service.credential(alice.bearer) == verified
 
 
+def test_save_reserves_verify_headroom_before_mutating(chat_env):
+    service, alice, _, _ = chat_env
+    verified = connect_key(service, alice)
+    with service.engine.begin() as conn:
+        conn.execute(sa.update(chat.limits).where(
+            chat.limits.c.account_id == alice.view.account.id,
+            chat.limits.c.kind == "credential",
+        ).values(count=CREDENTIAL_WINDOW_LIMIT - 1))
+
+    with pytest.raises(ChatError, match="chat_rate_limited"):
+        service.save_credential(
+            alice.bearer, alice.view.csrf_token,
+            CredentialWrite(
+                operation_id=uuid4(), key=KEY,
+                expected_revision=verified.revision,
+            ),
+        )
+
+    assert service.credential(alice.bearer) == verified
+    with service.engine.begin() as conn:
+        count = conn.execute(sa.select(chat.limits.c.count).where(
+            chat.limits.c.account_id == alice.view.account.id,
+            chat.limits.c.kind == "credential",
+        )).scalar_one()
+    assert count == CREDENTIAL_WINDOW_LIMIT - 1
+
+
 def test_verified_credential_survives_service_reload(chat_env):
     service, alice, _, _ = chat_env
     verified = connect_key(service, alice)
