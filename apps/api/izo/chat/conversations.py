@@ -93,9 +93,7 @@ class ConversationMixin(AttachmentMixin, RequestStateMixin):
 
     def create_request(self, raw, csrf, thread_id: UUID, command) -> RequestView:
         now = self.now()
-        provider = self.policy.model_provider(command.model)
-        if not provider:
-            raise ChatError(422, "model_not_allowed")
+        provider, _provider_model = self.resolve_model(command.model)
         try:
             with self.engine.begin() as conn:
                 account, _ = self._account(conn, raw, csrf, mutation=True)
