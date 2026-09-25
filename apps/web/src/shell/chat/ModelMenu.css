@@ -48,3 +48,27 @@ overflow-y:auto;
   opacity:.48;
   cursor:not-allowed;
 }
+
+.chat-model-search {
+  margin:4px 6px 7px;
+  min-height:34px;
+  padding:0 9px;
+  border:1px solid var(--color-border);
+  border-radius:9px;
+  display:flex;
+  align-items:center;
+  gap:7px;
+  background:var(--color-bg);
+  color:var(--color-text-secondary);
+}
+.chat-model-search svg { width:15px; height:15px; flex:0 0 auto; }
+.chat-model-search input {
+  min-width:0;
+  width:100%;
+  border:0;
+  outline:0;
+  background:transparent;
+  color:var(--color-text);
+  font-size:12px;
+}
+.chat-model-option small + small { margin-top:2px; }
