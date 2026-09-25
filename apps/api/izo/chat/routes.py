@@ -14,7 +14,7 @@ from .credential_routes import attach_credential_routes
 from .provider import DeepSeekProvider, FakeDeepSeekProvider
 from .provider_openrouter import OpenRouterProvider, FakeOpenRouterProvider
 from .schemas import (
-    ChatPolicyView, RequestCreate, RequestView, ThreadCreate, ThreadDetail,
+    ChatPolicyView, OpenRouterCatalogView, RequestCreate, RequestView, ThreadCreate, ThreadDetail,
     ThreadList, ThreadView,
 )
 from .service import ChatError, ChatService
@@ -150,6 +150,13 @@ def attach_chat(app, database_config, accounts_provider) -> None:
 
     attach_credential_routes(
         router, runtime_service, bearer, mutation)
+
+    @router.get(
+        "/catalog/openrouter", response_model=OpenRouterCatalogView)
+    def openrouter_catalog(request: Request):
+        service = runtime_service(request)
+        return service.openrouter_catalog(
+            bearer(request, service))
 
     @router.get(
         "/threads", response_model=ThreadList)
