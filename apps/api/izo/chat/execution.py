@@ -61,7 +61,7 @@ class ExecutionMixin(ExecutionContextMixin):
 		request_id = request_row["id"]
 		event = self._register_stop(request_id)
 		content, saved_at, saved_len = "", time.monotonic(), 0
-		sequence = 0
+		sequence, provider = 0, None
 		try:
 			yield self._event(
 				"message.start",
@@ -101,12 +101,14 @@ class ExecutionMixin(ExecutionContextMixin):
 		except (ChatError, ProviderFailure) as exc:
 			self._finish(request_id, "error", exc.code, content)
 			sequence += 1
-			yield self._event(
-				"message.error", {
-					"request_id": str(request_id),
-					"sequence": sequence,
-					"code": exc.code,
-				})
+			payload = {
+				"request_id": str(request_id),
+				"sequence": sequence,
+				"code": exc.code,
+			}
+			if provider:
+				payload["provider"] = provider
+			yield self._event("message.error", payload)
 		except GeneratorExit:
 			self._finish(
 				request_id, "interrupted",
