@@ -1,7 +1,11 @@
 import type { ChatPolicyView, CredentialView } from '../../shared/api'
 import type { IconName } from '../../shared/ui/Icon'
 
-export type ChatModel = ChatPolicyView['models'][number]
+export type ChatModel = ChatPolicyView['models'][number] & {
+  context_length?: number
+  provider_brand?: string
+  catalog_stale?: boolean
+}
 export type Tool = 'image' | 'video' | 'audio' | '3d' | 'web'
 
 export const providerLabels: Record<string, string> = {
@@ -54,4 +58,18 @@ export function groupedTextModels(models: ChatModel[]) {
     label: providerLabels[provider] ?? provider,
     models: models.filter(item => item.provider === provider),
   })).filter(group => group.models.length > 0)
+}
+
+export function modelSearchText(model: ChatModel): string {
+  return `${model.label} ${model.id} ${providerLabels[model.provider] ?? model.provider} ${model.provider_brand ?? ''}`
+    .toLocaleLowerCase('ru')
+}
+
+export function modelMeta(model: ChatModel): string {
+  const brand = model.provider_brand ?? providerLabels[model.provider] ?? model.provider
+  const context = model.context_length && model.context_length > 0
+    ? ` · контекст ${model.context_length.toLocaleString('ru-RU')}`
+    : ''
+  const stale = model.catalog_stale ? ' · сохранённый каталог' : ''
+  return `${brand}${context}${stale}`
 }
