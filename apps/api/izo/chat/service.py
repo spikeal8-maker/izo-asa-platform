@@ -101,7 +101,11 @@ class ChatService(CredentialMixin, ConversationMixin, ExecutionMixin):
         self._ensure_local_preview_entitlement(conn, account)
         return account, session
 
-    def _consume_rate(self, conn, account_id, kind: str, maximum: int) -> None:
+    def _consume_rate(
+            self, conn, account_id, kind: str, maximum: int,
+            required_slots: int = 1) -> None:
+        if not 1 <= required_slots <= maximum:
+            raise ValueError("Invalid rate-limit reservation")
         now = self.now()
         start = now - now % REQUEST_WINDOW_SECONDS
         if conn.dialect.name == "postgresql":
@@ -120,7 +124,7 @@ class ChatService(CredentialMixin, ConversationMixin, ExecutionMixin):
         count = conn.execute(query).scalar_one()
         conn.execute(sa.delete(t.limits).where(
             t.limits.c.window_start < start - 2 * REQUEST_WINDOW_SECONDS))
-        if count > maximum:
+        if count + required_slots - 1 > maximum:
             raise ChatError(429, "chat_rate_limited")
 
     def public_policy(self, raw) -> ChatPolicyView:
