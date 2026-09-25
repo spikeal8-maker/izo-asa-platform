@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import {
-apiRequest, apiStream, ApiError, chatErrors, chatProblem,
+apiRequest, apiStream, ApiError, chatProblem, chatProviderProblem,
 type AuthView, type ChatPolicyView, type ChatRequestView, type CredentialListView, type CredentialView,
 type MessageView, type ThreadDetail, type ThreadList, type ThreadView,
 } from '../../shared/api'
@@ -24,7 +24,6 @@ const resumeAttempted = useRef(new Set<string>())
 const models = policy?.models ?? []
 const model: ChatModel | null = models.find(item => item.id === modelId)
 ?? models.find(item => item.id === policy?.default_model) ?? models[0] ?? null
-const credential = credentials.find(item => item.provider === 'deepseek') ?? null
 const modelCredential = model
 ? credentials.find(item => item.provider === model.provider) ?? null
 : null
@@ -76,7 +75,8 @@ message.request_id === requestId && message.role === 'assistant'
 ? { ...message, content: message.content + data.text, state: 'partial' }
 : message))
 } else if (name === 'message.error' && typeof data.code === 'string') {
-setError(chatErrors[data.code] ?? 'Ответ завершился с ошибкой.')
+setError(chatProviderProblem(
+data.code, typeof data.provider === 'string' ? data.provider : undefined))
 } else if (name === 'message.interrupted') {
 setError(data.reason === 'stopped' ? ''
 : 'Ответ был прерван. Частичный текст сохранён.')
@@ -213,7 +213,7 @@ streamController.current?.abort()
 setCredential(value); setBusy(false); setActiveRequestId(null)
 }
 return {
-policy, credentials, credential, modelCredential, history, messages, currentChatId, model, busy, activeRequestId,
+policy, credentials, modelCredential, history, messages, currentChatId, model, busy, activeRequestId,
 error, setError, setCredential, credentialDisabled, setModelId,
 newChat, openChat, send, stop,
 }
