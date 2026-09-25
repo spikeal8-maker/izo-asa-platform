@@ -25,6 +25,19 @@ export function ChatPage({ auth, theme, onThemeChange, onLogout }: {
   useVisualViewport()
 
   useEffect(() => {
+    if (!auth) return
+    const key = `izo-chat-current:${auth.account.id}`
+    if (runtime.currentChatId) {
+      sessionStorage.setItem(key, runtime.currentChatId)
+      return
+    }
+    if (!runtime.history.length || runtime.busy) return
+    const remembered = sessionStorage.getItem(key)
+    const chat = runtime.history.find(item => item.id === remembered)
+    if (chat) void runtime.openChat(chat)
+  }, [auth?.account.id, runtime.currentChatId, runtime.history, runtime.busy])
+
+  useEffect(() => {
     const media = window.matchMedia(desktopQuery)
     const sync = () => setSidebarOpen(media.matches)
     sync()
@@ -33,6 +46,7 @@ export function ChatPage({ auth, theme, onThemeChange, onLogout }: {
   }, [])
 
   function newChat() {
+    if (auth) sessionStorage.removeItem(`izo-chat-current:${auth.account.id}`)
     runtime.newChat()
     if (!window.matchMedia(desktopQuery).matches) setSidebarOpen(false)
   }
