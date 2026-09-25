@@ -11,3 +11,40 @@ overflow-y:auto;
 @container chat (max-width: 519px) {
 .chat-model-menu { left:6px; right:6px; width:auto; }
 }
+
+.chat-model-provider {
+  padding:4px 0;
+}
+.chat-model-provider + .chat-model-provider {
+  margin-top:4px;
+  padding-top:8px;
+  border-top:1px solid var(--color-border);
+}
+.chat-model-provider-title {
+  padding:4px 10px 5px;
+  color:var(--color-text-secondary);
+  font-size:11px;
+  line-height:1.2;
+}
+.chat-model-provider > button {
+  width:100%;
+  min-height:46px;
+  padding:7px 10px;
+  border:0;
+  border-radius:9px;
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:10px;
+  background:transparent;
+  color:var(--color-text);
+  text-align:left;
+}
+.chat-model-provider > button:hover:not(:disabled),
+.chat-model-provider > button.selected {
+  background:color-mix(in srgb,var(--color-text) 6%,var(--color-surface));
+}
+.chat-model-provider > button:disabled {
+  opacity:.48;
+  cursor:not-allowed;
+}
