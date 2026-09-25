@@ -18,14 +18,14 @@ export class ApiError extends Error {
 }
 export const chatErrors: Record<string, string> = {
   chat_preview_not_enabled: 'Этот аккаунт не допущен к локальному Chat preview.',
-  credential_not_verified: 'Подключите и проверьте ключ DeepSeek.',
-  credential_rejected: 'DeepSeek отклонил этот ключ.',
+  credential_not_verified: 'Подключите и проверьте API key выбранного провайдера.',
+  credential_rejected: 'Провайдер отклонил этот API key.',
   credential_storage_unavailable: 'Хранилище ключей недоступно. Проверьте локальный root key.',
   credential_unavailable: 'Сохранённый ключ недоступен или был отключён.',
   credential_revision_conflict: 'Настройки ключа уже изменились. Обновите страницу.',
   credential_in_use: 'Сначала остановите активный ответ, затем замените ключ.',
-  credential_check_failed: 'DeepSeek не подтвердил подключение. Повторите проверку.',
-  provider_rejected: 'DeepSeek отклонил проверку подключения.',
+  credential_check_failed: 'Провайдер не подтвердил подключение. Повторите проверку.',
+  provider_rejected: 'Провайдер отклонил проверку подключения.',
   model_not_allowed: 'Выбранная модель не разрешена сервером.',
   model_vision_unsupported: 'Модель не поддерживает изображения.',
   attachment_not_found: 'Вложение недоступно этому аккаунту.',
