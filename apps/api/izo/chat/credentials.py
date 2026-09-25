@@ -69,7 +69,9 @@ class CredentialMixin:
 				if row["last_operation_hash"] != operation_hash:
 					raise ChatError(409, "operation_conflict")
 				return self._credential_view(row)
-			self._consume_rate(conn, account["id"], "credential", CREDENTIAL_WINDOW_LIMIT)
+			self._consume_rate(
+				conn, account["id"], "credential", CREDENTIAL_WINDOW_LIMIT,
+				required_slots=2)
 			if row and command.expected_revision != row["revision"]:
 				raise ChatError(409, "credential_revision_conflict")
 			if not row and command.expected_revision is not None:
