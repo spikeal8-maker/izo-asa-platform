@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import {
 apiRequest, apiStream, ApiError, chatErrors, chatProblem,
-type AuthView, type ChatPolicyView, type ChatRequestView, type CredentialView,
+type AuthView, type ChatPolicyView, type ChatRequestView, type CredentialListView, type CredentialView,
 type MessageView, type ThreadDetail, type ThreadList, type ThreadView,
 } from '../../shared/api'
 import { chatImageProblem, uploadChatImage } from './chatAttachments'
@@ -35,7 +35,7 @@ boundary = buffer.indexOf('\n\n')
 }
 export function useChatRuntime(auth: AuthView | null | undefined) {
 const [policy, setPolicy] = useState<ChatPolicyView | null>(null)
-const [credential, setCredential] = useState<CredentialView | null>(null)
+const [credentials, setCredentials] = useState<CredentialView[]>([])
 const [history, setHistory] = useState<ThreadView[]>([])
 const [messages, setMessages] = useState<MessageView[]>([])
 const [currentChatId, setCurrentChatId] = useState<string | null>(null)
@@ -48,6 +48,10 @@ const resumeAttempted = useRef(new Set<string>())
 const models = policy?.models ?? []
 const model: ChatModel | null = models.find(item => item.id === modelId)
 ?? models.find(item => item.id === policy?.default_model) ?? models[0] ?? null
+const credential = credentials.find(item => item.provider === 'deepseek') ?? null
+const modelCredential = model
+? credentials.find(item => item.provider === model.provider) ?? null
+: null
 const refreshHistory = useCallback(async (signal?: AbortSignal) => {
 if (!auth) return
 const list = await apiRequest<ThreadList>('/api/v1/chat/threads', { signal })
@@ -61,18 +65,18 @@ return detail
 }, [])
 useEffect(() => {
 streamController.current?.abort()
-setPolicy(null); setCredential(null); setHistory([]); setMessages([])
+setPolicy(null); setCredentials([]); setHistory([]); setMessages([])
 setCurrentChatId(null); setBusy(false); setActiveRequestId(null); setError('')
 resumeAttempted.current.clear()
 if (!auth) return
 const controller = new AbortController()
 Promise.all([
 apiRequest<ChatPolicyView>('/api/v1/chat/policy', { signal: controller.signal }),
-apiRequest<CredentialView>('/api/v1/chat/credential', { signal: controller.signal }),
+apiRequest<CredentialListView>('/api/v1/chat/credentials', { signal: controller.signal }),
 apiRequest<ThreadList>('/api/v1/chat/threads', { signal: controller.signal }),
 ]).then(([p, c, h]) => {
 if (controller.signal.aborted) return
-setPolicy(p); setModelId(p.default_model); setCredential(c); setHistory(h.threads)
+setPolicy(p); setModelId(p.default_model); setCredentials(c.credentials); setHistory(h.threads)
 }).catch(reason => {
 if (!controller.signal.aborted) setError(chatProblem(reason))
 })
@@ -145,7 +149,8 @@ async function send(
   text: string, selectedModelId?: string, attachments: File[] = [],
 ): Promise<boolean> {
 const selectedModel = policy?.models.find(item => item.id === selectedModelId) ?? model
-if (!auth || !policy || !selectedModel || busy || !credential?.verified) return false
+const selectedCredential = credentials.find(item => item.provider === selectedModel?.provider)
+if (!auth || !policy || !selectedModel || busy || !selectedCredential?.verified) return false
 if (attachments.length > policy.max_attachments) {
 setError(`Можно прикрепить не больше ${policy.max_attachments} изображений.`)
 return false
@@ -221,12 +226,18 @@ setError('')
 } catch (reason) { setError(chatProblem(reason)) }
 finally { setBusy(false); setActiveRequestId(null) }
 }
+function setCredential(value: CredentialView) {
+setCredentials(current => {
+const next = current.filter(item => item.provider !== value.provider)
+return [...next, value]
+})
+}
 function credentialDisabled(value: CredentialView) {
 streamController.current?.abort()
 setCredential(value); setBusy(false); setActiveRequestId(null)
 }
 return {
-policy, credential, history, messages, currentChatId, model, busy, activeRequestId,
+policy, credentials, credential, modelCredential, history, messages, currentChatId, model, busy, activeRequestId,
 error, setError, setCredential, credentialDisabled, setModelId,
 newChat, openChat, send, stop,
 }
