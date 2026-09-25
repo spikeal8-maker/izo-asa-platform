@@ -6,9 +6,10 @@ type MessageView, type ThreadDetail, type ThreadList, type ThreadView,
 } from '../../shared/api'
 import { chatImageProblem, uploadChatImage } from './chatAttachments'
 import { consumeSse } from './chatSse'
+import { useChatCatalog } from './useChatCatalog'
 type ChatModel = ChatPolicyView['models'][number]
 export function useChatRuntime(auth: AuthView | null | undefined) {
-const [policy, setPolicy] = useState<ChatPolicyView | null>(null)
+const [basePolicy, setBasePolicy] = useState<ChatPolicyView | null>(null)
 const [credentials, setCredentials] = useState<CredentialView[]>([])
 const [history, setHistory] = useState<ThreadView[]>([])
 const [messages, setMessages] = useState<MessageView[]>([])
@@ -17,6 +18,7 @@ const [modelId, setModelId] = useState<string | null>(null)
 const [busy, setBusy] = useState(false)
 const [activeRequestId, setActiveRequestId] = useState<string | null>(null)
 const [error, setError] = useState('')
+const policy = useChatCatalog(auth, basePolicy, setError)
 const streamController = useRef<AbortController | null>(null)
 const resumeAttempted = useRef(new Set<string>())
 const models = policy?.models ?? []
@@ -39,7 +41,7 @@ return detail
 }, [])
 useEffect(() => {
 streamController.current?.abort()
-setPolicy(null); setCredentials([]); setHistory([]); setMessages([])
+setBasePolicy(null); setCredentials([]); setHistory([]); setMessages([])
 setCurrentChatId(null); setBusy(false); setActiveRequestId(null); setError('')
 resumeAttempted.current.clear()
 if (!auth) return
@@ -50,7 +52,7 @@ apiRequest<CredentialListView>('/api/v1/chat/credentials', { signal: controller.
 apiRequest<ThreadList>('/api/v1/chat/threads', { signal: controller.signal }),
 ]).then(([p, c, h]) => {
 if (controller.signal.aborted) return
-setPolicy(p); setModelId(p.default_model); setCredentials(c.credentials); setHistory(h.threads)
+setBasePolicy(p); setModelId(p.default_model); setCredentials(c.credentials); setHistory(h.threads)
 }).catch(reason => {
 if (!controller.signal.aborted) setError(chatProblem(reason))
 })
