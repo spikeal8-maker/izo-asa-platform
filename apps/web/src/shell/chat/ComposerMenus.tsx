@@ -1,8 +1,8 @@
-import type { RefObject } from 'react'
+import { useEffect, useState, type RefObject } from 'react'
 import type { CredentialView } from '../../shared/api'
 import { Icon } from '../../shared/ui/Icon'
 import {
-  groupedTextModels, modelAvailable, tools,
+  groupedTextModels, modelAvailable, modelMeta, modelSearchText, tools,
   type ChatModel, type Tool,
 } from './modelCatalog'
 import { menuKeyboard } from './composerLayout'
@@ -26,6 +26,15 @@ export function ComposerMenus({
   onSelectTool: (tool: Tool) => void
   onSelectModel: (modelId: string) => void
 }) {
+  const [query, setQuery] = useState('')
+  useEffect(() => {
+    if (!modelOpen) setQuery('')
+  }, [modelOpen])
+  const normalized = query.trim().toLocaleLowerCase('ru')
+  const visible = normalized
+    ? models.filter(item => modelSearchText(item).includes(normalized))
+    : models
+
   return <>
     {toolsOpen && <div className="chat-popover chat-tools-menu" role="menu" aria-label="Инструменты"
       onKeyDown={event => menuKeyboard(event, onCloseTools, plusButton.current)}>
@@ -41,7 +50,12 @@ export function ComposerMenus({
     </div>}
     {modelOpen && <div className="chat-popover chat-model-menu" role="menu" aria-label="Модели"
       onKeyDown={event => menuKeyboard(event, onCloseModels, modelButton.current)}>
-      {groupedTextModels(models).map(group =>
+      <label className="chat-model-search">
+        <Icon name="search" />
+        <input value={query} onChange={event => setQuery(event.target.value)}
+          placeholder="Поиск модели" aria-label="Поиск модели" />
+      </label>
+      {groupedTextModels(visible).map(group =>
         <section className="chat-model-provider" key={group.provider} aria-label={group.label}>
           <div className="chat-model-provider-title">{group.label}</div>
           {group.models.map(item => {
@@ -54,6 +68,7 @@ export function ComposerMenus({
               key={item.id} onClick={() => onSelectModel(item.id)}>
               <span className="chat-model-option">
                 <strong>{item.label}</strong>
+                <small>{modelMeta(item)}</small>
                 <small>{available
                   ? item.description
                   : `Подключите ${group.label} API key`}</small>
