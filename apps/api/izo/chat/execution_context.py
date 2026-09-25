@@ -44,9 +44,8 @@ class ExecutionContextMixin(VisionContextMixin):
         chosen = self._bounded_context(
             prior, user, grouped, MAX_CONTEXT_CHARS)
         provider = connection["provider"]
-        provider_model = self.policy.provider_model(request_row["model"])
-        if (not provider_model
-                or self.policy.model_provider(request_row["model"]) != provider):
+        resolved_provider, provider_model = self.resolve_model(request_row["model"])
+        if resolved_provider != provider:
             raise ChatError(503, "model_provider_mismatch")
         return (
             key, provider, provider_model,
