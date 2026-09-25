@@ -16,8 +16,8 @@ MODELS = (
      True, True, "Текст · Изображения"),
     ("deepseek-v4-pro", "DeepSeek V4 Pro", "deepseek", "deepseek-v4-pro",
      True, False, "Текст"),
-    ("openrouter-auto", "OpenRouter Auto", "openrouter", "openrouter/auto",
-     True, False, "Текст"),
+    ("openrouter-auto", "Автовыбор OpenRouter", "openrouter", "openrouter/auto",
+     True, False, "OpenRouter автоматически выбирает подходящую модель."),
 )
 PROVIDERS: tuple[ProviderId, ...] = ("deepseek", "openrouter")
 DEFAULT_MODEL = MODELS[0][0]
@@ -108,6 +108,22 @@ class ChatPolicyView(BaseModel):
     max_output_tokens: int
     max_image_bytes: int
     max_attachments: int
+
+
+class OpenRouterCatalogModel(BaseModel):
+    id: str
+    name: str
+    provider: str
+    context_length: int
+    input_per_million_usd: float = 0
+    output_per_million_usd: float = 0
+    created: int | None = None
+
+
+class OpenRouterCatalogView(BaseModel):
+    models: list[OpenRouterCatalogModel]
+    stale: bool
+    fetched_at: int | None
 
 
 class CredentialView(BaseModel):
