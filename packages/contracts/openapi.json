@@ -1804,6 +1804,88 @@
         "title": "ModelView",
         "type": "object"
       },
+      "OpenRouterCatalogModel": {
+        "properties": {
+          "context_length": {
+            "title": "Context Length",
+            "type": "integer"
+          },
+          "created": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Created"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "input_per_million_usd": {
+            "default": 0,
+            "title": "Input Per Million Usd",
+            "type": "number"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "output_per_million_usd": {
+            "default": 0,
+            "title": "Output Per Million Usd",
+            "type": "number"
+          },
+          "provider": {
+            "title": "Provider",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "provider",
+          "context_length"
+        ],
+        "title": "OpenRouterCatalogModel",
+        "type": "object"
+      },
+      "OpenRouterCatalogView": {
+        "properties": {
+          "fetched_at": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Fetched At"
+          },
+          "models": {
+            "items": {
+              "$ref": "#/components/schemas/OpenRouterCatalogModel"
+            },
+            "title": "Models",
+            "type": "array"
+          },
+          "stale": {
+            "title": "Stale",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "models",
+          "stale",
+          "fetched_at"
+        ],
+        "title": "OpenRouterCatalogView",
+        "type": "object"
+      },
       "Overview": {
         "properties": {
           "account_id": {
@@ -4349,6 +4431,27 @@
         "summary": "Revoke Session",
         "tags": [
           "accounts"
+        ]
+      }
+    },
+    "/api/v1/chat/catalog/openrouter": {
+      "get": {
+        "operationId": "openrouter_catalog_api_v1_chat_catalog_openrouter_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OpenRouterCatalogView"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Openrouter Catalog",
+        "tags": [
+          "chat"
         ]
       }
     },
