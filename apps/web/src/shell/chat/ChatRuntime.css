@@ -21,6 +21,7 @@
 }
 .chat-credential-toggle > span.is-ok { background: var(--color-success); }
 .chat-credential-toggle > span.is-error { background: var(--color-danger); }
+.chat-credential-toggle > span.is-saved { background: var(--color-warning); }
 .chat-credential-toggle > span.is-off { background: var(--color-text-secondary); opacity:.55; }
 .chat-credential-popover {
   position: absolute;
@@ -37,6 +38,7 @@
 .chat-credential-popover h2 { margin: 0 0 6px; font-size: 16px; font-weight: 600; }
 .chat-credential-status { font-weight:600; }
 .chat-credential-status.is-ok { color:var(--color-success); }
+.chat-credential-status.is-saved { color:var(--color-warning); }
 .chat-credential-status.is-error { color:var(--color-danger); }
 .chat-credential-key { display:grid; gap:6px; color:var(--color-text-secondary); font-size:12px; }
 .chat-credential-popover p,
