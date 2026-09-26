@@ -3,46 +3,12 @@ import json
 import time
 from uuid import UUID
 import sqlalchemy as sa
-from cryptography.exceptions import InvalidTag
 from . import tables as t
-from .credentials import ChatError, decrypt
+from .errors import ChatError
 from .provider import ProviderFailure
-from .schemas import MAX_CONTEXT_CHARS, MAX_CONTEXT_MESSAGES, MAX_OUTPUT_TOKENS
-from .vision import VisionContextMixin
-class ExecutionMixin(VisionContextMixin):
-	def _context_and_key(self, account_id, request_row):
-		root = self._root()
-		with self.engine.begin() as conn:
-			connection = conn.execute(sa.select(t.connections).where(
-				t.connections.c.id == request_row["connection_id"],
-				t.connections.c.account_id == account_id)).mappings().first()
-			if (not connection or not connection["enabled"]
-					or connection["generation"]
-					!= request_row["credential_generation"]):
-				raise ChatError(503, "credential_unavailable")
-			try:
-				key = decrypt(
-					root, account_id, connection["id"],
-					connection["generation"], connection["nonce"],
-					connection["ciphertext"])
-			except (InvalidTag, UnicodeError, ValueError):
-				raise ChatError(503, "credential_unavailable") from None
-
-			user = conn.execute(sa.select(t.messages).where(
-				t.messages.c.request_id == request_row["id"],
-				t.messages.c.role == "user")).mappings().one()
-			prior = conn.execute(sa.select(t.messages).where(
-				t.messages.c.thread_id == request_row["thread_id"],
-				t.messages.c.sequence < user["sequence"],
-				t.messages.c.state == "complete").order_by(
-				t.messages.c.sequence.desc()).limit(
-				MAX_CONTEXT_MESSAGES)).mappings().all()
-			message_ids = [item["id"] for item in [*prior, user]]
-			grouped = self._vision_rows(
-				conn, account_id, message_ids, request_row["model"])
-		chosen = self._bounded_context(
-			prior, user, grouped, MAX_CONTEXT_CHARS)
-		return key, [self._provider_message(item, grouped) for item in chosen]
+from .schemas import MAX_OUTPUT_TOKENS
+from .execution_context import ExecutionContextMixin
+class ExecutionMixin(ExecutionContextMixin):
 	def _save_partial(self, request_id, content: str) -> None:
 		now = self.now()
 		with self.engine.begin() as conn:
@@ -95,18 +61,18 @@ class ExecutionMixin(VisionContextMixin):
 		request_id = request_row["id"]
 		event = self._register_stop(request_id)
 		content, saved_at, saved_len = "", time.monotonic(), 0
-		sequence = 0
+		sequence, provider = 0, None
 		try:
 			yield self._event(
 				"message.start",
 				{"request_id": str(request_id), "sequence": sequence})
-			key, messages = self._context_and_key(
+			key, provider, provider_model, messages = self._context_and_key(
 				account_id, request_row)
 			remaining = request_row["deadline_at"] - self.now()
 			if remaining <= 0:
 				raise ProviderFailure("request_expired")
-			for chunk in self.provider.stream(
-					key, request_row["model"], messages, MAX_OUTPUT_TOKENS, remaining, event):
+			for chunk in self.provider_for(provider).stream(
+					key, provider_model, messages, MAX_OUTPUT_TOKENS, remaining, event):
 				if event.is_set():
 					break
 				content += chunk
@@ -135,12 +101,14 @@ class ExecutionMixin(VisionContextMixin):
 		except (ChatError, ProviderFailure) as exc:
 			self._finish(request_id, "error", exc.code, content)
 			sequence += 1
-			yield self._event(
-				"message.error", {
-					"request_id": str(request_id),
-					"sequence": sequence,
-					"code": exc.code,
-				})
+			payload = {
+				"request_id": str(request_id),
+				"sequence": sequence,
+				"code": exc.code,
+			}
+			if provider:
+				payload["provider"] = provider
+			yield self._event("message.error", payload)
 		except GeneratorExit:
 			self._finish(
 				request_id, "interrupted",

@@ -60,6 +60,8 @@ services:
       IZO_CHAT_PREVIEW_ACCOUNT_EMAILS: preview@local.izo
       IZO_CHAT_LOCAL_PREVIEW_ENABLED: 'true'
     command:
+      - /bin/sh
+      - /app/tools/dev-api-entrypoint.sh
       - python
       - -m
       - uvicorn
@@ -76,6 +78,8 @@ services:
       - --no-access-log
     volumes:
       - ./apps/api:/app/apps/api:ro
+      - ./tools/dev-api-entrypoint.sh:/app/tools/dev-api-entrypoint.sh:ro
+      - ./.runtime/dev-ca:/run/izo-dev-ca:ro
     networks: [private, chat-egress]
     read_only: true
     tmpfs: [/tmp]

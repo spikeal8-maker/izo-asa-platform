@@ -14,3 +14,4 @@ artifacts/
 *.log
 *.sqlite*
 apps/web/src/shared/api.generated.ts
+.runtime/

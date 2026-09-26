@@ -11,6 +11,7 @@ from ..entitlements.local_preview import ensure_local_preview_media
 from ..entitlements.schemas import EntitlementError
 
 from . import tables as t
+from .catalog import CatalogMixin, OpenRouterCatalogCache
 from .conversations import ConversationMixin
 from .credentials import ChatError, CredentialMixin
 from .schemas import ChatPolicyView, ModelView
@@ -21,12 +22,14 @@ from .schemas import (
 from .execution import ExecutionMixin
 
 
-class ChatService(CredentialMixin, ConversationMixin, ExecutionMixin):
+class ChatService(CatalogMixin, CredentialMixin, ConversationMixin, ExecutionMixin):
     def __init__(
             self, auth, policy, provider, clock=time.time, media_store=None,
-            environment="test"):
+            environment="test", providers=None, openrouter_catalog=None):
         self.auth, self.engine, self.policy = auth, auth.engine, policy
         self.provider, self.clock, self.media_store = provider, clock, media_store
+        self.providers = {"deepseek": provider, **(providers or {})}
+        self._openrouter_catalog = openrouter_catalog or OpenRouterCatalogCache(clock=self.clock)
         self.environment = environment
         self._stops: dict[object, Event] = {}
         self._stop_lock = Lock()
@@ -34,6 +37,15 @@ class ChatService(CredentialMixin, ConversationMixin, ExecutionMixin):
 
     def now(self) -> int:
         return int(self.clock())
+
+    def provider_for(self, provider: str):
+        if provider == "deepseek":
+            # Keep the mutable compatibility attribute used by focused tests.
+            return self.provider
+        instance = self.providers.get(provider)
+        if instance is None:
+            raise ChatError(503, "provider_unavailable")
+        return instance
 
     def _recover_stale(self) -> None:
         now = self.now()
@@ -135,10 +147,10 @@ class ChatService(CredentialMixin, ConversationMixin, ExecutionMixin):
             default_model=DEFAULT_MODEL,
             models=[
                 ModelView(
-                    id=model, label=label, text=text, vision=vision,
-                    description=description,
+                    id=model, label=label, provider=provider,
+                    text=text, vision=vision, description=description,
                 )
-                for model, label, text, vision, description in MODELS
+                for model, label, provider, _provider_model, text, vision, description in MODELS
             ],
             max_input_chars=MAX_INPUT_CHARS,
             max_output_tokens=MAX_OUTPUT_TOKENS,

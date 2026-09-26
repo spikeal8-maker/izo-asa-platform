@@ -93,8 +93,7 @@ class ConversationMixin(AttachmentMixin, RequestStateMixin):
 
     def create_request(self, raw, csrf, thread_id: UUID, command) -> RequestView:
         now = self.now()
-        if not self.policy.model_allowed(command.model):
-            raise ChatError(422, "model_not_allowed")
+        provider, _provider_model = self.resolve_model(command.model)
         try:
             with self.engine.begin() as conn:
                 account, _ = self._account(conn, raw, csrf, mutation=True)
@@ -121,7 +120,8 @@ class ConversationMixin(AttachmentMixin, RequestStateMixin):
                 if not thread:
                     raise ChatError(404, "thread_not_found")
                 connection = conn.execute(sa.select(t.connections).where(
-                    t.connections.c.account_id == account["id"]
+                    t.connections.c.account_id == account["id"],
+                    t.connections.c.provider == provider
                 ).with_for_update()).mappings().first()
                 if (not connection or not connection["enabled"]
                         or connection["verified_at"] is None):

@@ -58,21 +58,94 @@
   background: var(--color-bg);
   color: var(--color-text);
 }
-.chat-credential-actions { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 10px; }
-.chat-credential-actions button {
-  min-height: 36px;
-  padding: 7px 11px;
-  border: 1px solid transparent;
-  border-radius: 9px;
-  background: var(--color-text);
-  color: var(--color-surface);
+.chat-provider-list { display:grid; gap:10px; }
+.chat-provider-card {
+  padding:10px;
+  border:1px solid var(--color-border);
+  border-radius:11px;
+  background:var(--color-bg);
 }
-.chat-credential-actions button.secondary {
-  border-color: var(--color-border);
-  background: transparent;
-  color: var(--color-text);
+.chat-provider-card-head {
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:10px;
 }
-.chat-credential-actions button:disabled { opacity: .5; }
+.chat-provider-identity {
+  min-width:0;
+  display:flex;
+  align-items:center;
+  gap:7px;
+}
+.chat-provider-identity > strong {
+  font-size:13px;
+  font-weight:600;
+}
+.chat-provider-dot {
+  width:8px;
+  height:8px;
+  flex:0 0 auto;
+  border-radius:50%;
+  background:var(--color-text-secondary);
+  opacity:.55;
+}
+.chat-provider-dot.is-ok { background:var(--color-success); opacity:1; }
+.chat-provider-dot.is-saved { background:var(--color-warning); opacity:1; }
+.chat-provider-dot.is-error { background:var(--color-danger); opacity:1; }
+.chat-provider-card .chat-credential-status {
+  color:var(--color-text-secondary);
+  font-size:12px;
+  font-weight:500;
+}
+.chat-provider-actions {
+  display:flex;
+  align-items:center;
+  justify-content:flex-end;
+  gap:6px;
+  flex-wrap:wrap;
+}
+.chat-provider-key-form {
+  margin-top:10px;
+  display:grid;
+  gap:8px;
+}
+.chat-provider-button {
+  min-height:32px;
+  padding:6px 9px;
+  border:1px solid transparent;
+  border-radius:8px;
+  font-size:12px;
+  line-height:1.2;
+}
+.chat-provider-button.primary {
+  background:var(--color-text);
+  color:var(--color-surface);
+}
+.chat-provider-button.primary:hover:not(:disabled),
+.chat-provider-button.primary:active:not(:disabled) {
+  background:color-mix(in srgb,var(--color-text) 86%,var(--color-surface));
+  color:var(--color-surface);
+}
+.chat-provider-button.secondary {
+  border-color:var(--color-border);
+  background:var(--color-surface);
+  color:var(--color-text);
+}
+.chat-provider-button.secondary:hover:not(:disabled),
+.chat-provider-button.secondary:active:not(:disabled) {
+  background:color-mix(in srgb,var(--color-text) 7%,var(--color-surface));
+  color:var(--color-text);
+}
+.chat-provider-button:focus-visible {
+  outline:2px solid var(--color-brand);
+  outline-offset:2px;
+}
+.chat-provider-button:disabled { opacity:.45; cursor:not-allowed; }
+.chat-provider-busy {
+  align-self:center;
+  color:var(--color-text-secondary);
+  font-size:12px;
+}
 
 .chat-turn-assistant { justify-content: flex-start; }
 .chat-assistant-message {

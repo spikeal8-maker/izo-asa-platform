@@ -50,11 +50,12 @@ async function previewSession(page) {
 }
 
 async function expectDeepSeekConnected(page) {
-  const settings = page.getByRole('button', { name: 'Настройки DeepSeek' })
+  const settings = page.getByRole('button', { name: 'Настройки DeepSeek и OpenRouter' })
   await expect(settings).toBeVisible({ timeout: 15000 })
   await settings.click()
-  await expect(page.locator('.chat-credential-status'))
-    .toContainText('Статус: подключён', { timeout: 15000 })
+  const card = page.locator('.chat-provider-card').filter({ hasText: 'DeepSeek' })
+  await expect(card.locator('.chat-credential-status'))
+    .toContainText('Подключён', { timeout: 15000 })
   await settings.click()
 }
 
@@ -63,8 +64,28 @@ async function chooseFlash(page) {
   await expect(selector).toContainText('DeepSeek Flash')
   await selector.click()
   const menu = page.getByRole('menu', { name: 'Модели' })
-  await expect(menu.getByRole('menuitemradio')).toHaveCount(2)
-  await menu.getByRole('menuitemradio', { name: /DeepSeek Flash/ }).click()
+  const deepSeekGroup = menu.getByRole('region', { name: 'DeepSeek' })
+  const openRouterGroup = menu.getByRole('region', { name: 'OpenRouter' })
+  await expect(deepSeekGroup).toBeVisible()
+  await expect(openRouterGroup).toBeVisible()
+
+  const flash = deepSeekGroup.getByRole('menuitemradio', { name: /^DeepSeek Flash\b/ })
+  await expect(flash).toHaveCount(1)
+  await expect(flash).toBeVisible()
+  await expect(flash).toBeEnabled()
+  await expect(flash).toHaveAttribute('aria-checked', 'true')
+
+  const pro = deepSeekGroup.getByRole('menuitemradio', { name: /^DeepSeek V4 Pro\b/ })
+  await expect(pro).toHaveCount(1)
+  await expect(pro).toBeVisible()
+
+  const auto = openRouterGroup.getByRole('menuitemradio', { name: /^Автовыбор OpenRouter\b/ })
+  await expect(auto).toHaveCount(1)
+  await expect(auto).toBeVisible()
+  await expect(auto).toBeDisabled()
+
+  await selector.click()
+  await expect(menu).toHaveCount(0)
   await expect(selector).toContainText('DeepSeek Flash')
 }
 
@@ -112,18 +133,21 @@ try {
       auth = await page.evaluate(async () => (await fetch('/api/v1/auth/me')).json())
     }
 
-    const settings = page.getByRole('button', { name: 'Настройки DeepSeek' })
+    const settings = page.getByRole('button', { name: 'Настройки DeepSeek и OpenRouter' })
     await expect(settings).toBeVisible({ timeout: 15000 })
     await settings.click()
-    const tokenInput = page.getByLabel('Новый API key')
+    const deepSeekCard = page.locator('.chat-provider-card').filter({ hasText: 'DeepSeek' })
+    await deepSeekCard.getByRole('button', { name: 'Добавить ключ' }).click()
+    const tokenInput = deepSeekCard.getByLabel('Новый API key DeepSeek')
     await expect(tokenInput).toBeVisible()
     await tokenInput.fill('x'.repeat(32))
-    await page.getByRole('button', {
-      name: /Сохранить и проверить|Заменить и проверить/,
+    await deepSeekCard.getByRole('button', {
+      name: 'Сохранить и проверить', exact: true,
     }).click()
-    await expect(page.locator('.chat-credential-status'))
-      .toContainText('Статус: подключён', { timeout: 15000 })
-    await expect(tokenInput).toHaveValue('')
+    await expect(deepSeekCard.locator('.chat-credential-status'))
+      .toContainText('Подключён', { timeout: 15000 })
+    await expect(tokenInput).toHaveCount(0)
+    await settings.click()
 
     await chooseFlash(page)
     await send(page, 'Первый вопрос D1')

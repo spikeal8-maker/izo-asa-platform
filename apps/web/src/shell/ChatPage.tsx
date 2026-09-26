@@ -25,6 +25,19 @@ export function ChatPage({ auth, theme, onThemeChange, onLogout }: {
   useVisualViewport()
 
   useEffect(() => {
+    if (!auth) return
+    const key = `izo-chat-current:${auth.account.id}`
+    if (runtime.currentChatId) {
+      sessionStorage.setItem(key, runtime.currentChatId)
+      return
+    }
+    if (!runtime.history.length || runtime.busy) return
+    const remembered = sessionStorage.getItem(key)
+    const chat = runtime.history.find(item => item.id === remembered)
+    if (chat) void runtime.openChat(chat)
+  }, [auth?.account.id, runtime.currentChatId, runtime.history, runtime.busy])
+
+  useEffect(() => {
     const media = window.matchMedia(desktopQuery)
     const sync = () => setSidebarOpen(media.matches)
     sync()
@@ -33,6 +46,7 @@ export function ChatPage({ auth, theme, onThemeChange, onLogout }: {
   }, [])
 
   function newChat() {
+    if (auth) sessionStorage.removeItem(`izo-chat-current:${auth.account.id}`)
     runtime.newChat()
     if (!window.matchMedia(desktopQuery).matches) setSidebarOpen(false)
   }
@@ -43,9 +57,10 @@ export function ChatPage({ auth, theme, onThemeChange, onLogout }: {
   }
 
   const empty = runtime.messages.length === 0
-  const disabled = !auth || !runtime.policy || !runtime.credential?.verified
+  const disabled = !auth || !runtime.policy || !runtime.modelCredential?.verified
   const composer = <ChatComposer
     policy={runtime.policy}
+    credentials={runtime.credentials}
     busy={runtime.busy}
     stoppable={Boolean(runtime.activeRequestId)}
     disabled={disabled}
@@ -82,7 +97,7 @@ export function ChatPage({ auth, theme, onThemeChange, onLogout }: {
         </button>}
         {auth && <ChatCredentialPanel
           auth={auth}
-          credential={runtime.credential}
+          credentials={runtime.credentials}
           onChange={runtime.setCredential}
           onDisabled={runtime.credentialDisabled}
           onError={runtime.setError}
@@ -97,8 +112,8 @@ export function ChatPage({ auth, theme, onThemeChange, onLogout }: {
                 ? <p className="chat-start-note">
                     Для сохранённого разговора нужен аккаунт. <Link href="/login">Войти</Link>
                   </p>
-                : !runtime.credential?.verified
-                  ? <p className="chat-start-note">Подключите и проверьте свой ключ DeepSeek.</p>
+                : !runtime.modelCredential?.verified
+                  ? <p className="chat-start-note">Подключите и проверьте API key выбранного провайдера.</p>
                   : null}
             {runtime.error && <div className="chat-runtime-note" role="alert">
               <Icon name="info" /><span>{runtime.error}</span>

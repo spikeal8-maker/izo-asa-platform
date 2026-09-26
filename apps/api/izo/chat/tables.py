@@ -20,7 +20,7 @@ connections = sa.Table(
     "chat_connections", metadata,
     sa.Column("id", sa.Uuid, primary_key=True),
     sa.Column("account_id", sa.Uuid, sa.ForeignKey("accounts.id", ondelete="CASCADE"),
-              nullable=False, unique=True),
+              nullable=False),
     sa.Column("provider", sa.String(24), nullable=False),
     sa.Column("generation", sa.Integer, nullable=False),
     sa.Column("revision", sa.Integer, nullable=False),
@@ -33,8 +33,10 @@ connections = sa.Table(
     sa.Column("created_at", sa.BigInteger, nullable=False),
     sa.Column("updated_at", sa.BigInteger, nullable=False),
     sa.UniqueConstraint("id", "account_id", name="chat_connection_owner"),
-    sa.CheckConstraint("provider = 'deepseek' AND generation > 0 AND revision > 0",
-                       name="chat_connection_bounds"),
+    sa.UniqueConstraint("account_id", "provider", name="chat_connection_account_provider"),
+    sa.CheckConstraint(
+        "provider IN ('deepseek','openrouter') AND generation > 0 AND revision > 0",
+        name="chat_connection_bounds"),
 )
 
 threads = sa.Table(

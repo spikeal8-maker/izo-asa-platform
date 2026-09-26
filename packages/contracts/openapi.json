@@ -889,6 +889,22 @@
         "title": "CredentialCommand",
         "type": "object"
       },
+      "CredentialListView": {
+        "properties": {
+          "credentials": {
+            "items": {
+              "$ref": "#/components/schemas/CredentialView"
+            },
+            "title": "Credentials",
+            "type": "array"
+          }
+        },
+        "required": [
+          "credentials"
+        ],
+        "title": "CredentialListView",
+        "type": "object"
+      },
       "CredentialView": {
         "properties": {
           "configured": {
@@ -912,6 +928,10 @@
           },
           "provider": {
             "default": "deepseek",
+            "enum": [
+              "deepseek",
+              "openrouter"
+            ],
             "title": "Provider",
             "type": "string"
           },
@@ -1756,6 +1776,14 @@
             "title": "Label",
             "type": "string"
           },
+          "provider": {
+            "enum": [
+              "deepseek",
+              "openrouter"
+            ],
+            "title": "Provider",
+            "type": "string"
+          },
           "text": {
             "title": "Text",
             "type": "boolean"
@@ -1768,11 +1796,94 @@
         "required": [
           "id",
           "label",
+          "provider",
           "text",
           "vision",
           "description"
         ],
         "title": "ModelView",
+        "type": "object"
+      },
+      "OpenRouterCatalogModel": {
+        "properties": {
+          "context_length": {
+            "title": "Context Length",
+            "type": "integer"
+          },
+          "created": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Created"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "input_per_million_usd": {
+            "default": 0,
+            "title": "Input Per Million Usd",
+            "type": "number"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "output_per_million_usd": {
+            "default": 0,
+            "title": "Output Per Million Usd",
+            "type": "number"
+          },
+          "provider": {
+            "title": "Provider",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "provider",
+          "context_length"
+        ],
+        "title": "OpenRouterCatalogModel",
+        "type": "object"
+      },
+      "OpenRouterCatalogView": {
+        "properties": {
+          "fetched_at": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Fetched At"
+          },
+          "models": {
+            "items": {
+              "$ref": "#/components/schemas/OpenRouterCatalogModel"
+            },
+            "title": "Models",
+            "type": "array"
+          },
+          "stale": {
+            "title": "Stale",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "models",
+          "stale",
+          "fetched_at"
+        ],
+        "title": "OpenRouterCatalogView",
         "type": "object"
       },
       "Overview": {
@@ -4323,6 +4434,27 @@
         ]
       }
     },
+    "/api/v1/chat/catalog/openrouter": {
+      "get": {
+        "operationId": "openrouter_catalog_api_v1_chat_catalog_openrouter_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OpenRouterCatalogView"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Openrouter Catalog",
+        "tags": [
+          "chat"
+        ]
+      }
+    },
     "/api/v1/chat/credential": {
       "get": {
         "operationId": "credential_api_v1_chat_credential_get",
@@ -4460,6 +4592,239 @@
           }
         },
         "summary": "Verify Credential",
+        "tags": [
+          "chat"
+        ]
+      }
+    },
+    "/api/v1/chat/credentials": {
+      "get": {
+        "operationId": "credentials_api_v1_chat_credentials_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CredentialListView"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Credentials",
+        "tags": [
+          "chat"
+        ]
+      }
+    },
+    "/api/v1/chat/credentials/{provider}": {
+      "get": {
+        "operationId": "provider_credential_api_v1_chat_credentials__provider__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "provider",
+            "required": true,
+            "schema": {
+              "enum": [
+                "deepseek",
+                "openrouter"
+              ],
+              "title": "Provider",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CredentialView"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Provider Credential",
+        "tags": [
+          "chat"
+        ]
+      },
+      "post": {
+        "operationId": "save_provider_credential_api_v1_chat_credentials__provider__post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "provider",
+            "required": true,
+            "schema": {
+              "enum": [
+                "deepseek",
+                "openrouter"
+              ],
+              "title": "Provider",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CredentialWrite"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CredentialView"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Save Provider Credential",
+        "tags": [
+          "chat"
+        ]
+      }
+    },
+    "/api/v1/chat/credentials/{provider}/disable": {
+      "post": {
+        "operationId": "disable_provider_credential_api_v1_chat_credentials__provider__disable_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "provider",
+            "required": true,
+            "schema": {
+              "enum": [
+                "deepseek",
+                "openrouter"
+              ],
+              "title": "Provider",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CredentialCommand"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CredentialView"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Disable Provider Credential",
+        "tags": [
+          "chat"
+        ]
+      }
+    },
+    "/api/v1/chat/credentials/{provider}/verify": {
+      "post": {
+        "operationId": "verify_provider_credential_api_v1_chat_credentials__provider__verify_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "provider",
+            "required": true,
+            "schema": {
+              "enum": [
+                "deepseek",
+                "openrouter"
+              ],
+              "title": "Provider",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CredentialCommand"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CredentialView"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Verify Provider Credential",
         "tags": [
           "chat"
         ]

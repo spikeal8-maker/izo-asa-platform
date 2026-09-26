@@ -15,8 +15,8 @@ c:'Выбрать модель',n:'Открыть панель',q:'Поиск ч
 w:'Поиск в интернете'}
 const F=(p:Z)=>p.goto('/')
 async function G(p:Z){await p.unroute('**/api/v1/auth/me');const s=await W(p);s.account.display_name='Александр';s.balance=123
-await p.route('**/api/v1/chat/policy',r=>r.fulfill({json:{revision:'test',default_model:'deepseek-flash',models:[{id:'deepseek-flash',label:'DeepSeek Flash',text:true,vision:true,description:'Текст · Изображения'},{id:'deepseek-v4-pro',label:'DeepSeek V4 Pro',text:true,vision:false,description:'Текст'}],max_input_chars:6000,max_output_tokens:2048,max_image_bytes:12*1024*1024,max_attachments:5}}))
-await p.route('**/api/v1/chat/credential',r=>r.fulfill({json:{configured:true,enabled:true,verified:true,revision:1,generation:1,provider:'deepseek'}}))
+await p.route('**/api/v1/chat/policy',r=>r.fulfill({json:{revision:'test',default_model:'deepseek-flash',models:[{id:'deepseek-flash',label:'DeepSeek Flash',provider:'deepseek',text:true,vision:true,description:'Текст · Изображения'},{id:'deepseek-v4-pro',label:'DeepSeek V4 Pro',provider:'deepseek',text:true,vision:false,description:'Текст'},{id:'openrouter-auto',label:'OpenRouter Auto',provider:'openrouter',text:true,vision:false,description:'Текст'}],max_input_chars:6000,max_output_tokens:2048,max_image_bytes:12*1024*1024,max_attachments:5}}))
+await p.route('**/api/v1/chat/credentials',r=>r.fulfill({json:{credentials:[{configured:true,enabled:true,verified:true,revision:1,generation:1,provider:'deepseek'},{configured:false,enabled:false,verified:false,revision:null,generation:null,provider:'openrouter'}]}}))
 await p.route('**/api/v1/chat/threads',r=>r.fulfill({json:{threads:[]}}));return s}
 async function M(m:J){await V(...['Аккаунт','Токены','Настройки','Помощь'].map(x=>I(m,x)),m.getByText('Тема',{exact:true}),R(m,'Светлая'),R(m,'Тёмная'),I(m,'Выйти'));await C(Q(m,'.social-link'),4)}
 async function O(p:Z){const x=B(p,N.n);if(await x.isVisible())await x.click()}
@@ -36,7 +36,7 @@ await A(Q(h,'.brand-favicon'),'src','/favicon.svg');await V(L(h,N.l),L(v,'Лен
 await G(page);await page.reload();h=H(page);t=D(page,'global-token-group');await Promise.all([C(L(h,N.l),0),T(D(t,'token-main'),'123'),C(Q(page,'.chat-sidebar-bottom'),1),X(Q(page,'.chat-profile-name'),'Александр')])
 await B(h,N.p).click();let m=page.getByRole('menu');await M(m);await R(m,'Тёмная').click();await A(Q(page,'html'),'data-theme','dark')
 if(info.project.name!=='laptop')return
-await page.keyboard.press('Escape');const model=Q(page,'.chat-model-selector');await V(model);await T(model,'DeepSeek Flash');await model.click();m=page.getByRole('menu',{name:N.o});await V(R(m,'DeepSeek Flash'),R(m,'DeepSeek V4 Pro'));await C(R(m,'Авто'),0);await C(Q(m,'.chat-model-category'),0)
+await page.keyboard.press('Escape');const model=Q(page,'.chat-model-selector');await V(model);await T(model,'DeepSeek Flash');await model.click();m=page.getByRole('menu',{name:N.o});await V(R(m,'DeepSeek Flash'),R(m,'DeepSeek V4 Pro'));await C(R(m,'OpenRouter Auto'),1);await e(R(m,'OpenRouter Auto')).toBeDisabled();await C(Q(m,'.chat-model-category'),0)
 })
 test('d',async({page},i)=>{
 test.skip(i.project.name!=='laptop');await F(page);const h=await H(page).boundingBox(),c=await Q(page,'.chat-page').boundingBox(),s=await S(page).boundingBox()

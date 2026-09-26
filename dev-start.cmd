@@ -35,6 +35,9 @@ if errorlevel 1 (
 )
 findstr /B /C:"IZO_DEV_PORT=" .env.dev >nul || >>.env.dev echo IZO_DEV_PORT=5190
 
+powershell -NoProfile -ExecutionPolicy Bypass -File tools\dev-export-local-ca.ps1
+if errorlevel 1 exit /b 1
+
 set "NEED_BUILD=0"
 docker image inspect izo-chat-dev-api:local >nul 2>nul || set "NEED_BUILD=1"
 docker image inspect izo-chat-dev-web:local >nul 2>nul || set "NEED_BUILD=1"

@@ -10,10 +10,11 @@ from fastapi.exception_handlers import request_validation_exception_handler
 from fastapi.responses import JSONResponse, StreamingResponse
 
 from ..accounts.http_security import same_origin
+from .credential_routes import attach_credential_routes
 from .provider import DeepSeekProvider, FakeDeepSeekProvider
+from .provider_openrouter import OpenRouterProvider, FakeOpenRouterProvider
 from .schemas import (
-    ChatPolicyView, CredentialCommand, CredentialView, CredentialWrite,
-    RequestCreate, RequestView, ThreadCreate, ThreadDetail,
+    ChatPolicyView, OpenRouterCatalogView, RequestCreate, RequestView, ThreadCreate, ThreadDetail,
     ThreadList, ThreadView,
 )
 from .service import ChatError, ChatService
@@ -76,13 +77,19 @@ def attach_chat(app, database_config, accounts_provider) -> None:
                     if database_config.environment == "test"
                     else DeepSeekProvider()
                 )
+                openrouter = (
+                    FakeOpenRouterProvider()
+                    if database_config.environment == "test"
+                    else OpenRouterProvider()
+                )
                 from ..media.objects import MediaStore
                 current = ChatService(
                     accounts_provider(request),
                     ChatSettings(),
                     provider,
                     media_store=MediaStore(database_config),
-                    environment=database_config.environment)
+                    environment=database_config.environment,
+                    providers={"openrouter": openrouter})
                 request.app.state._chat_runtime_service = current
             return current
 
@@ -141,41 +148,15 @@ def attach_chat(app, database_config, accounts_provider) -> None:
         return service.public_policy(
             bearer(request, service))
 
+    attach_credential_routes(
+        router, runtime_service, bearer, mutation)
+
     @router.get(
-        "/credential", response_model=CredentialView)
-    def credential(request: Request):
+        "/catalog/openrouter", response_model=OpenRouterCatalogView)
+    def openrouter_catalog(request: Request):
         service = runtime_service(request)
-        return service.credential(
+        return service.openrouter_catalog(
             bearer(request, service))
-
-    @router.post(
-        "/credential", response_model=CredentialView)
-    def save_credential(
-            data: CredentialWrite, request: Request):
-        service = runtime_service(request)
-        raw, csrf = mutation(request, service)
-        return service.save_credential(
-            raw, csrf, data)
-
-    @router.post(
-        "/credential/verify",
-        response_model=CredentialView)
-    def verify_credential(
-            data: CredentialCommand, request: Request):
-        service = runtime_service(request)
-        raw, csrf = mutation(request, service)
-        return service.verify_credential(
-            raw, csrf, data)
-
-    @router.post(
-        "/credential/disable",
-        response_model=CredentialView)
-    def disable_credential(
-            data: CredentialCommand, request: Request):
-        service = runtime_service(request)
-        raw, csrf = mutation(request, service)
-        return service.disable_credential(
-            raw, csrf, data)
 
     @router.get(
         "/threads", response_model=ThreadList)

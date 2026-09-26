@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState, type FormEvent } from 'react'
-import type { ChatPolicyView } from '../../shared/api'
+import type { ChatPolicyView, CredentialView } from '../../shared/api'
 import { Icon } from '../../shared/ui/Icon'
-import { selectedTextModel, textModels, toolById, type Tool } from './modelCatalog'
+import { modelAvailable, selectedTextModel, textModels, toolById, type Tool } from './modelCatalog'
 import { ComposerMenus } from './ComposerMenus'
 import { useChatAttachment } from './AttachmentControl'
 import { useComposerLayout } from './composerLayout'
@@ -10,10 +10,11 @@ import './ChatComposer.css'
 import './ModelMenu.css'
 
 export function ChatComposer({
-  policy, busy, stoppable, disabled, selectedModelId,
+  policy, credentials, busy, stoppable, disabled, selectedModelId,
   onModelChange, onSend, onStop, onUnsupported,
 }: {
   policy: ChatPolicyView | null
+  credentials: CredentialView[]
   busy: boolean
   stoppable: boolean
   disabled: boolean
@@ -62,7 +63,7 @@ export function ChatComposer({
     return () => document.removeEventListener('keydown', escape)
   }, [modelOpen, toolsOpen])
 
-  const visionModel = models.find(item => item.vision) ?? null
+  const visionModel = models.find(item => item.vision && modelAvailable(item, credentials)) ?? null
   const attachmentControl = useChatAttachment({
     policy,
     selectedVision: selectedModel?.vision ?? false,
@@ -100,7 +101,7 @@ export function ChatComposer({
 
   function selectModel(modelId: string) {
     const next = models.find(item => item.id === modelId)
-    if (!next) return
+    if (!next || !modelAvailable(next, credentials)) return
     if (attachments.length && !next.vision) return
     onModelChange(next.id)
     setModelOpen(false)
@@ -149,7 +150,7 @@ export function ChatComposer({
             </div>
           </div>
         : <textarea ref={layout.textareaRef} rows={1} value={draft} aria-label="Сообщение"
-            placeholder={disabled ? 'Подключите ключ DeepSeek' : 'Спросите что-нибудь'}
+            placeholder={disabled ? 'Подключите API key провайдера' : 'Спросите что-нибудь'}
             disabled={disabled || busy}
             onChange={event => setDraft(event.target.value)}
             onKeyDown={event => {
@@ -193,7 +194,8 @@ export function ChatComposer({
       {voice.error && <div className="chat-voice-error" role="alert">{voice.error}</div>}
       <ComposerMenus
         toolsOpen={toolsOpen} modelOpen={modelOpen} tool={tool}
-        models={models} selectedModelId={selectedModel?.id ?? null}
+        models={models} credentials={credentials}
+        selectedModelId={selectedModel?.id ?? null}
         plusButton={plusButton} modelButton={modelButton}
         inputRef={attachmentControl.inputRef}
         onCloseTools={() => setToolsOpen(false)}
