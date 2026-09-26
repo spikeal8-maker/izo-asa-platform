@@ -143,6 +143,8 @@ class CatalogMixin:
         spec = self.policy.model_spec(model)
         if spec:
             return spec[2], spec[3]
+        if "/" not in model:
+            raise ChatError(422, "model_not_allowed")
         try:
             catalog = self._openrouter_catalog.get()
         except ProviderFailure:
