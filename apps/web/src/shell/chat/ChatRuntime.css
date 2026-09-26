@@ -128,7 +128,7 @@
 }
 .chat-provider-button.secondary {
   border-color:var(--color-border);
-  background:transparent;
+  background:var(--color-surface);
   color:var(--color-text);
 }
 .chat-provider-button.secondary:hover:not(:disabled),
