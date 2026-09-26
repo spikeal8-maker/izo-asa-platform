@@ -55,7 +55,7 @@ async function expectDeepSeekConnected(page) {
   await settings.click()
   const card = page.locator('.chat-provider-card').filter({ hasText: 'DeepSeek' })
   await expect(card.locator('.chat-credential-status'))
-    .toContainText('подключён', { timeout: 15000 })
+    .toContainText('Подключён', { timeout: 15000 })
   await settings.click()
 }
 
@@ -64,8 +64,9 @@ async function chooseFlash(page) {
   await expect(selector).toContainText('DeepSeek Flash')
   await selector.click()
   const menu = page.getByRole('menu', { name: 'Модели' })
-  await expect(menu.getByRole('menuitemradio')).toHaveCount(3)
-  await expect(menu.getByRole('menuitemradio', { name: /OpenRouter Auto/ })).toBeDisabled()
+  await expect(menu.getByRole('menuitemradio', { name: /DeepSeek Flash/ })).toBeVisible()
+  await expect(menu.getByRole('menuitemradio', { name: /DeepSeek V4 Pro/ })).toBeVisible()
+  await expect(menu.getByRole('menuitemradio', { name: /Автовыбор OpenRouter/ })).toBeDisabled()
   await menu.getByRole('menuitemradio', { name: /DeepSeek Flash/ }).click()
   await expect(selector).toContainText('DeepSeek Flash')
 }
