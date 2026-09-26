@@ -63,10 +63,11 @@ test('saved DeepSeek credential remains visible when verification fails', async 
   await expect(card.locator('.chat-credential-status'))
     .toContainText('не подключён')
 
-  await page.getByLabel('Новый API key DeepSeek')
+  await card.getByRole('button', { name: 'Добавить ключ' }).click()
+  await card.getByLabel('Новый API key DeepSeek')
     .fill('synthetic-test-credential')
-  await page.getByRole('button', {
-    name: 'Сохранить и проверить DeepSeek',
+  await card.getByRole('button', {
+    name: 'Сохранить и проверить', exact: true,
   }).click()
   await expect(card.locator('.chat-credential-status'))
     .toContainText('проверка не пройдена')
@@ -120,7 +121,7 @@ test('OpenRouter model enables immediately after provider verification', async (
   const selector = page.getByRole('button', { name: 'Выбрать модель' })
   await selector.click()
   let menu = page.getByRole('menu', { name: 'Модели' })
-  let model = menu.getByRole('menuitemradio', { name: /OpenRouter Auto/ })
+  let model = menu.getByRole('menuitemradio', { name: /Автовыбор OpenRouter/ })
   await expect(model).toBeDisabled()
   await expect(model).toContainText('Подключите OpenRouter API key')
   await page.keyboard.press('Escape')
@@ -128,12 +129,13 @@ test('OpenRouter model enables immediately after provider verification', async (
   await page.getByRole('button', {
     name: 'Настройки DeepSeek и OpenRouter',
   }).click()
-  await page.getByLabel('Новый API key OpenRouter')
-    .fill('synthetic-openrouter-credential')
-  await page.getByRole('button', {
-    name: 'Сохранить и проверить OpenRouter',
-  }).click()
   const card = await providerCard(page, 'OpenRouter')
+  await card.getByRole('button', { name: 'Добавить ключ' }).click()
+  await card.getByLabel('Новый API key OpenRouter')
+    .fill('synthetic-openrouter-credential')
+  await card.getByRole('button', {
+    name: 'Сохранить и проверить', exact: true,
+  }).click()
   await expect(card.locator('.chat-credential-status'))
     .toContainText('подключён')
 
@@ -142,8 +144,8 @@ test('OpenRouter model enables immediately after provider verification', async (
   }).click()
   await selector.click()
   menu = page.getByRole('menu', { name: 'Модели' })
-  model = menu.getByRole('menuitemradio', { name: /OpenRouter Auto/ })
+  model = menu.getByRole('menuitemradio', { name: /Автовыбор OpenRouter/ })
   await expect(model).toBeEnabled()
   await model.click()
-  await expect(selector).toContainText('OpenRouter Auto')
+  await expect(selector).toContainText('Автовыбор OpenRouter')
 })
