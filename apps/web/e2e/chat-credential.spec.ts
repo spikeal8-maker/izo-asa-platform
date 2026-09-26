@@ -61,7 +61,7 @@ test('saved DeepSeek credential remains visible when verification fails', async 
   }).click()
   let card = await providerCard(page, 'DeepSeek')
   await expect(card.locator('.chat-credential-status'))
-    .toContainText('не подключён')
+    .toContainText('Не подключён')
 
   await card.getByRole('button', { name: 'Добавить ключ' }).click()
   await card.getByLabel('Новый API key DeepSeek')
@@ -70,7 +70,7 @@ test('saved DeepSeek credential remains visible when verification fails', async 
     name: 'Сохранить и проверить', exact: true,
   }).click()
   await expect(card.locator('.chat-credential-status'))
-    .toContainText('проверка не пройдена')
+    .toContainText('Проверка не пройдена')
   await expect(page.getByRole('alert'))
     .toContainText('Ключ DeepSeek сохранён. Проверка не пройдена.')
 
@@ -80,12 +80,12 @@ test('saved DeepSeek credential remains visible when verification fails', async 
   }).click()
   card = await providerCard(page, 'DeepSeek')
   await expect(card.locator('.chat-credential-status'))
-    .toContainText('сохранён, не проверен')
+    .toContainText('Сохранён, не проверен')
 
   verifyFails = false
   await card.getByRole('button', { name: 'Проверить', exact: true }).click()
   await expect(card.locator('.chat-credential-status'))
-    .toContainText('подключён')
+    .toContainText('Подключён')
 })
 
 test('OpenRouter model enables immediately after provider verification', async ({ page }, info) => {
@@ -137,7 +137,7 @@ test('OpenRouter model enables immediately after provider verification', async (
     name: 'Сохранить и проверить', exact: true,
   }).click()
   await expect(card.locator('.chat-credential-status'))
-    .toContainText('подключён')
+    .toContainText('Подключён')
 
   await page.getByRole('button', {
     name: 'Настройки DeepSeek и OpenRouter',
