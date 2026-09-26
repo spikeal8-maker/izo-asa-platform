@@ -127,7 +127,7 @@ try {
     }).click()
     await expect(deepSeekCard.locator('.chat-credential-status'))
       .toContainText('Подключён', { timeout: 15000 })
-    await expect(tokenInput).toHaveValue('')
+    await expect(tokenInput).toHaveCount(0)
     await settings.click()
 
     await chooseFlash(page)
