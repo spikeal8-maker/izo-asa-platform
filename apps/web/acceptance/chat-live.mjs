@@ -117,15 +117,16 @@ try {
     const settings = page.getByRole('button', { name: 'Настройки DeepSeek и OpenRouter' })
     await expect(settings).toBeVisible({ timeout: 15000 })
     await settings.click()
-    const tokenInput = page.getByLabel('Новый API key DeepSeek')
+    const deepSeekCard = page.locator('.chat-provider-card').filter({ hasText: 'DeepSeek' })
+    await deepSeekCard.getByRole('button', { name: 'Добавить ключ' }).click()
+    const tokenInput = deepSeekCard.getByLabel('Новый API key DeepSeek')
     await expect(tokenInput).toBeVisible()
     await tokenInput.fill('x'.repeat(32))
-    await page.getByRole('button', {
-      name: /Сохранить и проверить DeepSeek|Заменить и проверить DeepSeek/,
+    await deepSeekCard.getByRole('button', {
+      name: 'Сохранить и проверить', exact: true,
     }).click()
-    const deepSeekCard = page.locator('.chat-provider-card').filter({ hasText: 'DeepSeek' })
     await expect(deepSeekCard.locator('.chat-credential-status'))
-      .toContainText('подключён', { timeout: 15000 })
+      .toContainText('Подключён', { timeout: 15000 })
     await expect(tokenInput).toHaveValue('')
     await settings.click()
 
