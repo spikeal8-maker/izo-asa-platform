@@ -4,6 +4,9 @@ width:clamp(300px,34cqw,420px);
 max-height:min(560px,70dvh);
 overflow-y:auto;
 }
+.chat-page.is-empty .chat-model-menu {
+max-height:min(560px,calc(50dvh - var(--global-header-height) - 16px));
+}
 .chat-model-menu > button { justify-content:space-between; }
 .chat-model-option { min-width:0; display:flex; flex-direction:column; align-items:flex-start; gap:2px; }
 .chat-model-option strong { font-size:13px; font-weight:600; }

@@ -64,10 +64,14 @@ async function chooseFlash(page) {
   await expect(selector).toContainText('DeepSeek Flash')
   await selector.click()
   const menu = page.getByRole('menu', { name: 'Модели' })
-  await expect(menu.getByRole('menuitemradio', { name: /DeepSeek Flash/ })).toBeVisible()
+  const flash = menu.getByRole('menuitemradio', { name: /DeepSeek Flash/ })
+  await expect(flash).toBeVisible()
+  await expect(flash).toBeEnabled()
+  await expect(flash).toHaveAttribute('aria-checked', 'true')
   await expect(menu.getByRole('menuitemradio', { name: /DeepSeek V4 Pro/ })).toBeVisible()
   await expect(menu.getByRole('menuitemradio', { name: /Автовыбор OpenRouter/ })).toBeDisabled()
-  await menu.getByRole('menuitemradio', { name: /DeepSeek Flash/ }).click()
+  await selector.click()
+  await expect(menu).toHaveCount(0)
   await expect(selector).toContainText('DeepSeek Flash')
 }
 
