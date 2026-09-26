@@ -31,7 +31,10 @@ async function contrast(locator: Locator) {
   return locator.evaluate(node => {
     function rgb(value: string) {
       const match = value.match(/[\d.]+/g)?.slice(0, 3).map(Number) ?? [0, 0, 0]
-      return match.map(item => {
+      const srgb = value.startsWith('color(srgb')
+        ? match.map(item => item * 255)
+        : match
+      return srgb.map(item => {
         const v = item / 255
         return v <= .03928 ? v / 12.92 : ((v + .055) / 1.055) ** 2.4
       })
@@ -66,8 +69,8 @@ test('OpenRouter catalog uses donor-style search and provider metadata', async (
   const selector = page.getByRole('button', { name: 'Выбрать модель' })
   await selector.click()
   const menu = page.getByRole('menu', { name: 'Модели' })
-  await expect(menu.getByText('DeepSeek', { exact: true })).toBeVisible()
-  await expect(menu.getByText('OpenRouter', { exact: true })).toBeVisible()
+  await expect(menu.locator('.chat-model-provider-title', { hasText: 'DeepSeek' })).toBeVisible()
+  await expect(menu.locator('.chat-model-provider-title', { hasText: 'OpenRouter' })).toBeVisible()
   await expect(menu.getByRole('menuitemradio', { name: /Автовыбор OpenRouter/ }))
     .toBeDisabled()
   await expect(menu.getByRole('menuitemradio', { name: /Claude Test/ }))
