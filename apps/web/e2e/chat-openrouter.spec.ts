@@ -15,6 +15,27 @@ async function openTextModels(page: Page) {
   return menu
 }
 
+test('first-run DeepSeek key entry receives focus and can be dismissed', async ({ page }) => {
+  await workspace(page)
+  await page.route('**/api/v1/chat/credentials', route => route.fulfill({ json: { credentials: [
+    { provider: 'deepseek', configured: false, enabled: false, verified: false, revision: null, generation: null },
+    { provider: 'openrouter', configured: false, enabled: false, verified: false, revision: null, generation: null },
+  ] } }))
+  await page.goto('/')
+  const key = page.getByLabel('API ключ DeepSeek', { exact: true })
+  await expect(key).toBeFocused()
+  await page.getByRole('button', { name: 'Отмена' }).click()
+  await expect(key).toHaveCount(0)
+  const add = page.locator('.chat-provider-card').filter({ hasText: 'DeepSeek' })
+    .getByRole('button', { name: 'Добавить ключ' })
+  await expect(add).toBeFocused()
+  await add.click()
+  await expect(key).toBeFocused()
+  await page.keyboard.press('Escape')
+  await page.getByRole('button', { name: 'Настройки DeepSeek и OpenRouter' }).click()
+  await expect(key).toBeFocused()
+})
+
 test('provider settings verify OpenRouter key and unlock its models', async ({ page }, info) => {
   test.skip(info.project.name !== 'laptop')
   await workspace(page)

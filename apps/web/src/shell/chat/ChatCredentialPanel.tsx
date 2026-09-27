@@ -7,11 +7,8 @@ const providers = [
   { id: 'openrouter', label: 'OpenRouter' },
 ] as const
 
-function credentialFor(
-  credentials: CredentialView[], provider: ChatProviderId,
-) {
-  return credentials.find(item => item.provider === provider) ?? null
-}
+const credentialFor = (credentials: CredentialView[], provider: ChatProviderId) =>
+  credentials.find(item => item.provider === provider) ?? null
 
 export function ChatCredentialPanel({
   auth, credentials, onChange, onDisabled, onError,
@@ -25,17 +22,14 @@ export function ChatCredentialPanel({
   const [open, setOpen] = useState(false)
   const [busyProvider, setBusyProvider] = useState<ChatProviderId | null>(null)
   const wrapper = useRef<HTMLDivElement>(null)
-  const autoOpenedFor = useRef<string | null>(null)
   const firstRun = credentials.length > 0 && credentials.every(item => !item.configured)
   const connected = providers.filter(
     item => credentialFor(credentials, item.id)?.verified).length
   const deepseekOnly = connected === 1 && credentialFor(credentials, 'deepseek')?.verified
 
   useEffect(() => {
-    if (!firstRun || autoOpenedFor.current === auth.account.id) return
-    autoOpenedFor.current = auth.account.id
-    setOpen(true)
-  }, [auth.account.id, firstRun])
+    if (firstRun) setOpen(true)
+  }, [firstRun])
 
   useEffect(() => {
     if (!open) return
@@ -65,10 +59,10 @@ export function ChatCredentialPanel({
     {open && <div className="chat-credential-popover" role="dialog"
       aria-label="Провайдеры">
       <h2>Провайдеры</h2>
-      <p>API keys хранятся зашифрованными в аккаунте и не показываются после сохранения.</p>
+      <p>Ключи шифруются и не показываются после сохранения.</p>
       <div className="chat-provider-list">
         {providers.map(provider => <ProviderCredentialCard
-          key={provider.id}
+          key={`${auth.account.id}:${provider.id}`}
           auth={auth}
           provider={provider.id}
           label={provider.label}
@@ -81,7 +75,7 @@ export function ChatCredentialPanel({
           onError={onError}
         />)}
       </div>
-      <p className="chat-provider-model-hint">Модели можно найти и закрепить в меню рядом с полем ввода.</p>
+      <p className="chat-provider-model-hint">Модели — в меню поля ввода.</p>
     </div>}
   </div>
 }
@@ -110,10 +104,6 @@ function ProviderCredentialCard({
   const busy = busyProvider === provider
   const blocked = busyProvider !== null
   const showKeyForm = editing || (autoEntry && !entryDismissed)
-
-  useEffect(() => {
-    setEditing(false); setEntryDismissed(false); setKey(''); setVerifyFailed(false)
-  }, [auth.account.id])
 
   const status = credential?.verified
     ? { text: 'Подключён', className: 'is-ok' }
@@ -210,18 +200,20 @@ function ProviderCredentialCard({
               <button type="button" className="chat-provider-button secondary"
                 disabled={blocked} onClick={() => void verifyAgain()}>Проверить</button>
               <button type="button" className="chat-provider-button secondary"
+                autoFocus={entryDismissed}
                 disabled={blocked} onClick={() => setEditing(true)}>Заменить ключ</button>
               <button type="button" className="chat-provider-button secondary"
                 disabled={blocked} onClick={() => void disable()}>Отключить</button>
             </>
           : <button type="button" className="chat-provider-button secondary"
+              autoFocus={entryDismissed}
               disabled={blocked} onClick={() => setEditing(true)}>Добавить ключ</button>}
       </div>}
     </div>
     {showKeyForm && <form className="chat-provider-key-form" onSubmit={event => void save(event)}>
       <label className="chat-credential-key">
         <span>{provider === 'deepseek' ? 'API ключ DeepSeek' : `Новый API key ${label}`}</span>
-        <input type="password" autoComplete="off" value={key}
+        <input type="password" autoComplete="off" autoFocus value={key}
           onChange={event => setKey(event.target.value)}
           placeholder={`Введите ${label} API key`} />
       </label>
