@@ -1,0 +1,27 @@
+{
+  "package_id": "CHAT-UX-001",
+  "base": "ed1f79a6c53bdc3cab5d827d308ee661a61ebd20",
+  "scope_class": "normal",
+  "risk": "medium",
+  "independent_review_required": false,
+  "max_files": 18,
+  "domains": ["web-chat", "responsive-ui", "accessibility", "frontend-tests", "frontend-docs"],
+  "non_goals": [
+    "No change to the global top bar or product navigation",
+    "No backend, provider, model price, admission, Credits, Jobs or Media changes",
+    "No direct cherry-pick of the divergent E: UX worktree or its OpenRouter contracts",
+    "No image generation, voice runtime, billing or deployment"
+  ],
+  "allowed": [
+    "docs/CURRENT.md", "docs/PLAN.json", "docs/CHECKPOINTS.json",
+    "docs/UX_PRODUCT_SHELL.md", "docs/CONTEXT_MAP.json",
+    "docs/reviews/CHAT-UX-001.md", "tools/scopes/chat-ux-001.json",
+    "apps/web/AGENTS.md", "apps/web/src/shell/chat/README.md",
+    "apps/web/src/shell/ChatPage.tsx", "apps/web/src/shell/chat.css",
+    "apps/web/src/shell/chat/ChatSidebar.tsx", "apps/web/src/shell/chat/ChatSidebar.css",
+    "apps/web/src/shell/chat/ChatComposer.css",
+    "apps/web/e2e/chat-sidebar.spec.ts", "apps/web/e2e/chat-responsive.spec.ts",
+    "apps/web/e2e/shell.spec.ts"
+  ],
+  "sensitive_approved": ["tools/scopes/chat-ux-001.json", "apps/web/AGENTS.md"]
+}

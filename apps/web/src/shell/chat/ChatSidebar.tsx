@@ -4,7 +4,8 @@ import { Icon } from '../../shared/ui/Icon'
 import { AccountMenu } from '../TopBar'
 import './ChatSidebar.css'
 
-export function ChatSidebar({ auth, history, currentChatId, busy, theme, onThemeChange, onLogout, onNewChat, onOpenChat, onClose }: {
+export function ChatSidebar({ auth, history, currentChatId, busy, theme, onThemeChange, onLogout,
+  compact, drawerOpen, hiddenFromKeyboard, onNewChat, onOpenChat, onClose, onExpand }: {
   auth: AuthView | null | undefined
   history: ThreadView[]
   currentChatId: string | null
@@ -12,15 +13,34 @@ export function ChatSidebar({ auth, history, currentChatId, busy, theme, onTheme
   theme: 'light' | 'dark'
   onThemeChange: (value: 'light' | 'dark') => void
   onLogout: () => void
+  compact: boolean
+  drawerOpen: boolean
+  hiddenFromKeyboard: boolean
   onNewChat: () => void
   onOpenChat: (chat: ThreadView) => void
   onClose: () => void
+  onExpand: () => void
 }) {
   const [searchOpen, setSearchOpen] = useState(false)
   const [searchQuery, setSearchQuery] = useState('')
   const [profileOpen, setProfileOpen] = useState(false)
   const profileRef = useRef<HTMLDivElement>(null)
   const profileButtonRef = useRef<HTMLButtonElement>(null)
+  const sidebarRef = useRef<HTMLElement>(null)
+  const closeButtonRef = useRef<HTMLButtonElement>(null)
+
+  useEffect(() => {
+    if (!hiddenFromKeyboard) return
+    setSearchOpen(false)
+    setSearchQuery('')
+    setProfileOpen(false)
+  }, [hiddenFromKeyboard])
+
+  useEffect(() => {
+    if (!drawerOpen) return
+    const frame = requestAnimationFrame(() => closeButtonRef.current?.focus())
+    return () => cancelAnimationFrame(frame)
+  }, [drawerOpen])
 
   useEffect(() => {
     const dismiss = (event: PointerEvent) => {
@@ -49,7 +69,25 @@ export function ChatSidebar({ auth, history, currentChatId, busy, theme, onTheme
     : history
   const initial = auth?.account.display_name.trim().slice(0, 1).toUpperCase() || ''
 
-  return <aside className="chat-sidebar" aria-label="История чатов">
+  return <aside ref={sidebarRef} className={`chat-sidebar ${compact ? 'is-compact' : ''}`}
+    role={drawerOpen ? 'dialog' : undefined} aria-modal={drawerOpen || undefined}
+    aria-label="История чатов" aria-hidden={hiddenFromKeyboard} inert={hiddenFromKeyboard}
+    onKeyDown={event => {
+      if (!drawerOpen) return
+      if (event.key === 'Escape' && !searchOpen && !profileOpen) {
+        event.preventDefault(); onClose(); return
+      }
+      if (event.key !== 'Tab') return
+      const elements = [...(sidebarRef.current?.querySelectorAll<HTMLElement>(
+        'button:not(:disabled),input:not(:disabled),a[href]') ?? [])]
+        .filter(item => item.getClientRects().length > 0)
+      if (!elements.length) return
+      if (event.shiftKey && document.activeElement === elements[0]) {
+        event.preventDefault(); elements.at(-1)?.focus()
+      } else if (!event.shiftKey && document.activeElement === elements.at(-1)) {
+        event.preventDefault(); elements[0].focus()
+      }
+    }}>
     <div className="chat-sidebar-head">
       {searchOpen
         ? <label className="chat-search-box chat-search-head"><Icon name="search" />
@@ -64,22 +102,25 @@ export function ChatSidebar({ auth, history, currentChatId, busy, theme, onTheme
           </label>
         : <span className="chat-sidebar-title">История</span>}
       <div className="chat-sidebar-head-actions">
+        <button ref={closeButtonRef} className="chat-icon-button"
+          aria-label={compact ? 'Развернуть панель' : 'Скрыть панель'}
+          onClick={() => { setSearchOpen(false); setProfileOpen(false); compact ? onExpand() : onClose() }}>
+          <Icon name="panel" /></button>
         <button className="chat-icon-button" aria-label="Поиск чатов" aria-expanded={searchOpen}
-          onClick={() => { setSearchOpen(value => !value); if (searchOpen) setSearchQuery('') }}><Icon name="search" /></button>
-        <button className="chat-icon-button" aria-label="Скрыть панель" onClick={onClose}><Icon name="panel" /></button>
+          onClick={() => { if (compact) onExpand(); setSearchOpen(value => compact || !value); if (searchOpen) setSearchQuery('') }}><Icon name="search" /></button>
       </div>
     </div>
 
     <div className="chat-sidebar-actions">
-      <button onClick={onNewChat} disabled={busy}><Icon name="edit" /><span>Новый чат</span></button>
+      <button aria-label="Новый чат" onClick={onNewChat} disabled={busy}><Icon name="edit" /><span>Новый чат</span></button>
     </div>
 
-    <div className="chat-side-section">Чаты</div>
+    {!compact && <><div className="chat-side-section">Чаты</div>
     <div className="chat-history-list" aria-label="Список чатов">
       {visibleHistory.map(chat => <button className={chat.id === currentChatId ? 'chat-history-item active' : 'chat-history-item'}
         key={chat.id} onClick={() => onOpenChat(chat)} disabled={busy}
         title={chat.title}>{chat.title}</button>)}
-    </div>
+    </div></>}
 
     {auth && <div className="chat-sidebar-bottom">
       <div className="chat-side-profile" ref={profileRef}
@@ -90,7 +131,7 @@ export function ChatSidebar({ auth, history, currentChatId, busy, theme, onTheme
           requestAnimationFrame(() => profileButtonRef.current?.focus())
         }}>
         <button ref={profileButtonRef} className="chat-profile-button" aria-label="Профиль в боковой панели" aria-expanded={profileOpen}
-          onClick={() => setProfileOpen(value => !value)}>
+          onClick={() => { if (compact) onExpand(); setProfileOpen(value => !value) }}>
           <span className="chat-profile-avatar">{initial}</span>
           <span className="chat-profile-copy"><span className="chat-profile-name">{auth.account.display_name}</span><span className="chat-profile-plan">ИЗО АСА</span></span>
           <Icon name="more" />

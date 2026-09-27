@@ -10,7 +10,8 @@
   pointer-events: none;
   transition: opacity .18s ease, transform .18s ease;
 }
-.chat-page.sidebar-open .chat-sidebar { opacity: 1; pointer-events: auto; }
+.chat-page.sidebar-open .chat-sidebar,
+.chat-page.sidebar-compact .chat-sidebar { opacity: 1; pointer-events: auto; }
 .chat-sidebar-head {
   height: var(--chat-toolbar-height);
   display: grid;
@@ -111,6 +112,27 @@
   padding: var(--chat-gap-sm);
   border-top: 1px solid color-mix(in srgb, var(--color-text) 10%, transparent);
   flex: 0 0 auto;
+}
+.chat-sidebar.is-compact .chat-sidebar-head {
+  height: auto;
+  display: block;
+  padding: var(--chat-gap-sm) 0 0;
+}
+.chat-sidebar.is-compact .chat-sidebar-title,
+.chat-sidebar.is-compact .chat-profile-copy,
+.chat-sidebar.is-compact .chat-profile-button > .icon,
+.chat-sidebar.is-compact .chat-sidebar-actions button > span { display: none; }
+.chat-sidebar.is-compact .chat-sidebar-head-actions {
+  flex-direction: column;
+  align-items: center;
+}
+.chat-sidebar.is-compact .chat-sidebar-actions { align-items: center; padding-inline: var(--chat-gap-sm); }
+.chat-sidebar.is-compact .chat-sidebar-actions button { justify-content: center; padding: 0; }
+.chat-sidebar.is-compact .chat-profile-button {
+  display: grid;
+  grid-template-columns: 1fr;
+  place-items: center;
+  padding: 0;
 }
 .chat-side-profile { position: relative; }
 .chat-profile-button {

@@ -12,6 +12,23 @@
         "Review Source": 34710133922
       }
     },
+    "ADMIN-DONOR-CATALOG-001": {
+      "base_head": "93d9417070e65cdef16fd729b6c1046d5721061c",
+      "independent_review": "unavailable",
+      "owner_actor": "spikeal8-maker",
+      "owner_waiver": true,
+      "owner_waiver_reason": "Repository has no other participants; owner works alone; independent GitHub reviewer unavailable",
+      "owner_waiver_source": "ed1f79a6c53bdc3cab5d827d308ee661a61ebd20",
+      "source_head": "ed1f79a6c53bdc3cab5d827d308ee661a61ebd20",
+      "tested_merge_tree": "29b1c2b5dbaaa89bcdc57ee64968b0760d50171a",
+      "type": "pr_merge_tree",
+      "verified_pr": 232,
+      "workflows": {
+        "Dependency Security": 36317480579,
+        "Foundation CI": 36317480580,
+        "Review Source": 36317480597
+      }
+    },
     "CHAT-DEEPSEEK-001": {
       "base_head": "1120121c0fd1f6d9279aa3e95523bb48d5b906f8",
       "independent_review": "unavailable",

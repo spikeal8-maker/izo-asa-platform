@@ -85,12 +85,16 @@ async function expectNoHeaderCollision(page: Page) {
 
 async function expectCompactRow(page: Page) {
   const row = await composer(page).evaluate(node =>
-    ['.chat-composer-plus', 'textarea', '.chat-model-selector', '.chat-mic-button', '.chat-send-button'].map(selector => {
+    ({ width: node.getBoundingClientRect().width, centers: ['.chat-composer-plus', 'textarea', '.chat-model-selector', '.chat-mic-button', '.chat-send-button'].map(selector => {
       const rect = node.querySelector(selector)!.getBoundingClientRect()
       return rect.top + rect.height / 2
-    }),
+    }) }),
   )
-  expect(Math.max(...row) - Math.min(...row)).toBeLessThanOrEqual(2)
+  const [plus, input, model, mic, send] = row.centers
+  const controls = [plus, model, mic, send]
+  expect(Math.max(...controls) - Math.min(...controls)).toBeLessThanOrEqual(2)
+  if (row.width <= 620) expect(input).toBeLessThan(plus - 2)
+  else expect(Math.abs(input - plus)).toBeLessThanOrEqual(2)
 }
 
 test('chat shell uses geometry-based sidebar mode and fluid desktop scaling', async ({ page }, info) => {

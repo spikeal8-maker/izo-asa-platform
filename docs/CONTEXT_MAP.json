@@ -31,6 +31,12 @@
       "scores": {"api.chat": 12, "ops.runtime": -4, "web.gallery": -4}
     },
     {
+      "name": "chat_sidebar_ui",
+      "intent": "not_backend",
+      "all_any": [["чат", "chat"], ["sidebar", "drawer", "боковая панель", "история", "композитор", "центрирование"]],
+      "scores": {"web.chat": 14, "ops.runtime": -5, "api.chat": -3}
+    },
+    {
       "name": "admin_model_catalog_backend",
       "intent": "backend",
       "all_any": [["каталог моделей", "model catalog", "цена модели", "model price"]],
@@ -44,6 +50,13 @@
       "tests": ["apps/web/e2e/shell.spec.ts"],
       "expand_if_needed": ["apps/web/src/shell/layout.css", "apps/web/src/shell/theme.css", "apps/web/src/shell/router.tsx", "apps/web/src/shell/navigation.ts", "docs/UX_PRODUCT_SHELL.md"],
       "do_not_read_by_default": ["docs/PRODUCT.md", "docs/ADMIN.md", "docs/AI_RUNTIME.md", "apps/api"]
+    },
+    "web.chat": {
+      "keywords": ["chat sidebar", "чат", "боковая панель", "sidebar", "drawer", "история чатов", "пустой чат", "центрирование чата"],
+      "read_first": ["apps/web/AGENTS.md", "apps/web/src/shell/chat/README.md"],
+      "tests": ["apps/web/e2e/chat-sidebar.spec.ts", "apps/web/e2e/chat-responsive.spec.ts"],
+      "expand_if_needed": ["apps/web/src/shell/ChatPage.tsx", "apps/web/src/shell/chat.css", "apps/web/src/shell/chat/ChatSidebar.tsx", "apps/web/src/shell/chat/ChatSidebar.css", "docs/UX_PRODUCT_SHELL.md"],
+      "do_not_read_by_default": ["apps/api", "docs/ADMIN.md", "docs/OPERATIONS.md"]
     },
     "web.feed": {
       "keywords": ["лента", "feed", "explore", "первый экран", "главная страница", "публичная лента", "подборка идей"],

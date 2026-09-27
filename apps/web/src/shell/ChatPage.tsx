@@ -1,4 +1,4 @@
-import { useEffect, useState, type FormEvent } from 'react'
+import { useEffect, useLayoutEffect, useRef, useState, type FormEvent } from 'react'
 import { apiRequest, chatProblem, type AuthView, type CredentialView } from '../shared/api'
 import { Icon } from '../shared/ui/Icon'
 import { Link } from './router'
@@ -10,6 +10,11 @@ import { useVisualViewport } from './chat/useVisualViewport'
 import './chat.css'
 import './chat/ChatRuntime.css'
 const desktopQuery = '(min-width: 1120px)'
+const sidebarPreference = 'izo-chat-sidebar-expanded'
+function initiallyExpanded() {
+try { return localStorage.getItem(sidebarPreference) !== 'false' }
+catch { return true }
+}
 export function ChatPage({ auth, theme, onThemeChange, onLogout }: {
 auth: AuthView | null | undefined
 theme: 'light' | 'dark'
@@ -17,22 +22,50 @@ onThemeChange: (value: 'light' | 'dark') => void
 onLogout: () => void
 }) {
 const runtime = useChatRuntime(auth)
-const [sidebarOpen, setSidebarOpen] = useState(
-() => window.matchMedia(desktopQuery).matches)
+const [desktop, setDesktop] = useState(() => window.matchMedia(desktopQuery).matches)
+const [expanded, setExpanded] = useState(initiallyExpanded)
+const [drawerOpen, setDrawerOpen] = useState(false)
+const drawerOpener = useRef<HTMLButtonElement>(null)
 useVisualViewport()
 useEffect(() => {
 const media = window.matchMedia(desktopQuery)
-const sync = () => setSidebarOpen(media.matches)
+let wasDesktop = media.matches
+let focusFrame = 0
+const sync = () => {
+const moveFocus = wasDesktop && !media.matches && Boolean(document.activeElement?.closest('.chat-sidebar'))
+wasDesktop = media.matches
+setDesktop(media.matches); setDrawerOpen(false)
+if (moveFocus) focusFrame = requestAnimationFrame(() => drawerOpener.current?.focus())
+}
 sync(); media.addEventListener('change', sync)
-return () => media.removeEventListener('change', sync)
+return () => { media.removeEventListener('change', sync); cancelAnimationFrame(focusFrame) }
 }, [])
+useLayoutEffect(() => {
+if (desktop || !drawerOpen) return
+const background = [document.querySelector<HTMLElement>('.global-header'),
+document.querySelector<HTMLElement>('.skip-link')].filter((node): node is HTMLElement => Boolean(node))
+const previous = background.map(node => node.inert)
+background.forEach(node => { node.inert = true })
+return () => background.forEach((node, index) => { node.inert = previous[index] })
+}, [desktop, drawerOpen])
+const sidebarOpen = desktop ? expanded : drawerOpen
+const compact = desktop && !expanded
+function setDesktopExpanded(value: boolean) {
+setExpanded(value)
+try { localStorage.setItem(sidebarPreference, String(value)) } catch { /* UI preference only. */ }
+}
+function closeDrawer() {
+setDrawerOpen(false)
+requestAnimationFrame(() => drawerOpener.current?.focus())
+}
+function closeSidebar() { if (desktop) setDesktopExpanded(false); else closeDrawer() }
 function newChat() {
 runtime.newChat()
-if (!window.matchMedia(desktopQuery).matches) setSidebarOpen(false)
+if (!desktop) closeDrawer()
 }
 async function openChat(chat: (typeof runtime.history)[number]) {
+if (!desktop) closeDrawer()
 await runtime.openChat(chat)
-if (!window.matchMedia(desktopQuery).matches) setSidebarOpen(false)
 }
 const empty = runtime.messages.length === 0
 const disabled = !auth || !runtime.policy || !runtime.credential?.verified
@@ -42,20 +75,21 @@ busy={runtime.busy} stoppable={Boolean(runtime.activeRequestId)} disabled={disab
 onSend={runtime.send} onStop={() => void runtime.stop()}
 onUnsupported={() => runtime.setError('Этот инструмент ещё не подключён к текстовому Chat D1.')} />
 return <section
-className={`chat-page ${empty ? 'is-empty' : ''} ${sidebarOpen ? 'sidebar-open' : ''}`}
+className={`chat-page ${empty ? 'is-empty' : ''} ${sidebarOpen ? 'sidebar-open' : ''} ${compact ? 'sidebar-compact' : ''}`}
 aria-label="Чат ИЗО АСА">
 <ChatSidebar
 auth={auth} history={runtime.history} currentChatId={runtime.currentChatId}
 busy={runtime.busy} theme={theme} onThemeChange={onThemeChange} onLogout={onLogout}
+compact={compact} drawerOpen={!desktop && drawerOpen} hiddenFromKeyboard={!desktop && !drawerOpen}
 onNewChat={newChat} onOpenChat={chat => void openChat(chat)}
-onClose={() => setSidebarOpen(false)}
+onClose={closeSidebar} onExpand={() => setDesktopExpanded(true)}
 />
-{sidebarOpen && <button className="chat-drawer-backdrop" aria-label="Закрыть историю"
-onClick={() => setSidebarOpen(false)} />}
-<div className="chat-main">
+{!desktop && drawerOpen && <button className="chat-drawer-backdrop" aria-hidden="true" tabIndex={-1}
+onClick={closeDrawer} />}
+<div className="chat-main" inert={!desktop && drawerOpen}>
 <div className="chat-toolbar">
-{!sidebarOpen && <button className="chat-icon-button chat-sidebar-open"
-aria-label="Открыть панель" onClick={() => setSidebarOpen(true)}>
+{!desktop && !drawerOpen && <button ref={drawerOpener} className="chat-icon-button chat-sidebar-open"
+aria-label="Открыть панель" aria-expanded={drawerOpen} onClick={() => setDrawerOpen(true)}>
 <Icon name="panel" />
 </button>}
 {auth && <ChatCredentialPanel
