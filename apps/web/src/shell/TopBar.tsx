@@ -129,6 +129,10 @@ export function TopBar({ path, auth, theme, onThemeChange, onLogout }: {
   const initial = auth?.account.display_name.trim().slice(0, 1).toUpperCase() || 'А'
   const tokenHref = auth ? '/account/credits' : '/login'
   const mainTokens = auth && credits !== null ? String(credits) : '0'
+  const permissions = auth?.account.permissions ?? []
+  const adminHref = permissions.includes('catalog.read') ? '/admin/catalog'
+    : permissions.includes('users.read_limited') ? '/admin/users'
+      : permissions.includes('access.read') ? '/admin/access' : null
 
   return <header className="global-header" data-testid="global-header">
     <div className="header-left">
@@ -156,6 +160,10 @@ export function TopBar({ path, auth, theme, onThemeChange, onLogout }: {
     </nav>
 
     <div className="header-right">
+      {adminHref && <Link className={path.startsWith('/admin') ? 'header-admin-link active' : 'header-admin-link'}
+        href={adminHref} aria-label="Admin" aria-current={path.startsWith('/admin') ? 'page' : undefined}>
+        <Icon name="lock" /><span>Admin</span>
+      </Link>}
       <div className="token-box" data-testid="global-token-group" aria-label="Баланс токенов">
         <Link className="token-pill daily" data-testid="token-daily" href={tokenHref}
           aria-label="Дневные токены: 0 из 0" title="Дневные токены: 0 из 0">

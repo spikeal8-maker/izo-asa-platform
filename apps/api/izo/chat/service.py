@@ -1,24 +1,35 @@
 """Compose bounded Chat owners into one request-scoped API service."""
+import hashlib
+import json
 import time
 from threading import Event, Lock
 
 import sqlalchemy as sa
+from ..catalog.service import CatalogService
 
 from . import tables as t
 from .conversations import ConversationMixin
 from .credentials import ChatError, CredentialMixin
 from .schemas import ChatPolicyView, ModelView
-from .schemas import (
-    DEFAULT_MODEL, MAX_INPUT_CHARS, MAX_OUTPUT_TOKENS, MODEL_REVISION,
-    MODELS, REQUEST_WINDOW_SECONDS,
-)
+from .schemas import MAX_INPUT_CHARS, MAX_OUTPUT_TOKENS, MODEL_REVISION, REQUEST_WINDOW_SECONDS
 from .execution import ExecutionMixin
 
 
 class ChatService(CredentialMixin, ConversationMixin, ExecutionMixin):
+    @staticmethod
+    def _request_fingerprint(thread_id, text, model, connection_id, generation,
+                             model_revision=MODEL_REVISION) -> str:
+        value = {"thread": str(thread_id), "text": text, "model": model,
+                 "model_revision": model_revision, "connection": str(connection_id),
+                 "credential_generation": generation}
+        raw = json.dumps(value, ensure_ascii=False, sort_keys=True,
+                         separators=(",", ":")).encode("utf-8")
+        return hashlib.sha256(raw).hexdigest()
+
     def __init__(self, auth, policy, provider, clock=time.time):
         self.auth, self.engine, self.policy = auth, auth.engine, policy
         self.provider, self.clock = provider, clock
+        self.catalog = CatalogService(auth)
         self._stops: dict[object, Event] = {}
         self._stop_lock = Lock()
         self._recover_stale()
@@ -74,10 +85,12 @@ class ChatService(CredentialMixin, ConversationMixin, ExecutionMixin):
     def public_policy(self, raw) -> ChatPolicyView:
         with self.engine.begin() as conn:
             self._account(conn, raw)
+            head, models = self.catalog.public_text(conn)
         return ChatPolicyView(
-            revision=MODEL_REVISION,
-            default_model=DEFAULT_MODEL,
-            models=[ModelView(id=model, label=label) for model, label in MODELS],
+            revision=f"{MODEL_REVISION}:catalog-{head['revision']}",
+            default_model=head["default_model"],
+            models=[ModelView(id=model.id, label=model.label, provider=model.provider,
+                              price=model.price) for model in models],
             max_input_chars=MAX_INPUT_CHARS,
             max_output_tokens=MAX_OUTPUT_TOKENS,
         )

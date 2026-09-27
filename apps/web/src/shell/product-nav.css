@@ -1,9 +1,23 @@
-.global-brand:hover, .header-route:hover, .token-pill:hover {
+.global-brand:hover, .header-route:hover, .header-admin-link:hover, .token-pill:hover {
   background: color-mix(in srgb, var(--color-text) 6%, var(--color-surface));
 }
 .brand-izo { color: var(--color-warning); font-weight: 750; }
 .brand-asa { color: var(--color-brand); font-weight: 750; }
 .header-route.active { background: color-mix(in srgb, var(--color-text) 7%, var(--color-surface)); }
+.header-admin-link {
+  min-height: clamp(36px, calc(30px + .35vw), 54px);
+  padding: 0 clamp(7px, .45vw, 12px);
+  border-radius: clamp(8px, .5vw, 12px);
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  color: var(--color-text);
+  font-size: clamp(13px, calc(10px + .22vw), 23px);
+  font-weight: 550;
+  white-space: nowrap;
+}
+.header-admin-link.active { background: color-mix(in srgb, var(--color-text) 7%, var(--color-surface)); }
+.header-admin-link .icon { width: 17px; height: 17px; }
 .product-nav {
   height: 100%;
   display: grid;
@@ -128,6 +142,8 @@
 .menu-logout { color: var(--color-text); }
 
 @media (max-width: 1119px) {
+  .header-admin-link { min-height: 28px; padding-inline: 4px; gap: 3px; font-size: 11px; }
+  .header-admin-link .icon { width: 14px; height: 14px; }
   .token-pill.daily, .token-pill.main { min-width: clamp(46px, 7vw, 58px); }
   .token-pill {
     height: clamp(28px, calc(26px + .5vw), 34px);
@@ -163,6 +179,8 @@
 }
 
 @media (max-width: 360px) {
+  .header-admin-link { width: 28px; justify-content: center; padding: 0; }
+  .header-admin-link span { display: none; }
   .token-pill.daily, .token-pill.main { min-width: 46px; }
   .token-value, .token-pill.main .token-value { min-width: 16px; font-size: 10.5px; }
   .product-tab { font-size: 11.5px; gap: 2px; }

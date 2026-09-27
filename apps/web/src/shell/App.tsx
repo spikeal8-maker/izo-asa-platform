@@ -11,6 +11,7 @@ import { AssetPage } from '../features/gallery/AssetPage'
 import { AccountPage } from '../features/accounts/AccountPage'
 import { SecurityPage, securityPages } from '../features/accounts/SecurityPage'
 import { AdminLink, AdminPage } from '../features/admin/AdminPage'
+import { AdminCatalogPage } from '../features/admin/AdminCatalogPage'
 import { AccessPage } from '../features/admin/AccessPage'
 import { CreditsPage } from '../features/credits/CreditsPage'
 import { FeedPage } from '../features/feed/FeedPage'
@@ -39,6 +40,7 @@ export function App() {
   const credits = path === '/account/credits'
   const admin = path === '/admin' || path.startsWith('/admin/')
   const accessAdmin = path === '/admin/access'
+  const catalogAdmin = path === '/admin/catalog'
   const detail = path.startsWith('/gallery/')
   const jobs = path === '/jobs' || path.startsWith('/jobs/')
 
@@ -87,9 +89,9 @@ export function App() {
     <a className="skip-link" href="#main">К содержимому</a>
     <TopBar path={path} auth={auth} theme={theme} onThemeChange={setTheme} onLogout={() => void logout()} />
     <div className={chat ? 'content chat-content' : 'content'}>
-      {admin && <aside className="staff-context" aria-label="Административный доступ"><AdminLink path={path} /></aside>}
+      {admin && !catalogAdmin && <aside className="staff-context" aria-label="Административный доступ"><AdminLink path={path} /></aside>}
       <main id="main" tabIndex={-1}>
-      {accessAdmin ? <AccessPage key={path} /> : admin ? <AdminPage key={path} path={path} /> : credits ? <CreditsPage />
+      {catalogAdmin ? <AdminCatalogPage auth={auth} /> : accessAdmin ? <AccessPage key={path} /> : admin ? <AdminPage key={path} path={path} /> : credits ? <CreditsPage />
         : security ? <SecurityPage key={path} mode={security} />
         : account ? <AccountPage key={path} mode={path === '/register' ? 'register' : path === '/login' ? 'login' : 'account'} />
         : chat ? <ChatPage auth={auth} theme={theme} onThemeChange={setTheme} onLogout={() => void logout()} />

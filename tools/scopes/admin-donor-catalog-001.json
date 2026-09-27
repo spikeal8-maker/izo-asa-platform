@@ -1,0 +1,42 @@
+{
+  "package_id": "ADMIN-DONOR-CATALOG-001",
+  "base": "d2d1d76ea86193dea1d83b0371c56216d0247dfb",
+  "scope_class": "cross_domain",
+  "risk": "high",
+  "independent_review_required": true,
+  "max_files": 40,
+  "large_scope_reason": "One bounded vertical slice must connect a staff-authorized, revisioned model and RUB display-price catalog to the existing Chat policy, Admin entry and model picker, with migration, mobile layout, an explicit local upgrade path for an already enrolled owner, negative tests and donor documentation. The shared Credits ledger and image Jobs runtime are not modified.",
+  "domains": ["governance", "donor-analysis", "admin-catalog", "staff-access", "chat-policy", "web-admin", "web-chat", "tests"],
+  "non_goals": [
+    "No live provider keys, external spend, new provider transport, OpenRouter execution or arbitrary provider endpoint",
+    "No actual charge, payment, exchange-rate conversion or change to Credits, Jobs or Media ownership",
+    "No Chat sidebar redesign, image generation in Chat, merge, deploy or release",
+    "No edits to the original E: checkout or donor-analysis worktree"
+  ],
+  "allowed": [
+    "docs/CURRENT.md", "docs/PLAN.json", "docs/CHECKPOINTS.json",
+    "apps/web/src/shell/chat/ChatComposer.css", "docs/ADMIN.md",
+    "docs/reviews/IZO-ASA-DONOR-ANALYSIS-001.md", "docs/reviews/ADMIN-DONOR-CATALOG-001.md",
+    "docs/CONTEXT_MAP.json", "tools/scopes/admin-donor-catalog-001.json",
+    "apps/api/izo/app.py", "apps/api/izo/chat/README.md", "apps/api/izo/catalog/README.md",
+    "apps/api/izo/catalog/tables.py", "apps/api/izo/catalog/schemas.py", "apps/api/izo/catalog/service.py",
+    "apps/api/izo/catalog/routes.py", "apps/api/migrations/versions/0013_admin_catalog.py",
+    "apps/api/izo/access/permissions.py", "apps/api/izo/chat/schemas.py", "apps/api/izo/chat/service.py",
+    "apps/api/izo/chat/conversations.py", "packages/contracts/openapi.json",
+    "tests/test_catalog.py", "tests/test_catalog_http.py", "tests/test_catalog_migration.py",
+    "tests/test_chat_catalog.py", "apps/web/src/shell/TopBar.tsx", "apps/web/src/shell/product-nav.css",
+    "apps/web/src/shell/App.tsx", "apps/web/src/features/admin/AdminCatalogPage.tsx",
+    "apps/web/src/features/admin/AdminCatalogEditor.tsx",
+    "apps/web/src/features/admin/README.md", "apps/web/src/shell/chat/modelCatalog.ts",
+    "apps/web/src/shell/chat/ChatComposer.tsx", "apps/web/src/shell/chat/ModelPicker.tsx",
+    "apps/web/src/shared/ui/records.css", "apps/web/src/shared/api.ts", "apps/web/e2e/admin.spec.ts",
+    "apps/web/e2e/catalog.spec.ts", "apps/api/izo/access/owner.py"
+  ],
+  "sensitive_approved": [
+    "tools/scopes/admin-donor-catalog-001.json", "apps/api/izo/app.py", "apps/api/izo/catalog/tables.py",
+    "apps/api/izo/catalog/service.py", "apps/api/izo/catalog/routes.py",
+    "apps/api/migrations/versions/0013_admin_catalog.py", "apps/api/izo/access/permissions.py",
+    "apps/api/izo/access/owner.py",
+    "apps/api/izo/chat/service.py", "apps/api/izo/chat/conversations.py"
+  ]
+}

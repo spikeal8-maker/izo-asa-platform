@@ -1,6 +1,4 @@
 """Durable Thread/Message/Request ownership and idempotency."""
-import hashlib
-import json
 from threading import Event
 from uuid import UUID, uuid4
 import sqlalchemy as sa
@@ -9,10 +7,6 @@ from . import tables as t
 from .credentials import ChatError
 from .schemas import MessageView, RequestView, ThreadDetail, ThreadList, ThreadView
 from .schemas import MESSAGE_PAGE_LIMIT, MODEL_REVISION, REQUEST_WINDOW_LIMIT, THREAD_PAGE_LIMIT
-def _sha(value: dict) -> str:
-	raw = json.dumps(value, ensure_ascii=False, sort_keys=True,
-                     separators=(",", ":")).encode("utf-8")
-	return hashlib.sha256(raw).hexdigest()
 class ConversationMixin:
 	def create_thread(self, raw, csrf, title: str | None) -> ThreadView:
 		now, thread_id = self.now(), uuid4()
@@ -65,18 +59,7 @@ class ConversationMixin:
 			state=row["state"], error_code=row["error_code"],
 			created_at=row["created_at"], updated_at=row["updated_at"],
 			deadline_at=row["deadline_at"])
-	@staticmethod
-	def _request_fingerprint(
-			thread_id, text, model, connection_id, generation) -> str:
-		return _sha({
-			"thread": str(thread_id), "text": text, "model": model,
-			"model_revision": MODEL_REVISION,
-			"connection": str(connection_id),
-			"credential_generation": generation,
-		})
 	def create_request(self, raw, csrf, thread_id: UUID, command) -> RequestView:
-		if not self.policy.model_allowed(command.model):
-			raise ChatError(422, "model_not_allowed")
 		try:
 			with self.engine.begin() as conn:
 				account, _ = self._account(conn, raw, csrf, mutation=True)
@@ -113,11 +96,14 @@ class ConversationMixin:
 						raise ChatError(404, "request_not_found")
 					expected = self._request_fingerprint(
 						thread_id, command.text, command.model,
-						existing["connection_id"],
-						existing["credential_generation"])
+					existing["connection_id"],
+					existing["credential_generation"], existing["model_revision"])
 					if expected != existing["fingerprint"]:
 						raise ChatError(409, "request_conflict")
 					return self._request_view(existing)
+				head, allowed_models = self.catalog.public_text(conn, lock=True)
+				if command.model not in {item.id for item in allowed_models}:
+					raise ChatError(422, "model_not_allowed")
 				self._consume_rate(
 					conn, account["id"], "request", REQUEST_WINDOW_LIMIT)
 				connection = conn.execute(sa.select(t.connections).where(
@@ -125,15 +111,16 @@ class ConversationMixin:
 				if (not connection or not connection["enabled"]
 						or connection["verified_at"] is None):
 					raise ChatError(409, "credential_not_verified")
+				model_revision = f"{MODEL_REVISION}:catalog-{head['revision']}"
 				fingerprint = self._request_fingerprint(
 					thread_id, command.text, command.model,
-					connection["id"], connection["generation"])
+					connection["id"], connection["generation"], model_revision)
 				request_id = command.request_id
 				sequence = thread["next_sequence"]
 				conn.execute(sa.insert(t.requests).values(
 					id=request_id, thread_id=thread_id,
 					account_id=account["id"], fingerprint=fingerprint,
-					model=command.model, model_revision=MODEL_REVISION,
+					model=command.model, model_revision=model_revision,
 					connection_id=connection["id"],
 					credential_generation=connection["generation"],
 					state="pending", error_code=None, stop_requested_at=None,

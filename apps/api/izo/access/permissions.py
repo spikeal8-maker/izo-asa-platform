@@ -14,6 +14,7 @@ GLOBAL_DELEGABLE = (
     "plans.write",
     "catalog.read",
     "catalog.write",
+    "pricing.write",
     "connections.read",
     "connections.write",
     "secrets.bind",

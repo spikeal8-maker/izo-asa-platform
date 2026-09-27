@@ -29,6 +29,12 @@
       "name": "deepseek_text_chat",
       "all_any": [["deepseek"], ["chat", "чат", "byok"]],
       "scores": {"api.chat": 12, "ops.runtime": -4, "web.gallery": -4}
+    },
+    {
+      "name": "admin_model_catalog_backend",
+      "intent": "backend",
+      "all_any": [["каталог моделей", "model catalog", "цена модели", "model price"]],
+      "scores": {"api.catalog": 12, "api.admin": -3, "api.credits": -3}
     }
   ],
   "routes": {
@@ -122,6 +128,13 @@
       "tests": ["tests/test_admin.py", "tests/test_admin_boundaries.py", "tests/test_admin_http.py"],
       "expand_if_needed": ["apps/api/izo/admin/service.py", "apps/api/izo/admin/routes.py", "docs/ADMIN.md", "apps/api/izo/credits/README.md"],
       "do_not_read_by_default": ["docs/UX.md", "apps/api/izo/providers"]
+    },
+    "api.catalog": {
+      "keywords": ["каталог моделей", "прайс моделей", "цена модели", "model catalog", "model price", "catalog permission"],
+      "read_first": ["apps/api/AGENTS.md", "apps/api/izo/catalog/README.md"],
+      "tests": ["tests/test_catalog.py", "tests/test_catalog_http.py"],
+      "expand_if_needed": ["apps/api/izo/catalog/service.py", "apps/api/izo/catalog/routes.py", "apps/api/izo/catalog/schemas.py", "apps/api/izo/catalog/tables.py", "tests/test_catalog_migration.py", "apps/api/izo/access/permissions.py", "docs/ADMIN.md"],
+      "do_not_read_by_default": ["apps/api/izo/credits/service.py", "apps/api/izo/jobs/provider_execution.py", "docs/UX.md"]
     },
     "api.access": {
       "keywords": ["выдать право сотруднику", "отозвать право сотрудника", "управление доступом", "access manage", "staff access", "delegation", "permission grant", "access revoke"],

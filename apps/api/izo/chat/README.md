@@ -12,5 +12,5 @@ runtime environment and is intentionally absent from database backups and previe
 back to it. A failed/unknown real execution is persisted as a non-success terminal state and
 is not automatically submitted again.
 
-Limits and model policy live in `schemas.py`. UI code consumes the public policy endpoint
-rather than duplicating provider capability rules.
+Chat bounds live in `schemas.py`; published model policy and informational RUB
+display prices live in `../catalog/`. UI consumes the public policy endpoint.

@@ -29,6 +29,7 @@
 .admin-receipt{margin-top:20px;padding:16px 18px;border:1px solid var(--line);background:var(--soft);border-radius:14px;overflow-wrap:anywhere}
 .admin-page .summary-list dd,.credits-page .summary-list dd{overflow-wrap:anywhere}
 .admin-form fieldset{display:grid;gap:16px;border:0;padding:0;margin:0;min-width:0}
+.admin-catalog-cards{display:none}
 @media(min-width:980px){
   .admin-user-detail,.access-subject-panel{display:grid;grid-template-columns:minmax(0,1fr) minmax(320px,400px);column-gap:44px;align-items:start}
   .admin-user-detail>.admin-card-heading,.access-subject-panel>.admin-card-heading{grid-column:1/-1}
@@ -39,3 +40,14 @@
   .access-subject-panel>.admin-receipt{grid-column:2}
 }
 @media(max-width:600px){.admin-page,.credits-page{max-width:100%}.admin-search{display:grid;grid-template-columns:minmax(0,1fr)}.admin-history li{display:block}.admin-history a{display:inline-block;margin-top:8px}.admin-links{gap:4px}.admin-form{max-width:100%}.admin-card-heading,.admin-section-heading{align-items:flex-start}.admin-card-heading>span,.admin-section-heading>span{flex-shrink:0}}
+@media(max-width:600px){
+  .admin-catalog-table{display:none}
+  .admin-catalog-cards{display:block;margin-block:20px;border-top:1px solid var(--line)}
+  .admin-catalog-card{padding:18px 0;border-bottom:1px solid var(--line);min-width:0}
+  .admin-catalog-card h3{margin:0 0 3px;font-size:1rem}
+  .admin-catalog-card small{color:var(--muted);overflow-wrap:anywhere}
+  .admin-catalog-card dl{display:grid;gap:12px;margin:18px 0 0}
+  .admin-catalog-card dt{font-size:.78rem;color:var(--muted)}
+  .admin-catalog-card dd{margin:3px 0 0;overflow-wrap:anywhere}
+  .admin-catalog-card button{margin-top:16px}
+}

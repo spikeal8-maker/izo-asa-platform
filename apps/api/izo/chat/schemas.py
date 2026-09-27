@@ -5,10 +5,9 @@ import base64
 from uuid import UUID
 from pydantic import BaseModel, ConfigDict, Field, SecretStr, field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
+from ..catalog.schemas import Price
 
 MODEL_REVISION = "deepseek-2026-09-d1"
-MODELS = (("deepseek-flash", "DeepSeek Flash"), ("deepseek-v4-pro", "DeepSeek V4 Pro"))
-DEFAULT_MODEL = MODELS[0][0]
 MAX_INPUT_CHARS = 6_000
 MAX_CONTEXT_MESSAGES = 40
 MAX_CONTEXT_CHARS = 24_000
@@ -42,16 +41,14 @@ class ChatSettings(BaseSettings):
         allowed = {item.strip().lower() for item in self.preview_account_emails.split(",")}
         return bool(email and email.lower() in allowed)
 
-    @staticmethod
-    def model_allowed(model: str) -> bool:
-        return any(model == model_id for model_id, _ in MODELS)
-
 class StrictInput(BaseModel):
     model_config = ConfigDict(extra="forbid", hide_input_in_errors=True)
 
 class ModelView(BaseModel):
     id: str
     label: str
+    provider: str
+    price: Price
 
 class ChatPolicyView(BaseModel):
     revision: str

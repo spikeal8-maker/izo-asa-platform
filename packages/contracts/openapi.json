@@ -653,6 +653,91 @@
         "title": "CapabilityStatus",
         "type": "object"
       },
+      "CatalogPatch": {
+        "additionalProperties": false,
+        "properties": {
+          "enabled": {
+            "title": "Enabled",
+            "type": "boolean"
+          },
+          "expected_revision": {
+            "maximum": 2000000000.0,
+            "minimum": 1.0,
+            "title": "Expected Revision",
+            "type": "integer"
+          },
+          "is_default": {
+            "title": "Is Default",
+            "type": "boolean"
+          },
+          "operation_id": {
+            "format": "uuid",
+            "title": "Operation Id",
+            "type": "string"
+          },
+          "price": {
+            "$ref": "#/components/schemas/Price"
+          },
+          "published": {
+            "title": "Published",
+            "type": "boolean"
+          },
+          "reason": {
+            "maxLength": 300,
+            "minLength": 3,
+            "title": "Reason",
+            "type": "string"
+          }
+        },
+        "required": [
+          "operation_id",
+          "expected_revision",
+          "published",
+          "enabled",
+          "is_default",
+          "price",
+          "reason"
+        ],
+        "title": "CatalogPatch",
+        "type": "object"
+      },
+      "CatalogView": {
+        "properties": {
+          "models": {
+            "items": {
+              "$ref": "#/components/schemas/izo__catalog__schemas__ModelView"
+            },
+            "title": "Models",
+            "type": "array"
+          },
+          "permissions": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Permissions",
+            "type": "array"
+          },
+          "providers": {
+            "items": {
+              "$ref": "#/components/schemas/ProviderView"
+            },
+            "title": "Providers",
+            "type": "array"
+          },
+          "revision": {
+            "title": "Revision",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "revision",
+          "permissions",
+          "providers",
+          "models"
+        ],
+        "title": "CatalogView",
+        "type": "object"
+      },
       "ChangePasswordInput": {
         "additionalProperties": false,
         "properties": {
@@ -705,7 +790,7 @@
           },
           "models": {
             "items": {
-              "$ref": "#/components/schemas/ModelView"
+              "$ref": "#/components/schemas/izo__chat__schemas__ModelView"
             },
             "title": "Models",
             "type": "array"
@@ -1674,24 +1759,6 @@
         "title": "Modality",
         "type": "string"
       },
-      "ModelView": {
-        "properties": {
-          "id": {
-            "title": "Id",
-            "type": "string"
-          },
-          "label": {
-            "title": "Label",
-            "type": "string"
-          }
-        },
-        "required": [
-          "id",
-          "label"
-        ],
-        "title": "ModelView",
-        "type": "object"
-      },
       "Overview": {
         "properties": {
           "account_id": {
@@ -1891,6 +1958,58 @@
         "title": "PreviewView",
         "type": "object"
       },
+      "Price": {
+        "additionalProperties": false,
+        "properties": {
+          "currency": {
+            "const": "RUB",
+            "default": "RUB",
+            "title": "Currency",
+            "type": "string"
+          },
+          "image_kopeks_per_image": {
+            "anyOf": [
+              {
+                "maximum": 1000000000000.0,
+                "minimum": 0.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Image Kopeks Per Image"
+          },
+          "input_kopeks_per_million": {
+            "anyOf": [
+              {
+                "maximum": 1000000000000.0,
+                "minimum": 0.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Input Kopeks Per Million"
+          },
+          "output_kopeks_per_million": {
+            "anyOf": [
+              {
+                "maximum": 1000000000000.0,
+                "minimum": 0.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Output Kopeks Per Million"
+          }
+        },
+        "title": "Price",
+        "type": "object"
+      },
       "ProofInput": {
         "additionalProperties": false,
         "properties": {
@@ -1907,6 +2026,24 @@
           "token"
         ],
         "title": "ProofInput",
+        "type": "object"
+      },
+      "ProviderView": {
+        "properties": {
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "label": {
+            "title": "Label",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "label"
+        ],
+        "title": "ProviderView",
         "type": "object"
       },
       "PublishInput": {
@@ -2645,6 +2782,103 @@
         ],
         "title": "ValidationError",
         "type": "object"
+      },
+      "izo__catalog__schemas__ModelView": {
+        "properties": {
+          "enabled": {
+            "title": "Enabled",
+            "type": "boolean"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "is_default": {
+            "title": "Is Default",
+            "type": "boolean"
+          },
+          "label": {
+            "title": "Label",
+            "type": "string"
+          },
+          "modality": {
+            "enum": [
+              "text",
+              "image"
+            ],
+            "title": "Modality",
+            "type": "string"
+          },
+          "price": {
+            "$ref": "#/components/schemas/Price"
+          },
+          "price_source": {
+            "enum": [
+              "unset",
+              "admin_manual"
+            ],
+            "title": "Price Source",
+            "type": "string"
+          },
+          "provider": {
+            "title": "Provider",
+            "type": "string"
+          },
+          "publishable": {
+            "title": "Publishable",
+            "type": "boolean"
+          },
+          "published": {
+            "title": "Published",
+            "type": "boolean"
+          },
+          "updated_at": {
+            "title": "Updated At",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "id",
+          "provider",
+          "modality",
+          "label",
+          "published",
+          "enabled",
+          "is_default",
+          "publishable",
+          "price_source",
+          "updated_at",
+          "price"
+        ],
+        "title": "ModelView",
+        "type": "object"
+      },
+      "izo__chat__schemas__ModelView": {
+        "properties": {
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "label": {
+            "title": "Label",
+            "type": "string"
+          },
+          "price": {
+            "$ref": "#/components/schemas/Price"
+          },
+          "provider": {
+            "title": "Provider",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "label",
+          "provider",
+          "price"
+        ],
+        "title": "ModelView",
+        "type": "object"
       }
     }
   },
@@ -2984,6 +3218,129 @@
         "summary": "Audit",
         "tags": [
           "admin"
+        ]
+      }
+    },
+    "/api/v1/admin/catalog": {
+      "get": {
+        "operationId": "read_api_v1_admin_catalog_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CatalogView"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AuthErrorView"
+                }
+              }
+            },
+            "description": "Safe catalog error"
+          },
+          "4XX": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AuthErrorView"
+                }
+              }
+            },
+            "description": "Safe catalog error"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AuthErrorView"
+                }
+              }
+            },
+            "description": "Safe catalog error"
+          }
+        },
+        "summary": "Read",
+        "tags": [
+          "admin-catalog"
+        ]
+      }
+    },
+    "/api/v1/admin/catalog/models/{model_id}": {
+      "patch": {
+        "operationId": "patch_api_v1_admin_catalog_models__model_id__patch",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "model_id",
+            "required": true,
+            "schema": {
+              "title": "Model Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CatalogPatch"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CatalogView"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AuthErrorView"
+                }
+              }
+            },
+            "description": "Safe catalog error"
+          },
+          "4XX": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AuthErrorView"
+                }
+              }
+            },
+            "description": "Safe catalog error"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AuthErrorView"
+                }
+              }
+            },
+            "description": "Safe catalog error"
+          }
+        },
+        "summary": "Patch",
+        "tags": [
+          "admin-catalog"
         ]
       }
     },

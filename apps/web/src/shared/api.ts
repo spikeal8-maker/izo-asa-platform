@@ -44,7 +44,7 @@ export function chatProblem(reason: unknown): string {
   return 'Связь с Chat прервалась. Новый платный запрос автоматически не запускался.'
 }
 type Options = {
-  method?: 'GET' | 'POST' | 'DELETE'
+  method?: 'GET' | 'POST' | 'PATCH' | 'DELETE'
   data?: unknown
   csrf?: string
   signal?: AbortSignal
