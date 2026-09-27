@@ -60,6 +60,11 @@ def _ready(chat_env):
     return service, alice, new_thread(service, alice)
 
 
+def _ask(service, account, thread, text, request_id=None):
+    return request(service, account, thread.id, text, model="vendor/text",
+                   request_id=request_id)
+
+
 def test_deepseek_legacy_hash_and_provider_aad_remain_separate(chat_env):
     service, alice, bob, _ = chat_env
     _install_openrouter(service)
@@ -94,8 +99,7 @@ def test_dynamic_model_own_key_and_russian_preference(chat_env):
     auto = next(item for item in policy.models if item.id == "openrouter-auto")
     assert auto.provider == "openrouter"
     assert auto.price.input_kopeks_per_million is None
-    accepted = request(service, alice, thread.id, "Ответь кратко",
-                       model="vendor/text")
+    accepted = _ask(service, alice, thread, "Ответь кратко")
     with service.engine.begin() as conn:
         row = conn.execute(sa.select(chat.requests).where(
             chat.requests.c.id == accepted.id)).mappings().one()
@@ -136,27 +140,21 @@ def test_failed_provider_verification_replay_never_marks_key_verified(chat_env):
 
 
 def test_catalog_outage_blocks_new_request_but_not_idempotent_replay(chat_env):
-    service, alice, bob, clock = chat_env
-    _install_openrouter(service)
-    _connect_openrouter(service, alice)
-    thread = new_thread(service, alice)
+    service, alice, thread = _ready(chat_env)
+    bob, clock = chat_env[2:]
     request_id = uuid4()
-    first = request(service, alice, thread.id, "safe replay",
-                    model="vendor/text", request_id=request_id)
+    first = _ask(service, alice, thread, "safe replay", request_id)
     service._openrouter_catalog.fetcher = lambda: (_ for _ in ()).throw(
         ProviderFailure("catalog_unavailable"))
     clock[0] += CATALOG_TTL_SECONDS + 1
-    replay = request(service, alice, thread.id, "safe replay",
-                     model="vendor/text", request_id=request_id)
+    replay = _ask(service, alice, thread, "safe replay", request_id)
     assert replay.id == first.id
     with pytest.raises(ChatError, match="catalog_unavailable"):
-        request(service, alice, thread.id, "new",
-                model="vendor/text")
+        _ask(service, alice, thread, "new")
     bob_thread = new_thread(service, bob)
     for request_id in (first.id, uuid4()):
         with pytest.raises(ChatError, match="catalog_unavailable"):
-            request(service, bob, bob_thread.id, "same",
-                    model="vendor/text", request_id=request_id)
+            _ask(service, bob, bob_thread, "same", request_id)
 
 
 def test_db_rejects_duplicate_provider_and_unknown_provider(chat_env):
@@ -215,7 +213,7 @@ def test_catalog_failure_backoff_then_recovers():
 ])
 def test_paid_outcome_barrier_and_known_rejection(chat_env, failure, unknown):
     service, alice, thread = _ready(chat_env)
-    first = request(service, alice, thread.id, "charged?", model="vendor/text")
+    first = _ask(service, alice, thread, "charged?")
     if failure == "restart":
         with service.engine.begin() as conn:
             conn.execute(sa.update(chat.requests).where(chat.requests.c.id == first.id)
@@ -233,11 +231,10 @@ def test_paid_outcome_barrier_and_known_rejection(chat_env, failure, unknown):
     assert service.request(alice.bearer, first.id).error_code == expected
     if unknown:
         with pytest.raises(ChatError, match="provider_outcome_unknown"):
-            request(service, alice, thread.id, "again", model="vendor/text")
+            _ask(service, alice, thread, "again")
     else:
-        request(service, alice, thread.id, "again", model="vendor/text")
-    assert request(service, alice, thread.id, "charged?", model="vendor/text",
-                   request_id=first.id).id == first.id
+        _ask(service, alice, thread, "again")
+    assert _ask(service, alice, thread, "charged?", first.id).id == first.id
 
 
 def test_http_provider_routes_reject_unknown_and_hide_key(http_env):
