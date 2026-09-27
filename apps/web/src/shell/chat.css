@@ -78,6 +78,7 @@
   letter-spacing: -.035em;
   text-align: center;
 }
+.chat-start-state .chat-start-note { text-align: center; }
 .chat-turns { padding-top: var(--chat-gap-xs); }
 .chat-turn {
   display: flex;

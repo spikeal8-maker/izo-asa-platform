@@ -196,3 +196,19 @@ test('empty heading and composer share a centered block on phone and desktop', a
     await noOverflow(page)
   }
 })
+
+test('guest note centers at 320px', async ({ page }) => {
+  (await workspace(page)).signedIn = false
+  await page.setViewportSize({ width: 320, height: 640 })
+  await page.goto('/')
+  const note = page.locator('.chat-start-note')
+  await expect(note).toBeVisible()
+  const dx = await note.evaluate(el => {
+    const line = document.createRange()
+    line.selectNodeContents(el.firstChild!)
+    const text = line.getClientRects()[0], box = el.getBoundingClientRect()
+    return Math.abs(text.left + text.width / 2 - (box.left + box.width / 2))
+  })
+  expect(dx).toBeLessThanOrEqual(12)
+  await noOverflow(page)
+})
