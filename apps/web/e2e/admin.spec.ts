@@ -6,19 +6,10 @@ const actor = { id:'11111111-1111-4111-8111-111111111111', public_code:'aaaabbbb
   display_name:'Тестовый оператор', state:'active', email:'test@example.invalid', email_verified:true,
   permissions:['users.read_limited','credits.read','credits.grant','audit.read'] }
 const balance = (amount:number) => ({ account_id:user.id, balance:{balance:amount,available:amount,reserved:0,sequence:amount?1:0},entries:[],next_before:null })
-const catalog=(permissions:string[])=>({revision:1,permissions,
-  providers:[{id:'deepseek',label:'DeepSeek'},{id:'fal',label:'fal.ai'}],models:[
-    {id:'deepseek-flash',provider:'deepseek',modality:'text',label:'DeepSeek Flash',published:true,enabled:true,is_default:true,publishable:true,
-      price:{currency:'RUB',input_kopeks_per_million:null,output_kopeks_per_million:0,image_kopeks_per_image:null}},
-    {id:'fal.flux2.klein.4b',provider:'fal',modality:'image',label:'FLUX.2 [klein] 4B',published:false,enabled:false,is_default:false,publishable:false,
-      price:{currency:'RUB',input_kopeks_per_million:null,output_kopeks_per_million:null,image_kopeks_per_image:450}},
-  ]})
 
 test.beforeEach(async ({page})=>{
   await page.route('**/api/v1/foundation',r=>r.fulfill({json:{stage:'foundation',build_sha:'unreleased',capabilities:[]}}))
   await page.route('**/api/v1/auth/me',r=>r.fulfill({json:{account:actor,csrf_token:'test-csrf'}}))
-  await page.route('**/api/v1/credits',r=>r.fulfill({json:{account_id:actor.id,
-    balance:{balance:0,available:0,reserved:0,sequence:0},entries:[],next_before:null}}))
   await page.route('**/api/v1/admin/me',r=>r.fulfill({json:{permissions:actor.permissions,max_grant:1000,csrf_token:'test-csrf'}}))
   await page.route('**/api/v1/admin/users?*',r=>r.fulfill({json:{users:[user],next_after:null}}))
   await page.route('**/api/v1/admin/users/'+user.id,r=>r.fulfill({json:user}))
@@ -105,65 +96,4 @@ test('U-28 server balance and failure never use demo credit fallback',async({pag
   await page.reload()
   await expect(page.locator('.credits-page').getByRole('alert')).toContainText('Демо-значение не подставляется')
   await expect(page.getByTestId('own-available')).toHaveCount(0)
-})
-
-test('catalog-only staff sees server prices without mutation controls',async({page},info)=>{
-  const permissions=['catalog.read']
-  await page.route('**/api/v1/auth/me',r=>r.fulfill({json:{account:{...actor,permissions},csrf_token:'catalog-csrf'}}))
-  await page.route('**/api/v1/admin/catalog',r=>r.fulfill({json:catalog(permissions)}))
-  await page.goto('/admin/catalog')
-  await expect(page.getByRole('heading',{name:'Каталог моделей'})).toBeVisible()
-  const visible=page.locator('.admin-catalog-table:visible, .admin-catalog-cards:visible')
-  await expect(visible.getByText('Цена не задана')).toBeVisible()
-  await expect(visible.getByText('0 ₽ / 1 млн токенов')).toBeVisible()
-  await expect(visible.getByText('4,5 ₽ / изображение')).toBeVisible()
-  await expect(page.getByRole('button',{name:'Настроить'})).toHaveCount(0)
-  expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBe(true)
-  if(info.project.name==='laptop')await page.screenshot({path:info.outputPath('admin-catalog-desktop.png'),fullPage:true})
-  await page.setViewportSize({width:320,height:640})
-  const mobile=await page.evaluate(()=>({overflow:document.documentElement.scrollWidth>innerWidth,
-    tableHidden:getComputedStyle(document.querySelector('.admin-catalog-table')!).display==='none',
-    cards:document.querySelectorAll('.admin-catalog-card').length,
-    headerGap:document.querySelector('.token-box')!.getBoundingClientRect().left-document.querySelector('.header-admin-link')!.getBoundingClientRect().right}))
-  expect(mobile).toMatchObject({overflow:false,tableHidden:true,cards:2})
-  expect(mobile.headerGap).toBeGreaterThanOrEqual(0)
-  await page.screenshot({path:info.outputPath('admin-catalog-320.png'),fullPage:true})
-})
-
-test('catalog direct URL respects server denial',async({page})=>{
-  await page.route('**/api/v1/auth/me',r=>r.fulfill({json:{account:{...actor,permissions:[]},csrf_token:'auth'}}))
-  await page.route('**/api/v1/admin/catalog',r=>r.fulfill({status:403,json:{error:{code:'forbidden'}}}))
-  await page.goto('/admin/catalog')
-  await expect(page.getByRole('alert')).toContainText('Нет полномочия для каталога')
-  await expect(page.getByRole('link',{name:'Admin'})).toHaveCount(0)
-  await expect(page.locator('.admin-catalog-card')).toHaveCount(0)
-})
-
-test('catalog PATCH keeps operation id after uncertain response',async({page},info)=>{
-  const permissions=['catalog.read','catalog.write','pricing.write']
-  const view=catalog(permissions),sent:Record<string,any>[]=[]
-  await page.route('**/api/v1/auth/me',r=>r.fulfill({json:{account:{...actor,permissions},csrf_token:'catalog-csrf'}}))
-  await page.route('**/api/v1/admin/catalog',r=>r.fulfill({json:view}))
-  await page.route('**/api/v1/admin/catalog/models/deepseek-flash',async r=>{
-    expect(r.request().method()).toBe('PATCH')
-    expect(r.request().headers()['x-csrf-token']).toBe('catalog-csrf')
-    sent.push(r.request().postDataJSON())
-    if(sent.length===1)return r.fulfill({status:503,json:{error:{code:'temporary'}}})
-    return r.fulfill({json:{...view,revision:2,models:[{...view.models[0],price:sent[1].price},view.models[1]]}})
-  })
-  await page.goto('/admin/catalog')
-  await page.getByRole('button',{name:'Настроить'}).first().click()
-  await page.setViewportSize({width:320,height:640})
-  expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBe(true)
-  await page.screenshot({path:info.outputPath('admin-catalog-form-320.png'),fullPage:true})
-  await page.getByLabel('Вход, ₽ за 1 млн токенов').fill('1,25')
-  await page.getByLabel('Выход, ₽ за 1 млн токенов').fill('2.50')
-  await page.getByLabel('Причина изменения').fill('Новая отображаемая цена')
-  await page.getByRole('button',{name:'Сохранить'}).click()
-  await expect(page.getByRole('alert')).toContainText('Результат неизвестен')
-  await page.getByRole('button',{name:'Сохранить'}).click()
-  await expect(page.getByText('Версия каталога: 2')).toBeVisible()
-  expect(sent).toHaveLength(2)
-  expect(sent[0].operation_id).toBe(sent[1].operation_id)
-  expect(sent[0]).toMatchObject({expected_revision:1,price:{currency:'RUB',input_kopeks_per_million:125,output_kopeks_per_million:250}})
 })

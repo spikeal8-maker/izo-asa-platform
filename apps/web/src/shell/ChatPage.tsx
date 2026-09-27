@@ -104,7 +104,7 @@ const [open, setOpen] = useState(!credential?.verified)
 const [busy, setBusy] = useState(false)
 const [key, setKey] = useState('')
 useEffect(() => {
-if (!credential?.verified) setOpen(true)
+setOpen(!credential?.verified)
 }, [credential?.verified])
 async function verify(view: CredentialView) {
 if (!view.revision) return

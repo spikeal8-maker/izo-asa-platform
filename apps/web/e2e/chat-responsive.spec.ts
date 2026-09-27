@@ -170,8 +170,7 @@ test('composer is compact for one line and expands from real wrapping', async ({
 
 test('composer resize hysteresis is bounded by real geometry and attachments force expansion', async ({ page }, info) => {
   test.skip(info.project.name !== 'laptop')
-  const state = await workspace(page)
-  state.capabilities = ['fal.flux2.klein.4b']
+  await workspace(page)
   await freshChat(page, 1920, 1080)
   const near = await preciseBoundaryText(page)
   await input(page).fill(near.expanded)
@@ -210,11 +209,11 @@ test('composer remeasures when compact control geometry changes', async ({ page 
   const modelButton = page.getByRole('button', { name: 'Выбрать модель' })
   const autoWidth = (await modelButton.boundingBox())!.width
   await modelButton.click()
-  const imageCategory = page.locator('.chat-model-category').filter({ hasText: 'Изображения' })
-  await expect(imageCategory).toContainText('1')
-  await imageCategory.locator('summary').click()
-  await page.getByRole('menuitemradio', { name: 'FLUX.2 [klein] 4B' }).click()
-  await expect(modelButton).toContainText('FLUX.2 [klein] 4B')
+  const textCategory = page.locator('.chat-model-category').filter({ hasText: 'Текст' })
+  await expect(textCategory).toContainText('2')
+  await textCategory.locator('summary').click()
+  await page.getByRole('menuitemradio', { name: 'DeepSeek V4 Pro' }).click()
+  await expect(modelButton).toContainText('DeepSeek V4 Pro')
   expect((await modelButton.boundingBox())!.width).toBeGreaterThan(autoWidth)
   await expect(composer(page)).toHaveAttribute('data-layout', 'expanded')
 

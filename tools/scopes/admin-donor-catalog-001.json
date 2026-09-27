@@ -24,12 +24,12 @@
     "apps/api/izo/access/permissions.py", "apps/api/izo/chat/schemas.py", "apps/api/izo/chat/service.py",
     "apps/api/izo/chat/conversations.py", "packages/contracts/openapi.json",
     "tests/test_catalog.py", "tests/test_catalog_http.py", "tests/test_catalog_migration.py",
-    "tests/test_chat_catalog.py", "apps/web/src/shell/TopBar.tsx", "apps/web/src/shell/product-nav.css",
+    "apps/web/src/shell/ChatPage.tsx", "apps/web/src/shell/TopBar.tsx", "apps/web/src/shell/product-nav.css",
     "apps/web/src/shell/App.tsx", "apps/web/src/features/admin/AdminCatalogPage.tsx",
     "apps/web/src/features/admin/AdminCatalogEditor.tsx",
     "apps/web/src/features/admin/README.md", "apps/web/src/shell/chat/modelCatalog.ts",
     "apps/web/src/shell/chat/ChatComposer.tsx", "apps/web/src/shell/chat/ModelPicker.tsx",
-    "apps/web/src/shared/ui/records.css", "apps/web/src/shared/api.ts", "apps/web/e2e/admin.spec.ts",
+    "apps/web/src/shared/ui/records.css", "apps/web/src/shared/api.ts", "apps/web/e2e/chat-responsive.spec.ts",
     "apps/web/e2e/catalog.spec.ts", "apps/api/izo/access/owner.py"
   ],
   "sensitive_approved": [
