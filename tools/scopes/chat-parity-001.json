@@ -1,0 +1,47 @@
+{
+  "package_id": "CHAT-PARITY-001",
+  "base": "e7af398cfc731027ab2a526451f52ac98509cdbe",
+  "scope_class": "cross_domain",
+  "risk": "high",
+  "independent_review_required": true,
+  "max_files": 40,
+  "large_scope_reason": "A usable OpenRouter path requires one bounded change across encrypted provider credentials, server admission and streaming, the model picker, credential settings, generated API contract and acceptance tests. The canonical Admin catalog and existing DeepSeek path must remain intact. Image vision is deliberately a later package so this package stays within the enforced 40-file limit.",
+  "domains": ["governance", "chat-credentials", "chat-provider", "chat-catalog", "web-chat", "tests"],
+  "non_goals": [
+    "No image upload, vision or image generation in this package",
+    "No Credits debit, payments, currency conversion or claim that unknown RUB pricing is free",
+    "No real provider call, credential import from the old database or changes to the old E: checkout",
+    "No global top bar or Admin permission change, merge or public release"
+  ],
+  "allowed": [
+    "docs/CURRENT.md", "docs/PLAN.json", "docs/CHECKPOINTS.json",
+    "docs/reviews/CHAT-PARITY-001.md", "tools/scopes/chat-parity-001.json",
+    "apps/api/izo/chat/README.md", "apps/web/src/shell/chat/README.md",
+    "packages/contracts/openapi.json",
+    "apps/api/izo/chat/schemas.py", "apps/api/izo/chat/tables.py",
+    "apps/api/izo/chat/service.py", "apps/api/izo/chat/credentials.py",
+    "apps/api/izo/chat/conversations.py", "apps/api/izo/chat/execution.py",
+    "apps/api/izo/chat/routes.py", "apps/api/izo/chat/provider.py",
+    "apps/api/izo/chat/catalog.py", "apps/api/izo/chat/provider_openrouter.py",
+    "apps/api/izo/chat/credential_crypto.py", "apps/api/izo/chat/credential_read.py",
+    "apps/api/izo/chat/credential_disable.py", "apps/api/izo/chat/credential_routes.py",
+    "apps/api/izo/chat/request_state.py",
+    "apps/api/izo/chat/provider_errors.py",
+    "apps/api/migrations/versions/0014_chat_multi_provider.py",
+    "tests/test_chat_multi_provider.py",
+    "apps/web/src/shell/ChatPage.tsx", "apps/web/src/shell/chat.css",
+    "apps/web/src/shell/chat/ChatComposer.tsx", "apps/web/src/shell/chat/ModelPicker.tsx",
+    "apps/web/src/shell/chat/modelCatalog.ts", "apps/web/src/shell/chat/useChatRuntime.ts",
+    "apps/web/src/shell/chat/ChatRuntime.css", "apps/web/src/shared/api.ts",
+    "apps/web/src/shell/chat/ChatCredentialPanel.tsx",
+    "apps/web/src/shell/chat/useChatCatalog.ts",
+    "apps/web/e2e/shell.spec.ts",
+    "apps/web/e2e/chat-openrouter.spec.ts",
+    "apps/web/e2e/workspace-fixtures.ts",
+    "apps/web/e2e/chat-responsive.spec.ts"
+  ],
+  "sensitive_approved": [
+    "tools/scopes/chat-parity-001.json",
+    "apps/api/migrations/versions/0014_chat_multi_provider.py"
+  ]
+}

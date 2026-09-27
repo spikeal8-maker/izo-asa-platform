@@ -12,14 +12,10 @@ from urllib.error import HTTPError, URLError
 from urllib.request import HTTPRedirectHandler, HTTPSHandler, Request, build_opener
 
 from .schemas import MAX_ASSISTANT_CHARS, MAX_SSE_LINE
+from .provider_errors import ProviderFailure, failure as _failure
 
 BASE_URL = "https://api.deepseek.com"
 MAX_ERROR_BODY = 64 * 1024
-
-class ProviderFailure(Exception):
-    def __init__(self, code: str):
-        self.code = code
-        super().__init__(code)
 
 class _NoRedirect(HTTPRedirectHandler):
     def redirect_request(self, req, fp, code, msg, headers, newurl):
@@ -46,18 +42,6 @@ class _TrackedHTTPS(HTTPSHandler):
             self.track(conn)
             return conn
         return self.do_open(connection, req, context=self._context)
-
-def _failure(status: int) -> ProviderFailure:
-    return ProviderFailure({
-        400: "provider_rejected",
-        401: "credential_rejected",
-        402: "provider_balance",
-        403: "credential_rejected",
-        422: "model_rejected",
-        429: "provider_rate_limited",
-        500: "provider_unavailable",
-        503: "provider_overloaded",
-    }.get(status, "provider_error"))
 
 class DeepSeekProvider:
     def __init__(self):
@@ -127,25 +111,24 @@ class DeepSeekProvider:
         except (URLError, TimeoutError, socket.timeout, OSError, ValueError, json.JSONDecodeError):
             raise ProviderFailure("provider_unavailable") from None
 
+    @staticmethod
+    def _chat_request(key: str, model: str, messages: list[dict], max_tokens: int) -> Request:
+        body = json.dumps({
+            "model": model, "messages": messages, "stream": True,
+            "thinking": {"type": "disabled"}, "max_tokens": max_tokens,
+        }, ensure_ascii=False, separators=(",", ":")).encode("utf-8")
+        return Request(BASE_URL + "/chat/completions", data=body, method="POST", headers={
+            "Authorization": f"Bearer {key}", "Content-Type": "application/json",
+            "Accept": "text/event-stream", "User-Agent": "IZO-ASA/1",
+        })
+
     def stream(self, key: str, model: str, messages: list[dict[str, str]],
                max_tokens: int, timeout: int, stop: Event) -> Iterable[str]:
         if stop.is_set():
             return
         deadline = time.monotonic() + timeout
         expired = Event()
-        body = json.dumps({
-            "model": model,
-            "messages": messages,
-            "stream": True,
-            "thinking": {"type": "disabled"},
-            "max_tokens": max_tokens,
-        }, ensure_ascii=False, separators=(",", ":")).encode("utf-8")
-        request = Request(BASE_URL + "/chat/completions", data=body, method="POST", headers={
-            "Authorization": f"Bearer {key}",
-            "Content-Type": "application/json",
-            "Accept": "text/event-stream",
-            "User-Agent": "IZO-ASA/1",
-        })
+        request = self._chat_request(key, model, messages, max_tokens)
         total = 0
         finish_reason = None
         try:

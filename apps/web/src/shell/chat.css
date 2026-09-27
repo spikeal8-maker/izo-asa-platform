@@ -2,9 +2,9 @@
 .chat-content main { height: 100%; }
 .chat-page {
   --chat-toolbar-height: clamp(48px, calc(40px + .55vw), 88px);
-  --chat-sidebar-width: clamp(280px, 16vw, 960px);
+  --chat-sidebar-width: clamp(280px, 18vw, 300px);
   --chat-rail-width: clamp(64px, 4.5vw, 196px);
-  --chat-content-width: clamp(760px, 54cqw, 2400px);
+  --chat-content-width: 760px;
   --chat-control-size: clamp(40px, calc(36px + .3vw), 64px);
   --chat-icon-size: clamp(19px, calc(17px + .15vw), 30px);
   --chat-label-size: clamp(14px, calc(12px + .16vw), 22px);
@@ -26,7 +26,10 @@
   transition: grid-template-columns .18s ease;
 }
 .chat-page.sidebar-open { grid-template-columns: var(--chat-sidebar-width) minmax(0, 1fr); }
-.chat-page.sidebar-compact { grid-template-columns: var(--chat-rail-width) minmax(0, 1fr); }
+.chat-page.sidebar-compact {
+  grid-template-columns: var(--chat-rail-width) minmax(0, 1fr);
+  transition: none;
+}
 .chat-main {
   position: relative;
   min-width: 0;
@@ -72,7 +75,7 @@
 }
 .chat-start-state h1 {
   margin: 0;
-  font-size: clamp(28px, calc(22px + .95cqw), 88px);
+  font-size: clamp(26px, calc(23px + .55cqw), 36px);
   line-height: 1.16;
   font-weight: 600;
   letter-spacing: -.035em;
@@ -83,7 +86,7 @@
 .chat-turn {
   display: flex;
   margin: 0 0 var(--chat-gap-lg);
-  font-size: clamp(16px, calc(14px + .22cqw), 28px);
+  font-size: clamp(16px, calc(15px + .12cqw), 18px);
   line-height: 1.58;
 }
 .chat-turn-user { justify-content: flex-end; }

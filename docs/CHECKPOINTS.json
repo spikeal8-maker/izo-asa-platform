@@ -145,6 +145,23 @@
         "Review Source": 34687805595
       }
     },
+    "LOCAL-ADMIN-ACCESS-001": {
+      "base_head": "74bdd8916473975cc0b140feb93bc001f9fffd01",
+      "independent_review": "unavailable",
+      "owner_actor": "spikeal8-maker",
+      "owner_waiver": true,
+      "owner_waiver_reason": "Repository has no other participants; owner explicitly approved waiver for this exact SHA after required CI passed.",
+      "owner_waiver_source": "e7af398cfc731027ab2a526451f52ac98509cdbe",
+      "source_head": "e7af398cfc731027ab2a526451f52ac98509cdbe",
+      "tested_merge_tree": "e154fc126c176b61501b5c2fa61e41edd9f8f60c",
+      "type": "pr_merge_tree",
+      "verified_pr": 234,
+      "workflows": {
+        "Dependency Security": 36346002370,
+        "Foundation CI": 36346002386,
+        "Review Source": 36346002421
+      }
+    },
     "MAINT-AGENT-002": {
       "base_head": "d99abc6528f0c460b1b061dbfb9ea583d3c3b553",
       "source_head": "37baf419c45970d02ce1fab75aea15cc9e8269a0",

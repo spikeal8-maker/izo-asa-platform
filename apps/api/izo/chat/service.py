@@ -5,17 +5,23 @@ import time
 from threading import Event, Lock
 
 import sqlalchemy as sa
+from ..catalog.schemas import Price
 from ..catalog.service import CatalogService
 
 from . import tables as t
+from .catalog import CatalogMixin, OpenRouterCatalogCache
 from .conversations import ConversationMixin
 from .credentials import ChatError, CredentialMixin
 from .schemas import ChatPolicyView, ModelView
-from .schemas import MAX_INPUT_CHARS, MAX_OUTPUT_TOKENS, MODEL_REVISION, REQUEST_WINDOW_SECONDS
+from .schemas import (
+    MAX_INPUT_CHARS, MAX_OUTPUT_TOKENS, MODEL_REVISION,
+    OPENROUTER_AUTO_MODEL, REQUEST_WINDOW_SECONDS,
+)
 from .execution import ExecutionMixin
+from .request_state import UNKNOWN_PAID_OUTCOME
 
 
-class ChatService(CredentialMixin, ConversationMixin, ExecutionMixin):
+class ChatService(CatalogMixin, CredentialMixin, ConversationMixin, ExecutionMixin):
     @staticmethod
     def _request_fingerprint(thread_id, text, model, connection_id, generation,
                              model_revision=MODEL_REVISION) -> str:
@@ -26,9 +32,12 @@ class ChatService(CredentialMixin, ConversationMixin, ExecutionMixin):
                          separators=(",", ":")).encode("utf-8")
         return hashlib.sha256(raw).hexdigest()
 
-    def __init__(self, auth, policy, provider, clock=time.time):
+    def __init__(self, auth, policy, provider, clock=time.time,
+                 providers=None, openrouter_catalog=None):
         self.auth, self.engine, self.policy = auth, auth.engine, policy
         self.provider, self.clock = provider, clock
+        self.providers = {"deepseek": provider, **(providers or {})}
+        self._openrouter_catalog = openrouter_catalog or OpenRouterCatalogCache(clock=clock)
         self.catalog = CatalogService(auth)
         self._stops: dict[object, Event] = {}
         self._stop_lock = Lock()
@@ -37,17 +46,37 @@ class ChatService(CredentialMixin, ConversationMixin, ExecutionMixin):
     def now(self) -> int:
         return int(self.clock())
 
+    def provider_for(self, provider: str):
+        if provider == "deepseek":
+            return self.provider
+        instance = self.providers.get(provider)
+        if instance is None:
+            raise ChatError(503, "provider_unavailable")
+        return instance
+
     def _recover_stale(self) -> None:
         now = self.now()
         with self.engine.begin() as conn:
-            stale = list(conn.execute(sa.select(t.requests.c.id).where(
-                t.requests.c.state == "streaming")).scalars())
+            stale = list(conn.execute(sa.select(
+                t.requests.c.id, t.requests.c.model_revision).where(
+                t.requests.c.state == "streaming")).all())
             if stale:
-                conn.execute(sa.update(t.requests).where(
-                    t.requests.c.id.in_(stale)).values(
-                    state="interrupted", error_code="executor_restarted", updated_at=now))
+                openrouter_ids = [item.id for item in stale
+                                  if item.model_revision.endswith(":openrouter")]
+                deepseek_ids = [item.id for item in stale
+                                if not item.model_revision.endswith(":openrouter")]
+                if openrouter_ids:
+                    conn.execute(sa.update(t.requests).where(
+                        t.requests.c.id.in_(openrouter_ids)).values(
+                        state="interrupted", error_code=UNKNOWN_PAID_OUTCOME,
+                        updated_at=now))
+                if deepseek_ids:
+                    conn.execute(sa.update(t.requests).where(
+                        t.requests.c.id.in_(deepseek_ids)).values(
+                        state="interrupted", error_code="executor_restarted",
+                        updated_at=now))
                 conn.execute(sa.update(t.messages).where(
-                    t.messages.c.request_id.in_(stale),
+                    t.messages.c.request_id.in_([item.id for item in stale]),
                     t.messages.c.role == "assistant",
                     t.messages.c.state == "partial").values(
                     state="interrupted", updated_at=now))
@@ -89,8 +118,15 @@ class ChatService(CredentialMixin, ConversationMixin, ExecutionMixin):
         return ChatPolicyView(
             revision=f"{MODEL_REVISION}:catalog-{head['revision']}",
             default_model=head["default_model"],
-            models=[ModelView(id=model.id, label=model.label, provider=model.provider,
-                              price=model.price) for model in models],
+            models=[
+                ModelView(id=model.id, label=model.label, provider=model.provider,
+                          price=model.price, text=True, vision=False,
+                          description="Текст") for model in models
+            ] + ([ModelView(
+                id=OPENROUTER_AUTO_MODEL, label="Автовыбор OpenRouter",
+                provider="openrouter", price=Price(), text=True, vision=False,
+                description="OpenRouter автоматически выбирает текстовую модель.")]
+                if "openrouter" in self.providers else []),
             max_input_chars=MAX_INPUT_CHARS,
             max_output_tokens=MAX_OUTPUT_TOKENS,
         )
@@ -143,10 +179,13 @@ class ChatService(CredentialMixin, ConversationMixin, ExecutionMixin):
                 return
             if state in {"interrupted", "stopped"}:
                 sequence += 1
-                yield self._event("message.interrupted", {
+                payload = {
                     "request_id": str(request_id), "sequence": sequence,
                     "reason": state,
-                })
+                }
+                if row["error_code"] == UNKNOWN_PAID_OUTCOME:
+                    payload["code"] = UNKNOWN_PAID_OUTCOME
+                yield self._event("message.interrupted", payload)
                 return
             if state == "error":
                 sequence += 1

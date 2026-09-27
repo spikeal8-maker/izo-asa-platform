@@ -10,7 +10,13 @@ from cryptography.exceptions import InvalidTag
 from . import tables as t
 from .credentials import ChatError, decrypt
 from .provider import ProviderFailure
+from .request_state import KNOWN_PROVIDER_REJECTIONS, UNKNOWN_PAID_OUTCOME
 from .schemas import MAX_CONTEXT_CHARS, MAX_CONTEXT_MESSAGES, MAX_OUTPUT_TOKENS
+
+RUSSIAN_REPLY_PREFERENCE = (
+    "Отвечай на русском языке, если пользователь явно не попросил другой язык. "
+    "Сохраняй исходный язык кода, цитат и имён собственных."
+)
 class ExecutionMixin:
 	def _context_and_key(self, account_id, request_row):
 		root = self._root()
@@ -26,7 +32,7 @@ class ExecutionMixin:
 				key = decrypt(
 					root, account_id, connection["id"],
 					connection["generation"], connection["nonce"],
-					connection["ciphertext"])
+					connection["ciphertext"], connection["provider"])
 			except (InvalidTag, UnicodeError, ValueError):
 				raise ChatError(503, "credential_unavailable") from None
 			user = conn.execute(sa.select(t.messages).where(
@@ -46,8 +52,16 @@ class ExecutionMixin:
 				"role": item["role"], "content": item["content"]})
 			used += len(item["content"])
 		chosen.reverse()
+		provider = connection["provider"]
+		if "/" in request_row["model"]:
+			resolved_provider, provider_model = "openrouter", request_row["model"]
+		else:
+			resolved_provider, provider_model = self.resolve_model(request_row["model"])
+		if provider != resolved_provider:
+			raise ChatError(503, "model_provider_mismatch")
+		chosen.insert(0, {"role": "system", "content": RUSSIAN_REPLY_PREFERENCE})
 		chosen.append({"role": "user", "content": user["content"]})
-		return key, chosen
+		return key, provider, provider_model, chosen
 	def _save_partial(self, request_id, content: str) -> None:
 		now = self.now()
 		with self.engine.begin() as conn:
@@ -61,58 +75,29 @@ class ExecutionMixin:
 				content=content, state="partial", updated_at=now))
 			conn.execute(sa.update(t.requests).where(
 				t.requests.c.id == request_id).values(updated_at=now))
-	def _terminal(
-			self, conn, request_id, state: str,
-			error_code: str | None, now: int,
-			content: str | None = None) -> None:
-		conn.execute(sa.update(t.requests).where(
-			t.requests.c.id == request_id).values(
-			state=state, error_code=error_code, updated_at=now))
-		message_state = "complete" if state == "completed" else state
-		values = {"state": message_state, "updated_at": now}
-		if content is not None:
-			values["content"] = content
-		conn.execute(sa.update(t.messages).where(
-			t.messages.c.request_id == request_id,
-			t.messages.c.role == "assistant").values(**values))
-		thread_id = conn.execute(sa.select(t.requests.c.thread_id).where(
-			t.requests.c.id == request_id)).scalar_one()
-		conn.execute(sa.update(t.threads).where(
-			t.threads.c.id == thread_id).values(updated_at=now))
-	def _finish(self, request_id, state, error_code, content):
-		now = self.now()
-		with self.engine.begin() as conn:
-			current, stopped_at, deadline = conn.execute(sa.select(
-				t.requests.c.state, t.requests.c.stop_requested_at, t.requests.c.deadline_at
-			).where(t.requests.c.id == request_id).with_for_update()).one()
-			if current in {"completed", "interrupted", "error", "stopped"}:
-				return current
-			if stopped_at is not None:
-				state, error_code = "stopped", None
-			elif state == "completed" and now >= deadline:
-				state, error_code = "interrupted", "request_expired"
-			self._terminal(
-				conn, request_id, state, error_code, now, content)
-		if state != "completed":
-			self._signal_stop(request_id)
-		return state
 	def _execute(self, account_id, request_row):
 		request_id = request_row["id"]
 		event = self._register_stop(request_id)
 		content, saved_at, saved_len = "", time.monotonic(), 0
 		sequence = 0
+		provider = None
+		submitted = False
 		try:
 			yield self._event(
 				"message.start",
 				{"request_id": str(request_id), "sequence": sequence})
-			key, messages = self._context_and_key(
+			key, provider, provider_model, messages = self._context_and_key(
 				account_id, request_row)
 			remaining = request_row["deadline_at"] - self.now()
 			if remaining <= 0:
 				raise ProviderFailure("request_expired")
+			adapter = self.provider_for(provider)
+			if provider == "openrouter":
+				self._mark_openrouter_submission(request_id)
+				submitted = True
 			expired = False
-			with closing(self.provider.stream(
-					key, request_row["model"], messages, MAX_OUTPUT_TOKENS, remaining, event)) as source:
+			with closing(adapter.stream(
+					key, provider_model, messages, MAX_OUTPUT_TOKENS, remaining, event)) as source:
 				for chunk in source:
 					if self.now() >= request_row["deadline_at"]:
 						expired = True
@@ -141,16 +126,24 @@ class ExecutionMixin:
 				payload["text_length"] = len(content)
 			else:
 				payload["reason"] = state
+				if submitted:
+					row, _ = self._snapshot(account_id, request_id)
+					if row["error_code"] == UNKNOWN_PAID_OUTCOME:
+						payload["code"] = UNKNOWN_PAID_OUTCOME
 			yield self._event("message.done" if state == "completed"
 				else "message.interrupted", payload)
 		except (ChatError, ProviderFailure) as exc:
+			code = (UNKNOWN_PAID_OUTCOME if submitted
+					and exc.code not in KNOWN_PROVIDER_REJECTIONS else exc.code)
 			state = self._finish(request_id,
 				"interrupted" if exc.code == "request_expired" else "error",
-				exc.code, content)
+				code, content)
 			sequence += 1
 			payload = {"request_id": str(request_id), "sequence": sequence}
 			interrupted = state in {"interrupted", "stopped"}
-			payload["reason" if interrupted else "code"] = state if interrupted else exc.code
+			payload["reason" if interrupted else "code"] = state if interrupted else code
+			if interrupted and code == UNKNOWN_PAID_OUTCOME:
+				payload["code"] = code
 			yield self._event("message.interrupted" if interrupted else "message.error", payload)
 		except GeneratorExit:
 			self._finish(
@@ -158,15 +151,16 @@ class ExecutionMixin:
 				"client_disconnected", content)
 			raise
 		except Exception:
+			code = UNKNOWN_PAID_OUTCOME if submitted else "chat_execution_failed"
 			self._finish(
 				request_id, "error",
-				"chat_execution_failed", content)
+				code, content)
 			sequence += 1
 			yield self._event(
 				"message.error", {
 					"request_id": str(request_id),
 					"sequence": sequence,
-					"code": "chat_execution_failed",
+					"code": code,
 				})
 		finally:
 			self._unregister_stop(request_id)

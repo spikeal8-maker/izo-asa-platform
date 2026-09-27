@@ -1,5 +1,4 @@
 import { test, expect, type Page } from '@playwright/test'
-import { COMPOSER_COLLAPSE_HEADROOM_PX } from '../src/shell/chat/composerLayout'
 import { noOverflow, workspace } from './workspace-fixtures'
 
 const widths = [320, 390, 768, 1024, 1440, 1920, 2560, 3840, 7680]
@@ -46,24 +45,6 @@ async function preciseBoundaryText(page: Page) {
     else compact = mid
   }
   return { compact: value(compact), expanded: value(expanded) }
-}
-
-async function mirrorWidth(page: Page) {
-  return page.locator('.chat-composer-measure').evaluate(node => Number.parseFloat((node as HTMLElement).style.width))
-}
-
-async function widenUntilMirrorGain(page: Page, baseWidth: number, gain: number) {
-  const viewport = page.viewportSize()
-  if (!viewport) throw new Error('viewport is unavailable')
-  let width = viewport.width
-  for (let step = 0; step < 80; step++) {
-    width += 4
-    await page.setViewportSize({ width, height: viewport.height })
-    await page.waitForTimeout(16)
-    const current = await mirrorWidth(page)
-    if (current >= baseWidth + gain) return current
-  }
-  throw new Error(`composer mirror did not gain ${gain}px`)
 }
 
 async function expectNoHeaderCollision(page: Page) {
@@ -172,32 +153,24 @@ test('composer is compact for one line and expands from real wrapping', async ({
   }
 })
 
-test('composer resize hysteresis is bounded by real geometry and attachments force expansion', async ({ page }, info) => {
+test('composer remains readable on wide screens and unavailable attachments stay disabled', async ({ page }, info) => {
   test.skip(info.project.name !== 'laptop')
   await workspace(page)
   await freshChat(page, 1920, 1080)
   const near = await preciseBoundaryText(page)
   await input(page).fill(near.expanded)
   await expect(composer(page)).toHaveAttribute('data-layout', 'expanded')
-  const baseMirrorWidth = await mirrorWidth(page)
-
-  await widenUntilMirrorGain(page, baseMirrorWidth, COMPOSER_COLLAPSE_HEADROOM_PX - 4)
+  const bounded = await page.locator('.chat-composer-wrap').boundingBox()
+  expect(bounded!.width).toBeLessThanOrEqual(760)
+  await page.setViewportSize({ width: 3840, height: 1080 })
+  const wide = await page.locator('.chat-composer-wrap').boundingBox()
+  expect(wide!.width).toBeLessThanOrEqual(760)
   await expect(composer(page)).toHaveAttribute('data-layout', 'expanded')
-
-  await widenUntilMirrorGain(page, baseMirrorWidth, COMPOSER_COLLAPSE_HEADROOM_PX + 8)
-  await expect(composer(page)).toHaveAttribute('data-layout', 'compact')
 
   await input(page).fill('')
   await expect(composer(page)).toHaveAttribute('data-layout', 'compact')
-
-  const chooser = page.waitForEvent('filechooser')
-  await page.getByRole('button', { name: 'Добавить', exact: true }).click()
-  await page.getByRole('menu', { name: 'Инструменты' }).getByRole('menuitem', { name: 'Добавить файл' }).click()
-  const file = await chooser
-  await file.setFiles({ name: 'reference.txt', mimeType: 'text/plain', buffer: Buffer.from('reference') })
-  await expect(composer(page)).toHaveAttribute('data-layout', 'expanded')
-  await page.getByRole('button', { name: 'Удалить вложение' }).click()
-  await expect(composer(page)).toHaveAttribute('data-layout', 'compact')
+  await expect(page.getByRole('button', { name: 'Добавить', exact: true })).toBeDisabled()
+  await noOverflow(page)
 })
 
 test('composer remeasures when compact control geometry changes', async ({ page }, info) => {
@@ -214,7 +187,7 @@ test('composer remeasures when compact control geometry changes', async ({ page 
   const autoWidth = (await modelButton.boundingBox())!.width
   await modelButton.click()
   const textCategory = page.locator('.chat-model-category').filter({ hasText: 'Текст' })
-  await expect(textCategory).toContainText('2')
+  await expect(textCategory).toContainText('3')
   await textCategory.locator('summary').click()
   await page.getByRole('menuitemradio', { name: 'DeepSeek V4 Pro' }).click()
   await expect(modelButton).toContainText('DeepSeek V4 Pro')

@@ -42,12 +42,16 @@ export async function workspace(page: Page) {
       policy: { capability_ids: state.capabilities, executors: ['api'], image_sizes: [{ width: 64, height: 64 }, { width: 128, height: 64 }] } })
     if (path === '/api/v1/chat/policy') return answer({
       revision: 'browser-fixture', default_model: 'deepseek-flash',
-      models: [{ id: 'deepseek-flash', label: 'DeepSeek Flash' }, { id: 'deepseek-v4-pro', label: 'DeepSeek V4 Pro' }],
+      models: [{ id: 'deepseek-flash', label: 'DeepSeek Flash', provider: 'deepseek' },
+        { id: 'deepseek-v4-pro', label: 'DeepSeek V4 Pro', provider: 'deepseek' },
+        { id: 'openrouter-auto', label: 'Автовыбор OpenRouter', provider: 'openrouter' }],
       max_input_chars: 6000, max_output_tokens: 2048,
     })
-    if (path === '/api/v1/chat/credential') return answer({
-      configured: true, enabled: true, verified: true, revision: 1, generation: 1, provider: 'deepseek',
-    })
+    if (path === '/api/v1/chat/credentials') return answer({ credentials: [
+      { configured: true, enabled: true, verified: true, revision: 1, generation: 1, provider: 'deepseek' },
+      { configured: false, enabled: false, verified: false, revision: null, generation: null, provider: 'openrouter' },
+    ] })
+    if (path === '/api/v1/chat/catalog/openrouter') return answer({ models: [], stale: false, fetched_at: 1 })
     if (path === '/api/v1/chat/threads' && req.method() === 'GET') return answer({ threads: [] })
     if (req.method() === 'POST') {
       expect(req.headers()['x-csrf-token']).toBe('workspace-csrf')

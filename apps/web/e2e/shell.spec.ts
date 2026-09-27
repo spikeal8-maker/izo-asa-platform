@@ -49,12 +49,12 @@ return{collision:a.some((x,j)=>a.slice(j+1).some(y=>o(x,y))),overflow:document.d
 test('8K shell',async({page},i)=>{
 test.skip(i.project.name!=='eight-k');await F(page);const m=await page.evaluate(()=>{const f=(s:K)=>parseFloat(getComputedStyle(document.querySelector(s)!).fontSize),w=(s:K)=>document.querySelector(s)!.getBoundingClientRect().width
 return{b:f('.global-brand'),p:f('.product-tab'),h:f('.chat-start-state h1'),s:w('.chat-sidebar'),c:w('.chat-composer-wrap'),v:innerWidth}})
-e([m.b>=34,m.p>=28,m.h>=72,m.s>=600,m.c>=2100,m.c<m.v/2]).toEqual([true,true,true,true,true,true]);await page.goto('/feed');const g=Q(page,'.feed-grid')
+e([m.b>=34,m.p>=28,m.h>=34,m.h<=36,m.s>=280,m.s<=300,m.c>=740,m.c<=760,m.c<m.v/2]).toEqual([true,true,true,true,true,true,true,true,true]);await page.goto('/feed');const g=Q(page,'.feed-grid')
 e([await g.evaluate(x=>getComputedStyle(x).gridTemplateColumns.split(' ').length)>=8,(await g.boundingBox())!.width>4000,((await Q(page,'.feed-hero-copy').boundingBox())?.width??9999)<1000]).toEqual([true,true,true]);await Y(page)
 })
 test('c',async({page})=>{
-await F(page);let c=P(page);await X(page.getByRole('heading',{level:1}),'Чем я могу помочь?');await e(E(c,N.m)).toBeDisabled();await e(B(c,N.a)).toBeEnabled();await e(B(c,'Микрофон')).toBeEnabled();await e(B(c,N.s)).toBeDisabled()
-await G(page);await page.reload();c=P(page);await e(E(c,N.m)).toBeEnabled();await T(B(c,N.c),'Авто');await e(B(c,N.a)).toBeEnabled();await e(B(c,'Микрофон')).toBeEnabled();await E(c,N.m).fill('Проверка');await e(B(c,N.s)).toBeEnabled()
+await F(page);let c=P(page);await X(page.getByRole('heading',{level:1}),'Чем я могу помочь?');await e(E(c,N.m)).toBeDisabled();await e(B(c,N.a)).toBeDisabled();await e(B(c,'Микрофон')).toBeEnabled();await e(B(c,N.s)).toBeDisabled()
+await G(page);await page.reload();c=P(page);await e(E(c,N.m)).toBeEnabled();await T(B(c,N.c),'Авто');await e(B(c,N.a)).toBeDisabled();await e(B(c,'Микрофон')).toBeEnabled();await E(c,N.m).fill('Проверка');await e(B(c,N.s)).toBeEnabled()
 })
 test('s',async({page})=>{
 await G(page);const rows=[{id:'11111111-1111-4111-8111-111111111112',title:'Первый проект',created_at:1,updated_at:2},{id:'11111111-1111-4111-8111-111111111113',title:'Второй проект',created_at:1,updated_at:3}]

@@ -2,12 +2,16 @@
 from __future__ import annotations
 
 import base64
+from typing import Literal
 from uuid import UUID
 from pydantic import BaseModel, ConfigDict, Field, SecretStr, field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 from ..catalog.schemas import Price
 
 MODEL_REVISION = "deepseek-2026-09-d1"
+ProviderId = Literal["deepseek", "openrouter"]
+PROVIDERS: tuple[ProviderId, ...] = ("deepseek", "openrouter")
+OPENROUTER_AUTO_MODEL = "openrouter-auto"
 MAX_INPUT_CHARS = 6_000
 MAX_CONTEXT_MESSAGES = 40
 MAX_CONTEXT_CHARS = 24_000
@@ -41,6 +45,10 @@ class ChatSettings(BaseSettings):
         allowed = {item.strip().lower() for item in self.preview_account_emails.split(",")}
         return bool(email and email.lower() in allowed)
 
+    @staticmethod
+    def provider_allowed(provider: str) -> bool:
+        return provider in PROVIDERS
+
 class StrictInput(BaseModel):
     model_config = ConfigDict(extra="forbid", hide_input_in_errors=True)
 
@@ -49,6 +57,9 @@ class ModelView(BaseModel):
     label: str
     provider: str
     price: Price
+    text: bool = True
+    vision: bool = False
+    description: str = ""
 
 class ChatPolicyView(BaseModel):
     revision: str
@@ -56,6 +67,23 @@ class ChatPolicyView(BaseModel):
     models: list[ModelView]
     max_input_chars: int
     max_output_tokens: int
+    max_attachments: int = 0
+    max_image_bytes: int = 0
+
+class OpenRouterCatalogModel(BaseModel):
+    id: str
+    name: str
+    provider: str
+    context_length: int
+    vision: bool = False
+    input_per_million_usd: float | None = None
+    output_per_million_usd: float | None = None
+    created: int | None = None
+
+class OpenRouterCatalogView(BaseModel):
+    models: list[OpenRouterCatalogModel]
+    stale: bool
+    fetched_at: int | None
 
 class CredentialView(BaseModel):
     configured: bool
@@ -63,7 +91,10 @@ class CredentialView(BaseModel):
     verified: bool
     revision: int | None = None
     generation: int | None = None
-    provider: str = "deepseek"
+    provider: ProviderId = "deepseek"
+
+class CredentialListView(BaseModel):
+    credentials: list[CredentialView]
 
 class CredentialWrite(StrictInput):
     operation_id: UUID

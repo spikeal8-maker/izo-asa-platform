@@ -1,52 +1,24 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import {
-apiRequest, apiStream, ApiError, chatErrors, chatProblem,
-type AuthView, type ChatPolicyView, type ChatRequestView, type CredentialView,
+apiRequest, apiStream, ApiError, chatProblem, chatProviderProblem,
+type AuthView, type ChatPolicyView, type ChatRequestView, type CredentialListView, type CredentialView,
 type MessageView, type ThreadDetail, type ThreadList, type ThreadView,
 } from '../../shared/api'
-type ChatModel = ChatPolicyView['models'][number]
-type StreamPayload = Record<string, unknown>
-async function consumeSse(
-response: Response, onEvent: (name: string, data: StreamPayload) => void,
-) {
-const reader = response.body!.getReader()
-const decoder = new TextDecoder()
-let buffer = ''
-try {
-while (true) {
-const part = await reader.read()
-if (part.done) break
-buffer += decoder.decode(part.value, { stream: true }).replace(/\r\n/g, '\n')
-let boundary = buffer.indexOf('\n\n')
-while (boundary >= 0) {
-const frame = buffer.slice(0, boundary)
-buffer = buffer.slice(boundary + 2)
-let event = '', data = ''
-for (const line of frame.split('\n')) {
-if (line.startsWith('event:')) event = line.slice(6).trim()
-else if (line.startsWith('data:')) data += line.slice(5).trim()
-}
-if (event && data) onEvent(event, JSON.parse(data) as StreamPayload)
-boundary = buffer.indexOf('\n\n')
-}
-}
-} finally { reader.releaseLock() }
-}
+import { consumeSse, useChatCatalog, useCredentialSync } from './useChatCatalog'
+import { providerFor } from './modelCatalog'
 export function useChatRuntime(auth: AuthView | null | undefined) {
-const [policy, setPolicy] = useState<ChatPolicyView | null>(null)
-const [credential, setCredential] = useState<CredentialView | null>(null)
+const [basePolicy, setBasePolicy] = useState<ChatPolicyView | null>(null)
+const [credentials, setCredentials] = useState<CredentialView[]>([])
 const [history, setHistory] = useState<ThreadView[]>([])
 const [messages, setMessages] = useState<MessageView[]>([])
 const [currentChatId, setCurrentChatId] = useState<string | null>(null)
-const [modelId, setModelId] = useState<string | null>(null)
 const [busy, setBusy] = useState(false)
 const [activeRequestId, setActiveRequestId] = useState<string | null>(null)
 const [error, setError] = useState('')
+const publishCredentialChange = useCredentialSync(auth, setCredentials)
+const { policy, catalogError } = useChatCatalog(auth, basePolicy)
 const streamController = useRef<AbortController | null>(null)
 const resumeAttempted = useRef(new Set<string>())
-const models = policy?.models ?? []
-const model: ChatModel | null = models.find(item => item.id === modelId)
-?? models.find(item => item.id === policy?.default_model) ?? models[0] ?? null
 const refreshHistory = useCallback(async (signal?: AbortSignal) => {
 if (!auth) return
 const list = await apiRequest<ThreadList>('/api/v1/chat/threads', { signal })
@@ -56,22 +28,32 @@ const loadThread = useCallback(async (threadId: string, signal?: AbortSignal) =>
 const detail = await apiRequest<ThreadDetail>(
 `/api/v1/chat/threads/${threadId}`, { signal })
 setCurrentChatId(detail.thread.id); setMessages(detail.messages)
+const last = [...detail.messages].reverse().find(message => message.role === 'assistant')
+if (last && ['error', 'interrupted', 'stopped'].includes(last.state)) {
+try {
+const request = await apiRequest<ChatRequestView>(
+`/api/v1/chat/requests/${last.request_id}`, { signal })
+if (request.error_code === 'provider_outcome_unknown')
+setError(chatProviderProblem(request.error_code))
+} catch { /* Keep the thread visible; request status can be checked again on reload. */ }
+}
 return detail
 }, [])
 useEffect(() => {
 streamController.current?.abort()
-setPolicy(null); setCredential(null); setHistory([]); setMessages([])
+setBasePolicy(null); setCredentials([]); setHistory([]); setMessages([])
 setCurrentChatId(null); setBusy(false); setActiveRequestId(null); setError('')
 resumeAttempted.current.clear()
 if (!auth) return
 const controller = new AbortController()
 Promise.all([
 apiRequest<ChatPolicyView>('/api/v1/chat/policy', { signal: controller.signal }),
-apiRequest<CredentialView>('/api/v1/chat/credential', { signal: controller.signal }),
+apiRequest<CredentialListView>('/api/v1/chat/credentials', { signal: controller.signal }),
 apiRequest<ThreadList>('/api/v1/chat/threads', { signal: controller.signal }),
 ]).then(([p, c, h]) => {
 if (controller.signal.aborted) return
-setPolicy(p); setModelId(p.default_model); setCredential(c); setHistory(h.threads)
+setBasePolicy(p)
+setCredentials(c.credentials); setHistory(h.threads)
 }).catch(reason => {
 if (!controller.signal.aborted) setError(chatProblem(reason))
 })
@@ -95,10 +77,13 @@ message.request_id === requestId && message.role === 'assistant'
 ? { ...message, content: message.content + data.text, state: 'partial' }
 : message))
 } else if (name === 'message.error' && typeof data.code === 'string') {
-setError(chatErrors[data.code] ?? 'Ответ завершился с ошибкой.')
+setError(chatProviderProblem(data.code,
+  typeof data.provider === 'string' ? data.provider : undefined))
 } else if (name === 'message.interrupted') {
-setError(data.reason === 'stopped' ? ''
-: 'Ответ был прерван. Частичный текст сохранён.')
+setError(data.code === 'provider_outcome_unknown' || data.reason === 'provider_outcome_unknown'
+  ? chatProviderProblem('provider_outcome_unknown')
+  : data.reason === 'stopped' ? ''
+  : 'Ответ был прерван. Частичный текст сохранён.')
 }
 })
 } catch (reason) {
@@ -140,9 +125,11 @@ setError('')
 try { await loadThread(chat.id) }
 catch (reason) { setError(chatProblem(reason)) }
 }
-async function send(text: string, selectedModelId?: string): Promise<boolean> {
-const selectedModel = policy?.models.find(item => item.id === selectedModelId) ?? model
-if (!auth || !selectedModel || busy || !credential?.verified) return false
+async function send(text: string, selectedModelId: string): Promise<boolean> {
+const selectedModel = policy?.models.find(item => item.id === selectedModelId)
+const selectedCredential = selectedModel
+  ? credentials.find(item => item.provider === providerFor(selectedModel)) : null
+if (!auth || !selectedModel || busy || !selectedCredential?.verified) return false
 setError(''); setBusy(true)
 let threadId = currentChatId
 try {
@@ -188,23 +175,33 @@ async function stop() {
 if (!auth || !activeRequestId) return
 const requestId = activeRequestId
 try {
-await apiRequest<ChatRequestView>(
+const stopped = await apiRequest<ChatRequestView>(
 `/api/v1/chat/requests/${requestId}/stop`, {
 method: 'POST', csrf: auth.csrf_token, data: {},
 })
+resumeAttempted.current.add(requestId)
 streamController.current?.abort()
-if (currentChatId) await loadThread(currentChatId)
-setError('')
+const outcomeWarning = stopped.error_code === 'provider_outcome_unknown'
+  ? chatProviderProblem(stopped.error_code) : ''
+setError(outcomeWarning)
+if (currentChatId) {
+try { await loadThread(currentChatId) }
+catch (reason) { if (!outcomeWarning) setError(chatProblem(reason)) }
+}
 } catch (reason) { setError(chatProblem(reason)) }
 finally { setBusy(false); setActiveRequestId(null) }
+}
+function setCredential(value: CredentialView) {
+setCredentials(current => [...current.filter(item => item.provider !== value.provider), value])
+publishCredentialChange()
 }
 function credentialDisabled(value: CredentialView) {
 streamController.current?.abort()
 setCredential(value); setBusy(false); setActiveRequestId(null)
 }
 return {
-policy, credential, history, messages, currentChatId, model, busy, activeRequestId,
-error, setError, setCredential, credentialDisabled, setModelId,
+policy, catalogError, credentials, history, messages, currentChatId, busy, activeRequestId,
+error, setError, setCredential, credentialDisabled,
 newChat, openChat, send, stop,
 }
 }

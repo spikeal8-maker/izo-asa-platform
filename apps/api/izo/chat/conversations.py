@@ -1,13 +1,14 @@
 """Durable Thread/Message/Request ownership and idempotency."""
-from threading import Event
 from uuid import UUID, uuid4
 import sqlalchemy as sa
 from sqlalchemy.exc import IntegrityError
 from . import tables as t
 from .credentials import ChatError
+from .request_state import RequestStateMixin, UNKNOWN_PAID_OUTCOME
 from .schemas import MessageView, RequestView, ThreadDetail, ThreadList, ThreadView
 from .schemas import MESSAGE_PAGE_LIMIT, MODEL_REVISION, REQUEST_WINDOW_LIMIT, THREAD_PAGE_LIMIT
-class ConversationMixin:
+from .schemas import OPENROUTER_AUTO_MODEL
+class ConversationMixin(RequestStateMixin):
 	def create_thread(self, raw, csrf, title: str | None) -> ThreadView:
 		now, thread_id = self.now(), uuid4()
 		safe = (title or "Новый чат").strip()[:120] or "Новый чат"
@@ -52,14 +53,25 @@ class ConversationMixin:
 		return ThreadDetail(
 			thread=self._thread_view(thread),
 			messages=[self._message_view(row) for row in reversed(rows)])
-	@staticmethod
-	def _request_view(row) -> RequestView:
-		return RequestView(
-			id=row["id"], thread_id=row["thread_id"], model=row["model"],
-			state=row["state"], error_code=row["error_code"],
-			created_at=row["created_at"], updated_at=row["updated_at"],
-			deadline_at=row["deadline_at"])
 	def create_request(self, raw, csrf, thread_id: UUID, command) -> RequestView:
+		# Resolve remote catalog IDs before acquiring the thread row lock. Durable
+		# request replays still work when the provider catalog is unavailable.
+		dynamic_provider = None
+		if "/" in command.model:
+			with self.engine.begin() as conn:
+				account, _ = self._account(conn, raw, csrf, mutation=True)
+				exists = conn.execute(sa.select(t.requests.c.id).where(
+					t.requests.c.id == command.request_id,
+					t.requests.c.account_id == account["id"],
+					t.requests.c.thread_id == thread_id)).first() is not None
+				if not exists and conn.execute(sa.select(t.requests.c.id).where(
+						t.requests.c.account_id == account["id"],
+						t.requests.c.thread_id == thread_id,
+						t.requests.c.error_code == UNKNOWN_PAID_OUTCOME
+					).limit(1)).first():
+					raise ChatError(409, UNKNOWN_PAID_OUTCOME)
+			if not exists:
+				dynamic_provider, _ = self.resolve_model(command.model)
 		try:
 			with self.engine.begin() as conn:
 				account, _ = self._account(conn, raw, csrf, mutation=True)
@@ -101,17 +113,37 @@ class ConversationMixin:
 					if expected != existing["fingerprint"]:
 						raise ChatError(409, "request_conflict")
 					return self._request_view(existing)
+				if conn.execute(sa.select(t.requests.c.id).where(
+						t.requests.c.thread_id == thread_id,
+						t.requests.c.account_id == account["id"],
+						t.requests.c.error_code == UNKNOWN_PAID_OUTCOME
+					).limit(1)).first():
+					raise ChatError(409, UNKNOWN_PAID_OUTCOME)
 				head, allowed_models = self.catalog.public_text(conn, lock=True)
-				if command.model not in {item.id for item in allowed_models}:
-					raise ChatError(422, "model_not_allowed")
+				if command.model == OPENROUTER_AUTO_MODEL:
+					provider = "openrouter"
+				elif "/" in command.model:
+					if dynamic_provider is None:
+						raise ChatError(409, "request_conflict")
+					provider = dynamic_provider
+				else:
+					selected = next((item for item in allowed_models
+					                 if item.id == command.model), None)
+					if selected is None:
+						raise ChatError(422, "model_not_allowed")
+					provider = selected.provider
 				self._consume_rate(
 					conn, account["id"], "request", REQUEST_WINDOW_LIMIT)
 				connection = conn.execute(sa.select(t.connections).where(
-					t.connections.c.account_id == account["id"]).with_for_update()).mappings().first()
+					t.connections.c.account_id == account["id"],
+					t.connections.c.provider == provider
+				).with_for_update()).mappings().first()
 				if (not connection or not connection["enabled"]
 						or connection["verified_at"] is None):
 					raise ChatError(409, "credential_not_verified")
-				model_revision = f"{MODEL_REVISION}:catalog-{head['revision']}"
+				model_revision = (f"{MODEL_REVISION}:catalog-{head['revision']}"
+				                  if provider == "deepseek" else
+				                  f"{MODEL_REVISION}:openrouter")
 				fingerprint = self._request_fingerprint(
 					thread_id, command.text, command.model,
 					connection["id"], connection["generation"], model_revision)
@@ -152,55 +184,3 @@ class ConversationMixin:
 				return self._request_view(row)
 		except IntegrityError as exc:
 			raise ChatError(409, "active_request_exists") from exc
-	def request(self, raw, request_id: UUID) -> RequestView:
-		with self.engine.begin() as conn:
-			account, _ = self._account(conn, raw)
-			row = conn.execute(sa.select(t.requests).where(
-				t.requests.c.id == request_id,
-				t.requests.c.account_id == account["id"])).mappings().first()
-			if not row:
-				raise ChatError(404, "request_not_found")
-			return self._request_view(row)
-	def stop(self, raw, csrf, request_id: UUID) -> RequestView:
-		now = self.now()
-		with self.engine.begin() as conn:
-			account, _ = self._account(conn, raw, csrf, mutation=True)
-			row = conn.execute(sa.select(t.requests).where(
-				t.requests.c.id == request_id,
-				t.requests.c.account_id == account["id"]).with_for_update()).mappings().first()
-			if not row:
-				raise ChatError(404, "request_not_found")
-			if row["state"] in {
-					"completed", "interrupted", "error", "stopped"}:
-				return self._request_view(row)
-			if row["state"] == "pending":
-				conn.execute(sa.update(t.requests).where(
-					t.requests.c.id == request_id).values(
-					state="stopped", stop_requested_at=now, updated_at=now))
-				conn.execute(sa.update(t.messages).where(
-					t.messages.c.request_id == request_id,
-					t.messages.c.role == "assistant").values(
-					state="stopped", updated_at=now))
-			else:
-				conn.execute(sa.update(t.requests).where(
-					t.requests.c.id == request_id).values(
-					stop_requested_at=now, updated_at=now))
-		self._signal_stop(request_id)
-		return self.request(raw, request_id)
-	def _signal_stop(self, request_id: UUID) -> None:
-		with self._stop_lock:
-			event = self._stops.get(request_id)
-			if event:
-				event.set()
-	def _register_stop(self, request_id: UUID) -> Event:
-		with self._stop_lock:
-			event = self._stops.setdefault(request_id, Event())
-		with self.engine.begin() as conn:
-			requested = conn.execute(sa.select(t.requests.c.stop_requested_at).where(
-				t.requests.c.id == request_id)).scalar_one()
-		if requested is not None:
-			event.set()
-		return event
-	def _unregister_stop(self, request_id: UUID) -> None:
-		with self._stop_lock:
-			self._stops.pop(request_id, None)

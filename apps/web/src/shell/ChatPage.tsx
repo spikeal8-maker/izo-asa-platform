@@ -1,8 +1,9 @@
-import { useEffect, useLayoutEffect, useRef, useState, type FormEvent } from 'react'
-import { apiRequest, chatProblem, type AuthView, type CredentialView } from '../shared/api'
+import { useEffect, useLayoutEffect, useRef, useState } from 'react'
+import type { AuthView } from '../shared/api'
 import { Icon } from '../shared/ui/Icon'
 import { Link } from './router'
 import { ChatComposer } from './chat/ChatComposer'
+import { ChatCredentialPanel } from './chat/ChatCredentialPanel'
 import { ChatMessage } from './chat/ChatMessage'
 import { ChatSidebar } from './chat/ChatSidebar'
 import { useChatRuntime } from './chat/useChatRuntime'
@@ -68,12 +69,12 @@ if (!desktop) closeDrawer()
 await runtime.openChat(chat)
 }
 const empty = runtime.messages.length === 0
-const disabled = !auth || !runtime.policy || !runtime.credential?.verified
+const disabled = !auth || !runtime.policy
 const composer = <ChatComposer
-auth={auth} policy={runtime.policy}
+auth={auth} policy={runtime.policy} credentials={runtime.credentials}
+catalogError={runtime.catalogError}
 busy={runtime.busy} stoppable={Boolean(runtime.activeRequestId)} disabled={disabled}
-onSend={runtime.send} onStop={() => void runtime.stop()}
-onUnsupported={() => runtime.setError('Этот инструмент ещё не подключён к текстовому Chat D1.')} />
+onSend={runtime.send} onStop={() => void runtime.stop()} />
 return <section
 className={`chat-page ${empty ? 'is-empty' : ''} ${sidebarOpen ? 'sidebar-open' : ''} ${compact ? 'sidebar-compact' : ''}`}
 aria-label="Чат ИЗО АСА">
@@ -93,7 +94,7 @@ aria-label="Открыть панель" aria-expanded={drawerOpen} onClick={() 
 <Icon name="panel" />
 </button>}
 {auth && <ChatCredentialPanel
-auth={auth} credential={runtime.credential}
+auth={auth} credentials={runtime.credentials}
 onChange={runtime.setCredential} onDisabled={runtime.credentialDisabled}
 onError={runtime.setError} />}
 </div>
@@ -104,8 +105,8 @@ onError={runtime.setError} />}
 ? <p className="chat-start-note" role="status">Проверяем вход…</p>
 : !auth
 ? <p className="chat-start-note">Для сохранённого разговора нужен аккаунт. <Link href="/login">Войти</Link></p>
-: !runtime.credential?.verified
-? <p className="chat-start-note">Подключите и проверьте свой ключ DeepSeek.</p>
+: !runtime.credentials.some(item => item.verified)
+? <p className="chat-start-note">Подключите и проверьте API key провайдера.</p>
 : null}
 {runtime.error && <div className="chat-runtime-note" role="alert">
 <Icon name="info" /><span>{runtime.error}</span>
@@ -126,88 +127,4 @@ onError={runtime.setError} />}
 </>}
 </div>
 </section>
-}
-function ChatCredentialPanel({ auth, credential, onChange, onDisabled, onError }: {
-auth: AuthView
-credential: CredentialView | null
-onChange: (value: CredentialView) => void
-onDisabled: (value: CredentialView) => void
-onError: (message: string) => void
-}) {
-const [open, setOpen] = useState(!credential?.verified)
-const [busy, setBusy] = useState(false)
-const [key, setKey] = useState('')
-useEffect(() => {
-setOpen(!credential?.verified)
-}, [credential?.verified])
-async function verify(view: CredentialView) {
-if (!view.revision) return
-const next = await apiRequest<CredentialView>('/api/v1/chat/credential/verify', {
-method: 'POST', csrf: auth.csrf_token, timeoutMs: 20000,
-data: { operation_id: crypto.randomUUID(), expected_revision: view.revision },
-})
-onChange(next)
-if (next.verified) setOpen(false)
-}
-async function save(event: FormEvent) {
-event.preventDefault()
-if (!key.trim() || busy) return
-setBusy(true); onError('')
-try {
-const saved = await apiRequest<CredentialView>('/api/v1/chat/credential', {
-method: 'POST', csrf: auth.csrf_token,
-data: {
-operation_id: crypto.randomUUID(), key: key.trim(),
-expected_revision: credential?.revision ?? null,
-},
-})
-setKey(''); onChange(saved); await verify(saved)
-} catch (reason) {
-setKey(''); onError(chatProblem(reason))
-} finally { setBusy(false) }
-}
-async function verifyAgain() {
-if (!credential || busy) return
-setBusy(true); onError('')
-try { await verify(credential) }
-catch (reason) { onError(chatProblem(reason)) }
-finally { setBusy(false) }
-}
-async function disable() {
-if (!credential?.revision || busy) return
-setBusy(true); onError('')
-try {
-const next = await apiRequest<CredentialView>('/api/v1/chat/credential/disable', {
-method: 'POST', csrf: auth.csrf_token,
-data: { operation_id: crypto.randomUUID(), expected_revision: credential.revision },
-})
-onDisabled(next); setOpen(true)
-} catch (reason) { onError(chatProblem(reason)) }
-finally { setBusy(false) }
-}
-return <>
-<button type="button" className="chat-credential-toggle" aria-expanded={open}
-onClick={() => setOpen(value => !value)}>
-<span className={credential?.verified ? 'is-ok' : ''} />
-{credential?.verified ? 'DeepSeek подключён' : 'Подключить DeepSeek'}
-</button>
-{open && <form className="chat-credential-popover" onSubmit={event => void save(event)}>
-<h2>Ключ DeepSeek</h2>
-<p>Ключ сохраняется зашифрованным в этом аккаунте и не попадает в историю чата.</p>
-<input type="password" autoComplete="off" value={key}
-onChange={event => setKey(event.target.value)}
-aria-label="API ключ DeepSeek" placeholder="Введите API key" />
-<div className="chat-credential-actions">
-<button type="submit" disabled={busy || !key.trim()}>
-{credential?.configured ? 'Заменить и проверить' : 'Сохранить и проверить'}
-</button>
-{credential?.configured && !credential.verified
-&& <button type="button" disabled={busy} onClick={() => void verifyAgain()}>
-Проверить сохранённый
-</button>}
-{credential?.configured && <button type="button" className="secondary"
-disabled={busy} onClick={() => void disable()}>Отключить</button>}
-</div>
-</form>}
-</>
 }
