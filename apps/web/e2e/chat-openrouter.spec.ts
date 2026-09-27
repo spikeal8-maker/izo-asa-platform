@@ -32,7 +32,9 @@ test('first-run DeepSeek key entry receives focus and can be dismissed', async (
   await add.click()
   await expect(key).toBeFocused()
   await page.keyboard.press('Escape')
-  await page.getByRole('button', { name: 'Настройки DeepSeek и OpenRouter' }).click()
+  const toggle = page.getByRole('button', { name: 'Настройки DeepSeek и OpenRouter' })
+  await expect(toggle).toBeFocused()
+  await toggle.click()
   await expect(key).toBeFocused()
 })
 

@@ -8,7 +8,7 @@ const providers = [
 ] as const
 
 const credentialFor = (credentials: CredentialView[], provider: ChatProviderId) =>
-  credentials.find(item => item.provider === provider) ?? null
+  credentials.find(item => item.provider === provider)
 
 export function ChatCredentialPanel({
   auth, credentials, onChange, onDisabled, onError,
@@ -29,7 +29,7 @@ export function ChatCredentialPanel({
 
   useEffect(() => {
     if (firstRun) setOpen(true)
-  }, [firstRun])
+  }, [auth.account.id, firstRun])
 
   useEffect(() => {
     if (!open) return
@@ -37,7 +37,9 @@ export function ChatCredentialPanel({
       if (event.target instanceof Node && !wrapper.current?.contains(event.target)) setOpen(false)
     }
     const escape = (event: KeyboardEvent) => {
-      if (event.key === 'Escape') setOpen(false)
+      if (event.key === 'Escape') {
+        setOpen(false); wrapper.current?.querySelector('button')?.focus()
+      }
     }
     document.addEventListener('pointerdown', dismiss)
     document.addEventListener('keydown', escape)
@@ -75,7 +77,7 @@ export function ChatCredentialPanel({
           onError={onError}
         />)}
       </div>
-      <p className="chat-provider-model-hint">Модели — в меню поля ввода.</p>
+      <p className="chat-provider-model-hint">Модели — в меню у поля ввода.</p>
     </div>}
   </div>
 }
@@ -89,7 +91,7 @@ function ProviderCredentialCard({
   auth: AuthView
   provider: ChatProviderId
   label: string
-  credential: CredentialView | null
+  credential?: CredentialView
   autoEntry: boolean
   busyProvider: ChatProviderId | null
   onBusy: (provider: ChatProviderId | null) => void
