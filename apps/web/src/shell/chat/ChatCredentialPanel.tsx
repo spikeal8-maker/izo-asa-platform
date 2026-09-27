@@ -25,9 +25,17 @@ export function ChatCredentialPanel({
   const [open, setOpen] = useState(false)
   const [busyProvider, setBusyProvider] = useState<ChatProviderId | null>(null)
   const wrapper = useRef<HTMLDivElement>(null)
+  const autoOpenedFor = useRef<string | null>(null)
+  const firstRun = credentials.length > 0 && credentials.every(item => !item.configured)
   const connected = providers.filter(
     item => credentialFor(credentials, item.id)?.verified).length
   const deepseekOnly = connected === 1 && credentialFor(credentials, 'deepseek')?.verified
+
+  useEffect(() => {
+    if (!firstRun || autoOpenedFor.current === auth.account.id) return
+    autoOpenedFor.current = auth.account.id
+    setOpen(true)
+  }, [auth.account.id, firstRun])
 
   useEffect(() => {
     if (!open) return
@@ -65,6 +73,7 @@ export function ChatCredentialPanel({
           provider={provider.id}
           label={provider.label}
           credential={credentialFor(credentials, provider.id)}
+          autoEntry={firstRun && provider.id === 'deepseek'}
           busyProvider={busyProvider}
           onBusy={setBusyProvider}
           onChange={onChange}
@@ -80,13 +89,14 @@ export function ChatCredentialPanel({
 type ChatProviderId = 'deepseek' | 'openrouter'
 
 function ProviderCredentialCard({
-  auth, provider, label, credential, busyProvider,
+  auth, provider, label, credential, autoEntry, busyProvider,
   onBusy, onChange, onDisabled, onError,
 }: {
   auth: AuthView
   provider: ChatProviderId
   label: string
   credential: CredentialView | null
+  autoEntry: boolean
   busyProvider: ChatProviderId | null
   onBusy: (provider: ChatProviderId | null) => void
   onChange: (value: CredentialView) => void
@@ -94,10 +104,17 @@ function ProviderCredentialCard({
   onError: (message: string) => void
 }) {
   const [editing, setEditing] = useState(false)
+  const [entryDismissed, setEntryDismissed] = useState(false)
   const [key, setKey] = useState('')
   const [verifyFailed, setVerifyFailed] = useState(false)
   const busy = busyProvider === provider
   const blocked = busyProvider !== null
+  const showKeyForm = editing || (autoEntry && !entryDismissed)
+
+  useEffect(() => {
+    setEditing(false); setEntryDismissed(false); setKey(''); setVerifyFailed(false)
+  }, [auth.account.id])
+
   const status = credential?.verified
     ? { text: 'Подключён', className: 'is-ok' }
     : credential?.configured && credential.enabled
@@ -187,7 +204,7 @@ function ProviderCredentialCard({
         <span className={`chat-provider-dot ${status.className}`} aria-hidden="true" />
         <span className={`chat-credential-status ${status.className}`}>{status.text}</span>
       </div>
-      {!editing && <div className="chat-provider-actions">
+      {!showKeyForm && <div className="chat-provider-actions">
         {credential?.configured
           ? <>
               <button type="button" className="chat-provider-button secondary"
@@ -201,12 +218,11 @@ function ProviderCredentialCard({
               disabled={blocked} onClick={() => setEditing(true)}>Добавить ключ</button>}
       </div>}
     </div>
-    {editing && <form className="chat-provider-key-form" onSubmit={event => void save(event)}>
+    {showKeyForm && <form className="chat-provider-key-form" onSubmit={event => void save(event)}>
       <label className="chat-credential-key">
-        <span>Новый API key {label}</span>
+        <span>{provider === 'deepseek' ? 'API ключ DeepSeek' : `Новый API key ${label}`}</span>
         <input type="password" autoComplete="off" value={key}
           onChange={event => setKey(event.target.value)}
-          aria-label={`Новый API key ${label}`}
           placeholder={`Введите ${label} API key`} />
       </label>
       <div className="chat-provider-actions">
@@ -215,7 +231,7 @@ function ProviderCredentialCard({
           {credential?.configured ? 'Заменить и проверить' : 'Сохранить и проверить'}
         </button>
         <button type="button" className="chat-provider-button secondary"
-          disabled={blocked} onClick={() => { setEditing(false); setKey('') }}>
+          disabled={blocked} onClick={() => { setEditing(false); setEntryDismissed(true); setKey('') }}>
           Отмена
         </button>
         {busy && <span className="chat-provider-busy" role="status">Проверяем…</span>}
