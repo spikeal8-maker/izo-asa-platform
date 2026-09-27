@@ -48,7 +48,7 @@
         20,
         21
       ],
-      "summary": "OpenRouter PRs are reference-only after LINEAGE-001; never continuation bases."
+      "summary": "Reference only; never a continuation base."
     }
   ],
   "packages": {
@@ -74,19 +74,19 @@
     "CATALOG-001": {"status": "superseded_reference","depends_on": ["API-001","SETTINGS-001"],"source_prs": [20,21]},
     "ACCESS-001": {"status": "technical_pass","depends_on": ["LINEAGE-001","AUTH-002","ADMIN-001"],"checkpoint": "ACCESS-001"},
     "SETTINGS-002": {"status": "technical_pass","depends_on": ["ACCESS-001","ENTITLEMENT-001","ADMIN-001"],"checkpoint": "SETTINGS-002"},
-    "UX-002": {"status": "technical_pass","depends_on": ["SETTINGS-002","AUTH-002","IMAGE-001","ADMIN-001"],"decides_next": true,"goal": "Historical owner-approved shell checkpoint: open signup, feed-first entry, neutral light/dark design and responsive behavior. Superseded for current frontend direction by active FRONTEND-001 owner decision.","checkpoint": "UX-002"},
-    "MAINT-SIZE-001": {"status": "technical_pass","depends_on": ["UX-002"],"decides_next": true,"goal": "Split oversized handwritten modules and enforce strict repository-wide modularity budgets for source, tests, tools and acceptance code.","checkpoint": "MAINT-SIZE-001"},
-    "GUEST-001": {"status": "technical_pass","depends_on": ["MAINT-SIZE-001","UX-002","AUTH-002","JOBS-001","IMAGE-001"],"decides_next": true,"goal": "Finite server-owned guest budget for first image trial before account creation, with abuse controls and same-owner result claim semantics.","checkpoint": "GUEST-001"},
-    "MAINT-AGENT-002": {"status": "technical_pass","depends_on": ["GUEST-001","MAINT-SIZE-001"],"decides_next": true,"goal": "Make agent-driven development continuously cheap and bounded: context budgets, near-limit growth guards, local-doc hygiene, scope classes, review gates and recurring maintainability audits.","checkpoint": "MAINT-AGENT-002"},
-    "FRONTEND-001": {"status": "superseded_incomplete_reference","depends_on": ["MAINT-AGENT-002","GUEST-001","UX-002"],"decides_next": true,"goal": "Owner-accepted chat-first product frontend: Chat is canonical home, shared shell uses Semantic Color System v1.1 as a single changeable token source, creative navigation is Chat/Image/Video/Audio/3D, existing server-backed Image/Gallery/Account/Admin contracts are preserved, and mobile/desktop/QHD/4K/8K require visual acceptance before feature expansion.","reference_head": "5c0e79b6fc3a7120207d0889b176fbfed3dab973","acceptance_gaps": ["scope","independent_review","owner_visual_acceptance"],"superseded_by": "FRONTEND-002"},
+    "UX-002": {"status": "technical_pass","depends_on": ["SETTINGS-002","AUTH-002","IMAGE-001","ADMIN-001"],"decides_next": true,"goal": "Historical shell: signup, feed-first home, neutral theme and responsive layout; superseded by FRONTEND-001.","checkpoint": "UX-002"},
+    "MAINT-SIZE-001": {"status": "technical_pass","depends_on": ["UX-002"],"decides_next": true,"goal": "Split oversized modules; enforce source/test/tool size limits.","checkpoint": "MAINT-SIZE-001"},
+    "GUEST-001": {"status": "technical_pass","depends_on": ["MAINT-SIZE-001","UX-002","AUTH-002","JOBS-001","IMAGE-001"],"decides_next": true,"goal": "Server-owned guest image-trial budget, abuse controls and same-owner claim.","checkpoint": "GUEST-001"},
+    "MAINT-AGENT-002": {"status": "technical_pass","depends_on": ["GUEST-001","MAINT-SIZE-001"],"decides_next": true,"goal": "Bound agent context, file/scope growth, review gates and recurring audits.","checkpoint": "MAINT-AGENT-002"},
+    "FRONTEND-001": {"status": "superseded_incomplete_reference","depends_on": ["MAINT-AGENT-002","GUEST-001","UX-002"],"decides_next": true,"goal": "Historical chat-first shell and color tokens; preserved server pages and responsive visual acceptance remain unapproved.","reference_head": "5c0e79b6fc3a7120207d0889b176fbfed3dab973","acceptance_gaps": ["scope","independent_review","owner_visual_acceptance"],"superseded_by": "FRONTEND-002"},
     "FRONTEND-002": {"status": "technical_pass","depends_on": ["MAINT-AGENT-002","GUEST-001","UX-002"],"continues": "FRONTEND-001","decides_next": true,"goal": "Continue the owner-revised frontend on the current canonical lineage.","checkpoint": "FRONTEND-002"},
-    "CATALOG-002": {"status": "planned","depends_on": ["SETTINGS-002","ACCESS-001","API-001","ADMIN-001"],"goal": "Provider-neutral versioned catalog for fal/future adapters.","note": "Draft PR #31 paused after owner reprioritized product UX; resume only after accepted maintenance/product checkpoint."},
+    "CATALOG-002": {"status": "planned","depends_on": ["SETTINGS-002","ACCESS-001","API-001","ADMIN-001"],"goal": "Provider-neutral versioned catalog for fal/future adapters.","note": "PR #31 paused; resume after accepted checkpoint."},
     "CATALOG-UI-002": {"status": "planned","depends_on": ["CATALOG-002","ADMIN-001","ACCESS-001"],"goal": "Permission-correct admin catalog UI."},
     "LOCAL-001": {"status": "planned","depends_on": ["JOBS-001","API-001","CATALOG-002"]},
     "PLATFORM-001": {"status": "planned","depends_on": ["AUTH-002","IMAGE-001"]},
     "PLATFORM-002": {"status": "planned","depends_on": ["AUTH-002","IMAGE-001"]},
     "FEED-001": {"status": "planned","depends_on": ["MEDIA-001","ADMIN-001","IMAGE-001","UX-002"]},
-    "CHAT-001": {"status": "planned","depends_on": ["AUTH-002","CREDIT-001","ENTITLEMENT-001","IMAGE-001","API-001","UX-002"],"goal": "Add the server text-chat runtime and durable conversation semantics behind the already accepted chat-first frontend; do not replace the frontend shell package."},
+    "CHAT-001": {"status": "planned","depends_on": ["AUTH-002","CREDIT-001","ENTITLEMENT-001","IMAGE-001","API-001","UX-002"],"goal": "Planned durable text-chat runtime behind the chat-first shell."},
     "IMAGE-002": {"status": "planned","depends_on": ["IMAGE-001","MEDIA-001","API-001","UX-002"]},
     "VIDEO-001": {"status": "planned","depends_on": ["JOBS-001","MEDIA-001","API-001","UX-002"]},
     "AUDIO-001": {"status": "planned","depends_on": ["JOBS-001","MEDIA-001","API-001","UX-002"]},
@@ -100,20 +100,20 @@
     "DOC-004B": {"status": "technical_pass","depends_on": ["DOC-004"],"checkpoint": "DOC-004B"},
     "DOC-004C": {"status": "technical_pass","depends_on": ["DOC-004B"],"checkpoint": "DOC-004C"},
     "DOC-004D": {"status": "technical_pass","depends_on": ["DOC-004C"],"checkpoint": "DOC-004D"},
-    "MAINT-STATE-003": {"status": "technical_pass","depends_on": ["FRONTEND-002"],"decides_next": true,"goal": "Repair decides_next control-plane transitions with structured review evidence and explicit exact-SHA owner waiver when no independent GitHub actor is available.","issues": [166,188],"checkpoint": "MAINT-STATE-003"},
+    "MAINT-STATE-003": {"status": "technical_pass","depends_on": ["FRONTEND-002"],"decides_next": true,"goal": "Exact-SHA review and owner-waiver gate for decides_next transitions.","issues": [166,188],"checkpoint": "MAINT-STATE-003"},
     "CHAT-DEEPSEEK-001": {"status": "technical_pass","depends_on": ["MAINT-STATE-003"],"decides_next": true,"goal": "DeepSeek BYOK durable chat and Docker preview.","checkpoint": "CHAT-DEEPSEEK-001"},
-    "ADMIN-DONOR-CATALOG-001": {"status": "active","depends_on": ["CHAT-DEEPSEEK-001","ADMIN-001","CREDIT-001"],"decides_next": true,"goal": "Map the IZO_ASA donor and port a bounded first Admin catalog slice: top-bar Admin entry, owner-checked provider and model settings, and server-owned RUB display prices for text tokens and images; reuse Account, Credits, Jobs and Media without a second ledger or live charging."}
+    "ADMIN-DONOR-CATALOG-001": {"status": "active","depends_on": ["CHAT-DEEPSEEK-001","ADMIN-001","CREDIT-001"],"decides_next": true,"goal": "First donor-informed Admin catalog: top-bar entry, staff-controlled approved models and RUB display prices; reuse shared domains without charging."}
   },
   "status_meaning": {
-    "active": "The only package a new coding agent may continue by default.",
-    "planned_next": "Starts only after active package acceptance.",
-    "technical_pass": "Implementation has technical evidence but may still be unmerged/unreleased.",
-    "technical_ci_pass_live_acceptance_pending": "Technical contract is green; real external-provider acceptance remains separate.",
-    "parallel_lineage_only": "Exists on a non-canonical line and cannot be used as a continuation base without reconciliation.",
-    "planned": "Not started on the canonical line.",
-    "historical_complete": "Documentation/process milestone retained for history.",
-    "historical_technical_pass": "Older technical gate retained for provenance.",
-    "historical_implemented_design_unapproved": "Implementation existed, but owner design acceptance remains separate.",
-    "superseded_reference": "Historical non-canonical implementation retained only as review/design evidence; never a continuation base."
+    "active": "Only package coding agents may continue.",
+    "planned_next": "Starts after active acceptance.",
+    "technical_pass": "Technical evidence; may be unmerged.",
+    "technical_ci_pass_live_acceptance_pending": "CI green; external acceptance pending.",
+    "parallel_lineage_only": "Non-canonical; reconcile before reuse.",
+    "planned": "Not started.",
+    "historical_complete": "Past documentation milestone.",
+    "historical_technical_pass": "Past technical milestone.",
+    "historical_implemented_design_unapproved": "Built; owner design approval pending.",
+    "superseded_reference": "Historical reference; never a base."
   }
 }
