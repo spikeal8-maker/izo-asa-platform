@@ -46,6 +46,20 @@
         "Review Source": 36312041847
       }
     },
+    "CHAT-UX-001": {
+      "base_head": "ed1f79a6c53bdc3cab5d827d308ee661a61ebd20",
+      "independent_review": "not_required",
+      "owner_waiver": false,
+      "source_head": "74bdd8916473975cc0b140feb93bc001f9fffd01",
+      "tested_merge_tree": "fed3746660b9cbf49997a15dcf5fe15b13601d99",
+      "type": "pr_merge_tree",
+      "verified_pr": 233,
+      "workflows": {
+        "Dependency Security": 36321484424,
+        "Foundation CI": 36321484422,
+        "Review Source": 36321484335
+      }
+    },
     "DOC-004": {
       "head": "001edb9953d642f4d06453505809c20512f4b2b3",
       "workflows": {

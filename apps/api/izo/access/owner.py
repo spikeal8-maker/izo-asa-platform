@@ -6,6 +6,7 @@ import sqlalchemy as sa
 
 from ..accounts import repository as repo, tables as accounts
 from ..accounts.credit_access import verified
+from ..accounts.local_staff import staff_identity_allowed, verified_only_staff_permission
 from ..accounts.security import AuthError
 from ..config import Settings
 from . import tables as t
@@ -22,7 +23,7 @@ class AccessOwnerMixin:
             raise AuthError(403, "local_upgrade_disabled")
         with self.auth.engine.begin() as conn:
             account = repo.account_by_id(conn, target, lock=True)
-            if not account or account["state"] != "active" or not verified(conn, target):
+            if not account or account["state"] != "active" or not staff_identity_allowed(conn, target):
                 raise AuthError(403, "access_owner_required")
             self._lock_state(conn)
 
@@ -69,8 +70,11 @@ class AccessOwnerMixin:
             raise ValueError("Only known global permissions may be bootstrapped")
         with self.auth.engine.begin() as conn:
             account = repo.account_by_id(conn, target, lock=True)
-            if not account or account["state"] != "active" or not verified(conn, target):
+            if not account or account["state"] != "active" or not staff_identity_allowed(conn, target):
                 raise AuthError(403, "verified_active_account_required")
+            if not verified(conn, target) and any(
+                    verified_only_staff_permission(permission) for permission in requested):
+                raise AuthError(403, "verification_required")
             existing = conn.execute(sa.select(t.grants.c.permission).where(
                 t.grants.c.account_id == target).limit(1)).first()
             existing_ceiling = conn.execute(sa.select(t.ceilings.c.permission).where(

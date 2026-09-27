@@ -9,17 +9,17 @@
       "pr": 22,
       "state": "technical_ci_pass_draft"
     },
-    "working_branch": "codex/chat-ux-001",
+    "working_branch": "codex/local-admin-access-001",
     "provider_direction": "fal.ai / fal-ai/flux-2/klein/4b",
     "merge_deployed": false,
     "current_package_base": {
-      "branch": "codex/admin-donor-catalog-001",
-      "sha": "ed1f79a6c53bdc3cab5d827d308ee661a61ebd20",
+      "branch": "codex/chat-ux-001",
+      "sha": "74bdd8916473975cc0b140feb93bc001f9fffd01",
       "state": "verified_pr_merge_tree_checkpoint"
     },
     "next_branch_source": "verified_working_head"
   },
-  "active_package": "CHAT-UX-001",
+  "active_package": "LOCAL-ADMIN-ACCESS-001",
   "next_package": null,
   "rules": {
     "one_active_package": true,
@@ -103,7 +103,8 @@
     "MAINT-STATE-003": {"status": "technical_pass","depends_on": ["FRONTEND-002"],"decides_next": true,"goal": "Exact-SHA review and owner-waiver gate for decides_next transitions.","issues": [166,188],"checkpoint": "MAINT-STATE-003"},
     "CHAT-DEEPSEEK-001": {"status": "technical_pass","depends_on": ["MAINT-STATE-003"],"decides_next": true,"goal": "DeepSeek BYOK durable chat and Docker preview.","checkpoint": "CHAT-DEEPSEEK-001"},
     "ADMIN-DONOR-CATALOG-001": {"status": "technical_pass","depends_on": ["CHAT-DEEPSEEK-001","ADMIN-001","CREDIT-001"],"decides_next": true,"goal": "First donor-informed Admin catalog: top-bar entry, staff-controlled approved models and RUB display prices; reuse shared domains without charging.","checkpoint": "ADMIN-DONOR-CATALOG-001"},
-    "CHAT-UX-001": {"status": "active","depends_on": ["ADMIN-DONOR-CATALOG-001","UX-002"],"decides_next": true,"goal": "Compact desktop Chat sidebar, accessible mobile drawer and centered empty Chat across responsive viewports; preserve top bar, server-owned model prices and admission"}
+    "CHAT-UX-001": {"status": "technical_pass","depends_on": ["ADMIN-DONOR-CATALOG-001","UX-002"],"decides_next": true,"goal": "Compact desktop Chat sidebar, accessible mobile drawer and centered empty Chat across responsive viewports; preserve top bar, server-owned model prices and admission","checkpoint": "CHAT-UX-001"},
+    "LOCAL-ADMIN-ACCESS-001": {"status": "active","depends_on": ["CHAT-UX-001"],"decides_next": true,"goal": "Allow explicit isolated local Admin bootstrap for one unverified account while mail delivery is unavailable; preserve production verification and server permissions."}
   },
   "status_meaning": {
     "active": "Only package coding agents may continue.",

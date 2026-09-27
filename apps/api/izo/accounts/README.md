@@ -18,6 +18,7 @@ Accounts владеет серверной identity, регистрацией/в
 - Пароль, proof/token, raw cookie и секретные audit details не попадают в публичные ответы/логи.
 - Account identity одна для Credits, Entitlements, Jobs и Media; второй auth/identity store не создаётся.
 - Email сейчас следует документированному mailbox contract; расширение формата не делается «заодно» с UI-правкой.
+- Для изолированного development/test preview пара `IZO_LOCAL_UNVERIFIED_STAFF_MODE=isolated` и `IZO_LOCAL_UNVERIFIED_STAFF_ACCOUNT_ID` допускает ровно один выбранный UUID к staff-проверкам без подтверждения почты. Это не меняет `verified_at`, не выдаёт права и не открывает Credits/Plans; права выдаются отдельно через локальный ACCESS bootstrap. В доступном извне развёртывании настройку не включать.
 
 ## Текущие интеграции
 

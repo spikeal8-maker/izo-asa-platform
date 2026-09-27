@@ -4,6 +4,8 @@ from uuid import UUID
 import sqlalchemy as sa
 
 from ..accounts import admin_access as access, tables as accounts
+from ..accounts.credit_access import verified
+from ..accounts.local_staff import verified_only_staff_permission
 from ..accounts.security import AuthError
 from . import tables as t
 from .schemas import GrantAccessInput, RevokeAccessInput
@@ -21,6 +23,8 @@ class AccessMutationMixin:
                 raise AuthError(403, "reauth_required")
             if target == actor["id"]:
                 raise AuthError(403, "self_delegation_forbidden")
+            if verified_only_staff_permission(command.permission) and not verified(conn, actor["id"]):
+                raise AuthError(403, "delegation_forbidden")
             replay = self._replay(conn, actor["id"], target, command, "grant")
             if replay is not None:
                 return replay
@@ -76,6 +80,8 @@ class AccessMutationMixin:
                 raise AuthError(403, "reauth_required")
             if target == actor["id"]:
                 raise AuthError(403, "self_delegation_forbidden")
+            if verified_only_staff_permission(command.permission) and not verified(conn, actor["id"]):
+                raise AuthError(403, "delegation_forbidden")
             replay = self._replay(conn, actor["id"], target, command, "revoke")
             if replay is not None:
                 return replay

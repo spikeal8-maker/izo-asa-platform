@@ -1,0 +1,30 @@
+{
+  "package_id": "LOCAL-ADMIN-ACCESS-001",
+  "base": "74bdd8916473975cc0b140feb93bc001f9fffd01",
+  "scope_class": "normal",
+  "risk": "high",
+  "independent_review_required": true,
+  "max_files": 16,
+  "domains": ["accounts-staff-boundary", "access-bootstrap", "docker-preview", "tests", "local-docs"],
+  "non_goals": [
+    "No automatic Admin rights at registration or browser-owned permissions",
+    "No email verified_at mutation, real mail service or production verification bypass",
+    "No Credits, Entitlements, payment, provider key or paid-model execution changes",
+    "No merge, public deployment or changes to the original E: checkout"
+  ],
+  "allowed": [
+    "docs/CURRENT.md", "docs/PLAN.json", "docs/CHECKPOINTS.json",
+    "docs/reviews/LOCAL-ADMIN-ACCESS-001.md", "tools/scopes/local-admin-access-001.json",
+    "compose.yaml", "apps/api/izo/accounts/README.md", "apps/api/izo/access/README.md",
+    "apps/api/izo/accounts/local_staff.py", "apps/api/izo/accounts/admin_access.py",
+    "apps/api/izo/access/owner.py", "apps/api/izo/access/base.py",
+    "apps/api/izo/access/mutations.py", "apps/api/izo/access/reads.py",
+    "tests/test_local_staff.py"
+  ],
+  "sensitive_approved": [
+    "tools/scopes/local-admin-access-001.json", "compose.yaml",
+    "apps/api/izo/accounts/local_staff.py", "apps/api/izo/accounts/admin_access.py",
+    "apps/api/izo/access/owner.py", "apps/api/izo/access/base.py",
+    "apps/api/izo/access/mutations.py", "apps/api/izo/access/reads.py"
+  ]
+}

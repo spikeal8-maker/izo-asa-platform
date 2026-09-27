@@ -53,6 +53,8 @@ services:
       <<: *api-environment
       IZO_CHAT_ROOT_KEY: ${IZO_CHAT_ROOT_KEY:?Run python tools/bootstrap.py --chat-only first}
       IZO_CHAT_PREVIEW_ACCOUNT_EMAILS: ${IZO_CHAT_PREVIEW_ACCOUNT_EMAILS:-preview@local.izo}
+      IZO_LOCAL_UNVERIFIED_STAFF_ACCOUNT_ID: ${IZO_LOCAL_UNVERIFIED_STAFF_ACCOUNT_ID:-}
+      IZO_LOCAL_UNVERIFIED_STAFF_MODE: ${IZO_LOCAL_UNVERIFIED_STAFF_MODE:-}
     networks: [private, chat-egress]
     read_only: true
     tmpfs: [/tmp]

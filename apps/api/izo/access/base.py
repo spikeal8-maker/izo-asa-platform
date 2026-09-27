@@ -8,7 +8,7 @@ import sqlalchemy as sa
 from sqlalchemy.exc import IntegrityError
 
 from ..accounts import admin_access as access, repository as repo, tables as accounts
-from ..accounts.credit_access import verified
+from ..accounts.local_staff import staff_identity_allowed
 from ..accounts.security import AuthError, verify_password
 from ..admin import tables as admin_tables
 from . import tables as t
@@ -59,7 +59,7 @@ class AccessServiceBase:
         account = repo.account_by_id(conn, target)
         if not account:
             raise AuthError(404, "not_found")
-        if account["state"] != "active" or not verified(conn, target):
+        if account["state"] != "active" or not staff_identity_allowed(conn, target):
             raise AuthError(403, "verified_active_account_required")
         return account
 

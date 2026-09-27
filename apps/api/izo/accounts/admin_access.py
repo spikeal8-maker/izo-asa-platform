@@ -5,6 +5,7 @@ import sqlalchemy as sa
 
 from . import repository as repo, tables as t
 from .credit_access import locked_states, verified
+from .local_staff import staff_identity_allowed, verified_only_staff_permission
 from .security import AuthError, TOKEN, token_hash, verify_password
 
 metadata = t.metadata
@@ -35,8 +36,14 @@ def staff_session(auth, conn, raw, required, *, target=None, csrf=None, mutation
         .with_for_update(read=True)).scalars())
     if account["state"] != "active" or not set(required).issubset(permissions):
         raise AuthError(403, "forbidden")
-    if not verified(conn, owner):
+    if not staff_identity_allowed(conn, owner):
         raise AuthError(403, "verification_required")
+    if not verified(conn, owner):
+        # Local staff cannot use Credits or publish financial plan policy.
+        if any(verified_only_staff_permission(permission) for permission in required):
+            raise AuthError(403, "verification_required")
+        permissions = {permission for permission in permissions
+            if not verified_only_staff_permission(permission)}
     return account, session, permissions
 
 

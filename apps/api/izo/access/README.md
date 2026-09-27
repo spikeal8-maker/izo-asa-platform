@@ -10,6 +10,7 @@
 - Exact operation-id replay receipts for grant/revoke.
 - Fresh-password confirmation and last `access.manage` protection.
 - Initial owner enrollment only through an explicit local bootstrap command.
+- For an isolated development/test preview with unavailable mail delivery, `IZO_LOCAL_UNVERIFIED_STAFF_MODE=isolated` and `IZO_LOCAL_UNVERIFIED_STAFF_ACCOUNT_ID` may designate exactly one active email account for that bootstrap. This grants no permission by itself and never marks email verified. Credits and Plans permissions remain verified-only. Remove both settings to close the exception; retain a verified permanent ACCESS owner before doing so.
 
 ## Does not own
 

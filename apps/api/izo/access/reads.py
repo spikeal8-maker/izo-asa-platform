@@ -4,6 +4,8 @@ from uuid import UUID
 import sqlalchemy as sa
 
 from ..accounts import admin_access as access, tables as accounts
+from ..accounts.credit_access import verified
+from ..accounts.local_staff import verified_only_staff_permission
 from . import tables as t
 from .schemas import AccessMe, AccessPermission, AccessSubject
 
@@ -18,6 +20,9 @@ class AccessReadMixin:
                 t.ceilings.c.account_id == actor["id"], t.ceilings.c.scope == "global",
                 sa.or_(t.ceilings.c.expires_at.is_(None), t.ceilings.c.expires_at > now))
                 .order_by(t.ceilings.c.permission)).scalars().all()
+            if not verified(conn, actor["id"]):
+                ceiling = [permission for permission in ceiling
+                    if not verified_only_staff_permission(permission)]
             return AccessMe(permissions=sorted(permissions),
                 delegation_ceiling=list(ceiling), csrf_token=session["csrf_token"])
 
