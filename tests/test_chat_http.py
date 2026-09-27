@@ -2,6 +2,11 @@
 from __future__ import annotations
 
 import base64
+import io
+import json
+import time
+from threading import Event
+from types import SimpleNamespace
 from uuid import uuid4
 
 import pytest
@@ -15,13 +20,24 @@ from izo.accounts.schemas import RegisterInput
 from izo.accounts.service import AuthService
 from izo.accounts.settings import AuthSettings
 from izo.chat import tables as chat
-from izo.chat.provider import FakeDeepSeekProvider
+from izo.chat.credentials import decrypt, encrypt
+from izo.chat.execution import FakeDeepSeekProvider
+from izo.chat.provider import DeepSeekProvider, ProviderFailure
 from izo.chat.service import ChatService
 from izo.chat.schemas import ChatSettings
 
 ORIGIN = "http://localhost:8080"
 PASSWORD = "synthetic-chat-http-password"
 KEY = "x" * 32
+
+
+def test_encrypt_roundtrip_requires_exact_owner_context():
+    root = b"k" * 32
+    account, connection = uuid4(), uuid4()
+    nonce, ciphertext = encrypt(root, account, connection, 3, KEY)
+    assert decrypt(root, account, connection, 3, nonce, ciphertext) == KEY
+    with pytest.raises(Exception):
+        decrypt(root, uuid4(), connection, 3, nonce, ciphertext)
 
 
 def root_key() -> str:
@@ -286,12 +302,6 @@ def test_preview_compression_metadata_and_secret_exclusion(tmp_path, monkeypatch
     ('partial', 'tool_calls', 'provider_incomplete_response'),
 ])
 def test_provider_wire_terminal_contract(text, finish, error):
-    import io
-    import json
-    from threading import Event
-    from types import SimpleNamespace
-    from izo.chat.provider import DeepSeekProvider, ProviderFailure
-
     def open_response(outbound, timeout):
         body = json.loads(outbound.data)
         assert body['thinking'] == {'type': 'disabled'}
@@ -309,3 +319,27 @@ def test_provider_wire_terminal_contract(text, finish, error):
             list(stream)
     else:
         assert ''.join(stream) == text
+
+@pytest.mark.parametrize('blocked_open', [False, True])
+def test_provider_deadline_interrupts_blocked_read(blocked_open):
+    released = Event()
+    class Socket:
+        def shutdown(self, how): released.set()
+    class Response:
+        status = 200
+        fp = SimpleNamespace(raw=SimpleNamespace(_sock=Socket()))
+        def __enter__(self): return self
+        def __exit__(self, *args): pass
+        def readline(self, size): released.wait(1); raise OSError('closed')
+    def open_response(request, timeout):
+        if blocked_open:
+            released.wait(1)
+            raise OSError('closed')
+        return Response()
+    provider = DeepSeekProvider()
+    provider.opener = SimpleNamespace(open=open_response, abort=released.set)
+    started = time.monotonic()
+    with pytest.raises(ProviderFailure, match='request_expired'):
+        list(provider.stream(KEY, 'deepseek-flash', [], 2048, 0.01, Event()))
+    assert time.monotonic() - started < 0.1
+    assert released.is_set()

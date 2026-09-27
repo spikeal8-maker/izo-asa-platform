@@ -28,22 +28,18 @@ class ChatService(CredentialMixin, ConversationMixin, ExecutionMixin):
 
     def _recover_stale(self) -> None:
         now = self.now()
-        try:
-            with self.engine.begin() as conn:
-                stale = list(conn.execute(sa.select(t.requests.c.id).where(
-                    t.requests.c.state == "streaming")).scalars())
-                if stale:
-                    conn.execute(sa.update(t.requests).where(
-                        t.requests.c.id.in_(stale)).values(
-                        state="interrupted", error_code="executor_restarted", updated_at=now))
-                    conn.execute(sa.update(t.messages).where(
-                        t.messages.c.request_id.in_(stale),
-                        t.messages.c.role == "assistant",
-                        t.messages.c.state == "partial").values(
-                        state="interrupted", updated_at=now))
-        except Exception:
-            # OpenAPI composition stays side-effect free when no DB is running.
-            pass
+        with self.engine.begin() as conn:
+            stale = list(conn.execute(sa.select(t.requests.c.id).where(
+                t.requests.c.state == "streaming")).scalars())
+            if stale:
+                conn.execute(sa.update(t.requests).where(
+                    t.requests.c.id.in_(stale)).values(
+                    state="interrupted", error_code="executor_restarted", updated_at=now))
+                conn.execute(sa.update(t.messages).where(
+                    t.messages.c.request_id.in_(stale),
+                    t.messages.c.role == "assistant",
+                    t.messages.c.state == "partial").values(
+                    state="interrupted", updated_at=now))
 
     def _account(self, conn, raw, csrf=None, mutation=False):
         account, session = self.auth._session(conn, raw, csrf, mutation=mutation)
@@ -91,3 +87,59 @@ class ChatService(CredentialMixin, ConversationMixin, ExecutionMixin):
             return self.policy.root_key_bytes()
         except RuntimeError:
             raise ChatError(503, "credential_storage_unavailable") from None
+
+    def _snapshot(self, account_id, request_id):
+        with self.engine.begin() as conn:
+            row = conn.execute(sa.select(t.requests).where(
+                t.requests.c.id == request_id,
+                t.requests.c.account_id == account_id)).mappings().first()
+            if not row:
+                raise ChatError(404, "request_not_found")
+            assistant = conn.execute(sa.select(t.messages.c.content).where(
+                t.messages.c.request_id == request_id,
+                t.messages.c.role == "assistant")).scalar_one()
+            return dict(row), assistant
+
+    def _follow(self, account_id, request_id):
+        sent, sequence = 0, 0
+        yield self._event("message.start", {
+            "request_id": str(request_id), "sequence": sequence,
+        })
+        while True:
+            row, content = self._snapshot(account_id, request_id)
+            if row["state"] in {"pending", "streaming"} and (
+                    row["stop_requested_at"] is not None or self.now() >= row["deadline_at"]):
+                stopped = row["stop_requested_at"] is not None
+                self._finish(request_id, "stopped" if stopped else "interrupted",
+                             None if stopped else "request_expired", content)
+                continue
+            if len(content) > sent:
+                sequence += 1
+                yield self._event("text.delta", {
+                    "request_id": str(request_id), "sequence": sequence,
+                    "text": content[sent:],
+                })
+                sent = len(content)
+            state = row["state"]
+            if state == "completed":
+                sequence += 1
+                yield self._event("message.done", {
+                    "request_id": str(request_id), "sequence": sequence,
+                    "text_length": len(content),
+                })
+                return
+            if state in {"interrupted", "stopped"}:
+                sequence += 1
+                yield self._event("message.interrupted", {
+                    "request_id": str(request_id), "sequence": sequence,
+                    "reason": state,
+                })
+                return
+            if state == "error":
+                sequence += 1
+                yield self._event("message.error", {
+                    "request_id": str(request_id), "sequence": sequence,
+                    "code": row["error_code"] or "chat_execution_failed",
+                })
+                return
+            time.sleep(0.2)

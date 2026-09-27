@@ -12,8 +12,8 @@ from izo.accounts.schemas import RegisterInput
 from izo.accounts.service import AuthService
 from izo.accounts.settings import AuthSettings
 from izo.chat import tables as chat
-from izo.chat.credentials import decrypt, encrypt
-from izo.chat.provider import FakeDeepSeekProvider
+from izo.chat.credentials import decrypt
+from izo.chat.execution import FakeDeepSeekProvider
 from izo.chat.schemas import (
     CredentialCommand, CredentialWrite, RequestCreate,
 )
@@ -93,6 +93,10 @@ def request(service, receipt, thread_id, text, model="deepseek-flash", request_i
     )
 
 
+def new_thread(service, receipt):
+    return service.create_thread(receipt.bearer, receipt.view.csrf_token, None)
+
+
 def test_key_is_aad_bound_and_not_plaintext_in_database(chat_env):
     service, alice, bob, _ = chat_env
     verified = connect_key(service, alice)
@@ -154,8 +158,7 @@ def test_credential_idempotency_revision_and_disable(chat_env):
 def test_request_replay_conflict_context_and_reload(chat_env):
     service, alice, _, _ = chat_env
     connect_key(service, alice)
-    thread = service.create_thread(
-        alice.bearer, alice.view.csrf_token, None)
+    thread = new_thread(service, alice)
 
     stable_id = uuid4()
     first = request(
@@ -206,8 +209,7 @@ def test_cross_account_thread_request_and_connection_are_hidden(chat_env):
 def test_pending_stop_never_calls_provider(chat_env):
     service, alice, _, _ = chat_env
     connect_key(service, alice)
-    thread = service.create_thread(
-        alice.bearer, alice.view.csrf_token, None)
+    thread = new_thread(service, alice)
     created = request(service, alice, thread.id, "stop before stream")
     stopped = service.stop(
         alice.bearer, alice.view.csrf_token, created.id)
@@ -218,39 +220,39 @@ def test_pending_stop_never_calls_provider(chat_env):
     assert detail.messages[-1].state == "stopped"
 
 
-def test_restart_marks_unfinished_stream_interrupted_without_resubmit(chat_env):
+@pytest.mark.parametrize('transient_failure', [False, True])
+def test_restart_marks_unfinished_stream_interrupted_without_resubmit(chat_env, monkeypatch, transient_failure):
     service, alice, _, clock = chat_env
     connect_key(service, alice)
-    thread = service.create_thread(
-        alice.bearer, alice.view.csrf_token, None)
+    thread = new_thread(service, alice)
     created = request(service, alice, thread.id, "crash")
 
     with service.engine.begin() as conn:
         conn.execute(sa.update(chat.requests).where(
             chat.requests.c.id == created.id).values(state="streaming"))
-    restarted = ChatService(
-        service.auth, service.policy, FakeDeepSeekProvider(),
-        clock=lambda: clock[0],
-    )
+    def restart():
+        return ChatService(service.auth, service.policy, FakeDeepSeekProvider(),
+                           clock=lambda: clock[0])
+    if transient_failure:
+        original_begin = service.engine.begin
+        def fail_once():
+            monkeypatch.setattr(service.engine, 'begin', original_begin)
+            raise RuntimeError('temporary database failure')
+        monkeypatch.setattr(service.engine, 'begin', fail_once)
+        with pytest.raises(RuntimeError, match='temporary database failure'):
+            restart()
+    restarted = restart()
     state = restarted.request(alice.bearer, created.id)
     assert state.state == "interrupted"
     detail = restarted.thread_detail(alice.bearer, thread.id)
     assert detail.messages[-1].state == "interrupted"
 
 
-def test_encrypt_roundtrip_requires_exact_owner_context():
-    root = b"k" * 32
-    account, connection = uuid4(), uuid4()
-    nonce, ciphertext = encrypt(root, account, connection, 3, KEY)
-    assert decrypt(root, account, connection, 3, nonce, ciphertext) == KEY
-    with pytest.raises(Exception):
-        decrypt(root, uuid4(), connection, 3, nonce, ciphertext)
-
 @pytest.mark.parametrize('boundary', ['start', 'partial', 'stop-before', 'stop-partial'])
 def test_stream_stop_and_disconnect_boundaries(chat_env, boundary):
     service, alice, _, _ = chat_env
     connect_key(service, alice)
-    thread = service.create_thread(alice.bearer, alice.view.csrf_token, None)
+    thread = new_thread(service, alice)
     created = request(service, alice, thread.id, 'bounded disconnect and Stop')
     stream = service.stream_events(alice.bearer, created.id)
     if boundary == 'stop-before':
@@ -274,7 +276,7 @@ def test_stream_stop_and_disconnect_boundaries(chat_env, boundary):
 def test_expired_unconsumed_claim_is_reconciled_without_new_execution(chat_env):
     service, alice, _, clock = chat_env
     connect_key(service, alice)
-    thread = service.create_thread(alice.bearer, alice.view.csrf_token, None)
+    thread = new_thread(service, alice)
     created = request(service, alice, thread.id, 'expire before consumer starts')
     unconsumed = service.stream_events(alice.bearer, created.id)
     clock[0] = created.deadline_at + 6
@@ -284,10 +286,44 @@ def test_expired_unconsumed_claim_is_reconciled_without_new_execution(chat_env):
     unconsumed.close()
 
 
+def test_pending_expiry_releases_thread(chat_env):
+    service, alice, _, clock = chat_env
+    connect_key(service, alice)
+    thread = new_thread(service, alice)
+    first = request(service, alice, thread.id, 'first')
+    clock[0] = first.deadline_at + 1
+    with pytest.raises(ChatError, match='request_conflict'):
+        request(service, alice, thread.id, 'different', request_id=first.id)
+    assert service.request(alice.bearer, first.id).state == 'interrupted'
+    request(service, alice, thread.id, 'second')
+    assert service.request(alice.bearer, first.id).state == 'interrupted'
+    assert service.thread_detail(alice.bearer, thread.id).messages[1].state == 'interrupted'
+    assert request(service, alice, thread.id, 'first', request_id=first.id).state == 'interrupted'
+
+
+def test_stream_deadline(chat_env):
+    service, alice, _, clock = chat_env
+    connect_key(service, alice)
+    thread = new_thread(service, alice)
+    created = request(service, alice, thread.id, 'stream')
+
+    class TrickleProvider:
+        def stream(self, *args):
+            yield 'before'
+            clock[0] = created.deadline_at + 1
+            yield 'after'
+
+    service.provider = TrickleProvider()
+    events = ''.join(service.stream_events(alice.bearer, created.id))
+    assert 'before' in events and 'after' not in events
+    assert 'message.interrupted' in events
+    assert service.request(alice.bearer, created.id).error_code == 'request_expired'
+
+
 def test_late_stream_finish_cannot_report_success_over_durable_interruption(chat_env):
     service, alice, _, _ = chat_env
     connect_key(service, alice)
-    thread = service.create_thread(alice.bearer, alice.view.csrf_token, None)
+    thread = new_thread(service, alice)
     created = request(service, alice, thread.id, 'competing terminal transition')
     stream = service.stream_events(alice.bearer, created.id)
     next(stream)

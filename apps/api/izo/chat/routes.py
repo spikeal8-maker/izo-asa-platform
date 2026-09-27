@@ -10,7 +10,8 @@ from fastapi.exception_handlers import request_validation_exception_handler
 from fastapi.responses import JSONResponse, StreamingResponse
 
 from ..accounts.http_security import same_origin
-from .provider import DeepSeekProvider, FakeDeepSeekProvider
+from .provider import DeepSeekProvider
+from .execution import FakeDeepSeekProvider
 from .schemas import (
     ChatPolicyView, CredentialCommand, CredentialView, CredentialWrite,
     RequestCreate, RequestView, ThreadCreate, ThreadDetail,

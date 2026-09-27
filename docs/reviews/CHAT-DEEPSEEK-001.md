@@ -34,3 +34,10 @@ After: an authenticated preview account can store its write-only DeepSeek key, s
 
 ## Non-goals
 No redesign; no attachments, mic/ASR, image tools, web search, provider admin, ASA Lab, merge/deploy or paid live smoke.
+
+## Continuation self-review · 2026-09-27
+- Existing PR source branch `feat/chat-deepseek-001` at `8b2f6c02bb68ef4a325c31aa776cd788647267d7` was reviewed before this fix. Changed files: chat conversations, execution, provider, routes, service, and two chat test modules.
+- Pending requests now expire durably before a later admission, including when that admission conflicts. Streaming checks the persisted deadline per chunk; the real provider bounds header wait and SSE reads, aborts a tracked HTTPS socket, and closes a response that arrives at the timeout boundary. Startup recovery propagates a transient DB failure so a later service construction can retry.
+- SELF_REVIEW verdict: **PASS** for implementation scope, ownership, retry/cost behavior, error and restart cases. Read-only subagent review of the final local diff: **PASS**; it is not the structured GitHub independent review required for technical acceptance.
+- Local evidence: 15 chat domain tests, 8 focused provider/crypto tests, 10 boundary tests, OpenAPI export check, docs check, scope check, and `git diff --check` passed. Two HTTP `TestClient` setups cannot run on Windows because the existing unit-test network guard blocks AnyIO's loopback socketpair; full Linux CI remains required on the pushed exact SHA.
+- Open gates: required full CI and structured independent GitHub `APPROVED` on the exact source SHA, or an explicit owner waiver under `docs/MAINTAINABILITY.md`. No paid live call, merge, or deploy was performed.

@@ -1,6 +1,9 @@
 """Outbound execution and durable partial/final persistence."""
 import json
 import time
+from contextlib import closing
+from collections.abc import Iterable
+from threading import Event
 from uuid import UUID
 import sqlalchemy as sa
 from cryptography.exceptions import InvalidTag
@@ -107,25 +110,31 @@ class ExecutionMixin:
 			remaining = request_row["deadline_at"] - self.now()
 			if remaining <= 0:
 				raise ProviderFailure("request_expired")
-			for chunk in self.provider.stream(
-					key, request_row["model"], messages, MAX_OUTPUT_TOKENS, remaining, event):
-				if event.is_set():
-					break
-				content += chunk
-				sequence += 1
-				yield self._event(
-					"text.delta", {
-						"request_id": str(request_id),
-						"sequence": sequence,
-						"text": chunk,
-					})
-				current = time.monotonic()
-				if (len(content) - saved_len >= 512
-						or current - saved_at >= 0.5):
-					self._save_partial(request_id, content)
-					saved_len, saved_at = len(content), current
+			expired = False
+			with closing(self.provider.stream(
+					key, request_row["model"], messages, MAX_OUTPUT_TOKENS, remaining, event)) as source:
+				for chunk in source:
+					if self.now() >= request_row["deadline_at"]:
+						expired = True
+						break
+					if event.is_set():
+						break
+					content += chunk
+					sequence += 1
+					yield self._event(
+						"text.delta", {
+							"request_id": str(request_id),
+							"sequence": sequence,
+							"text": chunk,
+						})
+					current = time.monotonic()
+					if (len(content) - saved_len >= 512
+							or current - saved_at >= 0.5):
+						self._save_partial(request_id, content)
+						saved_len, saved_at = len(content), current
 			state = self._finish(request_id,
-				"stopped" if event.is_set() else "completed", None, content)
+				"interrupted" if expired else "stopped" if event.is_set() else "completed",
+				"request_expired" if expired else None, content)
 			sequence += 1
 			payload = {"request_id": str(request_id), "sequence": sequence}
 			if state == "completed":
@@ -135,14 +144,14 @@ class ExecutionMixin:
 			yield self._event("message.done" if state == "completed"
 				else "message.interrupted", payload)
 		except (ChatError, ProviderFailure) as exc:
-			self._finish(request_id, "error", exc.code, content)
+			state = self._finish(request_id,
+				"interrupted" if exc.code == "request_expired" else "error",
+				exc.code, content)
 			sequence += 1
-			yield self._event(
-				"message.error", {
-					"request_id": str(request_id),
-					"sequence": sequence,
-					"code": exc.code,
-				})
+			payload = {"request_id": str(request_id), "sequence": sequence}
+			interrupted = state in {"interrupted", "stopped"}
+			payload["reason" if interrupted else "code"] = state if interrupted else exc.code
+			yield self._event("message.interrupted" if interrupted else "message.error", payload)
 		except GeneratorExit:
 			self._finish(
 				request_id, "interrupted",
@@ -196,68 +205,23 @@ class ExecutionMixin:
 			f"event: {name}\n"
 			f"data: {json.dumps(payload, ensure_ascii=False, separators=(',', ':'))}\n\n"
 		)
-	def _snapshot(self, account_id, request_id):
-		with self.engine.begin() as conn:
-			row = conn.execute(sa.select(t.requests).where(
-				t.requests.c.id == request_id,
-				t.requests.c.account_id == account_id)).mappings().first()
-			if not row:
-				raise ChatError(404, "request_not_found")
-			assistant = conn.execute(sa.select(
-				t.messages.c.content).where(
-				t.messages.c.request_id == request_id,
-				t.messages.c.role == "assistant")).scalar_one()
-			return dict(row), assistant
-	def _follow(self, account_id, request_id):
-		sent, sequence = 0, 0
-		yield self._event(
-			"message.start", {
-				"request_id": str(request_id),
-				"sequence": sequence,
-			})
-		while True:
-			row, content = self._snapshot(account_id, request_id)
-			if row["state"] in {"pending", "streaming"} and (
-					row["stop_requested_at"] is not None or self.now() >= row["deadline_at"]):
-				stopped = row["stop_requested_at"] is not None
-				self._finish(request_id, "stopped" if stopped else "interrupted",
-					None if stopped else "request_expired", content)
-				continue
-			if len(content) > sent:
-				sequence += 1
-				yield self._event(
-					"text.delta", {
-						"request_id": str(request_id),
-						"sequence": sequence,
-						"text": content[sent:],
-					})
-				sent = len(content)
-			state = row["state"]
-			if state == "completed":
-				sequence += 1
-				yield self._event(
-					"message.done", {
-						"request_id": str(request_id),
-						"sequence": sequence,
-						"text_length": len(content),
-					})
-				return
-			if state in {"interrupted", "stopped"}:
-				sequence += 1
-				yield self._event(
-					"message.interrupted", {
-						"request_id": str(request_id),
-						"sequence": sequence,
-						"reason": state,
-					})
-				return
-			if state == "error":
-				sequence += 1
-				yield self._event(
-					"message.error", {
-						"request_id": str(request_id),
-						"sequence": sequence,
-						"code": row["error_code"] or "chat_execution_failed",
-					})
-				return
-			time.sleep(0.2)
+
+class FakeDeepSeekProvider:
+    """CI-only provider. It never opens a socket and exposes deterministic chunks."""
+    def verify(self, key: str, timeout: int = 15) -> None:
+        if key != "x" * 32:
+            raise ProviderFailure("credential_rejected")
+
+    def stream(self, key: str, model: str, messages: list[dict[str, str]],
+               max_tokens: int, timeout: int, stop: Event) -> Iterable[str]:
+        self.verify(key)
+        users = [item["content"] for item in messages if item.get("role") == "user"]
+        previous = users[-2] if len(users) > 1 else ""
+        current = users[-1] if users else ""
+        answer = f"Ответ DeepSeek test: {current}" + (
+            f" | Контекст: {previous}" if previous else "")
+        for index in range(0, len(answer), 7):
+            if stop.is_set():
+                return
+            time.sleep(0.01)
+            yield answer[index:index + 7]

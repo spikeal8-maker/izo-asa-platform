@@ -75,12 +75,36 @@ class ConversationMixin:
 			"credential_generation": generation,
 		})
 	def create_request(self, raw, csrf, thread_id: UUID, command) -> RequestView:
-		now = self.now()
 		if not self.policy.model_allowed(command.model):
 			raise ChatError(422, "model_not_allowed")
 		try:
 			with self.engine.begin() as conn:
 				account, _ = self._account(conn, raw, csrf, mutation=True)
+				thread = conn.execute(sa.select(t.threads).where(
+					t.threads.c.id == thread_id,
+					t.threads.c.account_id == account["id"]).with_for_update()).mappings().first()
+				if not thread:
+					raise ChatError(404, "thread_not_found")
+				now = self.now()
+				expired = conn.execute(sa.update(t.requests).where(
+					t.requests.c.thread_id == thread_id,
+					t.requests.c.state == "pending",
+					t.requests.c.deadline_at <= now).values(
+					state="interrupted", error_code="request_expired",
+					updated_at=now).returning(t.requests.c.id)).scalars().all()
+				if expired:
+					conn.execute(sa.update(t.messages).where(
+						t.messages.c.request_id.in_(expired),
+						t.messages.c.role == "assistant").values(
+						state="interrupted", updated_at=now))
+			with self.engine.begin() as conn:
+				account, _ = self._account(conn, raw, csrf, mutation=True)
+				thread = conn.execute(sa.select(t.threads).where(
+					t.threads.c.id == thread_id,
+					t.threads.c.account_id == account["id"]).with_for_update()).mappings().first()
+				if not thread:
+					raise ChatError(404, "thread_not_found")
+				now = self.now()
 				existing = conn.execute(sa.select(t.requests).where(
 					t.requests.c.id == command.request_id)).mappings().first()
 				if existing:
@@ -96,11 +120,6 @@ class ConversationMixin:
 					return self._request_view(existing)
 				self._consume_rate(
 					conn, account["id"], "request", REQUEST_WINDOW_LIMIT)
-				thread = conn.execute(sa.select(t.threads).where(
-					t.threads.c.id == thread_id,
-					t.threads.c.account_id == account["id"]).with_for_update()).mappings().first()
-				if not thread:
-					raise ChatError(404, "thread_not_found")
 				connection = conn.execute(sa.select(t.connections).where(
 					t.connections.c.account_id == account["id"]).with_for_update()).mappings().first()
 				if (not connection or not connection["enabled"]
