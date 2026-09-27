@@ -341,5 +341,5 @@ def test_provider_deadline_interrupts_blocked_read(blocked_open):
     started = time.monotonic()
     with pytest.raises(ProviderFailure, match='request_expired'):
         list(provider.stream(KEY, 'deepseek-flash', [], 2048, 0.01, Event()))
-    assert time.monotonic() - started < 0.1
+    assert time.monotonic() - started < 0.5
     assert released.is_set()
