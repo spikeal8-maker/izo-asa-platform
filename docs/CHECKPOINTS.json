@@ -46,6 +46,23 @@
         "Review Source": 36312041847
       }
     },
+    "CHAT-PARITY-001": {
+      "base_head": "e7af398cfc731027ab2a526451f52ac98509cdbe",
+      "independent_review": "unavailable",
+      "owner_actor": "spikeal8-maker",
+      "owner_waiver": true,
+      "owner_waiver_reason": "Repository has no other participants; owner explicitly approved waiver for exact source SHA 67233e203436f56b77add709e04f01610ac462f3 after all required CI checks passed.",
+      "owner_waiver_source": "67233e203436f56b77add709e04f01610ac462f3",
+      "source_head": "67233e203436f56b77add709e04f01610ac462f3",
+      "tested_merge_tree": "78bcb7f2f083a988eaa5464e5d1f6ce411f8870d",
+      "type": "pr_merge_tree",
+      "verified_pr": 235,
+      "workflows": {
+        "Dependency Security": 36354874491,
+        "Foundation CI": 36354874472,
+        "Review Source": 36354874463
+      }
+    },
     "CHAT-UX-001": {
       "base_head": "ed1f79a6c53bdc3cab5d827d308ee661a61ebd20",
       "independent_review": "not_required",

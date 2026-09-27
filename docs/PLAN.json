@@ -9,17 +9,17 @@
       "pr": 22,
       "state": "technical_ci_pass_draft"
     },
-    "working_branch": "codex/chat-parity-001",
+    "working_branch": "codex/chat-vision-001",
     "provider_direction": "fal.ai / fal-ai/flux-2/klein/4b",
     "merge_deployed": false,
     "current_package_base": {
-      "branch": "codex/local-admin-access-001",
-      "sha": "e7af398cfc731027ab2a526451f52ac98509cdbe",
+      "branch": "codex/chat-parity-001",
+      "sha": "67233e203436f56b77add709e04f01610ac462f3",
       "state": "verified_pr_merge_tree_checkpoint"
     },
     "next_branch_source": "verified_working_head"
   },
-  "active_package": "CHAT-PARITY-001",
+  "active_package": "CHAT-VISION-001",
   "next_package": null,
   "rules": {
     "one_active_package": true,
@@ -105,7 +105,8 @@
     "ADMIN-DONOR-CATALOG-001": {"status": "technical_pass","depends_on": ["CHAT-DEEPSEEK-001","ADMIN-001","CREDIT-001"],"decides_next": true,"goal": "Admin entry, approved models and informational RUB prices; reuse shared domains without charges.","checkpoint": "ADMIN-DONOR-CATALOG-001"},
     "CHAT-UX-001": {"status": "technical_pass","depends_on": ["ADMIN-DONOR-CATALOG-001","UX-002"],"decides_next": true,"goal": "Compact Chat sidebar, mobile drawer and centered responsive empty state; preserve top bar and server model policy.","checkpoint": "CHAT-UX-001"},
     "LOCAL-ADMIN-ACCESS-001": {"status": "technical_pass","depends_on": ["CHAT-UX-001"],"decides_next": true,"goal": "Isolated local Admin bootstrap for one unverified account; production verification and permissions remain.","checkpoint": "LOCAL-ADMIN-ACCESS-001"},
-    "CHAT-PARITY-001": {"status": "active","depends_on": ["LOCAL-ADMIN-ACCESS-001"],"decides_next": true,"goal": "Restore OpenRouter text chat and model choice; preserve Admin, improve response language and reading width."}
+    "CHAT-PARITY-001": {"status": "technical_pass","depends_on": ["LOCAL-ADMIN-ACCESS-001"],"decides_next": true,"goal": "Restore OpenRouter text chat and model choice; preserve Admin, improve response language and reading width.","checkpoint": "CHAT-PARITY-001"},
+    "CHAT-VISION-001": {"status": "active","depends_on": ["CHAT-PARITY-001"],"decides_next": true,"goal": "Add private Media-backed image attachments and vision chat with ownership, idempotency and restart safety."}
   },
   "status_meaning": {
     "active": "Current coding package.",
