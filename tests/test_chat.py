@@ -317,7 +317,7 @@ def test_stream_deadline(chat_env):
     events = ''.join(service.stream_events(alice.bearer, created.id))
     assert 'before' in events and 'after' not in events
     assert 'message.interrupted' in events
-    assert service.request(alice.bearer, created.id).error_code == 'request_expired'
+    assert service.request(alice.bearer, created.id).error_code == 'provider_outcome_unknown'
 
 
 def test_late_stream_finish_cannot_report_success_over_durable_interruption(chat_env):

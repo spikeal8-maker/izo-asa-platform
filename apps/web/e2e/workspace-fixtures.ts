@@ -1,7 +1,7 @@
 import { createHash, randomUUID } from 'node:crypto'
 import { expect, type Page } from '@playwright/test'
 
-export const owner = '11111111-1111-4111-8111-111111111111'
+export const owner = `11111111-1111-4111-8111-1111111111${Number(process.env.TEST_WORKER_INDEX ?? 0).toString(16).padStart(2, '0')}`
 export const png = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAIAAACQkWg2AAAAGUlEQVR4nGMUaVrFQApgIkn1qIZRDUNKAwAFNgFgLuDeBwAAAABJRU5ErkJggg==', 'base64')
 export const hash = createHash('sha256').update(png).digest('hex')
 export function asset(id = randomUUID()) {
@@ -18,7 +18,8 @@ export async function workspace(page: Page) {
     requests: [] as { method: string; path: string; body: Record<string, any> | null }[],
     jobs: [] as Record<string, any>[], assets: [] as ReturnType<typeof asset>[],
     quotes: new Map<string, Record<string, any>>(), operations: new Map<string, string>(),
-    contentReads: 0, tickets: 0,
+    contentReads: 0, tickets: 0, uploads: new Map<string, Record<string, any>>(),
+    uploadOperations: new Map<string, string>(), uploadError: '', uploadUncertainOnce: false,
   }
   function finish(job: Record<string, any>) {
     if (job.status === 'succeeded') return
@@ -29,7 +30,8 @@ export async function workspace(page: Page) {
   }
   await page.route('**/api/v1/**', async route => {
     const req = route.request(), url = new URL(req.url()), path = url.pathname
-    const body = req.postData() ? req.postDataJSON() : null
+    const body = req.postData() && req.headers()['content-type'] !== 'application/octet-stream'
+      ? req.postDataJSON() : null
     state.requests.push({ method: req.method(), path, body })
     const answer = (value: unknown, status = 200) => route.fulfill({ status, json: value })
     const denied = (code: string, status = 409) => answer({ error: { code } }, status)
@@ -88,6 +90,28 @@ export async function workspace(page: Page) {
       } else if (state.autoFinish && job.status === 'queued') finish(job)
       return answer(job)
     }
+    if (path === '/api/v1/media/uploads' && req.method() === 'POST') {
+      if (state.uploadError) return denied(state.uploadError, 409)
+      const previous = state.uploadOperations.get(body.operation_id)
+      if (previous) return answer(state.uploads.get(previous), 201)
+      const upload = { id: randomUUID(), status: 'pending', asset_id: null,
+        expires_at: Math.floor(Date.now() / 1000) + 600, reserved_bytes: body.byte_size }
+      state.uploadOperations.set(body.operation_id, upload.id)
+      state.uploads.set(upload.id, upload)
+      return answer(upload, 201)
+    }
+    if (path.startsWith('/api/v1/media/uploads/')) {
+      const id = path.split('/')[5], upload = state.uploads.get(id)
+      if (!upload) return denied('not_found', 404)
+      if (path.endsWith('/content') && req.method() === 'POST') {
+        if (upload.status === 'pending') {
+          upload.status = 'ready'; upload.asset_id = randomUUID(); upload.reserved_bytes = 0
+          state.assets.push(asset(upload.asset_id))
+        }
+        if (state.uploadUncertainOnce) { state.uploadUncertainOnce = false; return denied('temporary', 503) }
+      }
+      return answer(upload)
+    }
     if (path === '/api/v1/media/assets') {
       if (state.assetError) return denied(state.assetError, 503)
       const offset = Number(url.searchParams.get('offset') ?? 0), limit = Number(url.searchParams.get('limit') ?? 20)
@@ -129,4 +153,51 @@ export async function create(page: Page, prompt?: string) {
 }
 export async function noOverflow(page: Page) {
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true)
+}
+
+export const visionThread = { id: '11111111-1111-4111-8111-111111111129', title: 'Изображение',
+  created_at: 1, updated_at: 1 }
+const visionPrice = { currency: 'RUB', input_kopeks_per_million: 100,
+  output_kopeks_per_million: 100, image_kopeks_per_image: null }
+export const visionPolicy = { revision: 'vision-fixture', default_model: 'deepseek-flash',
+  models: [{ id: 'deepseek-flash', label: 'DeepSeek Flash', provider: 'deepseek',
+    text: true, vision: true, price: visionPrice }, { id: 'deepseek-text', label: 'DeepSeek Text',
+    provider: 'deepseek', text: true, vision: false, price: visionPrice }], max_input_chars: 6000,
+  max_output_tokens: 2048, max_attachments: 5, max_image_bytes: 12 * 1024 * 1024 }
+
+export async function visionProvider(page: Page, vision: () => boolean) {
+  await page.route('**/api/v1/chat/catalog/openrouter', route => route.fulfill({ json: {
+    stale: false, fetched_at: 100, models: [{ id: 'anthropic/vision-test', name: 'Vision Test',
+      provider: 'anthropic', context_length: 100000, vision: vision(),
+      input_per_million_usd: null, output_per_million_usd: null }],
+  } }))
+  await page.route('**/api/v1/chat/credentials', route => route.fulfill({ json: { credentials:
+    ['deepseek', 'openrouter'].map(provider => ({ configured: true, enabled: true,
+      verified: true, revision: 1, generation: 1, provider })) } }))
+}
+
+export async function chatWorkspace(page: Page, existing = false) {
+  const app = await workspace(page)
+  const messages: Record<string, unknown>[] = []
+  const admitted: Record<string, any>[] = []
+  await page.route('**/api/v1/chat/policy', route => route.fulfill({ json: visionPolicy }))
+  await page.route('**/api/v1/chat/threads', route => route.request().method() === 'POST'
+    ? route.fulfill({ json: visionThread })
+    : route.fulfill({ json: { threads: existing || admitted.length ? [visionThread] : [] } }))
+  await page.route(`**/api/v1/chat/threads/${visionThread.id}`,
+    route => route.fulfill({ json: { thread: visionThread, messages } }))
+  await page.route(`**/api/v1/chat/threads/${visionThread.id}/requests`, route => {
+    const body = route.request().postDataJSON()
+    admitted.push(body)
+    messages.push({ id: randomUUID(), request_id: body.request_id, role: 'user', sequence: 1,
+      content: body.text, state: 'complete', created_at: 1, updated_at: 1,
+      attachments: body.attachment_ids.map((id: string) => ({ id: randomUUID(), asset_id: id,
+        media_type: 'image/png', byte_size: png.length, width: 16, height: 16,
+        sha256: app.assets.find(asset => asset.id === id)!.sha256, created_at: 1 })) })
+    return route.fulfill({ json: { id: body.request_id, thread_id: visionThread.id, state: 'pending' } })
+  })
+  await page.route('**/api/v1/chat/requests/*/events', route => route.fulfill({
+    headers: { 'content-type': 'text/event-stream' }, body: 'event: message.completed\ndata: {}\n\n',
+  }))
+  return { app, admitted }
 }

@@ -9,16 +9,25 @@ from threading import Lock
 from urllib.error import HTTPError, URLError
 from urllib.request import Request, build_opener
 
+from ..catalog.schemas import Price
 from .credential_read import ChatError
 from .provider import ProviderFailure, _NoRedirect
 from .provider_openrouter import OPENROUTER_BASE_URL
-from .schemas import OPENROUTER_AUTO_MODEL, OpenRouterCatalogModel, OpenRouterCatalogView
+from .schemas import (
+    ChatPolicyView, ModelView, OPENROUTER_AUTO_MODEL,
+    OpenRouterCatalogModel, OpenRouterCatalogView,
+    MAX_CHAT_ATTACHMENTS, MAX_CHAT_IMAGE_BYTES,
+    MAX_INPUT_CHARS, MAX_OUTPUT_TOKENS, MODEL_REVISION,
+)
 
 CATALOG_TTL_SECONDS = 600
 CATALOG_FAILURE_TTL_SECONDS = 30
 MAX_CATALOG_BYTES = 8 * 1024 * 1024
 MAX_CATALOG_MODELS = 1000
 MAX_MODEL_ID_CHARS = 64
+# Adapter capability, independent of Admin's text pricing/modality catalog.
+# https://api-docs.deepseek.com/guides/vision/
+DEEPSEEK_VISION_MODELS = frozenset({"deepseek-flash"})
 
 
 def parse_openrouter_text_models(payload) -> list[OpenRouterCatalogModel]:
@@ -154,6 +163,35 @@ class OpenRouterCatalogCache:
 
 
 class CatalogMixin:
+    @staticmethod
+    def static_vision_supported(model_id: str, provider: str) -> bool:
+        return provider == "deepseek" and model_id in DEEPSEEK_VISION_MODELS
+
+    def public_policy(self, raw) -> ChatPolicyView:
+        with self.engine.begin() as conn:
+            self._account(conn, raw)
+            head, models = self.catalog.public_text(conn)
+        return ChatPolicyView(
+            revision=f"{MODEL_REVISION}:catalog-{head['revision']}",
+            default_model=head["default_model"],
+            models=[ModelView(
+                id=model.id, label=model.label, provider=model.provider,
+                price=model.price, text=True,
+                vision=self.static_vision_supported(model.id, model.provider),
+                description=("Текст · Изображения" if self.static_vision_supported(
+                    model.id, model.provider)
+                             else "Текст")) for model in models] +
+            ([ModelView(
+                id=OPENROUTER_AUTO_MODEL, label="Автовыбор OpenRouter",
+                provider="openrouter", price=Price(), text=True, vision=False,
+                description="OpenRouter автоматически выбирает текстовую модель.")]
+             if "openrouter" in self.providers else []),
+            max_input_chars=MAX_INPUT_CHARS,
+            max_output_tokens=MAX_OUTPUT_TOKENS,
+            max_attachments=MAX_CHAT_ATTACHMENTS,
+            max_image_bytes=MAX_CHAT_IMAGE_BYTES,
+        )
+
     def openrouter_catalog(self, raw) -> OpenRouterCatalogView:
         with self.engine.begin() as conn:
             self._account(conn, raw)
@@ -163,16 +201,21 @@ class CatalogMixin:
             raise ChatError(503, "catalog_unavailable") from None
 
     def resolve_model(self, model: str) -> tuple[str, str]:
+        provider, provider_model, _ = self.model_admission(model)
+        return provider, provider_model
+
+    def model_admission(self, model: str) -> tuple[str, str, bool]:
         if model == OPENROUTER_AUTO_MODEL:
-            return "openrouter", "openrouter/auto"
+            return "openrouter", "openrouter/auto", False
         if "/" not in model:
-            return "deepseek", model
+            return "deepseek", model, self.static_vision_supported(model, "deepseek")
         try:
             catalog = self._openrouter_catalog.get()
         except ProviderFailure:
             raise ChatError(503, "catalog_unavailable") from None
         if catalog.stale:
             raise ChatError(503, "catalog_unavailable")
-        if any(item.id == model for item in catalog.models):
-            return "openrouter", model
+        selected = next((item for item in catalog.models if item.id == model), None)
+        if selected is not None:
+            return "openrouter", model, selected.vision
         raise ChatError(422, "model_not_allowed")

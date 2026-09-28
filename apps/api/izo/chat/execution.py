@@ -11,13 +11,14 @@ from . import tables as t
 from .credentials import ChatError, decrypt
 from .provider import ProviderFailure
 from .request_state import KNOWN_PROVIDER_REJECTIONS, UNKNOWN_PAID_OUTCOME
-from .schemas import MAX_CONTEXT_CHARS, MAX_CONTEXT_MESSAGES, MAX_OUTPUT_TOKENS
+from .schemas import MAX_CONTEXT_CHARS, MAX_CONTEXT_MESSAGES, MAX_OUTPUT_TOKENS, OPENROUTER_AUTO_MODEL
+from .vision import VisionContextMixin
 
 RUSSIAN_REPLY_PREFERENCE = (
     "Отвечай на русском языке, если пользователь явно не попросил другой язык. "
     "Сохраняй исходный язык кода, цитат и имён собственных."
 )
-class ExecutionMixin:
+class ExecutionMixin(VisionContextMixin):
 	def _context_and_key(self, account_id, request_row):
 		root = self._root()
 		with self.engine.begin() as conn:
@@ -44,24 +45,22 @@ class ExecutionMixin:
 				t.messages.c.state == "complete").order_by(
 				t.messages.c.sequence.desc()).limit(
 				MAX_CONTEXT_MESSAGES)).mappings().all()
-		chosen, used = [], len(user["content"])
-		for item in prior:
-			if used + len(item["content"]) > MAX_CONTEXT_CHARS:
-				break
-			chosen.append({
-				"role": item["role"], "content": item["content"]})
-			used += len(item["content"])
-		chosen.reverse()
+			grouped = (self._vision_rows(conn, account_id,
+				[item["id"] for item in [*prior, user]])
+				if request_row["vision_admitted"] else {})
+		chosen = self._bounded_context(prior, user, grouped, MAX_CONTEXT_CHARS)
 		provider = connection["provider"]
-		if "/" in request_row["model"]:
+		if request_row["model"] == OPENROUTER_AUTO_MODEL:
+			resolved_provider, provider_model = "openrouter", "openrouter/auto"
+		elif "/" in request_row["model"]:
 			resolved_provider, provider_model = "openrouter", request_row["model"]
 		else:
-			resolved_provider, provider_model = self.resolve_model(request_row["model"])
+			resolved_provider, provider_model = "deepseek", request_row["model"]
 		if provider != resolved_provider:
 			raise ChatError(503, "model_provider_mismatch")
-		chosen.insert(0, {"role": "system", "content": RUSSIAN_REPLY_PREFERENCE})
-		chosen.append({"role": "user", "content": user["content"]})
-		return key, provider, provider_model, chosen
+		messages = [{"role": "system", "content": RUSSIAN_REPLY_PREFERENCE}]
+		messages.extend(self._provider_message(item, grouped) for item in chosen)
+		return key, provider, provider_model, messages
 	def _save_partial(self, request_id, content: str) -> None:
 		now = self.now()
 		with self.engine.begin() as conn:
@@ -92,9 +91,9 @@ class ExecutionMixin:
 			if remaining <= 0:
 				raise ProviderFailure("request_expired")
 			adapter = self.provider_for(provider)
-			if provider == "openrouter":
-				self._mark_openrouter_submission(request_id)
-				submitted = True
+			# Commit the durable paid-outcome marker before either provider POST.
+			self._mark_paid_submission(request_id)
+			submitted = True
 			expired = False
 			with closing(adapter.stream(
 					key, provider_model, messages, MAX_OUTPUT_TOKENS, remaining, event)) as source:
@@ -209,7 +208,13 @@ class FakeDeepSeekProvider:
     def stream(self, key: str, model: str, messages: list[dict[str, str]],
                max_tokens: int, timeout: int, stop: Event) -> Iterable[str]:
         self.verify(key)
-        users = [item["content"] for item in messages if item.get("role") == "user"]
+        def visible_text(content):
+            if isinstance(content, str):
+                return content
+            return " ".join(part.get("text", "") for part in content
+                            if part.get("type") == "text")
+        users = [visible_text(item["content"]) for item in messages
+                 if item.get("role") == "user"]
         previous = users[-2] if len(users) > 1 else ""
         current = users[-1] if users else ""
         answer = f"Ответ DeepSeek test: {current}" + (

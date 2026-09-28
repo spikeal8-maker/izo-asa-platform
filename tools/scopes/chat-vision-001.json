@@ -6,7 +6,14 @@
   "independent_review_required": true,
   "max_files": 40,
   "large_scope_reason": "Private image attachment needs one bounded Media-to-Chat path across ownership admission, persisted message references, provider vision payloads, a responsive composer, the API contract and negative/integration tests. The donor migration cannot be copied because its revision chain conflicts with the canonical Admin migration.",
-  "domains": ["governance", "chat-provider", "chat-catalog", "web-chat", "media", "tests"],
+  "domains": [
+    "governance",
+    "chat-provider",
+    "chat-catalog",
+    "web-chat",
+    "media",
+    "tests"
+  ],
   "non_goals": [
     "No new Media store, gallery, account, ledger or auth system",
     "No image generation, payments, Credits debit, arbitrary RUB conversion or Admin pricing change",
@@ -14,18 +21,29 @@
     "No GIF upload until the existing Media contract supports it"
   ],
   "allowed": [
-    "docs/CURRENT.md", "docs/PLAN.json", "docs/CHECKPOINTS.json",
-    "docs/reviews/CHAT-VISION-001.md", "tools/scopes/chat-vision-001.json",
-    "apps/api/izo/chat/README.md", "apps/api/izo/chat/schemas.py",
-    "apps/api/izo/chat/tables.py", "apps/api/izo/chat/service.py",
-    "apps/api/izo/chat/catalog.py", "apps/api/izo/chat/conversations.py",
-    "apps/api/izo/chat/execution.py", "apps/api/izo/chat/execution_context.py",
-    "apps/api/izo/chat/attachments.py", "apps/api/izo/chat/vision.py",
-    "apps/api/izo/chat/routes.py", "apps/api/izo/chat/provider.py",
+    "docs/CURRENT.md",
+    "docs/PLAN.json",
+    "docs/CHECKPOINTS.json",
+    "docs/reviews/CHAT-VISION-001.md",
+    "tools/scopes/chat-vision-001.json",
+    "apps/api/izo/chat/README.md",
+    "apps/api/izo/chat/schemas.py",
+    "apps/api/izo/chat/tables.py",
+    "apps/api/izo/chat/service.py",
+    "apps/api/izo/chat/catalog.py",
+    "apps/api/izo/chat/conversations.py",
+    "apps/api/izo/chat/execution.py",
+    "apps/api/izo/chat/request_state.py",
+    "apps/api/izo/chat/attachments.py",
+    "apps/api/izo/chat/vision.py",
+    "apps/api/izo/chat/routes.py",
     "apps/api/migrations/versions/0015_chat_vision.py",
-    "tests/test_chat_vision.py", "tests/test_chat_vision_http.py",
+    "tests/test_chat.py",
+    "tests/test_chat_vision.py",
+    "tests/test_chat_vision_http.py",
     "tools/chat_vision_acceptance.py",
-    "apps/web/src/shell/chat/README.md", "apps/web/src/shell/chat/ChatComposer.tsx",
+    "apps/web/src/shell/chat/README.md",
+    "apps/web/src/shell/chat/ChatComposer.tsx",
     "apps/web/src/shell/chat/ChatComposer.css",
     "apps/web/src/shell/chat/AttachmentControl.tsx",
     "apps/web/src/shell/chat/AttachmentControl.css",
@@ -41,10 +59,13 @@
     "apps/web/e2e/chat-attachments.spec.ts",
     "apps/web/e2e/chat-responsive.spec.ts",
     "apps/web/e2e/workspace-fixtures.ts",
-    "packages/contracts/openapi.json"
+    "packages/contracts/openapi.json",
+    ".github/workflows/ci.yml"
   ],
   "sensitive_approved": [
     "tools/scopes/chat-vision-001.json",
-    "apps/api/migrations/versions/0015_chat_vision.py"
+    "apps/api/migrations/versions/0015_chat_vision.py",
+    ".github/workflows/ci.yml",
+    "tools/chat_vision_acceptance.py"
   ]
 }

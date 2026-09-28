@@ -17,7 +17,7 @@ KNOWN_PROVIDER_REJECTIONS = frozenset({
 
 
 class RequestStateMixin:
-    def _mark_openrouter_submission(self, request_id: UUID) -> None:
+    def _mark_paid_submission(self, request_id: UUID) -> None:
         # Commit before POST so process loss cannot make a charged call retryable.
         now = self.now()
         with self.engine.begin() as conn:

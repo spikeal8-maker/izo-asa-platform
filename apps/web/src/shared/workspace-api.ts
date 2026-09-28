@@ -5,6 +5,7 @@ export type Job = components['schemas']['JobView']
 export type Jobs = components['schemas']['JobList']
 export type Quote = components['schemas']['QuoteView']
 export type Asset = components['schemas']['AssetView']
+export type Upload = components['schemas']['UploadView']
 export type Assets = components['schemas']['AssetList']
 export type Plan = components['schemas']['EntitlementView']
 export type Credits = components['schemas']['Overview']
@@ -56,7 +57,8 @@ export function navigate(path: string) {
   window.dispatchEvent(new Event('izo:navigate'))
   window.scrollTo({ top: 0 })
 }
-export async function downloadTicket(asset: Asset, auth: AuthView, signal?: AbortSignal): Promise<string> {
+export async function downloadTicket(asset: Pick<Asset, 'id'>, auth: AuthView,
+  signal?: AbortSignal): Promise<string> {
   if (!isId(asset.id)) throw new Error('Invalid asset')
   const ticket = await apiRequest<components['schemas']['DownloadView']>(`/api/v1/media/assets/${asset.id}/download`,
     { method: 'POST', csrf: auth.csrf_token, signal })
@@ -65,7 +67,27 @@ export async function downloadTicket(asset: Asset, auth: AuthView, signal?: Abor
       || ticket.expires_at * 1000 <= Date.now()) throw new Error('Invalid download ticket')
   return ticket.url
 }
-export async function imageBlob(asset: Asset, auth: AuthView, signal?: AbortSignal): Promise<Blob> {
+export async function imageBlob(asset: Pick<Asset, 'id' | 'byte_size' | 'sha256'>,
+  auth: AuthView, signal?: AbortSignal): Promise<Blob> {
   const url = await downloadTicket(asset, auth, signal)
   return apiImage(url, asset.byte_size, asset.sha256, signal)
+}
+
+/** Send bounded bytes only to an existing private Media upload intent. */
+export async function uploadContent(uploadId: string, bytes: ArrayBuffer, auth: AuthView): Promise<Upload> {
+  if (!isId(uploadId) || bytes.byteLength < 1 || bytes.byteLength > 16 * 1024 * 1024)
+    throw new Error('Invalid Media upload')
+  const response = await fetch(`/api/v1/media/uploads/${uploadId}/content`, {
+    method: 'POST', credentials: 'same-origin', cache: 'no-store', redirect: 'error',
+    referrerPolicy: 'no-referrer', signal: AbortSignal.timeout(35000), body: bytes,
+    headers: { 'Content-Type': 'application/octet-stream', 'X-CSRF-Token': auth.csrf_token,
+      'X-IZO-Request': 'web' },
+  })
+  if (!response.ok) {
+    if (response.status === 401) window.dispatchEvent(new Event('izo:session-invalid'))
+    const body = await response.json().catch(() => null)
+    throw new ApiError(response.status,
+      typeof body?.error?.code === 'string' ? body.error.code : 'api_unavailable')
+  }
+  return await response.json() as Upload
 }

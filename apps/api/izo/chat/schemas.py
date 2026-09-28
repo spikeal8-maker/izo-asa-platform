@@ -4,7 +4,7 @@ from __future__ import annotations
 import base64
 from typing import Literal
 from uuid import UUID
-from pydantic import BaseModel, ConfigDict, Field, SecretStr, field_validator
+from pydantic import BaseModel, ConfigDict, Field, SecretStr, field_validator, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 from ..catalog.schemas import Price
 
@@ -23,6 +23,9 @@ REQUEST_WINDOW_LIMIT = 20
 CREDENTIAL_WINDOW_LIMIT = 6
 THREAD_PAGE_LIMIT = 50
 MESSAGE_PAGE_LIMIT = 100
+MAX_CHAT_ATTACHMENTS = 5
+MAX_CHAT_IMAGE_BYTES = 12 * 1024 * 1024
+MAX_CONTEXT_IMAGE_BYTES = 24 * 1024 * 1024
 
 class ChatSettings(BaseSettings):
     model_config = SettingsConfigDict(
@@ -125,6 +128,16 @@ class ThreadView(BaseModel):
 class ThreadList(BaseModel):
     threads: list[ThreadView]
 
+class AttachmentView(BaseModel):
+    id: UUID
+    asset_id: UUID
+    media_type: Literal["image/png"]
+    byte_size: int
+    width: int
+    height: int
+    sha256: str
+    created_at: int
+
 class MessageView(BaseModel):
     id: UUID
     request_id: UUID
@@ -132,6 +145,7 @@ class MessageView(BaseModel):
     sequence: int
     content: str
     state: str
+    attachments: list[AttachmentView] = Field(default_factory=list)
     created_at: int
     updated_at: int
 
@@ -141,16 +155,30 @@ class ThreadDetail(BaseModel):
 
 class RequestCreate(StrictInput):
     request_id: UUID
-    text: str = Field(min_length=1, max_length=MAX_INPUT_CHARS)
+    text: str = Field(max_length=MAX_INPUT_CHARS)
     model: str = Field(min_length=1, max_length=64)
+    attachment_ids: list[UUID] = Field(default_factory=list, max_length=MAX_CHAT_ATTACHMENTS)
 
     @field_validator("text")
     @classmethod
     def clean_text(cls, value: str) -> str:
         value = value.strip()
-        if not value or "\x00" in value:
+        if "\x00" in value:
             raise ValueError("Invalid message")
         return value
+
+    @field_validator("attachment_ids")
+    @classmethod
+    def unique_attachments(cls, value: list[UUID]) -> list[UUID]:
+        if len(set(value)) != len(value):
+            raise ValueError("Duplicate attachment")
+        return value
+
+    @model_validator(mode="after")
+    def has_content(self):
+        if not self.text and not self.attachment_ids:
+            raise ValueError("Message is empty")
+        return self
 
 class RequestView(BaseModel):
     id: UUID

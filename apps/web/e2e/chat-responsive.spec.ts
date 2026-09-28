@@ -1,5 +1,5 @@
 import { test, expect, type Page } from '@playwright/test'
-import { noOverflow, workspace } from './workspace-fixtures'
+import { chatWorkspace, noOverflow, png, visionPolicy, workspace } from './workspace-fixtures'
 
 const widths = [320, 390, 768, 1024, 1440, 1920, 2560, 3840, 7680]
 const desktopWidths = [1440, 1920, 2560, 3840, 7680]
@@ -105,6 +105,33 @@ test('chat shell uses geometry-based sidebar mode and fluid desktop scaling', as
     expect(desktopMetrics[i].sidebar).toBeGreaterThanOrEqual(desktopMetrics[i - 1].sidebar)
     expect(desktopMetrics[i].composer).toBeGreaterThanOrEqual(desktopMetrics[i - 1].composer)
   }
+})
+
+test('attachment list stays frozen during delayed policy preflight', async ({ page }, info) => {
+  test.skip(info.project.name !== 'laptop')
+  const { admitted } = await chatWorkspace(page)
+  let reads = 0, entered!: () => void, release!: () => void
+  const waiting = new Promise<void>(resolve => { entered = resolve })
+  const gate = new Promise<void>(resolve => { release = resolve })
+  await page.route('**/api/v1/chat/policy', async route => {
+    if (++reads > 1) { entered(); await gate }
+    await route.fulfill({ json: visionPolicy })
+  })
+  await page.goto('/')
+  await page.getByLabel('Выбрать изображения').setInputFiles({ name: 'fixed.png', mimeType: 'image/png', buffer: png })
+  await page.getByRole('button', { name: 'Отправить' }).click()
+  await waiting
+  await expect(page.getByRole('button', { name: 'Удалить изображение fixed.png' })).toBeDisabled()
+  await expect(page.getByRole('button', { name: 'Добавить', exact: true })).toBeDisabled()
+  await page.locator('.chat-composer').evaluate((node, bytes) => {
+    const transfer = new DataTransfer()
+    transfer.items.add(new File([new Uint8Array(bytes)], 'late.png', { type: 'image/png' }))
+    node.dispatchEvent(new DragEvent('drop', { dataTransfer: transfer, bubbles: true, cancelable: true }))
+  }, Array.from(png))
+  await expect(page.getByTestId('chat-attachment-preview')).toHaveCount(1)
+  release()
+  await expect.poll(() => admitted.length).toBe(1)
+  expect((admitted[0].attachment_ids as string[])).toHaveLength(1)
 })
 
 test('continuous resize has no responsive jumps or horizontal overflow', async ({ page }, info) => {

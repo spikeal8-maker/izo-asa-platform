@@ -16,7 +16,7 @@ runtime environment and is intentionally absent from database backups and previe
 back to it. A failed/unknown real execution is persisted as a non-success terminal state and
 is not automatically submitted again.
 
-Before an OpenRouter POST, the request receives a durable unknown-outcome marker.
+Before any provider POST, the request receives a durable unknown-outcome marker.
 An uncertain response, disconnect or executor restart preserves it; another
 request in that thread is rejected while exact request-ID replay remains safe.
 The preview has no in-app reconciliation yet. The user must check the provider
@@ -28,5 +28,17 @@ Chat bounds live in `schemas.py`; published DeepSeek policy and informational
 RUB display prices live in `../catalog/`. UI consumes server policy and catalog
 endpoints. The provider key is never sent to the browser after submission.
 The server adds a Russian reply preference while respecting an explicit user
-language request. Image attachment and generation paths are not implemented in
-this package; the browser must not present them as working Chat actions.
+language request.
+
+Chat image references point only to account-owned ready assets from shared Media.
+`attachments.py` admits ordered normalized PNG snapshots; `vision.py` loads
+private bytes with an aggregate context bound before provider submission.
+The request stores vision capability at admission so execution and replay do
+not depend on a later remote catalog refresh. Media owns upload policy, S3
+reconciliation and downloads. Chat has no image generation path yet.
+DeepSeek Flash vision is an explicit Chat adapter capability in `catalog.py`,
+based on the [DeepSeek vision API](https://api-docs.deepseek.com/guides/vision/):
+Chat Completions accepts `image_url` parts with private base64 PNG data.
+The Admin catalog's `text` modality controls publication and RUB text prices;
+it does not grant image capability. OpenRouter vision comes from its fresh
+model catalog's `input_modalities` and is captured on request admission.

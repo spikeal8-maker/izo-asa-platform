@@ -3,12 +3,13 @@ from uuid import UUID, uuid4
 import sqlalchemy as sa
 from sqlalchemy.exc import IntegrityError
 from . import tables as t
+from .attachments import AttachmentMixin
 from .credentials import ChatError
 from .request_state import RequestStateMixin, UNKNOWN_PAID_OUTCOME
 from .schemas import MessageView, RequestView, ThreadDetail, ThreadList, ThreadView
 from .schemas import MESSAGE_PAGE_LIMIT, MODEL_REVISION, REQUEST_WINDOW_LIMIT, THREAD_PAGE_LIMIT
 from .schemas import OPENROUTER_AUTO_MODEL
-class ConversationMixin(RequestStateMixin):
+class ConversationMixin(AttachmentMixin, RequestStateMixin):
 	def create_thread(self, raw, csrf, title: str | None) -> ThreadView:
 		now, thread_id = self.now(), uuid4()
 		safe = (title or "Новый чат").strip()[:120] or "Новый чат"
@@ -32,11 +33,12 @@ class ConversationMixin(RequestStateMixin):
 				t.threads.c.updated_at.desc(), t.threads.c.id.desc()).limit(
 				THREAD_PAGE_LIMIT)).mappings().all()
 		return ThreadList(threads=[self._thread_view(row) for row in rows])
-	@staticmethod
-	def _message_view(row) -> MessageView:
+	@classmethod
+	def _message_view(cls, row, attachment_rows=()) -> MessageView:
 		return MessageView(
 			id=row["id"], request_id=row["request_id"], role=row["role"],
 			sequence=row["sequence"], content=row["content"], state=row["state"],
+			attachments=[cls._attachment_view(item) for item in attachment_rows],
 			created_at=row["created_at"], updated_at=row["updated_at"])
 	def thread_detail(self, raw, thread_id: UUID) -> ThreadDetail:
 		with self.engine.begin() as conn:
@@ -50,13 +52,17 @@ class ConversationMixin(RequestStateMixin):
 				t.messages.c.thread_id == thread_id).order_by(
 				t.messages.c.sequence.desc()).limit(
 				MESSAGE_PAGE_LIMIT)).mappings().all()
+			ordered = list(reversed(rows))
+			grouped = self._attachments_for_messages(
+				conn, account["id"], [row["id"] for row in ordered])
 		return ThreadDetail(
 			thread=self._thread_view(thread),
-			messages=[self._message_view(row) for row in reversed(rows)])
+			messages=[self._message_view(row, grouped.get(row["id"], ()))
+			          for row in ordered])
 	def create_request(self, raw, csrf, thread_id: UUID, command) -> RequestView:
 		# Resolve remote catalog IDs before acquiring the thread row lock. Durable
 		# request replays still work when the provider catalog is unavailable.
-		dynamic_provider = None
+		dynamic_provider, dynamic_vision = None, False
 		if "/" in command.model:
 			with self.engine.begin() as conn:
 				account, _ = self._account(conn, raw, csrf, mutation=True)
@@ -71,7 +77,7 @@ class ConversationMixin(RequestStateMixin):
 					).limit(1)).first():
 					raise ChatError(409, UNKNOWN_PAID_OUTCOME)
 			if not exists:
-				dynamic_provider, _ = self.resolve_model(command.model)
+				dynamic_provider, _, dynamic_vision = self.model_admission(command.model)
 		try:
 			with self.engine.begin() as conn:
 				account, _ = self._account(conn, raw, csrf, mutation=True)
@@ -109,7 +115,8 @@ class ConversationMixin(RequestStateMixin):
 					expected = self._request_fingerprint(
 						thread_id, command.text, command.model,
 					existing["connection_id"],
-					existing["credential_generation"], existing["model_revision"])
+					existing["credential_generation"], existing["model_revision"],
+					command.attachment_ids)
 					if expected != existing["fingerprint"]:
 						raise ChatError(409, "request_conflict")
 					return self._request_view(existing)
@@ -122,16 +129,22 @@ class ConversationMixin(RequestStateMixin):
 				head, allowed_models = self.catalog.public_text(conn, lock=True)
 				if command.model == OPENROUTER_AUTO_MODEL:
 					provider = "openrouter"
+					vision = False
 				elif "/" in command.model:
 					if dynamic_provider is None:
 						raise ChatError(409, "request_conflict")
 					provider = dynamic_provider
+					vision = dynamic_vision
 				else:
 					selected = next((item for item in allowed_models
 					                 if item.id == command.model), None)
 					if selected is None:
 						raise ChatError(422, "model_not_allowed")
 					provider = selected.provider
+					vision = self.static_vision_supported(selected.id, provider)
+				if command.attachment_ids and not vision:
+					raise ChatError(422, "model_vision_unsupported")
+				assets = self._attachment_assets(conn, account["id"], command.attachment_ids)
 				self._consume_rate(
 					conn, account["id"], "request", REQUEST_WINDOW_LIMIT)
 				connection = conn.execute(sa.select(t.connections).where(
@@ -146,35 +159,40 @@ class ConversationMixin(RequestStateMixin):
 				                  f"{MODEL_REVISION}:openrouter")
 				fingerprint = self._request_fingerprint(
 					thread_id, command.text, command.model,
-					connection["id"], connection["generation"], model_revision)
+					connection["id"], connection["generation"], model_revision,
+					command.attachment_ids)
 				request_id = command.request_id
 				sequence = thread["next_sequence"]
+				user_message_id, assistant_message_id = uuid4(), uuid4()
 				conn.execute(sa.insert(t.requests).values(
 					id=request_id, thread_id=thread_id,
 					account_id=account["id"], fingerprint=fingerprint,
 					model=command.model, model_revision=model_revision,
 					connection_id=connection["id"],
 					credential_generation=connection["generation"],
+					vision_admitted=vision,
 					state="pending", error_code=None, stop_requested_at=None,
 					created_at=now, updated_at=now,
 					deadline_at=now + self.policy.request_deadline_seconds))
 				conn.execute(sa.insert(t.messages), [
 					dict(
-						id=uuid4(), thread_id=thread_id,
+						id=user_message_id, thread_id=thread_id,
 						request_id=request_id, role="user",
 						sequence=sequence, part_version=1,
 						content=command.text, state="complete",
 						created_at=now, updated_at=now),
 					dict(
-						id=uuid4(), thread_id=thread_id,
+						id=assistant_message_id, thread_id=thread_id,
 						request_id=request_id, role="assistant",
 						sequence=sequence + 1, part_version=1,
 						content="", state="partial",
 						created_at=now, updated_at=now),
 				])
+				self._insert_attachments(conn, account["id"], request_id,
+				                         user_message_id, assets, now)
 				title = thread["title"]
 				if sequence == 1 and title == "Новый чат":
-					title = command.text.replace("\n", " ").strip()[:72] or title
+					title = command.text.replace("\n", " ").strip()[:72] or "Изображение"
 				conn.execute(sa.update(t.threads).where(
 					t.threads.c.id == thread_id).values(
 					next_sequence=sequence + 2,

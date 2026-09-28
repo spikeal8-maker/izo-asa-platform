@@ -40,6 +40,12 @@ grid-template-areas:
 row-gap:clamp(5px,.5cqw,11px);
 border-radius:clamp(22px,1.55cqw,36px);
 }
+.chat-composer.has-attachments {
+grid-template-areas:
+'attachments attachments attachments attachments attachments'
+'input input input input input'
+'plus state model mic send';
+}
 .chat-composer:focus-within { border-color:color-mix(in srgb,var(--color-text) 34%,var(--color-border)); }
 .chat-composer textarea,
 .chat-composer-measure {

@@ -1,6 +1,18 @@
 import { isValidElement, useState, type ReactNode } from 'react'
 import ReactMarkdown from 'react-markdown'
-import type { MessageView as Message } from '../../shared/api'
+import type { AuthView, MessageView as Message } from '../../shared/api'
+import { usePrivateImageUrl } from '../../shared/usePrivateImageUrl'
+
+type Attachment = NonNullable<Message['attachments']>[number]
+
+function ChatImage({ attachment, auth }: { attachment: Attachment; auth: AuthView }) {
+  const { url, error, retry } = usePrivateImageUrl({ ...attachment, id: attachment.asset_id }, auth)
+  return <div className="chat-message-image">
+    {url ? <img src={url} alt="Прикреплённое изображение" width={attachment.width} height={attachment.height} />
+      : error ? <div role="alert">Не удалось открыть изображение. <button onClick={retry}>Повторить</button></div>
+      : <span role="status">Загружаем изображение…</span>}
+  </div>
+}
 
 function textOf(node: ReactNode): string {
   if (typeof node === 'string' || typeof node === 'number') return String(node)
@@ -43,10 +55,15 @@ function CodeBlock({ children }: { children?: ReactNode }) {
   </div>
 }
 
-export function ChatMessage({ message }: { message: Message }) {
+export function ChatMessage({ message, auth }: { message: Message; auth: AuthView | null | undefined }) {
   if (message.role === 'user') {
     return <div className="chat-turn chat-turn-user" data-message-id={message.id}>
-      <div className="chat-user-bubble">{message.content}</div>
+      <div className="chat-user-bubble">
+        {message.attachments?.length && auth ? <div className="chat-message-images">
+          {message.attachments.map(attachment => <ChatImage key={attachment.id} attachment={attachment} auth={auth} />)}
+        </div> : null}
+        {message.content && <div>{message.content}</div>}
+      </div>
     </div>
   }
 
@@ -61,6 +78,7 @@ export function ChatMessage({ message }: { message: Message }) {
             : <span>{children}</span>
         },
         pre: ({ children }) => <CodeBlock>{children}</CodeBlock>,
+        img: ({ alt }) => <span>{alt || 'Изображение в ответе недоступно'}</span>,
       }}>{message.content || (message.state === 'partial' ? '…' : '')}</ReactMarkdown>
       {message.state !== 'complete' && message.state !== 'partial'
         && <div className="chat-message-state" role="status">

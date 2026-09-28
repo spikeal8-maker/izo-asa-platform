@@ -3,6 +3,15 @@ import sqlalchemy as sa
 
 metadata = sa.MetaData()
 sa.Table("accounts", metadata, sa.Column("id", sa.Uuid, primary_key=True))
+media_assets = sa.Table("media_assets", metadata,
+    sa.Column("id", sa.Uuid, primary_key=True),
+    sa.Column("account_id", sa.Uuid, nullable=False),
+    sa.Column("object_key", sa.String(200), nullable=False),
+    sa.Column("sha256", sa.String(64), nullable=False),
+    sa.Column("byte_size", sa.BigInteger, nullable=False),
+    sa.Column("width", sa.Integer, nullable=False),
+    sa.Column("height", sa.Integer, nullable=False),
+    sa.Column("created_at", sa.BigInteger, nullable=False))
 
 connections = sa.Table("chat_connections", metadata,
     sa.Column("id", sa.Uuid, primary_key=True),
@@ -43,6 +52,7 @@ requests = sa.Table("chat_requests", metadata,
     sa.Column("model_revision", sa.String(64), nullable=False),
     sa.Column("connection_id", sa.Uuid, nullable=False),
     sa.Column("credential_generation", sa.Integer, nullable=False),
+    sa.Column("vision_admitted", sa.Boolean, nullable=False, server_default=sa.false()),
     sa.Column("state", sa.String(20), nullable=False),
     sa.Column("error_code", sa.String(80)),
     sa.Column("stop_requested_at", sa.BigInteger),
@@ -78,6 +88,25 @@ messages = sa.Table("chat_messages", metadata,
     sa.CheckConstraint("state IN ('complete','partial','interrupted','error','stopped')",
                        name="chat_message_state"))
 
+attachments = sa.Table("chat_message_attachments", metadata,
+    sa.Column("id", sa.Uuid, primary_key=True),
+    sa.Column("message_id", sa.Uuid, sa.ForeignKey(messages.c.id, ondelete="CASCADE"), nullable=False),
+    sa.Column("request_id", sa.Uuid, sa.ForeignKey(requests.c.id, ondelete="CASCADE"), nullable=False),
+    sa.Column("account_id", sa.Uuid, sa.ForeignKey("accounts.id", ondelete="CASCADE"), nullable=False),
+    sa.Column("asset_id", sa.Uuid, nullable=False),
+    sa.Column("ordinal", sa.SmallInteger, nullable=False),
+    sa.Column("media_type", sa.String(32), nullable=False),
+    sa.Column("byte_size", sa.BigInteger, nullable=False),
+    sa.Column("width", sa.Integer, nullable=False),
+    sa.Column("height", sa.Integer, nullable=False),
+    sa.Column("sha256", sa.String(64), nullable=False),
+    sa.Column("created_at", sa.BigInteger, nullable=False),
+    sa.ForeignKeyConstraint(["asset_id"], [media_assets.c.id]),
+    sa.UniqueConstraint("message_id", "ordinal", name="chat_attachment_ordinal"),
+    sa.UniqueConstraint("message_id", "asset_id", name="chat_attachment_asset_once"),
+    sa.CheckConstraint("ordinal >= 0 AND media_type = 'image/png' AND byte_size > 0 AND width > 0 AND height > 0", name="chat_attachment_shape"))
+sa.Index("ix_chat_attachment_request", attachments.c.request_id, attachments.c.ordinal)
+
 limits = sa.Table("chat_rate_limits", metadata,
     sa.Column("account_id", sa.Uuid, sa.ForeignKey("accounts.id", ondelete="CASCADE"), primary_key=True),
     sa.Column("kind", sa.String(16), primary_key=True),
@@ -85,4 +114,4 @@ limits = sa.Table("chat_rate_limits", metadata,
     sa.Column("count", sa.Integer, nullable=False),
     sa.CheckConstraint("kind IN ('request','credential') AND count > 0", name="chat_rate_shape"))
 
-TABLES = (connections, threads, requests, messages, limits)
+TABLES = (connections, threads, requests, messages, attachments, limits)

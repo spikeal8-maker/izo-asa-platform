@@ -5,17 +5,14 @@ import time
 from threading import Event, Lock
 
 import sqlalchemy as sa
-from ..catalog.schemas import Price
 from ..catalog.service import CatalogService
 
 from . import tables as t
 from .catalog import CatalogMixin, OpenRouterCatalogCache
 from .conversations import ConversationMixin
 from .credentials import ChatError, CredentialMixin
-from .schemas import ChatPolicyView, ModelView
 from .schemas import (
-    MAX_INPUT_CHARS, MAX_OUTPUT_TOKENS, MODEL_REVISION,
-    OPENROUTER_AUTO_MODEL, REQUEST_WINDOW_SECONDS,
+    MODEL_REVISION, REQUEST_WINDOW_SECONDS,
 )
 from .execution import ExecutionMixin
 from .request_state import UNKNOWN_PAID_OUTCOME
@@ -24,20 +21,23 @@ from .request_state import UNKNOWN_PAID_OUTCOME
 class ChatService(CatalogMixin, CredentialMixin, ConversationMixin, ExecutionMixin):
     @staticmethod
     def _request_fingerprint(thread_id, text, model, connection_id, generation,
-                             model_revision=MODEL_REVISION) -> str:
+                             model_revision=MODEL_REVISION, attachment_ids=()) -> str:
         value = {"thread": str(thread_id), "text": text, "model": model,
                  "model_revision": model_revision, "connection": str(connection_id),
                  "credential_generation": generation}
+        if attachment_ids:
+            value["attachments"] = [str(item) for item in attachment_ids]
         raw = json.dumps(value, ensure_ascii=False, sort_keys=True,
                          separators=(",", ":")).encode("utf-8")
         return hashlib.sha256(raw).hexdigest()
 
     def __init__(self, auth, policy, provider, clock=time.time,
-                 providers=None, openrouter_catalog=None):
+                 providers=None, openrouter_catalog=None, media_store=None):
         self.auth, self.engine, self.policy = auth, auth.engine, policy
         self.provider, self.clock = provider, clock
         self.providers = {"deepseek": provider, **(providers or {})}
         self._openrouter_catalog = openrouter_catalog or OpenRouterCatalogCache(clock=clock)
+        self.media_store = media_store
         self.catalog = CatalogService(auth)
         self._stops: dict[object, Event] = {}
         self._stop_lock = Lock()
@@ -58,21 +58,23 @@ class ChatService(CatalogMixin, CredentialMixin, ConversationMixin, ExecutionMix
         now = self.now()
         with self.engine.begin() as conn:
             stale = list(conn.execute(sa.select(
-                t.requests.c.id, t.requests.c.model_revision).where(
+                t.requests.c.id, t.requests.c.error_code,
+                t.requests.c.model_revision).where(
                 t.requests.c.state == "streaming")).all())
             if stale:
-                openrouter_ids = [item.id for item in stale
-                                  if item.model_revision.endswith(":openrouter")]
-                deepseek_ids = [item.id for item in stale
-                                if not item.model_revision.endswith(":openrouter")]
-                if openrouter_ids:
+                unknown_ids = [item.id for item in stale
+                               if item.error_code == UNKNOWN_PAID_OUTCOME
+                               or item.model_revision.endswith(":openrouter")]
+                unsubmitted_ids = [item.id for item in stale
+                                   if item.id not in unknown_ids]
+                if unknown_ids:
                     conn.execute(sa.update(t.requests).where(
-                        t.requests.c.id.in_(openrouter_ids)).values(
+                        t.requests.c.id.in_(unknown_ids)).values(
                         state="interrupted", error_code=UNKNOWN_PAID_OUTCOME,
                         updated_at=now))
-                if deepseek_ids:
+                if unsubmitted_ids:
                     conn.execute(sa.update(t.requests).where(
-                        t.requests.c.id.in_(deepseek_ids)).values(
+                        t.requests.c.id.in_(unsubmitted_ids)).values(
                         state="interrupted", error_code="executor_restarted",
                         updated_at=now))
                 conn.execute(sa.update(t.messages).where(
@@ -110,26 +112,6 @@ class ChatService(CatalogMixin, CredentialMixin, ConversationMixin, ExecutionMix
             t.limits.c.window_start < start - 2 * REQUEST_WINDOW_SECONDS))
         if count > maximum:
             raise ChatError(429, "chat_rate_limited")
-
-    def public_policy(self, raw) -> ChatPolicyView:
-        with self.engine.begin() as conn:
-            self._account(conn, raw)
-            head, models = self.catalog.public_text(conn)
-        return ChatPolicyView(
-            revision=f"{MODEL_REVISION}:catalog-{head['revision']}",
-            default_model=head["default_model"],
-            models=[
-                ModelView(id=model.id, label=model.label, provider=model.provider,
-                          price=model.price, text=True, vision=False,
-                          description="Текст") for model in models
-            ] + ([ModelView(
-                id=OPENROUTER_AUTO_MODEL, label="Автовыбор OpenRouter",
-                provider="openrouter", price=Price(), text=True, vision=False,
-                description="OpenRouter автоматически выбирает текстовую модель.")]
-                if "openrouter" in self.providers else []),
-            max_input_chars=MAX_INPUT_CHARS,
-            max_output_tokens=MAX_OUTPUT_TOKENS,
-        )
 
     def _root(self) -> bytes:
         try:

@@ -6,6 +6,7 @@ import { ChatComposer } from './chat/ChatComposer'
 import { ChatCredentialPanel } from './chat/ChatCredentialPanel'
 import { ChatMessage } from './chat/ChatMessage'
 import { ChatSidebar } from './chat/ChatSidebar'
+import { leaveChatMedia } from './chat/AttachmentControl'
 import { useChatRuntime } from './chat/useChatRuntime'
 import { useVisualViewport } from './chat/useVisualViewport'
 import './chat.css'
@@ -23,9 +24,11 @@ onThemeChange: (value: 'light' | 'dark') => void
 onLogout: () => void
 }) {
 const runtime = useChatRuntime(auth)
+useEffect(() => () => leaveChatMedia(auth?.account.id), [auth?.account.id])
 const [desktop, setDesktop] = useState(() => window.matchMedia(desktopQuery).matches)
 const [expanded, setExpanded] = useState(initiallyExpanded)
 const [drawerOpen, setDrawerOpen] = useState(false)
+const [composerVersion, setComposerVersion] = useState(0)
 const drawerOpener = useRef<HTMLButtonElement>(null)
 useVisualViewport()
 useEffect(() => {
@@ -61,20 +64,25 @@ requestAnimationFrame(() => drawerOpener.current?.focus())
 }
 function closeSidebar() { if (desktop) setDesktopExpanded(false); else closeDrawer() }
 function newChat() {
+if (runtime.busy || runtime.pendingAdmission) return
 runtime.newChat()
+setComposerVersion(value => value + 1)
 if (!desktop) closeDrawer()
 }
 async function openChat(chat: (typeof runtime.history)[number]) {
+if (runtime.busy || runtime.pendingAdmission) return
 if (!desktop) closeDrawer()
+setComposerVersion(value => value + 1)
 await runtime.openChat(chat)
 }
 const empty = runtime.messages.length === 0
 const disabled = !auth || !runtime.policy
-const composer = <ChatComposer
+const composer = <ChatComposer key={`${auth?.account.id ?? 'guest'}:${composerVersion}`}
 auth={auth} policy={runtime.policy} credentials={runtime.credentials}
 catalogError={runtime.catalogError}
 busy={runtime.busy} stoppable={Boolean(runtime.activeRequestId)} disabled={disabled}
-onSend={runtime.send} onStop={() => void runtime.stop()} />
+onSend={runtime.send} onStop={() => void runtime.stop()}
+onRefreshPolicy={runtime.refreshPolicy} />
 return <section
 className={`chat-page ${empty ? 'is-empty' : ''} ${sidebarOpen ? 'sidebar-open' : ''} ${compact ? 'sidebar-compact' : ''}`}
 aria-label="Чат ИЗО АСА">
@@ -117,7 +125,7 @@ onError={runtime.setError} />}
 <div className="chat-scroll" aria-live="polite"><div className="chat-column">
 <div className="chat-turns">
 {runtime.messages.map(message =>
-<ChatMessage key={message.id} message={message} />)}
+<ChatMessage key={message.id} message={message} auth={auth} />)}
 {runtime.error && <div className="chat-runtime-note" role="alert">
 <Icon name="info" /><span>{runtime.error}</span>
 </div>}

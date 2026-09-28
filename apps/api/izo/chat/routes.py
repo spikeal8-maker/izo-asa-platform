@@ -10,6 +10,7 @@ from fastapi.exception_handlers import request_validation_exception_handler
 from fastapi.responses import JSONResponse, StreamingResponse
 
 from ..accounts.http_security import same_origin
+from ..media.objects import MediaStore
 from .credential_routes import attach_credential_routes
 from .provider import DeepSeekProvider
 from .provider_openrouter import FakeOpenRouterProvider, OpenRouterProvider
@@ -87,7 +88,9 @@ def attach_chat(app, database_config, accounts_provider) -> None:
                 current = ChatService(
                     accounts_provider(request),
                     ChatSettings(),
-                    provider, providers={"openrouter": openrouter})
+                    provider, providers={"openrouter": openrouter},
+                    media_store=(getattr(request.app.state, "media_store", None)
+                                 or MediaStore(database_config)))
                 request.app.state._chat_runtime_service = current
             return current
 
