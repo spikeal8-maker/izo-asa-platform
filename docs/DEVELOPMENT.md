@@ -114,3 +114,83 @@ files, самые дорогие routes, локальные docs, map growth, du
 
 Несколько абзацев: package/task, branch/base, diff, tests/CI environment, risks, maintainability delta и один следующий шаг.
 Не переносить chain-of-thought, полный чат, огромные логи или repository synopsis.
+
+## 11. Controller / subagent orchestration
+
+Для multi-agent package один **controller** является единственным владельцем package goal, source-audit result, task graph, scope partition, integration order, final SELF_REVIEW и state transition. Controller не передаёт subagent право самостоятельно менять package meaning или repository state.
+
+Каждый writing subagent до старта получает явный contract:
+
+```text
+TASK_ID
+PACKAGE_ID
+BASE_SHA
+GOAL
+READ_SCOPE
+WRITE_SCOPE
+DEPENDENCIES
+INVARIANTS
+NON_GOALS
+ACCEPTANCE
+TARGETED_TESTS
+HANDOFF_FORMAT
+STOP_CONDITION
+```
+
+Writing task без этого contract не стартует.
+### Parallelism и isolation
+
+Главное правило: **one path = one active writer**. Параллельная реализация разрешена только для disjoint write scopes. Если два subagent требуют один owner/path, controller сериализует работу либо repartitions scope; competing concurrent writes запрещены.
+
+Параллельные writing subagents используют separate branch/worktree или другую доказанную isolated patch boundary. Два write-agents не работают одновременно в одном mutable file set. Controller интегрирует результаты в package branch и повторно проверяет diff/tests после integration.
+
+Subagent не расширяет scope самостоятельно. Нужен новый path/domain → вернуть `NEED_SCOPE_EXPANSION`; controller повторяет source/ownership/scope analysis и только затем выдаёт изменённый assignment.
+### State, conflicts и reviewer
+
+Только controller + repository state workflow меняют `PLAN.json`, `CURRENT.md`, `CHECKPOINTS.json`, active/next package и checkpoint/freeze state. Ordinary subagent state-файлы не меняет.
+
+Если subagents предлагают разные product semantics, controller не выбирает по вкусу: применяется canonical source hierarchy из `MAINTAINABILITY.md`. Если ответа нет — `NEW_DECISION_REQUIRED`.
+
+Review-subagent — READ-ONLY: не исправляет собственный finding и не является implementer того же diff. Internal subagent review не заменяет required structured independent GitHub review или exact-SHA owner waiver.
+
+Controller обязан STOP при `NEW_DECISION_REQUIRED`, unexpected source HEAD change, scope collision, unresolved security/ownership conflict, required CI failure, review blocker, owner-only action или real spend/live operation без отдельного разрешения.
+### Subagent handoff
+
+Минимальный handoff:
+
+```text
+TASK_ID
+BASE_SHA
+RESULT_SHA / patch identity
+CHANGED_PATHS
+TESTS
+RESULT
+RISKS
+BLOCKERS
+```
+
+Controller не принимает «готово» без exact diff/evidence. Handoff-critical результат materialize через GitHub-first process до STOP.
+
+## 12. Bounded ChatGPT + Claude benchmark procedure
+
+Требование о том, **когда** benchmark обязателен, принадлежит `MAINTAINABILITY.md`. Здесь находится только execution procedure.
+
+Для существенного user-visible Chat behavior, которое source audit признал не полностью определённым IZO ASA contracts, implementer перед `NEW_DECISION_REQUIRED` исследует **оба current ChatGPT и current Claude**. Используются current official product/help docs или проверяемая current product surface; старые воспоминания не evidence.
+Benchmark record фиксирует:
+
+```text
+BENCHMARK_DATE
+CHATGPT_SOURCE
+CLAUDE_SOURCE
+BEHAVIOR_UNDER_DECISION
+APPLICABLE_CRITERIA
+CHATGPT_OBSERVATION
+CLAUDE_OBSERVATION
+IZO_TARGET_CONSTRAINTS
+DECISION
+REASON
+```
+
+По применимости сравниваются interaction flow, discoverability, editing, regenerate/retry, branch/history behavior, attachments/files/tools/artifacts, copy/export, streaming, error/recovery, mobile/desktop, accessibility, latency/perceived responsiveness и privacy/safety.
+
+Нельзя выводить «ChatGPT делает X → копируем X» или «Claude делает Y → копируем Y». Решение сопоставляет current IZO contract + existing target implementation + applicable donor + оба benchmarks и выбирает best fit для IZO ASA; допускается совместить сильные стороны обоих, если итоговая semantics непротиворечива. После owner/contract decision external products перестают быть live dependency: authority — записанный IZO ASA canonical contract.

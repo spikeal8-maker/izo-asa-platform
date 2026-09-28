@@ -228,3 +228,52 @@ DB/S3 root credentials, Docker socket, container image tags/digests, network/egr
 Новая A/AD/S добавляется сначала в этот реестр с permission, apply semantics и пакетом NEXT. Существующая страница без своей карточки или новая настройка с неописанным default не считается завершённой. Документационный review проверяет ссылки/ID/полноту, runtime tests вводятся только вместе с кодом. Независимый security review не подменяется самопроверкой автора.
 
 Источники security-принципов, проверены 2026-09-08: https://cheatsheetseries.owasp.org/cheatsheets/Authorization_Cheat_Sheet.html и https://cheatsheetseries.owasp.org/cheatsheets/Secrets_Management_Cheat_Sheet.html . Конкретные роли, поля и технические DRAFT defaults — предложение IZO ASA, не нормативные значения OWASP.
+
+## 12. Chat v4 control-plane delivery
+
+Admin is a control plane, not an AI capability and not a post-Chat optional tab. It evolves in bounded layers while preserving the same domain owners used by user flows.
+
+### Model lifecycle
+
+Canonical model workflow:
+
+```text
+provider discovery
+→ candidate/provider facts
+→ product model draft
+→ validation/evidence
+→ publish or disable
+→ server-owned effective model projection
+```
+
+Discovery never makes a paid/raw provider model automatically selectable. Effective availability is computed server-side from publication/enabled state, account state, provider/runtime availability, credential, modality/tool compatibility, billing eligibility and entitlement. Frontend displays that projection; it does not reconstruct access from provider discovery.
+
+Changing publication/disable applies to new admissions after the effective revision changes and does not rewrite immutable snapshots of already accepted requests/jobs.
+### Admin A1 — Chat control plane
+
+A1 is a supporting prerequisite for Chat P4/P5 and contains the minimum controls needed to operate Chat Product V1:
+
+- users/account state and Access/permissions;
+- model/provider candidates, product-model draft, publish/disable and effective models;
+- provider connections and credential metadata/bindings without secret read-back;
+- pricing and Daily/Premium/BYOK product controls;
+- Credits/grants views and authorized corrective commands;
+- Chat-related Jobs/reconcile and Media metadata;
+- audit and system status required to operate Chat safely.
+
+A1 does not require every future operational screen before Chat V1, but the controls above cannot be deferred until after release acceptance.
+### Admin A2 — Image/Gallery/Feed control
+
+A2 lands with the corresponding accepted product slices and reuses shared domains:
+
+- image capability/model management;
+- Media review/metadata;
+- Gallery controls where a real server command exists;
+- Feed publication moderation, reports and public-derivative policy;
+- storage/publication policy needed by those products.
+
+### Admin A3 — extended operations
+
+Payments, notifications, mail, Telegram/MAX bots, social delivery, support, worker operations and advanced analytics are separate bounded products. A3 is not a blocker for `CHAT_PRODUCT_V1_ACCEPTED` unless a specific P1–P5 capability explicitly depends on one of these controls.
+
+Donor Admin is a behavior/test reference only after target conflict review; target permissions, domain ownership, secret boundary and audit rules remain authoritative.

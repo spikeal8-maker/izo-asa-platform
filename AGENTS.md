@@ -58,6 +58,7 @@ OPERATIONALLY_VERIFIED не склеиваются словом «готово»
 ## Документация и handoff
 
 `docs/DOCS_SYSTEM.md` определяет владельца фактов. Новый MASTER_PLAN/NOW/ROADMAP запрещён.
+Multi-agent work следует `docs/DEVELOPMENT.md`; orchestration contract здесь не дублируется.
 History/reviews/checkpoints не являются default context.
 
 Handoff: package, branch/base, фактический diff, проверки, открытые риски и один следующий шаг.

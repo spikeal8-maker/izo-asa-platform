@@ -155,3 +155,35 @@ Prompt версии хранится и тестируется отдельно 
 Уточняющие источники, проверены 2026-09-08:
 - OWASP Secrets Management: https://cheatsheetseries.owasp.org/cheatsheets/Secrets_Management_Cheat_Sheet.html
 - GitHub protected branches: https://docs.github.com/en/repositories/configuring-branches-and-merges-in-your-repository/managing-protected-branches/about-protected-branches
+
+## 11. Chat v4 provider/runtime contract
+
+Chat separates conversational transport from tool/capability execution.
+
+### ConversationProviderAdapter
+
+Conversation provider adapter owns only provider-specific conversation transport: normalized request construction, streaming decode, provider error mapping, usage/outcome evidence and cancellation/reconcile signals where supported. It does not own Accounts, pricing, Credits, Media, Jobs, branch selection or product permissions.
+
+Accepted ChatRequest persists a resolved execution snapshot sufficient for deterministic replay/recovery: public product-model/capability revision, provider/runtime binding, connection/credential generation reference without secret, context calculator/policy revision, tool/file capability facts and other material parameters. A later remote catalog refresh must not retroactively change an already admitted request.
+
+Provider streams normalize into IZO-owned events/parts; raw provider payload, chain-of-thought, secret, internal endpoint or traceback is not a public Chat contract.
+### Capability Runtime
+
+Image generation/edit, ASR, document/file generation and future Video/Audio/3D are ToolCapabilities, not conversation models merely because a provider calls them “models”. Long/side-effecting execution uses the shared Jobs/Media lifecycle and its own stable operation identity.
+
+Tool invocation is server-authorized after model proposal. Runtime validates schema, ownership, capability, quote/Spend Authority and confirmation before a side effect. ConversationProviderAdapter must not become a generic execution service.
+
+### Response Formatting Contract
+
+Every conversation model receives versioned IZO ASA response rules independent of provider: Markdown only where useful, language-tagged code fences where known, tables for genuinely structured comparison, no raw HTML/JS as presentation, and no model-created link treated as verified citation without structured source evidence.
+
+Renderer remains a separate IZO-owned presentation boundary; provider formatting quirks never become database schema.
+### Unknown outcome and reconcile
+
+Outbound provider submission is phase-aware. Before a call that may incur spend, durable request/funding state must make a crash or disconnect non-retryable until outcome is known. Timeout/disconnect after possible provider acceptance is `UNKNOWN`, not proof of failure and not zero usage.
+
+Blind paid retry/failover is prohibited. Reconcile first; only a proved pre-submit/no-execution or explicit safe rejection may follow safe retry semantics. Completed result/usage and settlement evidence bind to the original request/operation identity.
+
+### Discovery and effective availability
+
+Provider discovery supplies candidates and provider facts; it does not publish product models automatically. Admin/catalog policy creates versioned product models and effective projection after enabled/published/account/runtime/credential/modality/billing/entitlement checks. Model selector, Chat admission and tool routing consume the same effective authority/revision.

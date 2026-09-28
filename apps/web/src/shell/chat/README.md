@@ -39,3 +39,9 @@ Nearest tests: `apps/web/e2e/chat-attachments.spec.ts` for Media upload,
 reconciliation, plan rejection and persisted preview; `chat-sidebar.spec.ts`
 for rail/drawer/focus; `chat-responsive.spec.ts` for viewport geometry;
 `catalog.spec.ts` for model prices; `shell.spec.ts` for the shared header.
+
+## Canonical routing
+
+This existing Chat shell remains the frontend owner. Product behavior: `docs/PRODUCT.md`; interaction/renderer acceptance: `docs/UX.md`; branch/context/domain boundaries: `docs/ARCHITECTURE.md`; source/process rules: `docs/MAINTAINABILITY.md` and `docs/DEVELOPMENT.md`. Proposal snapshots are provenance only.
+
+Nearest browser evidence remains `apps/web/e2e/chat-responsive.spec.ts` and `apps/web/e2e/chat-attachments.spec.ts` plus the current Chat acceptance suites. P1 converges this implementation; it does not create a parallel Chat page.

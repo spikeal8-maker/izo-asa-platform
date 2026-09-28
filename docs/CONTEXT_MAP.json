@@ -200,9 +200,9 @@
     },
     "docs.system": {
       "keywords": ["документация", "план", "roadmap", "agents", "context map", "self review", "handoff", "каноническая ветка", "docs", "maintainability", "экономика агента"],
-      "read_first": ["AGENTS.md", "docs/CURRENT.md", "docs/MAINTAINABILITY.md"],
+      "read_first": ["AGENTS.md", "docs/CURRENT.md", "docs/DOCS_SYSTEM.md"],
       "tests": ["tests/test_docs_system.py"],
-      "expand_if_needed": ["docs/PLAN.json", "docs/DOCS_SYSTEM.md", "docs/DEVELOPMENT.md", "docs/INDEX.md", "docs/adr", "docs/history"],
+      "expand_if_needed": ["docs/PLAN.json", "docs/MAINTAINABILITY.md", "docs/DEVELOPMENT.md", "docs/INDEX.md", "docs/adr", "docs/history"],
       "do_not_read_by_default": ["docs/PRODUCT.md", "docs/ADMIN.md", "docs/AI_RUNTIME.md", "apps/api", "apps/web"]
     }
   }

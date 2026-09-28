@@ -98,3 +98,21 @@ Architecture guard проверяет handwritten production/tests/tools/e2e/acc
 domain-specific `if guest/chat/video/...` логики. Routing signals по возможности declarative.
 
 Численные пределы и audit cadence принадлежат `MAINTAINABILITY.md`.
+
+## 9. Source audit provenance и orchestration ownership
+
+`SOURCE_AUDIT` — package evidence, а не второй product owner. Live source hierarchy/mode/donor policy принадлежат `MAINTAINABILITY.md`; конкретный audit фиксируется в `reviews/<PACKAGE>.md` и должен позволять восстановить решение без истории чата.
+
+Минимальная provenance: target repo + exact SHA + canonical owners/paths/tests; применимый donor repo + fresh SHA + paths/classification; external references when used; conflicts; decisions; `NEW_DECISIONS_REQUIRED`; resulting scope. Для `BOUNDED_LOCAL` допустимый donor `NOT_REQUIRED` хранится с причиной.
+
+GitHub-first handoff materializes source-critical specs/reviews/patches в branch/PR до STOP. Chat-only/local-only reasoning не является переданным evidence. Mutable current SHA/branch по-прежнему живут только в PLAN/CURRENT/CHECKPOINTS/reviews, не в stable owners.
+Один нормативный факт имеет одного live owner. Proposal/review snapshot после adoption остаётся provenance и не является default live authority. Coding-agent начинает с canonical owners и current state; proposal открывается только для provenance/challenge review.
+
+| Process fact | Canonical owner |
+|---|---|
+| Source hierarchy / audit mode / donor / NEW_DECISION | `MAINTAINABILITY.md` |
+| Controller/subagent execution process | `DEVELOPMENT.md` |
+| Current package/branch/checkpoint | `PLAN.json` / `CURRENT.md` / `CHECKPOINTS.json` |
+| Package source audit / adoption evidence | `reviews/<ID>.md` |
+
+Controller/subagent process не дублируется в AGENTS или feature README: там допускается только короткий route к `DEVELOPMENT.md`.

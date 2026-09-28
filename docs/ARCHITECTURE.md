@@ -121,3 +121,56 @@ Feed может использовать отдельную публичную �
 - Telegram signed data: https://core.telegram.org/bots/webapps#validating-data-received-via-the-mini-app
 - MAX validation: https://dev.max.ru/docs/webapps/validation
 - Docker volumes: https://docs.docker.com/engine/storage/volumes/
+
+## 10. Chat v4 conversation architecture
+
+Это target architecture для convergence существующего Chat; она не утверждает, что все сущности уже реализованы. Existing Account/Credits/Jobs/Media остаются shared owners и не дублируются Chat.
+
+### Conversation Graph
+
+```text
+Thread 1
+ ├─ Branch 1..N
+ │   ├─ parent_branch_id? + fork_from_turn_id?
+ │   └─ ordered Turn 1..N
+ │       ├─ UserMessage exactly 1
+ │       │   └─ ordered MessagePart 0..N
+ │       └─ AssistantAttempt 0..N
+ │           ├─ ChatRequest exactly 1
+ │           └─ ordered MessagePart 0..N
+ └─ active_branch_id exactly 1 existing Branch
+```
+
+`UserMessage` immutable после admission. `ChatRequest` — одна conversational execution identity для одного AssistantAttempt и содержит stable request ID, material fingerprint, resolved execution snapshot, lifecycle state и provider/tool outcome references. Tool operations имеют собственные operation IDs/Jobs и не становятся дополнительными ChatRequest.
+Edit создаёт descendant Branch с `parent_branch_id + fork_from_turn_id`, новым immutable UserMessage и атомарно делает descendant active. Она наследует selected-attempt mapping только для prefix до fork point; edited turn начинается с selection `NONE`.
+
+Regenerate остаётся в active Branch и создаёт новый AssistantAttempt + ChatRequest для того же immutable UserMessage. Previous selected attempt остаётся selected во время execution; только durable `COMPLETED` атомарно переключает selection.
+
+Retry отличается от Regenerate. Known pre-submit failure повторяет тот же request identity/fingerprint и тот же attempt. Доказанный safe post-submit no-execution/rejection создаёт новый retry request/attempt с `retry_of_request_id`. `UNKNOWN` не меняет selection и блокирует новое execution до reconciliation.
+
+UI и Context Engine используют только persisted server-owned `active_branch_id` и selected AssistantAttempt mapping. Manual Branch selection атомарно меняет active branch; manual attempt selection допустим только среди `COMPLETED`. Timestamp, DOM order и last-streamed attempt не являются authority. Archive — состояние Thread, не hard delete audit/request/assets.
+### MessagePart registry
+
+Versioned registry включает минимум `markdown`, `input_attachment_ref`, `image_result_ref`, `file_result_ref`, `artifact_ref`, `job_ref`, `confirmation`, `sources`, `error_recovery`. Future video/audio/3D parts добавляются versioned extension.
+
+Unknown type/version отображается fail-safe как unsupported block. Media/Job/File identity хранится domain ID, не signed URL/object key/base64. DOM nodes не являются database schema.
+
+### Context Engine
+
+Context Engine — отдельный server owner. Pipeline: persisted Thread → active Branch → selected terminal AssistantAttempts → mandatory current-turn dependencies → effective model capability/context/output limits → versioned deterministic budget calculator → eligible recent turn groups → optional versioned summary/reduction.
+
+Persisted history не переписывается при model switch/context reduction. Mandatory System/Product policy, current turn и обязательные dependencies имеют приоритет; если mandatory set + reserved output не помещается, request отклоняется до provider call. Summary имеет identity/version/provenance и invalidates при изменении source branch/selection/tool/file/policy.
+### Files, tools, generated outputs и artifacts
+
+File Processing принимает private owned Media asset, определяет actual type server-side, применяет allowlisted parser/extractor и сохраняет provenance. Extension/client MIME не выбирает parser. Macros/scripts/external relationships, active HTML/SVG/XML и parser-driven network fetch default-deny; untrusted file/web/tool content не получает permission.
+
+Tool Orchestrator получает model proposal, но backend повторно валидирует schema, ownership, permission, quote/cost, confirmation и idempotency. Side effects не исполняются только потому, что модель их предложила.
+
+Generated file создаётся в ephemeral isolated runtime с approved libraries, без Docker socket/host FS/private network/secrets по умолчанию; output проходит magic/type/size/parser-openability validation и затем становится Media asset. Artifact, если введён, хранит logical identity/version/provenance и ссылки на Media versions, не второй binary store.
+### Catalog, Spend Authority и trust boundaries
+
+Catalog разделяет ConversationProductModel, ToolCapability и RuntimeBinding. Discovery даёт candidate/facts; Admin publication и access policy создают server-owned effective projection. Disabled/retired/unpublished/incompatible/billing-ineligible model — hard deny; browser не делает union discovery источником доступа.
+
+Spend Authority принадлежит server-side product/financial boundary, а не Chat UI/provider/model. FundingPlan различает FREE, PLATFORM_FUNDED, DAILY_ONLY, PREMIUM_ONLY, DAILY_FIRST и BYOK; Daily-first использует точный Premium shortfall, а BYOK provider cost отделён от возможной platform fee. Existing immutable Credits primitives не переписываются в «два кошелька» без ADR. Unknown external outcome удерживает provisional claim/reservation до reconcile.
+
+Trust order: System/Product policy + server authorization > authenticated user intent > untrusted model/file/web/tool content. Untrusted content не назначает permission, billing policy, secrets, network/host access, tool confirmation или owner/object identities.

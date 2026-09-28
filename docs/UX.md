@@ -113,3 +113,33 @@ Identity подтверждается только backend. JS platform hint и�
 Уточнение display/DPR, проверено 2026-09-08:
 - MDN devicePixelRatio: https://developer.mozilla.org/en-US/docs/Web/API/Window/devicePixelRatio
 - Playwright viewport и high-DPI: https://playwright.dev/docs/emulation
+
+## 10. Chat v4 interaction contract
+
+Chat UX развивается поверх существующего IZO ASA shell, header, themes и responsive composer; E0 не создаёт новый экран или второй Chat.
+
+### Shell, history и composer
+
+- Desktop использует читаемую bounded prose-column; code/table/media могут быть шире внутри собственных bounds, без document-level horizontal overflow.
+- Phone остаётся single-column; history открывается drawer/sheet, composer остаётся доступен над virtual keyboard и safe-area.
+- Пустой Chat показывает heading + composer как единый стартовый блок; активный Chat сохраняет composer доступным внизу.
+- History поддерживает search/new/rename/archive/restore и не хранится в localStorage как source of truth.
+- Composer: `+`, textarea, effective model selector, mic, send/stop. Постоянный каталог внутренних tools в composer запрещён.
+- Enter отправляет, Shift+Enter добавляет строку, IME composition не вызывает случайный submit.
+- Выбранные attachments видимы до отправки и сохраняют порядок; incompatible model приводит к явной compatible-model/removal flow, а не silent ignore.
+### Messages, renderer и actions
+
+Renderer принадлежит IZO ASA и принимает normalized message model, а не raw provider HTML/JSON.
+
+P1 renderer поддерживает paragraphs, headings, emphasis, ordered/unordered/nested/task lists, blockquote, inline code, fenced code with language/highlight, GFM tables, inline/display math и safe links. Raw HTML/JS выключен; external Markdown images не загружаются автоматически.
+
+Streaming split UTF-8 и незакрытые Markdown/code/table/math не должны ломать UI или final content. Code/table scroll остаётся внутри блока. Автопрокрутка следует за ответом только пока пользователь у конца; чтение старого текста не перехватывается.
+
+Assistant message: Copy, Copy Markdown, Regenerate и branch/attempt selector при наличии альтернатив. User message: Copy и Edit-as-new-branch. Code block: Copy exact source. Whole-answer copy сериализует normalized model, не DOM/toolbars; Copy Markdown возвращает canonical Markdown.
+### Accessibility, responsive и performance acceptance
+
+Все действия доступны mouse/touch/keyboard; hover не является единственным access path. Focus states, accessible names, long text, two themes, reduced-motion policy и keyboard navigation проверяются browser evidence.
+
+Responsive acceptance включает phone/tablet/desktop/QHD/4K geometry, no page overflow, stable composer/header/sidebar и сохранение viewport при history loading.
+
+До P1 acceptance должен существовать versioned performance benchmark profile: input responsiveness during streaming, chunk→render overhead, large-thread open, scroll stability, large code/table render и memory/DOM growth. Provider latency и IZO ASA platform/browser overhead измеряются отдельно; numeric threshold нельзя ослаблять после failure ради PASS.

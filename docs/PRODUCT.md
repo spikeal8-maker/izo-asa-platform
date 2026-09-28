@@ -8,7 +8,7 @@ DOC-003, 8 сентября 2026. Это целевое поведение но�
 
 Одно рабочее пространство: пользователь описывает задачу/прикладывает исходники, выбирает разрешённую модель, понимает максимальный расход, получает результат, хранит его приватно и при желании публикует. Один аккаунт, баланс, система заданий и владение файлами используются во всех клиентах. Новое подключение AI не создаёт вторую галерею или бухгалтерию.
 
-Старая IZO_ASA — только явно запрошенный референс поведения; код, пользователи и база не импортируются. Компенсация оформляется в новом аккаунте по заявке, без автоматического сопоставления старых имён/email. Полный функциональный паритет старому сайту не является условием выпуска.
+Legacy `spikeal8-maker/IZO_ASA` — обязательный product/UX/test donor для применимых Admin/Image/Gallery/Feed product/domain SOURCE_AUDIT, но не canonical authority и не источник wholesale code-copy. Его код, пользователи и база не импортируются автоматически. Компенсация оформляется в новом аккаунте по заявке, без автоматического сопоставления старых имён/email. Полный функциональный паритет старому сайту не является условием выпуска.
 
 ## 2. Понятия доступа
 
@@ -237,3 +237,52 @@ Entitlements версионируются. Итоговый набор — пе�
 Отложено за рамки v0.2: комментарии/подписки, коллекции, batch, команды/совместные проекты, партнёрский API, voice cloning, referrers/promos и social syndication. Для них сначала добавляется ограниченная карточка, затем код; нынешний реестр не разрешает их реализовывать «заодно».
 
 Источник security-принципов, проверен 2026-09-08: https://cheatsheetseries.owasp.org/cheatsheets/Authorization_Cheat_Sheet.html . Матрица выше — проектное решение IZO ASA, не текст OWASP и не автоматически работающая защита.
+
+## 14. Chat Product V1 и порядок платформенной поставки
+
+Chat Product V1 — развитие уже существующего Chat IZO ASA, а не разрешение переписать его с нуля. Каждый следующий package сначала исследует canonical owner и фактический target code/tests, затем закрывает только доказанный gap.
+
+| Gate | Пользовательский результат |
+|---|---|
+| P1 — Conversation Experience | надёжный разговор, server-owned branch/attempt state, Context Engine, история, renderer, actions |
+| P2 — Multimodal Input | изображения и основные документы/таблицы/аудио как безопасный вход |
+| P3 — Creation & Tools | реальные создаваемые файлы, Tool Orchestrator, image generation/edit через shared Jobs/Media |
+| P4 — Product Control | effective models/providers, Admin control plane, доступ и Spend Authority |
+| P5 — Release Acceptance | security, performance, accessibility, restart/browser/package/live gates |
+
+`CHAT_PRODUCT_V1_ACCEPTED` допустим только после принятия P1–P5. Один gate может состоять из нескольких bounded packages; видимый route или частично работающий capability не заменяет acceptance.
+### Delivery states
+
+Для крупной поверхности всегда различаются:
+
+- **VISIBLE** — route/UI можно увидеть;
+- **FUNCTIONAL** — заявленный end-to-end path реально работает на target contracts и не является fixture/demo-only;
+- **ACCEPTED** — required tests/review/CI/restart/security/browser/live evidence соответствующего gate пройдены.
+
+VISIBLE не означает FUNCTIONAL, FUNCTIONAL не означает ACCEPTED. Demo/presentation surface не выдаётся за реальный продукт или публикацию.
+
+### Chat-first sequence после P1–P5
+
+До `CHAT_PRODUCT_V1_ACCEPTED` новые dedicated AI tabs не вытесняют незакрытый Chat core. После Chat Product V1 следующим основным product sequence является:
+
+1. Image Workspace V1 на уже принятой shared image capability;
+2. Gallery V1 поверх shared Media/assets;
+3. Feed V1 поверх Publication/public derivatives;
+4. Image Editor как derived-asset workflow.
+
+Video, Audio creation и 3D вводятся по правилу `capability through Chat → acceptance → dedicated workspace acceptance`. ASR, использованный как input в P2, сам по себе не означает принятую Audio creation product.
+### Funding semantics Chat Product V1
+
+Product policy различает Daily allowance, Premium balance и BYOK. Daily/Premium/BYOK не являются provider-specific UI-флагами и не выбираются браузером.
+
+- Daily-first policy расходует Daily первым и Premium только на точный разрешённый shortfall.
+- Premium spend требует server-owned quote/eligibility и предусмотренного product confirmation.
+- BYOK означает, что provider payer — пользователь; provider cost не превращается скрыто в Premium debit.
+- Возможная platform service fee для BYOK — отдельная line item/policy, а не маскировка provider cost.
+- Unknown external outcome не считается zero-cost и сначала reconciles.
+
+Физическую persistence/atomicity ресурсов определяет архитектурный Spend Authority contract, а не этот Product owner.
+
+### Product quality reference
+
+IZO ASA остаётся собственным продуктом. Для существенного user-visible Chat behavior, которое не полностью определено canonical IZO ASA contract, обязательный source/benchmark process в `MAINTAINABILITY.md` и `DEVELOPMENT.md` сравнивает **оба** current ChatGPT и current Claude после target/donor sources. После решения authority становится зафиксированный IZO ASA canonical contract; внешний продукт не остаётся live dependency.
