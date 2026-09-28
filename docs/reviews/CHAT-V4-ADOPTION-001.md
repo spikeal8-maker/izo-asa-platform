@@ -182,17 +182,87 @@ E0 P1–P5 supersession note present
 Functional issue bodies remain the owners of their detailed work. Their old D1–D4 / `TEXT_CHAT_V1_ACCEPTED` sequencing and “multimodal after text V1” statements are explicitly historical where they conflict with #222. No issue was closed and no implementation status was fabricated.
 ## E0 repository self-review evidence
 
-Before issue mutation:
+Canonical E0 and its bounded CI repair converged without changing adopted product semantics or issues:
 
 - `python tools/project_state.py verify` → `PROJECT STATE OK`;
 - `python tools/check_docs.py` → `DOCS CHECK OK`;
 - `python -m pytest -q tests/test_docs_system.py` → 10/10 PASS;
-- `git diff --check` → PASS after removing new trailing whitespace;
+- focused scope/state tests → PASS;
 - `AGENTS.md + docs/CURRENT.md` = 5972 bytes, hard budget 6000;
 - `docs.system` initial route = 13645 bytes, hard budget 18000;
-- `python tools/check_change.py --base a386d9619be4456a962f6aab92fba5ec59e692a3 --scope tools/scopes/chat-v4-adoption-001.json` → scope 20/20 PASS;
+- final scope check from canonical E0 base → cross-domain 25/25 PASS, unexpected 0, unapproved sensitive 0;
 - requirement coverage → Chat 193/193, Platform 35/35, missing/orphan/duplicate 0;
 - traceability owner/status sanity → unresolved owner 0.
+
+```text
+SCOPE_BASE
+2a2995ee47c8c369b512c1328f02d3eb662775a3
+
+SCOPE_CLASS
+cross_domain
+
+SCOPE_MAX_FILES
+25
+
+SCOPE_ACTUAL_FILES
+25
+
+SCOPE_UNEXPECTED
+0
+
+SCOPE_UNAPPROVED_SENSITIVE
+0
+```
+
+The full stacked E0 PR contains 20 original E0 implementation paths + 3 state-transition paths + 2 bounded state-tooling repair paths = 25 paths.
+
+### Foundation CI repair evidence
+
+```text
+PRE_REPAIR_HEAD
+cc10d579cf11d8dcab1ec6e12faf9c93e3b4d349
+
+PRE_REPAIR_FOUNDATION_CI
+FAIL
+run 36493318351
+
+PRE_REPAIR_BLOCKERS
+active-package scope base mismatch
+PLAN context budget exceeded
+
+REPAIR_HEAD
+5300b750007faf23c27def0a5390bbdc8c6e20c4
+
+BLOCKER_01_SCOPE
+PASS
+
+BLOCKER_02_PLAN_BUDGET
+PASS
+```
+
+```text
+PLAN_BYTES_BEFORE
+10453
+
+PLAN_BYTES_AFTER
+9646
+
+PLAN_LINES_AFTER
+27
+
+PLAN_SEMANTICS_PRESERVED
+YES
+
+SERIALIZER_ROUNDTRIP
+PASS
+
+SERIALIZER_DETERMINISTIC
+PASS
+```
+
+PLAN repair is implemented in canonical `serialize_plan()`, not as a one-off manual formatting change.
+
+The repair head passed exact-head Foundation CI 36495736205, Dependency Security 36495736219 and Review Source 36495736238. These runs are historical repair evidence; the final evidence-convergence commit requires its own exact-head CI.
 
 Runtime code, migrations, provider runtime, Credits, Media and Jobs runtime are outside the E0 scope and unchanged.
 
@@ -231,6 +301,18 @@ PASS
 
 CONTROLLER_SUBAGENT_CONTRACT
 PASS
+
+CONTROLLER_ONLY_ORCHESTRATION
+PASS
+
+CONTROLLER_WRITES_PRODUCT_CODE_BY_DEFAULT
+NO
+
+IMPLEMENTATION_SUBAGENT_DEFAULT
+YES
+
+FIX_INTEGRATION_SUBAGENT_DEFAULT
+YES
 
 ONE_WRITER_PER_PATH
 PASS
@@ -278,4 +360,4 @@ SELF_REVIEW
 PASS
 ```
 
-The E0 diff has exactly 20 repository paths and contains no product runtime file. Controller/subagent process has one canonical owner (`DEVELOPMENT.md`); Source-First/benchmark trigger has one process-policy owner (`MAINTAINABILITY.md`); benchmark execution procedure lives in `DEVELOPMENT.md`; Product only states the product-quality goal. Proposal files are provenance snapshots, not live duplicate owners.
+The full stacked E0 PR has exactly 25 repository paths and contains no product runtime file. Controller/subagent process has one canonical owner (`DEVELOPMENT.md`); Source-First/benchmark trigger has one process-policy owner (`MAINTAINABILITY.md`); benchmark execution procedure lives in `DEVELOPMENT.md`; Product only states the product-quality goal. Proposal files are provenance snapshots, not live duplicate owners.
