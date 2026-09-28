@@ -1,6 +1,6 @@
 # IZO ASA Chat v4 — Adoption & Traceability Plan
 
-**Назначение:** переходный документ для внедрения Product/Architecture/Maintenance v4 в существующий GitHub-контур.  
+**Назначение:** переходный документ для внедрения Product/Architecture/Maintenance v4 и platform-level Source-First/Delivery contract в существующий GitHub-контур.  
 **Важно:** этот файл **не должен становиться новым постоянным `ROADMAP/NOW/MASTER_PLAN` в репозитории**. После принятия его решения распределяются по существующим owners: Issue #222/PRODUCT, ARCHITECTURE, AI_RUNTIME, ADMIN, UX, MAINTAINABILITY, local README, PLAN/CURRENT.
 
 ---
@@ -59,7 +59,10 @@ Snapshot не переносится в stable Product/Architecture/Maintenance 
 | `docs/ARCHITECTURE.md` | branch/attempt, Context Engine, domain ownership, file/tool/artifact boundaries |
 | `docs/AI_RUNTIME.md` | ConversationProviderAdapter vs Capability Runtime, stream normalization, reconcile |
 | `docs/ADMIN.md` | discovery→product model→publish/access/pricing workflow |
-| `docs/MAINTAINABILITY.md` | Chat 3-package audit, 30-day backstop, temporary-code expiry, garbage policy |
+| `docs/MAINTAINABILITY.md` | Chat 3-package audit, 30-day backstop, temporary-code expiry, garbage policy; source-first/donor classification и NEW_DECISION gate |
+| `docs/DOCS_SYSTEM.md` | GitHub handoff/provenance: source references и восстановимый SOURCE_AUDIT без chat-only reasoning |
+| `docs/PRODUCT.md` | дополнительно platform delivery order и статусы VISIBLE/FUNCTIONAL/ACCEPTED для крупных поверхностей |
+| `docs/ADMIN.md` | дополнительно Admin A1/A2/A3: Chat control plane → modality/publication control → extended operations |
 | local Chat README | краткие live owners/invariants/tests после фактической структуры |
 | `BLOCK_MAP/CONTEXT_MAP` | новые owners только по мере появления реального кода |
 
@@ -76,12 +79,16 @@ Snapshot не переносится в stable Product/Architecture/Maintenance 
 
 Цель: принять v4 семантически, не менять product code.
 
-1. owner подтверждает Product v4;
+1. owner подтверждает Product v4 и platform-level `IZO_ASA_PLATFORM_SOURCE_DELIVERY_CONTRACT_v1.md`;
 2. обновляется #222;
 3. синхронизируются противоречащие owner issues;
-4. stable docs получают только свои факты;
-5. docs checks проходят;
-6. current execution lineage не переписывается автоматически.
+4. `PRODUCT.md` получает platform delivery map `VISIBLE / FUNCTIONAL / ACCEPTED` и Chat-first sequencing;
+5. `MAINTAINABILITY.md` получает source hierarchy, donor classification и `NEW_DECISION_REQUIRED` gate;
+6. `DOCS_SYSTEM.md` получает provenance/SOURCE_AUDIT handoff contract;
+7. `ADMIN.md` получает Admin A1/A2/A3 delivery boundaries;
+8. stable docs получают только принадлежащие им факты без дублирующего live owner;
+9. docs checks проходят;
+10. current execution lineage не переписывается автоматически.
 
 ### E1 — Current active package reconciliation
 
@@ -201,6 +208,10 @@ Status `ADOPTION_PENDING` означает: requirement определён в re
 - Adoption в canonical docs меняет status группы на `ADOPTED`; implementation status меняется только при привязанном test/evidence, а не по заявлению.
 - Конкретные test paths/evidence IDs фиксируются при создании bounded implementation package; до этого test/evidence class задаёт обязательный тип доказательства и не считается `PASS`.
 
+### 5.2. Platform Source/Delivery requirements
+
+`PLAT-SRC-*`, `PLAT-DONOR-*`, `PLAT-VIS-*` и `PLAT-DEL-*` принадлежат отдельному `IZO_ASA_PLATFORM_SOURCE_DELIVERY_CONTRACT_v1.md` и имеют собственную adoption traceability там. Они **не меняют** утверждённый счётчик Chat v4 `193 MUST`; E0 обязан перенести их в platform canonical owners до начала нового product implementation package.
+
 ## 6. Current structural pressure
 
 Действующий maintainability hard-limit production files — 12 KB / 300 lines, warning zone >80%.
@@ -239,7 +250,10 @@ Status `ADOPTION_PENDING` означает: requirement определён в re
 - не начинать Credits migration до принятого Spend Authority ADR;
 - не строить full artifact editor до Generated File acceptance;
 - не добавлять новые provider tools в Chat ProviderAdapter;
-- не объявлять внешний ChatGPT/Claude UI вечным acceptance standard.
+- не объявлять внешний ChatGPT/Claude UI вечным acceptance standard;
+- не начинать новый Admin/Image/Gallery/Feed product package без `SOURCE_AUDIT` target+donor;
+- не копировать крупный feature из `IZO_ASA` wholesale и не переносить donor auth/ledger/storage/provider ownership;
+- не создавать dedicated Image/Video/Audio/3D backend вместо уже принятой Chat/shared capability.
 
 ---
 
@@ -254,4 +268,7 @@ v4 считается корректно внедрённой в докумен�
 5. P1–P5 и requirement IDs можно связать с конкретными packages/tests;
 6. `MAINTAINABILITY.md` содержит усиленный audit/cleanup cadence;
 7. следующий product package не расширяет near-limit Chat owners без split;
-8. docs/context checks проходят без увеличения budget ради PASS.
+8. docs/context checks проходят без увеличения budget ради PASS;
+9. source hierarchy, donor classification и `NEW_DECISION_REQUIRED` gate приняты в canonical process docs;
+10. `PRODUCT.md` однозначно показывает VISIBLE/FUNCTIONAL/ACCEPTED и следующий user-visible delivery stage;
+11. Admin A1/A2/A3 и Chat-first specialist-tab sequencing приняты без создания второго roadmap/source of truth.
