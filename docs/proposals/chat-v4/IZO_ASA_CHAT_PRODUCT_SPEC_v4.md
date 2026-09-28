@@ -276,7 +276,7 @@ FundingPlan
 
 | Policy | Funding semantics |
 | --- | --- |
-| `FREE` | Нет Daily/Premium debit и отдельной user charge; operation имеет нулевую product price. |
+| `FREE` | Нет Daily/Premium debit, platform funding reservation и billable provider/runtime charge для этой operation; если внешний расход несёт платформа, policy = `PLATFORM_FUNDED`. |
 | `PLATFORM_FUNDED` | Provider/runtime cost оплачивает платформа; user Daily/Premium не списываются. |
 | `DAILY_ONLY` | Daily должен покрывать всю product price; иначе deny. |
 | `PREMIUM_ONLY` | Premium reservation покрывает всю product price. |
@@ -310,7 +310,7 @@ FundingPlan
 - **CHAT-P-NFR-002 [MUST/P5]** — Длинный thread не требует полного reparsing/re-render всего разговора на каждый token; platform/UI overhead измеряется отдельно от provider queue/TTFT/generation latency.
 - **CHAT-P-NFR-003 [MUST/P5]** — Все controls имеют accessible name, keyboard navigation и visible focus в двух темах.
 - **CHAT-P-NFR-004 [MUST/P5]** — 320/390/768/1024/1440/1920 являются обязательными geometry checkpoints; QHD/UHD — smoke, а не замена browser-engine/real-device matrix.
-- **CHAT-P-NFR-005 [MUST/P5]** — До P1 acceptance владелец фиксирует benchmark profile и численные thresholds, необходимые для streaming Chat; до этого соответствующий performance evidence = `BLOCKED`, а не произвольный PASS. Profile обязан задавать baseline device class, browser, thread/message size, stream rate, measurement points и p95/p99 там, где percentile применим. Минимально измеряются input responsiveness during streaming, chunk→render overhead, large-thread open, scroll stability, large code/table render и memory/DOM growth. P5 повторно проверяет утверждённый profile на release matrix; thresholds нельзя выдумывать implementer-ом ради PASS.
+- **CHAT-P-NFR-005 [MUST/P1]** — До P1 acceptance владелец фиксирует benchmark profile и численные thresholds, необходимые для streaming Chat; до этого соответствующий performance evidence = `BLOCKED`, а не произвольный PASS. Profile обязан задавать baseline device class, browser, thread/message size, stream rate, measurement points и p95/p99 там, где percentile применим. Минимально измеряются input responsiveness during streaming, chunk→render overhead, large-thread open, scroll stability, large code/table render и memory/DOM growth. P5 повторно проверяет утверждённый profile на release matrix; thresholds нельзя выдумывать implementer-ом ради PASS.
 
 ### 9.3. Functional vs portable acceptance
 

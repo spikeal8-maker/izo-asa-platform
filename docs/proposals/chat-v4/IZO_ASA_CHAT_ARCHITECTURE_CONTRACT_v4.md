@@ -357,7 +357,7 @@ SpendDecision authorize(account, product_operation, quote_context)
 
 Policy semantics:
 
-- `FREE`: user resources не claim/reserve; product price zero.
+- `FREE`: user resources не claim/reserve; product price zero и нет billable provider/runtime charge для этой operation. Если внешний расход несёт платформа, используется `PLATFORM_FUNDED`.
 - `PLATFORM_FUNDED`: platform является provider payer; user Daily/Premium не списываются.
 - `DAILY_ONLY`: full price atomically claims/reserves Daily or deny.
 - `PREMIUM_ONLY`: full price резервируется через existing Premium Credits primitives.
