@@ -35,8 +35,10 @@ def test_media_read_uses_fresh_ticket_and_bounded_authenticated_transport():
     assert 'total > byteSize' in transport and 'total !== byteSize' in transport
     assert 'hash !== expectedHash' in transport
     preview = (WEB / 'src/features/gallery/PrivateImage.tsx').read_text(encoding="utf-8")
-    assert 'URL.revokeObjectURL' in preview and 'controller.abort()' in preview
-    assert 'await image.decode()' in preview and 'image.naturalWidth !== asset.width' in preview
+    shared = (WEB / 'src/shared/usePrivateImageUrl.ts').read_text(encoding="utf-8")
+    assert 'usePrivateImageUrl(asset, auth, version)' in preview
+    assert 'URL.revokeObjectURL' in shared and 'controller.abort()' in shared
+    assert 'await image.decode()' in shared and 'image.naturalWidth !== asset.width' in shared
     detail = (WEB / 'src/features/gallery/AssetPage.tsx').read_text(encoding="utf-8")
     assert 'await imageBlob(asset, auth, resource.controller.signal)' in detail
     assert 'link.download' in detail and 'release(current.current)' in detail

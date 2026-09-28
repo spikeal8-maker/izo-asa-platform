@@ -1,3 +1,9 @@
+.chat-composer.has-attachments {
+  grid-template-areas:
+    'attachments attachments attachments attachments attachments'
+    'input input input input input'
+    'plus state model mic send';
+}
 .chat-attachment-strip {
   grid-area:attachments;
   display:flex;

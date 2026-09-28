@@ -29,6 +29,14 @@ local browser run recorded 704 pass, 207 skip, 20 failures in two existing
 catalog tests across viewport projects; both failures were changed error copy,
 which was corrected without altering those tests. The four affected phone and
 laptop cases then passed. Required GitHub CI remains pending.
+The first GitHub verify run found three architecture-gate failures: Composer
+CSS had crossed its near-limit headroom, the Gallery private-image guard still
+looked in the component after its lifecycle moved to a shared hook, and
+`PLAN.json` exceeded 10 KB. The attachment grid rule now belongs to
+`AttachmentControl.css`; the guard checks the same abort/revoke/decode/dimension
+invariants in the shared hook; and machine-plan formatting was compacted
+without dropping fields. All three failing tests pass locally. Full CI must
+rerun on the corrected SHA.
 
 SELF_REVIEW: `PASS` for the finite image-attachment slice. Scope is 40/40 and
 `check_change`, `check_docs`, `project_state verify`, and `git diff --check`
@@ -37,6 +45,8 @@ idempotent upload operation and paid-outcome barrier remain server-side. No
 test or size limit was weakened. New handwritten files remain below the 80%
 warning threshold; existing Composer/runtime files approach it and should be
 split before their next substantial feature.
+`PLAN.json` is also close to its 10 KB gate; the next state transition should
+reserve headroom before adding another package.
 
 Residual risk: an uncertain Chat admission ID is held only in the current tab's
 memory. New/Open Chat in that tab preserve the draft and ID, but a closed or

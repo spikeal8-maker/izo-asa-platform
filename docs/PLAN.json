@@ -35,22 +35,7 @@
     "near_limit_files_must_not_grow_without_split": true,
     "periodic_full_agent_economy_audit_every_product_packages": 5
   },
-  "parallel_lineages": [
-    {
-      "id": "OPENROUTER-LINEAGE",
-      "status": "reconciled_reference_only",
-      "do_not_continue_automatically": true,
-      "prs": [
-        15,
-        16,
-        17,
-        19,
-        20,
-        21
-      ],
-      "summary": "Reference only; never a continuation base."
-    }
-  ],
+  "parallel_lineages": [{"id":"OPENROUTER-LINEAGE","status":"reconciled_reference_only","do_not_continue_automatically":true,"prs":[15,16,17,19,20,21],"summary":"Reference only; never a continuation base."}],
   "packages": {
     "DOC-001": {"status": "historical_complete","depends_on": []},
     "DOC-002": {"status": "historical_complete","depends_on": ["DOC-001"]},
