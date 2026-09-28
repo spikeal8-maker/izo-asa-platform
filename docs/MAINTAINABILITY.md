@@ -149,3 +149,16 @@ Package не получает `technical_pass`, если:
 
 Лимиты этого документа считаются инженерными ограничениями проекта. Их изменение — отдельное архитектурное решение
 с доказательством необходимости, а не локальный способ получить зелёный CI.
+
+
+
+## 10. GitHub-first continuity и перехват работы
+
+Handoff-critical результат до handoff/STOP обязан быть commit+push в рабочую branch/PR. WIP публикуется как WIP/Draft и не становится authority автоматически.
+
+Минимальный handoff: repository, branch/base, exact SHA, ключевые paths, PR/status, checks/risks и один следующий шаг. Следующий агент должен восстановить работу из GitHub + разрешённых runtime sources без истории личного чата.
+
+Secrets/credentials/private keys/tokens, персональные/private runtime data и production dumps не commit. Для непубликуемого/крупного runtime artifact хранится только safe reference/manifest/checksum и инструкция получения без раскрытия секрета. Generated/binary evidence следует repository policy.
+
+GitHub-first не отменяет scope/freeze/review gates. Package не handoff-ready, если по GitHub нельзя установить exact state, evidence и безопасную точку продолжения.
+

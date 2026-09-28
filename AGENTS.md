@@ -60,5 +60,6 @@ OPERATIONALLY_VERIFIED не склеиваются словом «готово»
 `docs/DOCS_SYSTEM.md` определяет владельца фактов. Новый MASTER_PLAN/NOW/ROADMAP запрещён.
 History/reviews/checkpoints не являются default context.
 
-Handoff: package, branch/base, фактический diff, проверки, открытые риски и один следующий шаг.
-Не переносить весь чат, reasoning или большие логи.
+GitHub-first handoff: нужные следующему агенту code/tests/specs/reviews до handoff/STOP commit+push в branch/PR;
+local/chat-only не передано. Handoff: repo, branch/base, exact SHA, paths, PR/status, checks/risks/next step.
+Secrets/credentials/private runtime data не commit; только safe reference.

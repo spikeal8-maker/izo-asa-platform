@@ -75,6 +75,7 @@ synthetic merge. `project_state.py begin-next` проверяет evidence/depen
 8. STATUS содержит только доказанные факты.
 9. Stable docs не содержат mutable SHA/PR.
 10. Maintainability delta проверен.
+11. Handoff-critical результат материализован в GitHub по правилу GitHub-first continuity из `MAINTAINABILITY.md`.
 
 ## 7. Запрещено
 
@@ -98,3 +99,14 @@ Architecture guard проверяет handwritten production/tests/tools/e2e/acc
 domain-specific `if guest/chat/video/...` логики. Routing signals по возможности declarative.
 
 Численные пределы и audit cadence принадлежат `MAINTAINABILITY.md`.
+
+
+## 9. GitHub-first handoff
+
+GitHub является обязательной точкой перехвата инженерной работы между агентами. Детальный контракт принадлежит
+`MAINTAINABILITY.md`: всё, что нужно следующему агенту для продолжения/проверки, до handoff/STOP должно быть
+commit+push в рабочую ветку/PR и адресоваться через exact SHA и paths. WIP/Draft разрешён и не становится authority
+автоматически. Chat-only/local-only артефакт не считается переданным.
+
+Секреты и запрещённые private/runtime данные не материализуются в GitHub; для них хранится только безопасная
+provenance/reference-информация, достаточная для получения через разрешённый источник.
