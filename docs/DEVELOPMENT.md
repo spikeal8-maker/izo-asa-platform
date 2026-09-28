@@ -119,6 +119,16 @@ files, самые дорогие routes, локальные docs, map growth, du
 
 Для multi-agent package один **controller** является единственным владельцем package goal, source-audit result, task graph, scope partition, integration order, final SELF_REVIEW и state transition. Controller не передаёт subagent право самостоятельно менять package meaning или repository state.
 
+### CONTROLLER_ONLY_ORCHESTRATION
+
+Если task явно задан как `controller + subagents`, controller по умолчанию **не является ordinary implementation writer** для product/runtime кода. Он восстанавливает state, выполняет SOURCE_AUDIT, строит task graph, делит scope, dispatches writing/review tasks, проверяет diff/SHA/tests, интегрирует принятые isolated results, принимает/отклоняет/reassigns работу, проводит package-level gates, state transitions и выбирает следующий bounded task.
+
+Обычная product/runtime implementation по умолчанию делегируется implementation subagent. Если после integration нужна содержательная code correction, controller назначает fix/integration subagent вместо превращения себя в основного implementer.
+
+Controller может самостоятельно выполнять orchestration/integration mechanics без новой product semantics: inspect/compare/assign, интегрировать или cherry-pick уже принятый isolated result когда это разрешено repository governance, запускать checks, проверять evidence и вызывать state workflow. Это правило само по себе не разрешает PR merge/deploy/owner-only action.
+
+Исключение: если multi-agent mode объективно не применяется и package явно single-agent/local, обычный workflow из предыдущих разделов допустим; искусственно создавать subagent для каждой CSS-строки не требуется. Но при явном `controller + subagents` controller-only orchestration обязательно.
+
 Каждый writing subagent до старта получает явный contract:
 
 ```text

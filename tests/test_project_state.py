@@ -6,7 +6,8 @@ import pytest
 ROOT=Path(__file__).resolve().parents[1]
 sys.path.insert(0,str(ROOT / "tools"))
 from project_state import(READY_DEPENDENCY_STATUSES,dependency_problems,reconcile_continuation,
-    reconcile_continuation_transition,render_current,transition,validate_plan,validate_pr_evidence)
+    reconcile_continuation_transition,render_current,serialize_plan,transition,validate_plan,
+    validate_pr_evidence)
 def plan():
     return json.loads((ROOT / "docs/PLAN.json").read_text(encoding="utf-8"))
 def evidence(head="a"*40):
@@ -96,7 +97,11 @@ def test_transition_rejects_unready_dependency():
         transition(source,activate="TEST-NEXT",next_id=None,new_branch="test/next",
                    source_head="a"*40,evidence=evidence())
 def test_machine_plan_stays_compact_enough_for_agent_context():
-    text=(ROOT / "docs/PLAN.json").read_text(encoding="utf-8")
+    source=plan()
+    text=serialize_plan(source)
+    assert json.loads(text)==source
+    assert serialize_plan(json.loads(text))==text
+    assert (ROOT / "docs/PLAN.json").read_text(encoding="utf-8")==text
     assert len(text.encode("utf-8"))<10_000
     assert len(text.splitlines())<140
 def test_begin_next_rolls_back_branch_state_and_checkpoint_on_write_failure(tmp_path,monkeypatch):

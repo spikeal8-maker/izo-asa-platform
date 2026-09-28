@@ -216,27 +216,27 @@ def reconcile_continuation_transition(plan: dict, *, activate: str, new_branch: 
 
 
 def serialize_plan(plan: dict) -> str:
+    """Deterministic compact PLAN JSON with bounded human-readable sections."""
+    def compact(value) -> str:
+        return json.dumps(value, ensure_ascii=False, separators=(",", ":"))
+
     lines = ["{"]
     keys = list(plan)
     for index, key in enumerate(keys):
         value = plan[key]
         comma = "," if index < len(keys) - 1 else ""
-        if key in {"packages", "status_meaning"} and isinstance(value, dict):
+        if key == "packages" and isinstance(value, dict):
             lines.append(f'  {json.dumps(key)}: {{')
-            items = list(value.items())
-            for pos, (name, item) in enumerate(items):
-                tail = "," if pos < len(items) - 1 else ""
-                compact = json.dumps(item, ensure_ascii=False, separators=(",", ": "))
-                lines.append(f'    {json.dumps(name, ensure_ascii=False)}: {compact}{tail}')
+            entries = [
+                f"{json.dumps(name, ensure_ascii=False)}:{compact(item)}"
+                for name, item in value.items()
+            ]
+            for start in range(0, len(entries), 4):
+                tail = "," if start + 4 < len(entries) else ""
+                lines.append("    " + ",".join(entries[start:start + 4]) + tail)
             lines.append(f"  }}{comma}")
         else:
-            rendered = json.dumps(value, ensure_ascii=False, indent=2).splitlines()
-            if len(rendered) == 1:
-                lines.append(f'  {json.dumps(key)}: {rendered[0]}{comma}')
-            else:
-                lines.append(f'  {json.dumps(key)}: {rendered[0]}')
-                lines.extend("  " + line for line in rendered[1:-1])
-                lines.append("  " + rendered[-1] + comma)
+            lines.append(f'  {json.dumps(key)}:{compact(value)}{comma}')
     return "\n".join([*lines, "}"]) + "\n"
 
 

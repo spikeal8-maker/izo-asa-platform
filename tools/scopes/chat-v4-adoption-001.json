@@ -1,14 +1,15 @@
 {
   "package_id": "CHAT-V4-ADOPTION-001",
-  "base": "a386d9619be4456a962f6aab92fba5ec59e692a3",
-  "scope_class": "normal",
+  "base": "2a2995ee47c8c369b512c1328f02d3eb662775a3",
+  "scope_class": "cross_domain",
   "risk": "high",
   "independent_review_required": true,
-  "max_files": 20,
+  "max_files": 25,
   "domains": [
     "governance",
     "product-docs",
-    "chat-docs"
+    "chat-docs",
+    "state-tooling"
   ],
   "non_goals": [
     "No product runtime implementation",
@@ -36,10 +37,17 @@
     "docs/proposals/chat-v4/IZO_ASA_PLATFORM_SOURCE_DELIVERY_CONTRACT_v1.md",
     "docs/proposals/chat-v4/README.md",
     "docs/reviews/CHAT-V4-ADOPTION-001.md",
-    "tools/scopes/chat-v4-adoption-001.json"
+    "tools/scopes/chat-v4-adoption-001.json",
+    "docs/CHECKPOINTS.json",
+    "docs/CURRENT.md",
+    "docs/PLAN.json",
+    "tools/project_state_model.py",
+    "tests/test_project_state.py"
   ],
   "sensitive_approved": [
     "AGENTS.md",
-    "tools/scopes/chat-v4-adoption-001.json"
-  ]
+    "tools/scopes/chat-v4-adoption-001.json",
+    "tools/project_state_model.py"
+  ],
+  "large_scope_reason": "E0 canonical adoption is a cross-domain documentation/governance package. Its stacked PR necessarily includes the three repository state-transition files, plus a bounded project-state serialization repair required by Foundation CI. No product runtime implementation is included."
 }
