@@ -78,15 +78,36 @@ Tool operations, предложенные внутри AssistantAttempt, пол�
 
 ### 3.2. Правила операций
 
-- **ARCH-MSG-001 [MUST]** — Edit user message создаёт descendant Branch с explicit `parent_branch_id + fork_from_turn_id` и новым immutable UserMessage; исходная branch/turn/message не изменяются.
-- **ARCH-MSG-002 [MUST]** — Regenerate создаёт новый AssistantAttempt и ровно один новый ChatRequest для того же UserMessage; старый attempt/request сохраняется.
-- **ARCH-MSG-003 [MUST]** — Branch хранит deterministic selected AssistantAttempt для каждого turn с альтернативами. Начало Regenerate не уничтожает прежний selection; selection меняется явным branch/attempt state transition и может быть переключён пользователем.
-- **ARCH-MSG-004 [MUST]** — UI и Context Engine используют persisted `active_branch_id` и selected attempt mapping, а не «последнюю запись по времени».
+- **ARCH-MSG-001 [MUST]** — Edit user message создаёт descendant Branch с explicit `parent_branch_id + fork_from_turn_id` и новым immutable UserMessage; исходная branch/turn/message не изменяются. После успешного создания descendant Branch server transaction атомарно устанавливает `thread.active_branch_id` на неё. Новая Branch наследует selected-attempt mapping родителя только для prefix до fork point; edited turn начинает с `selected_attempt_id = NONE`, а parent answer после fork не переносится в selection.
+- **ARCH-MSG-002 [MUST]** — Regenerate создаёт новый AssistantAttempt и ровно один новый ChatRequest для того же UserMessage в текущей active Branch; `active_branch_id` не меняется. Старый attempt/request сохраняется, а previous selected attempt остаётся selected до durable completion нового candidate.
+- **ARCH-MSG-003 [MUST]** — Branch хранит persisted deterministic selected AssistantAttempt для каждого turn с альтернативами. Только `COMPLETED` attempt может стать ordinary context selection: durable completion Regenerate/safe retry переключает selection по transition table ниже; manual selector может атомарно выбрать другой `COMPLETED` attempt. `ERROR`/`UNKNOWN`/partial `STOPPED`/`INTERRUPTED` остаются history/evidence и не выбираются ordinary selector action.
+- **ARCH-MSG-004 [MUST]** — UI и Context Engine используют persisted `active_branch_id` и selected-attempt mapping, а не «последнюю запись по времени». Manual Branch selection server-side атомарно устанавливает `thread.active_branch_id` на выбранную существующую Branch и использует её собственную persisted mapping без пересчёта по timestamp/DOM/stream order. Все branch/attempt selection transitions durably persisted и transactionally consistent; reload/restart восстанавливает тот же state.
 - **ARCH-MSG-005 [MUST]** — Archive — состояние Thread, а не hard-delete audit/request/assets.
-- **ARCH-MSG-006 [MUST]** — Retry не смешивается с Regenerate: known pre-submit failure переигрывает тот же request identity/fingerprint без нового attempt; доказанный post-submit rejection/no-execution создаёт новый ChatRequest+AssistantAttempt с `retry_of_request_id`; unknown outcome запрещает новый execution до reconciliation.
+- **ARCH-MSG-006 [MUST]** — Retry не смешивается с Regenerate. Known pre-submit failure переигрывает тот же request identity/fingerprint и тот же AssistantAttempt; Branch/selection во время execution не меняются, а durable `COMPLETED` выбирает current candidate. Доказанный post-submit rejection/no-execution создаёт новый ChatRequest+AssistantAttempt с `retry_of_request_id` и следует Regenerate selection transitions. `UNKNOWN` никогда не меняет selection и запрещает новое execution до reconciliation.
 - **ARCH-MSG-007 [MUST]** — P1 не имеет отдельной «Continue generating» execution semantics. Обычное продолжение — новый UserMessage в active Branch; отдельный assistant-continuation требует будущего versioned contract.
 
-### 3.3. Message parts
+### 3.3. Normative branch/attempt transition semantics
+
+Conversation Graph является единственным owner выбора Branch/AssistantAttempt. Context Engine не выбирает attempt самостоятельно: он получает persisted `active_branch_id` и selected-attempt mapping.
+
+| Operation | Active branch | Selection while running | Completed | Error | Stopped / Interrupted | Unknown |
+| --- | --- | --- | --- | --- | --- | --- |
+| Edit | new descendant становится active сразу после успешного создания | edited turn = `NONE` | new edited-turn attempt selected | `NONE` | `NONE`; partial сохраняется только как history/evidence | `NONE` + block new execution until reconcile |
+| Regenerate | unchanged | previous selected | new attempt selected | previous selected | previous selected; partial не выбирается | previous selected + block new execution until reconcile |
+| Retry pre-submit | unchanged | previous/`NONE`; same request + same attempt | current candidate selected | previous/`NONE` | previous/`NONE` | previous/`NONE` + reconcile first |
+| Retry safe post-submit | unchanged | previous/`NONE`; new request + new retry attempt | new retry attempt selected | previous/`NONE` | previous/`NONE` | previous/`NONE` + reconcile first |
+
+Дополнительные нормативные правила:
+
+- `COMPLETED` transition выполняется только после durable terminal persistence результата и selection update является server-owned, persisted и atomic.
+- Для Edit descendant Branch наследует parent selected-attempt mapping только для prefix до `fork_from_turn_id`; состояние parent Branch и её post-fork answers не копируются в новый divergent suffix.
+- Если Edit автоматически запускает attempt, `ERROR`/`STOPPED`/`INTERRUPTED` не выбирают parent answer; edited turn остаётся `NONE`.
+- `UNKNOWN` сохраняет selection, указанный таблицей, блокирует новое execution для affected lifecycle и сначала reconciles исходный request. Reconciliation с доказанным `COMPLETED` применяет обычный Completed transition; no-execution/rejected/error применяет обычный failure transition и не выбирает uncertain/partial output.
+- Manual attempt selection разрешён только среди `COMPLETED` attempts данного turn и atomically persists `selected_attempt_id`; timestamp, DOM order и last-streamed attempt не используются как authority.
+- Manual Branch selection atomically persists `thread.active_branch_id` и активирует собственную persisted selected-attempt mapping выбранной Branch; другие Branch/attempts не удаляются.
+- Любой automatic/manual branch или attempt transition, меняющий source range действующего summary, invalidates summary по существующему Context Engine contract; второй механизм summary не создаётся.
+
+### 3.4. Message parts
 
 Минимальный versioned registry:
 
