@@ -42,35 +42,49 @@
 
 ---
 
+
 ## 3. Conversation data model
 
-### 3.1. Сущности
+### 3.1. Сущности и cardinality
 
 ```text
-Thread
- ├─ Branch
- │   └─ ordered Turns
- │       ├─ UserMessage
- │       │   └─ ordered MessageParts
- │       └─ AssistantAttempt[1..N]
- │           └─ ordered MessageParts
- └─ active_branch_id
+Thread 1
+ ├─ Branch 1..N
+ │   ├─ parent_branch_id? + fork_from_turn_id?
+ │   └─ ordered Turn 1..N
+ │       ├─ UserMessage exactly 1
+ │       │   └─ ordered MessageParts 0..N
+ │       └─ AssistantAttempt 0..N
+ │           ├─ ChatRequest exactly 1
+ │           └─ ordered MessageParts 0..N
+ └─ active_branch_id exactly 1 existing branch
+```
 
+`Turn` — логическая позиция разговора в branch. `UserMessage` immutable после admission. Root Branch не имеет parent/fork. Descendant Branch хранит `parent_branch_id` и `fork_from_turn_id`: это turn исходной ветви, пользовательскую реплику которого Edit заменяет новой immutable UserMessage в первом divergent turn.
+
+`ChatRequest` — одна conversational execution identity для одного AssistantAttempt:
+
+```text
 ChatRequest
  ├─ request_id
+ ├─ assistant_attempt_id
  ├─ material_fingerprint
  ├─ resolved execution snapshot
  ├─ state
  └─ provider/tool outcome references
 ```
 
-### 3.2. Правила ветвления
+Tool operations, предложенные внутри AssistantAttempt, получают собственные stable operation IDs/Jobs и не становятся дополнительными ChatRequest.
 
-- **ARCH-MSG-001 [MUST]** — Edit user message создаёт новую `Branch` от parent point; исходная branch immutable для истории.
-- **ARCH-MSG-002 [MUST]** — Regenerate создаёт новую `AssistantAttempt` для того же UserMessage; user message не дублируется.
-- **ARCH-MSG-003 [MUST]** — Branch хранит выбор активной attempt для каждого turn, если попыток несколько.
-- **ARCH-MSG-004 [MUST]** — UI и Context Engine используют `active_branch_id`, а не эвристику «последняя запись по времени».
-- **ARCH-MSG-005 [MUST]** — Archive — состояние thread, а не hard-delete audit/request/assets.
+### 3.2. Правила операций
+
+- **ARCH-MSG-001 [MUST]** — Edit user message создаёт descendant Branch с explicit `parent_branch_id + fork_from_turn_id` и новым immutable UserMessage; исходная branch/turn/message не изменяются.
+- **ARCH-MSG-002 [MUST]** — Regenerate создаёт новый AssistantAttempt и ровно один новый ChatRequest для того же UserMessage; старый attempt/request сохраняется.
+- **ARCH-MSG-003 [MUST]** — Branch хранит deterministic selected AssistantAttempt для каждого turn с альтернативами. Начало Regenerate не уничтожает прежний selection; selection меняется явным branch/attempt state transition и может быть переключён пользователем.
+- **ARCH-MSG-004 [MUST]** — UI и Context Engine используют persisted `active_branch_id` и selected attempt mapping, а не «последнюю запись по времени».
+- **ARCH-MSG-005 [MUST]** — Archive — состояние Thread, а не hard-delete audit/request/assets.
+- **ARCH-MSG-006 [MUST]** — Retry не смешивается с Regenerate: known pre-submit failure переигрывает тот же request identity/fingerprint без нового attempt; доказанный post-submit rejection/no-execution создаёт новый ChatRequest+AssistantAttempt с `retry_of_request_id`; unknown outcome запрещает новый execution до reconciliation.
+- **ARCH-MSG-007 [MUST]** — P1 не имеет отдельной «Continue generating» execution semantics. Обычное продолжение — новый UserMessage в active Branch; отдельный assistant-continuation требует будущего versioned contract.
 
 ### 3.3. Message parts
 
@@ -98,26 +112,40 @@ ChatRequest
 
 Context Engine — отдельный owner, а не побочная функция provider adapter.
 
-Pipeline:
+Нормативный pipeline:
 
 ```text
-Thread history
- → active branch
- → selected assistant attempts
- → eligible terminal messages/tool results
- → source/file evidence selection
- → model-specific budget
- → optional reduction/summarization
+persisted Thread
+ → active Branch
+ → selected AssistantAttempts
+ → mandatory current-turn dependencies
+ → model capability + context/output limits
+ → deterministic budget calculator/version
+ → eligible recent turn groups
+ → optional versioned summary of older eligible prefix
  → normalized ConversationInput
  → ConversationProviderAdapter
 ```
 
-- **ARCH-CTX-001 [MUST]** — история и execution-context — разные сущности.
-- **ARCH-CTX-002 [MUST]** — context builder знает capability/context limit выбранной product model из resolved snapshot.
-- **ARCH-CTX-003 [MUST]** — failed/unknown/partial attempts не становятся ordinary assistant truth без явной policy.
-- **ARCH-CTX-004 [MUST]** — file excerpts/tool outputs имеют provenance и bounded contribution.
-- **ARCH-CTX-005 [MUST]** — switching model пересчитывает budget и modalities, не меняя сохранённую историю.
-- **ARCH-CTX-006 [SHOULD]** — summarization имеет source range/provenance и version, чтобы её можно было заменить без порчи исходной истории.
+Priority при budget pressure:
+
+```text
+1. System/Product policy
+2. current UserMessage
+3. current-turn required file/source/tool dependencies
+4. selected eligible terminal AssistantAttempts + paired user turns, newest first
+5. one valid summary of omitted older active-branch prefix
+```
+
+Ни current UserMessage, ни required current-turn dependency не truncates silently. Если mandatory set + reserved output не помещаются, admission fail до provider call.
+
+- **ARCH-CTX-001 [MUST]** — persisted history и execution-context — разные сущности.
+- **ARCH-CTX-002 [MUST]** — context builder использует capability/context/output limits resolved product model snapshot; calculator/tokenizer или conservative estimator + version/safety margin входят в execution snapshot.
+- **ARCH-CTX-003 [MUST]** — failed/unknown/partial attempts не становятся ordinary assistant truth; в provider context попадают только выбранные eligible terminal attempts согласно versioned policy.
+- **ARCH-CTX-004 [MUST]** — file excerpts/tool/source outputs имеют provenance и bounded contribution; raw previous-provider payload, secret и reasoning не переносятся между providers.
+- **ARCH-CTX-005 [MUST]** — switching model пересчитывает budget/modalities/tools без изменения persisted history. Current-turn incompatible modality блокирует admission или требует compatible effective model; historical unsupported binary исключается, а normalized derived evidence используется только если поддержано и имеет provenance.
+- **ARCH-CTX-006 [MUST]** — summary/reduction имеет `summary_id`, policy/version, active-branch source range и provenance. Summary invalidated при branch/edit divergence source range, selected-attempt change внутри range, изменении referenced source/tool/file result или несовместимом policy-version; invalid summary никогда не отправляется provider.
+- **ARCH-CTX-007 [MUST]** — fixtures `128k→32k`, vision→text-only, tool-capable→tool-incapable и provider switch обязаны давать deterministic selected input/explicit denial при одинаковом persisted state и policy-version.
 
 ---
 
@@ -203,30 +231,46 @@ User intent / model proposal
 
 ---
 
+
 ## 8. File ingestion и processing
 
 ### 8.1. Storage
 
-Media остаётся единственным binary storage owner.
+Media остаётся единственным binary storage owner. Filename, extension и browser-provided MIME — presentation metadata, не trust signal.
 
-### 8.2. Processing
+### 8.2. Trusted type selection
+
+Pipeline:
+
+```text
+owned Media asset bytes
+ → bounded signature/structure detection
+ → trusted actual format
+ → allowlisted parser
+ → bounded extraction
+ → normalized representation + provenance
+```
+
+Declared/actual mismatch либо fail-closed отклоняется, либо нормализуется только к безопасному detected type по server policy. Browser не выбирает parser. Parser/extractor egress, external relationships/resources и active content default-deny.
+
+### 8.3. Processing
 
 Shared File Processing layer выполняет bounded extraction:
 
 - PDF: pages/text + optional page images;
 - DOCX: paragraphs/tables/relationships без исполнения active content;
-- XLSX/CSV: workbook/sheet/range/formula facts;
-- HTML/XML/YAML/JSON/code: data/text sanitization;
-- audio: ASR capability;
-- future video: metadata/frames/audio through dedicated capability.
+- XLSX/CSV/TSV: workbook/sheet/range/formula facts;
+- TXT/MD/source: bounded text;
+- HTML/XML/YAML/JSON: sanitized/parsed structure без active fetch/execute;
+- audio: ASR capability + source segments;
+- video: отдельный deferred capability; P2 core не требует deep analysis.
 
 **ARCH-FILE-001 [MUST]** — parsers получают byte stream/asset through Media service, а не arbitrary local path/object key from browser.  
-**ARCH-FILE-002 [MUST]** — extracted representation содержит provenance.  
-**ARCH-FILE-003 [MUST]** — parsing bounded по bytes/pages/cells/nesting/decompression/resources.  
-**ARCH-FILE-004 [MUST]** — macros/scripts/external relationships не исполняются.  
-**ARCH-FILE-005 [MUST]** — PDF/Office/HTML/SVG и архивные containers рассматриваются как untrusted inputs.
-
----
+**ARCH-FILE-002 [MUST]** — extracted representation содержит asset + page/sheet/range/section/segment provenance где применимо.  
+**ARCH-FILE-003 [MUST]** — parsing bounded по bytes/pages/cells/nesting/decompression/resources/time; decompression/archive bombs fail closed.  
+**ARCH-FILE-004 [MUST]** — macros/scripts, XML entities, SVG/HTML active content, Office external relationships и parser-driven external network fetch не исполняются; egress default-deny.  
+**ARCH-FILE-005 [MUST]** — PDF/Office/HTML/SVG/XML/archive/spreadsheet inputs рассматриваются как untrusted data; formula-like content не превращается в executable spreadsheet output без explicit generation/edit policy.  
+**ARCH-FILE-006 [MUST]** — parser выбирается только по server-owned trusted actual format; extension/client MIME spoof не может переключить parser или ослабить limits.
 
 ## 9. Generated Files и Artifact Runtime
 
@@ -252,9 +296,10 @@ Normalized tool command
 
 ---
 
+
 ## 10. Catalog: models vs capabilities
 
-Catalog должен различать как минимум:
+Catalog различает как минимум:
 
 1. **ConversationProductModel** — text/vision/file-capable conversational model.
 2. **ToolCapability** — image.generate, image.edit, asr, document.generate, video.generate и т. п.
@@ -263,36 +308,70 @@ Catalog должен различать как минимум:
 **ARCH-CAT-001 [MUST]** — FLUX/image model не публикуется как text conversation model только потому, что это «AI model».  
 **ARCH-CAT-002 [MUST]** — provider raw cost и user-visible IZO price — разные поля/owners.  
 **ARCH-CAT-003 [MUST]** — retire сохраняет historical references.  
-**ARCH-CAT-004 [MUST]** — effective model/capability projection вычисляется сервером.
+**ARCH-CAT-004 [MUST]** — discovery создаёт candidate/facts, а effective model/capability projection вычисляется одной server-side authority после Admin publication и access checks.
+
+### 10.1. Effective model hard-deny envelope
+
+Порядок admission:
+
+```text
+candidate/provider facts
+ → product model exists
+ → not retired
+ → enabled
+ → published
+ → account active
+ → provider/runtime available
+ → required credential available
+ → capability/modality compatible
+ → billing eligible
+ → plan entitlement
+ → optional account override within global envelope
+ → EFFECTIVE
+```
+
+Retired/disabled/unpublished, restricted account, unavailable provider/credential, incompatible capability/modality и billing-ineligible — hard deny. Plan/user override не может re-enable hard-denied model. Override может только сузить доступ либо разрешить вариант, который уже находится внутри global published+enabled envelope и разрешён server policy. Frontend только отображает effective projection.
+
+**ARCH-CAT-005 [MUST]** — все Chat admissions, model selector/API и tool routing используют одну effective authority/revision; browser-side union remote discovery + local models не является access decision.  
+**ARCH-CAT-006 [MUST]** — изменение Admin publication/disable запрещает новые admissions после effective revision change, но не переписывает immutable snapshot уже принятого request/job.
 
 ---
 
 ## 11. Spend Authority: Daily + Premium + BYOK
 
-Продукт требует два пользовательских ресурса, но физическая persistence-модель выбирается отдельным ADR после анализа Credits/Entitlements.
+Продукт требует Daily allowance и Premium balance, но физическая persistence-модель выбирается ADR после анализа существующих Credits/Entitlements.
 
-Логическая функция:
+Логический result:
 
 ```text
 SpendDecision authorize(account, product_operation, quote_context)
  → allowed / denied
- → funding_plan
- → reservations/allowance claims
- → confirmation requirement
+ → FundingPlan {
+      sources[{resource, authorized_amount, reservation_or_claim_id?}],
+      settlement_rule,
+      confirmation_required,
+      provider_payer,
+      platform_fee
+   }
 ```
 
-Возможные реализации:
+Policy semantics:
 
-- bucketed ledger;
-- daily entitlement allowance + premium Credits ledger;
-- другая единая authority, сохраняющая атомарность.
+- `FREE`: user resources не claim/reserve; product price zero.
+- `PLATFORM_FUNDED`: platform является provider payer; user Daily/Premium не списываются.
+- `DAILY_ONLY`: full price atomically claims/reserves Daily or deny.
+- `PREMIUM_ONLY`: full price резервируется через existing Premium Credits primitives.
+- `DAILY_THEN_PREMIUM/DAILY_FIRST`: Daily first, Premium = exact shortfall; daily=3, price=5 → Daily 3 + Premium 2.
+- `MIXED`: explicit versioned split from product policy/quote; all sources authorize atomically.
+- `BYOK`: provider payer=user; no hidden Daily/Premium debit. Optional platform service fee is separate line item with separate FundingPlan/confirmation.
 
-**ARCH-SPEND-001 [MUST]** — Chat UI/Provider не решают, какой resource списать.  
-**ARCH-SPEND-002 [MUST]** — existing immutable Credits ledger не переписывается в два wallet «по предположению»; изменение финансовой схемы требует ADR/migration/reconciliation tests.  
-**ARCH-SPEND-003 [MUST]** — mixed daily→premium semantics фиксируются product policy и тестируются.  
-**ARCH-SPEND-004 [MUST]** — BYOK provider cost не маскируется platform charge и наоборот.
+Lifecycle каждого FundingPlan: `authorize → claim/reserve → execute → settle/release`; unknown external outcome удерживает provisional state и идёт в `reconcile` без blind retry. Resource-specific persistence может различаться, но atomic admission не допускает partial funding side effects.
 
----
+**ARCH-SPEND-001 [MUST]** — Chat UI/Provider/model не решают, какой resource списать и не формируют FundingPlan.  
+**ARCH-SPEND-002 [MUST]** — existing immutable Credits ledger/reserve/settle/release не переписывается в два wallet «по предположению»; Daily persistence и cross-resource atomicity требуют ADR/migration/reconciliation tests.  
+**ARCH-SPEND-003 [MUST]** — Daily→Premium semantics ровно daily-first + exact Premium shortfall; Premium part требует confirmation без explicit opt-in.  
+**ARCH-SPEND-004 [MUST]** — BYOK provider cost и platform fee — разные accounting lines; provider cost пользователя не превращается автоматически в IZO Premium debit.  
+**ARCH-SPEND-005 [MUST]** — unknown outcome сохраняет funding reservations/claims в reconcile state до доказанного settlement/release policy; unknown не считается zero-cost.
 
 ## 12. Security trust hierarchy
 

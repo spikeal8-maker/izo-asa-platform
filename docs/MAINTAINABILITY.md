@@ -151,27 +151,14 @@ Package не получает `technical_pass`, если:
 с доказательством необходимости, а не локальный способ получить зелёный CI.
 
 
+
 ## 10. GitHub-first continuity и перехват работы
 
-Любой материальный результат агента, необходимый для продолжения, проверки или воспроизведения работы другим агентом,
-до handoff, STOP или смены исполнителя обязан быть сохранён в GitHub в рабочей ветке и, когда уместно, Draft/Open PR.
-К таким результатам относятся code/tests/migrations/contracts, specs/ADR/task cards, architecture/review/acceptance docs,
-безопасные scripts/config и другие handoff-critical артефакты.
+Handoff-critical результат до handoff/STOP обязан быть commit+push в рабочую branch/PR. WIP публикуется как WIP/Draft и не становится authority автоматически.
 
-Правила:
-- значимая работа не должна существовать только в чате, локальной папке или временной среде к моменту handoff/STOP;
-- при длинной задаче публиковать каждый восстановимый checkpoint, а не ждать финальной приёмки;
-- незавершённая работа публикуется как явно помеченный WIP/Draft и не становится canonical только из-за появления в GitHub;
-- handoff обязан указывать repository, branch/base, exact commit SHA, изменённые/ключевые paths, PR/status, проверки,
-  известные риски и один следующий шаг;
-- следующий агент должен иметь возможность восстановить состояние задачи из GitHub и разрешённых внешних runtime sources,
-  не полагаясь на историю чата конкретного исполнителя;
-- секреты, credentials, private keys, токены, персональные данные, production dumps и иные запрещённые данные в GitHub
-  не публикуются. Для непубликуемого/крупного runtime-артефакта сохраняется безопасный manifest/reference/checksum,
-  владелец/место получения и инструкция восстановления без раскрытия секрета;
-- generated/binary evidence коммитится только когда это соответствует repository policy; иначе в GitHub хранится
-  достаточная безопасная provenance-ссылка на внешний разрешённый источник.
+Минимальный handoff: repository, branch/base, exact SHA, ключевые paths, PR/status, checks/risks и один следующий шаг. Следующий агент должен восстановить работу из GitHub + разрешённых runtime sources без истории личного чата.
 
-Package не является handoff-ready, если другой агент не может определить из GitHub, что сделано, на каком exact SHA,
-какие доказательства существуют и откуда безопасно продолжать. Это правило не отменяет scope/freeze/review gates и
-не разрешает commit секретов или объявление WIP каноническим.
+Secrets/credentials/private keys/tokens, персональные/private runtime data и production dumps не commit. Для непубликуемого/крупного runtime artifact хранится только safe reference/manifest/checksum и инструкция получения без раскрытия секрета. Generated/binary evidence следует repository policy.
+
+GitHub-first не отменяет scope/freeze/review gates. Package не handoff-ready, если по GitHub нельзя установить exact state, evidence и безопасную точку продолжения.
+

@@ -62,6 +62,7 @@ Chat Product V1 — не «работающий API» и не «Markdown-стр�
 
 ## 4. P1 — Conversation Experience
 
+
 ### 4.1. Разговор и история
 
 - **CHAT-P-LIFE-001 [MUST/P1]** — Разговор, сообщения и request-state сохраняются сервером; localStorage не является source of truth истории.
@@ -70,19 +71,26 @@ Chat Product V1 — не «работающий API» и не «Markdown-стр�
 - **CHAT-P-LIFE-004 [MUST/P1]** — Stop является серверной командой; закрытие fetch/SSE в браузере не считается доказанным Stop.
 - **CHAT-P-LIFE-005 [MUST/P1]** — Unknown/interrupted outcome отображается честно; blind retry платного/неопределённого запроса запрещён.
 - **CHAT-P-LIFE-006 [MUST/P1]** — История поддерживает cursor pagination, новый чат, поиск, rename, archive и restore.
-- **CHAT-P-LIFE-007 [MUST/P1]** — Regenerate создаёт новую assistant-attempt для той же пользовательской реплики и не уничтожает предыдущий ответ.
-- **CHAT-P-LIFE-008 [MUST/P1]** — Edit user message создаёт новую ветвь разговора от точки редактирования. Исходная ветвь сохраняется.
-- **CHAT-P-LIFE-009 [MUST/P1]** — UI явно знает активную ветвь/активную attempt; только она используется как обычное продолжение контекста.
+- **CHAT-P-LIFE-007 [MUST/P1]** — Regenerate означает запрос альтернативного ответа на тот же immutable UserMessage: создаются новый AssistantAttempt и новый ChatRequest; предыдущий ответ/attempt сохраняется и остаётся выбираемым.
+- **CHAT-P-LIFE-008 [MUST/P1]** — Edit user message не изменяет прежний UserMessage: создаётся новый immutable UserMessage в descendant Branch с явной fork-reference; исходная ветвь сохраняется.
+- **CHAT-P-LIFE-009 [MUST/P1]** — UI и Context Engine используют явно сохранённые active_branch и selected assistant attempt для каждого turn; эвристика «последняя запись по времени» не является authority.
+- **CHAT-P-LIFE-010 [MUST/P1]** — Retry является recovery-действием, а не синонимом Regenerate: known pre-submit failure безопасно переигрывает ту же request identity/fingerprint без новой assistant attempt; known post-submit rejection, для которого сервер доказал отсутствие billable/unknown execution, создаёт новый ChatRequest + AssistantAttempt с `retry_of_request_id`; unknown outcome сначала reconciles исходный request и не разрешает новый execution.
+- **CHAT-P-LIFE-011 [MUST/P1]** — Обычное продолжение разговора означает новый UserMessage в active Branch. Отдельная кнопка «Continue generating» не является P1 blocker и не вводится без собственного request/attempt lifecycle contract.
+
 
 ### 4.2. Context Engine
 
-Chat обязан сохранять полную историю и отдельно строить ограниченный execution-context для конкретной модели.
+Chat сохраняет полную историю и отдельно строит ограниченный execution-context для конкретного resolved model snapshot.
 
-- **CHAT-P-CTX-001 [MUST/P1]** — Context builder использует только активную ветвь и выбранные terminal assistant attempts; failed/interrupted partial не выдаются модели как подтверждённые ответы без явной политики.
-- **CHAT-P-CTX-002 [MUST/P1]** — Переключение модели внутри диалога не уничтожает историю. Перед каждым submit заново проверяются context limit, modality compatibility и доступность модели.
-- **CHAT-P-CTX-003 [MUST/P1]** — При меньшем context window новой модели сервер сокращает execution-context, но не удаляет сохранённую историю.
-- **CHAT-P-CTX-004 [MUST/P1]** — Context budget резервирует место под ответ и учитывает текст, структурированные источники, вложения и tool results.
-- **CHAT-P-CTX-005 [SHOULD/P1]** — При необходимости длинные разговоры используют серверную summarization/reduction policy с provenance, но summary не заменяет исходную историю.
+- **CHAT-P-CTX-001 [MUST/P1]** — Context builder использует только active Branch и выбранные terminal AssistantAttempts; failed/unknown/partial не выдаются модели как подтверждённая assistant truth без явной recovery policy.
+- **CHAT-P-CTX-002 [MUST/P1]** — Переключение модели внутри диалога не уничтожает историю. Перед каждым submit заново проверяются context limit, modality/tool compatibility, effective access и billing eligibility.
+- **CHAT-P-CTX-003 [MUST/P1]** — При меньшем context window новой модели сервер детерминированно сокращает только execution-context; persisted history не переписывается и не удаляется.
+- **CHAT-P-CTX-004 [MUST/P1]** — Context budget резервирует output budget и считает текст, structured sources, file excerpts, attachments и tool results по model-specific tokenizer либо по versioned conservative estimator с safety margin; выбранный calculator/version входит в execution snapshot.
+- **CHAT-P-CTX-005 [SHOULD/P1]** — Для длинных разговоров допускается server-owned summarization/reduction, но summary не заменяет исходную историю.
+- **CHAT-P-CTX-006 [MUST/P1]** — Нормативный selection order: mandatory System/Product policy → current UserMessage и обязательные зависимости текущего turn → selected terminal AssistantAttempts и связанные turns от новых к старым → versioned summary/reduction старого допустимого prefix. Если mandatory set + reserved output не помещаются, request отклоняется до provider call.
+- **CHAT-P-CTX-007 [MUST/P1]** — Summary имеет identity/version, source-range/provenance и policy-version. Он invalidated, если Edit/Branch меняет его source prefix, меняется selected attempt внутри source range, меняется referenced tool/file/source result либо policy-version требует rebuild.
+- **CHAT-P-CTX-008 [MUST/P1]** — Current-turn attachment/tool requirement нельзя молча отбросить при switch на incapable model: admission блокируется либо предлагает compatible effective model. Historical unsupported binary/provider payload не передаётся новой модели; допускаются только поддержанные normalized derived text/evidence с provenance.
+- **CHAT-P-CTX-009 [MUST/P1]** — Обязательные fixtures включают `128k → 32k`, vision-capable → text-only, tool-capable → tool-incapable и смену provider. Во всех случаях history сохраняется, context selection и отказ/сокращение воспроизводимы по одному policy-version.
 
 ### 4.3. Response Formatting Contract
 
@@ -120,16 +128,16 @@ Renderer принадлежит IZO ASA, а не модели или provider.
 - **CHAT-P-RENDER-005 [MUST/P1]** — Final render и render после reload семантически эквивалентны исходному сохранённому Markdown/parts.
 - **CHAT-P-RENDER-006 [MUST/P1]** — Автопрокрутка следует за потоком только пока пользователь находится у конца; чтение старого текста не перехватывается.
 
+
 ### 4.5. Actions и clipboard
 
-- **CHAT-P-ACT-001 [MUST/P1]** — Assistant message: Copy, Copy Markdown, Regenerate, feedback; branch/continue action доступно там, где поддержана ветка.
-- **CHAT-P-ACT-002 [MUST/P1]** — User message: Copy и Edit-as-new-branch.
-- **CHAT-P-ACT-003 [MUST/P1]** — Code/config block имеет отдельный Copy exact content.
-- **CHAT-P-ACT-004 [MUST/P1]** — Copy whole answer формирует clipboard из нормализованного message, а не копирует DOM с toolbar/иконками. Минимум `text/plain`; rich-capable browser также получает чистый `text/html`.
-- **CHAT-P-ACT-005 [MUST/P1]** — Copy Markdown возвращает канонический Markdown без UI-shell.
+- **CHAT-P-ACT-001 [MUST/P1]** — Assistant message имеет Copy, Copy Markdown и Regenerate; branch/attempt selector/action доступен, когда у turn есть альтернативы.
+- **CHAT-P-ACT-002 [MUST/P1]** — User message имеет Copy и Edit-as-new-branch.
+- **CHAT-P-ACT-003 [MUST/P1]** — Code/config block имеет отдельный Copy exact source без визуального toolbar, line numbers или normalization содержимого.
+- **CHAT-P-ACT-004 [MUST/P1]** — Copy whole answer сериализует normalized message model, а не DOM: всегда `text/plain`, а rich-capable browser также получает sanitized `text/html` без toolbar/button/hidden UI.
+- **CHAT-P-ACT-005 [MUST/P1]** — Copy Markdown возвращает canonical Markdown как `text/markdown` и `text/plain` fallback; serialized source не зависит от текущего DOM/render library.
 - **CHAT-P-ACT-006 [SHOULD/P1]** — Таблица может дополнительно предлагать «Copy table»/CSV export, если это не усложняет основной renderer.
-
----
+- **CHAT-P-ACT-007 [SHOULD/P1]** — Feedback может быть добавлен отдельным bounded contract. До определения storage/privacy/abuse semantics он не блокирует P1.
 
 ## 5. Composer
 
@@ -148,27 +156,37 @@ Renderer принадлежит IZO ASA, а не модели или provider.
 
 «Chat принимает файлы» означает: поддержанный файл можно загрузить как private owned asset; система валидирует тип и выбирает разрешённый parser/capability. Неизвестный формат может быть сохранён/скачан, но не выдаётся за успешно проанализированный.
 
+
 ### 6.2. Обязательный входной набор P2
 
-| Класс | P2 minimum |
-| --- | --- |
-| Images | PNG, JPEG, WebP |
-| Documents | PDF, DOCX, TXT, MD, HTML |
-| Spreadsheets | XLSX, CSV, TSV |
-| Structured text | JSON, XML, YAML |
-| Source code | текстовые исходники по allowlist |
-| Audio | минимум один browser-friendly upload format + ASR path |
-| Video | upload/store/metadata обязательно; глубокий анализ MAY до отдельной video-analysis capability |
-| Legacy/complex formats | MAY; не blocker P2 |
+P2 support описывается по операциям, а не фразой «формат поддерживается». `MUST card` означает безопасную file-card presentation; `P3` означает, что операция не является P2 blocker.
+
+| Формат | Upload | Store | Preview P2 | Extract P2 | Analyze P2 | Edit | Generate |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| PNG/JPEG/WebP | MUST | MUST | MUST inline | metadata MAY | MUST через effective vision path | P3 image-edit | P3 |
+| PDF | MUST | MUST | MUST card; page preview MAY | MUST pages/text/structure | MUST | DEFERRED | P3 |
+| DOCX | MUST | MUST | MUST card | MUST paragraphs/tables/relationships | MUST | DEFERRED | P3 |
+| XLSX | MUST | MUST | MUST card | MUST workbook/sheet/range/formula facts | MUST | DEFERRED | P3 |
+| CSV/TSV | MUST | MUST | MUST card | MUST rows/columns with bounded typing | MUST | DEFERRED | P3 |
+| TXT/MD | MUST | MUST | MUST card; safe text preview MAY | MUST text | MUST | DEFERRED | P3 |
+| HTML | MUST | MUST | MUST card; active preview запрещён | MUST sanitized text/structure | MUST | DEFERRED | P3 |
+| JSON | MUST | MUST | MUST card | MUST bounded parsed structure | MUST | DEFERRED | P3 |
+| XML/YAML | MUST | MUST | MUST card | MUST safe bounded parsed structure | MUST | DEFERRED | P3 |
+| Source files allowlist | MUST | MUST | MUST card; safe text preview MAY | MUST text/metadata | MUST | DEFERRED | P3 |
+| Audio: минимум один browser-friendly format | MUST | MUST | MUST safe player/card | MUST ASR transcript + segments | MUST по transcript/approved audio capability | DEFERRED | post-V1 generation |
+| Video | SHOULD | SHOULD | SHOULD metadata/card | metadata SHOULD | deep analysis DEFERRED | DEFERRED | DEFERRED |
+
+Video upload/store/metadata не блокирует P2: он становится отдельным bounded package, если у Chat Core появляется подтверждённый use-case.
 
 - **CHAT-P-FILE-001 [MUST/P2]** — Attachment identity — `asset_id`; base64/object key/provider URL не являются identity сообщения.
-- **CHAT-P-FILE-002 [MUST/P2]** — Picker/paste/drop используют единую validation pipeline и одинаковые лимиты.
-- **CHAT-P-FILE-003 [MUST/P2]** — Image получает inline preview; другие файлы получают file card с именем, типом, размером и status.
+- **CHAT-P-FILE-002 [MUST/P2]** — Picker/paste/drop используют единую server-owned validation pipeline и одинаковые лимиты.
+- **CHAT-P-FILE-003 [MUST/P2]** — Image получает inline preview; другие P2 files получают file card с именем, trusted type/status, размером и доступным action.
 - **CHAT-P-FILE-004 [MUST/P2]** — Preview/download после reload проходит через authenticated Media delivery.
-- **CHAT-P-FILE-005 [MUST/P2]** — PDF/DOCX/XLSX/CSV имеют валидированный extraction path; structure не должна без необходимости превращаться в один неразмеченный текст.
-- **CHAT-P-FILE-006 [MUST/P2]** — Audio проходит через принятую ASR capability и сохраняет связь transcript ↔ source asset.
+- **CHAT-P-FILE-005 [MUST/P2]** — PDF/DOCX/XLSX/CSV и остальные форматы, помеченные MUST Extract в matrix, имеют валидированный extraction path; структура не превращается без необходимости в один неразмеченный текст.
+- **CHAT-P-FILE-006 [MUST/P2]** — Audio проходит через принятую ASR capability и сохраняет transcript ↔ source asset/segment provenance.
 - **CHAT-P-FILE-007 [MUST/P2]** — Unsupported analysis показывает честное состояние «файл загружен, анализ этого формата пока недоступен».
-- **CHAT-P-FILE-008 [MUST/P2]** — Extracted context сохраняет provenance как минимум до asset и применимой page/sheet/section/segment координаты.
+- **CHAT-P-FILE-008 [MUST/P2]** — Extracted context сохраняет provenance как минимум до asset и применимой page/sheet/range/section/segment координаты.
+- **CHAT-P-FILE-009 [MUST/P2]** — Extension, filename и browser `Content-Type` считаются untrusted metadata. Server определяет trusted actual format по bounded allowlisted detection; declared/actual mismatch либо отклоняется, либо безопасно нормализуется. Parser выбирается только по server-owned detected type; parser/extractor network/external-resource fetch default-deny.
 
 ### 6.3. Sources/citations
 
@@ -220,6 +238,7 @@ Chat обязан возвращать реальный downloadable asset. Фр
 - **CHAT-P-MODEL-003 [MUST/P4]** — Discovery provider не публикует модель пользователям автоматически.
 - **CHAT-P-MODEL-004 [MUST/P4]** — Переключение модели в существующем thread перепроверяет context/modality/price/access перед submit.
 
+
 ### 8.2. Admin
 
 Администратор управляет продуктовой публикацией, а не просто «видит список API моделей».
@@ -232,7 +251,8 @@ Chat обязан возвращать реальный downloadable asset. Фр
 - **CHAT-P-ADMIN-002 [MUST/P4]** — Admin задаёт доступ по plan и, при необходимости, explicit account override.
 - **CHAT-P-ADMIN-003 [MUST/P4]** — Admin задаёт user-visible price/billing policy независимо от provider-reported raw cost.
 - **CHAT-P-ADMIN-004 [MUST/P4]** — Финансовые и privilege изменения имеют immutable audit trail и scoped permissions.
-- **CHAT-P-ADMIN-005 [MUST/P4]** — Effective availability вычисляется сервером с учётом account state, publication, entitlement, override, credential/provider health, modality и billing eligibility.
+- **CHAT-P-ADMIN-005 [MUST/P4]** — Effective availability вычисляется ровно одной server-side authority. Hard-deny envelope: retired/disabled/unpublished product model, restricted account, unavailable provider/credential, incompatible capability/modality и billing-ineligible state запрещают admission и не могут быть преодолены user override, plan override или frontend state. Plan/account override может только дополнительно сузить/разрешить доступ внутри глобально published+enabled envelope; frontend получает готовую effective projection, а не вычисляет её.
+
 
 ### 8.3. Daily allowance и Premium balance
 
@@ -241,15 +261,38 @@ Chat обязан возвращать реальный downloadable asset. Фр
 - **Daily allowance** — периодически выдаваемый/сбрасываемый ресурс по plan policy.
 - **Premium balance** — сохраняемый пополняемый баланс для premium operations.
 
-- **CHAT-P-SPEND-001 [MUST/P4]** — Server Spend Authority атомарно решает, разрешена ли операция и из какого ресурса она оплачивается.
-- **CHAT-P-SPEND-002 [MUST/P4]** — Поддерживаются политики минимум: `FREE`, `DAILY_ONLY`, `PREMIUM_ONLY`, `DAILY_THEN_PREMIUM`, `BYOK`.
-- **CHAT-P-SPEND-003 [MUST/P4]** — Для `DAILY_THEN_PREMIUM`: если daily недостаточно и потребуется premium, пользователь получает quote/confirmation, если у него нет явной opt-in policy на автодоплату.
-- **CHAT-P-SPEND-004 [MUST/P4]** — `BYOK` означает, что provider charge идёт на ключ пользователя; отдельное списание IZO premium разрешено только если продуктовая цена явно это предусматривает и показана пользователю.
-- **CHAT-P-SPEND-005 [MUST/P4]** — Paid platform execution использует reserve/settle/release/reconcile semantics и стабильный operation/request ID.
-- **CHAT-P-SPEND-006 [MUST/P4]** — Provider input/output tokens/cost facts не называются пользовательскими credits.
-- **CHAT-P-SPEND-007 [MUST/P4]** — UI показывает Daily allowance и Premium balance раздельно и не обещает нулевую стоимость при unknown outcome.
+Server Spend Authority возвращает логический `FundingPlan`:
 
----
+```text
+FundingPlan
+├─ sources[]              # resource + authorized/reserved amount
+├─ settlement_rule
+├─ confirmation_required
+├─ provider_payer         # platform | user | none
+└─ platform_fee           # explicit separate line item or none
+```
+
+Нормативные политики:
+
+| Policy | Funding semantics |
+| --- | --- |
+| `FREE` | Нет Daily/Premium debit и отдельной user charge; operation имеет нулевую product price. |
+| `PLATFORM_FUNDED` | Provider/runtime cost оплачивает платформа; user Daily/Premium не списываются. |
+| `DAILY_ONLY` | Daily должен покрывать всю product price; иначе deny. |
+| `PREMIUM_ONLY` | Premium reservation покрывает всю product price. |
+| `DAILY_THEN_PREMIUM` / `DAILY_FIRST` | Daily расходуется первым, Premium покрывает ровно shortfall. Пример: daily=3, price=5 → reserve/claim daily 3 + premium 2. Premium shortfall требует quote/confirmation, если нет явной user opt-in policy. |
+| `MIXED` | Разбиение источников заранее задаётся versioned product policy/quote; browser/model не придумывают split. Любая Premium часть проходит свою confirmation policy. |
+| `BYOK` | `provider_payer=user`; provider charge идёт на credential/account пользователя. Daily/Premium debit по умолчанию отсутствует. Допустимый `platform_fee` — отдельная явно показанная строка с собственным FundingPlan; он не маскируется под provider cost. |
+
+Для всех non-FREE policies admission выполняет атомарный authorize/claim-or-reserve всех требуемых user resources либо ничего. Settle фиксирует доказанный фактический product charge в пределах принятого quote/policy; release освобождает неиспользованный reserve/claim по правилам соответствующего resource. Unknown external outcome удерживает затронутые provisional claims/reservations в reconcile state и запрещает blind retry до разрешения outcome; нулевой cost не подставляется вместо unknown.
+
+- **CHAT-P-SPEND-001 [MUST/P4]** — Server Spend Authority атомарно решает admission и формирует FundingPlan; Chat UI, provider adapter и модель не выбирают источник средств.
+- **CHAT-P-SPEND-002 [MUST/P4]** — Поддерживаются минимум `FREE`, `PLATFORM_FUNDED`, `DAILY_ONLY`, `PREMIUM_ONLY`, `DAILY_THEN_PREMIUM/DAILY_FIRST`, `MIXED`, `BYOK` с semantics из таблицы.
+- **CHAT-P-SPEND-003 [MUST/P4]** — `DAILY_THEN_PREMIUM` использует normative split daily-first + premium-shortfall и quote/confirmation перед Premium shortfall без user opt-in.
+- **CHAT-P-SPEND-004 [MUST/P4]** — `BYOK` не создаёт скрытый Premium debit. Любой platform fee отделён от provider cost, показан до execution и проходит собственную funding/confirmation policy.
+- **CHAT-P-SPEND-005 [MUST/P4]** — Paid/platform-funded execution использует stable operation/request ID и соответствующие resource primitives `reserve/claim → settle/release → reconcile`; existing Credits reserve/settle/release сохраняются, а persistence Daily выбирается ADR.
+- **CHAT-P-SPEND-006 [MUST/P4]** — Provider input/output tokens/cost facts не называются пользовательскими credits.
+- **CHAT-P-SPEND-007 [MUST/P4]** — UI показывает Daily allowance и Premium balance раздельно, показывает provider payer/platform fee где применимо и не обещает нулевую стоимость при unknown outcome.
 
 ## 9. P5 — Release Acceptance
 
@@ -260,12 +303,14 @@ Chat обязан возвращать реальный downloadable asset. Фр
 - **CHAT-P-SEC-003 [MUST/P5]** — Raw chain-of-thought/provider reasoning не является пользовательским output contract.
 - **CHAT-P-SEC-004 [MUST/P5]** — Неподдержанный/опасный файл не исполняется автоматически.
 
+
 ### 9.2. Performance/accessibility
 
-- **CHAT-P-NFR-001 [MUST/P5]** — Browser acceptance включает Chromium/Edge-compatible, Firefox и WebKit/Safari-compatible engine; mobile touch/keyboard сценарии обязательны.
-- **CHAT-P-NFR-002 [MUST/P5]** — Длинный thread не требует полного reparsing/re-render всего разговора на каждый token.
+- **CHAT-P-NFR-001 [MUST/P5]** — Automated compatibility suite включает Chromium, Firefox и WebKit. Real compatibility target отдельно включает desktop Chrome/Edge, Firefox, Safari где есть поддерживаемая target environment, а также Android Chrome и iOS Safari. Реальный mobile acceptance проверяет virtual keyboard, safe area, composer, scroll, file picker, clipboard, download и attachments; viewport emulation не считается заменой real mobile browser proof. Недоступный обязательный target = `NOT_RUN/BLOCKED`, не `PASS`.
+- **CHAT-P-NFR-002 [MUST/P5]** — Длинный thread не требует полного reparsing/re-render всего разговора на каждый token; platform/UI overhead измеряется отдельно от provider queue/TTFT/generation latency.
 - **CHAT-P-NFR-003 [MUST/P5]** — Все controls имеют accessible name, keyboard navigation и visible focus в двух темах.
-- **CHAT-P-NFR-004 [MUST/P5]** — 320/390/768/1024/1440/1920 являются обязательными geometry checkpoints; QHD/UHD — smoke, а не замена browser-engine matrix.
+- **CHAT-P-NFR-004 [MUST/P5]** — 320/390/768/1024/1440/1920 являются обязательными geometry checkpoints; QHD/UHD — smoke, а не замена browser-engine/real-device matrix.
+- **CHAT-P-NFR-005 [MUST/P5]** — До P1 acceptance владелец фиксирует benchmark profile и численные thresholds, необходимые для streaming Chat; до этого соответствующий performance evidence = `BLOCKED`, а не произвольный PASS. Profile обязан задавать baseline device class, browser, thread/message size, stream rate, measurement points и p95/p99 там, где percentile применим. Минимально измеряются input responsiveness during streaming, chunk→render overhead, large-thread open, scroll stability, large code/table render и memory/DOM growth. P5 повторно проверяет утверждённый profile на release matrix; thresholds нельзя выдумывать implementer-ом ради PASS.
 
 ### 9.3. Functional vs portable acceptance
 

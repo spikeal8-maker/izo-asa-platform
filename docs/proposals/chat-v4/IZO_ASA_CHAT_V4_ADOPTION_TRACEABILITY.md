@@ -139,26 +139,66 @@ Snapshot не переносится в stable Product/Architecture/Maintenance 
 
 ---
 
-## 5. Requirement → owner traceability (initial)
+## 5. MUST-level requirement traceability
 
-| Product area | Stable owner | Existing issue / future package | Primary evidence |
-| --- | --- | --- | --- |
-| durable thread/request | ARCHITECTURE + Chat README | #87/#88 | PostgreSQL integration |
-| branch/edit/regenerate | PRODUCT + ARCHITECTURE | #87/#88/#139 update | branch/attempt tests |
-| context engine | ARCHITECTURE/AI_RUNTIME | #88 update | deterministic context cases |
-| renderer | UX + #222 | #140 | dedicated renderer browser suite |
-| clipboard/actions | UX | #139/#140 | serializer + browser clipboard |
-| composer/model selection | UX/AI_RUNTIME | #141 | E2E + request snapshot |
-| image input/vision | PRODUCT/AI_RUNTIME | current #236 + convergence | media→chat integration |
-| file ingestion | ARCHITECTURE | new bounded owner package | parser/provenance tests |
-| file generation | ARCHITECTURE | new tool/runtime package | structural file validation |
-| image generation/edit | PRODUCT/AI_RUNTIME | new tool package | Job/Media/version tests |
-| provider adapters | AI_RUNTIME | #88 / adapter packages | provider contract tests |
-| Admin model policy | ADMIN | catalog/admin package | permission/audit tests |
-| Daily/Premium/BYOK | PRODUCT + ARCHITECTURE | ADR + Credits/Entitlements package | financial/race/reconcile tests |
-| maintenance/cleanup | MAINTAINABILITY | every package + audits | check_change/check_docs/audit report |
+Каждый acceptance-blocking MUST ниже имеет разрешимую цепочку `Requirement → canonical authority → owner → product gate → test/evidence class → status`. Группировка допустима только для IDs с одинаковыми authority/owner/gate/evidence/status; разные gate разделены.
 
----
+Status `ADOPTION_PENDING` означает: requirement определён в review-кандидате, но ещё не перенесён/принят в canonical authority и не может считаться реализованным только из-за наличия этого PR.
+
+| Requirement IDs | Canonical authority after adoption | Owner | Product gate | Required test/evidence class | Status |
+| --- | --- | --- | --- | --- | --- |
+| `ARCH-ART-001`, `ARCH-ART-002`, `ARCH-ART-003`, `ARCH-ART-004`, `ARCH-ART-005` | docs/ARCHITECTURE.md | Computation/File Runtime | P3 | sandbox negative + generated-file validation | ADOPTION_PENDING |
+| `ARCH-BE-001`, `ARCH-BE-002`, `ARCH-BE-003`, `ARCH-BE-004`, `ARCH-BE-005` | docs/ARCHITECTURE.md + local Chat README | Chat backend ownership | owning P1–P4 gate | import/owner guard + service/repository tests | ADOPTION_PENDING |
+| `ARCH-CAT-001`, `ARCH-CAT-002`, `ARCH-CAT-003`, `ARCH-CAT-004`, `ARCH-CAT-005`, `ARCH-CAT-006` | docs/ADMIN.md + docs/AI_RUNTIME.md | Catalog / Effective Model Authority | P4 | discovery/publication/access/audit tests | ADOPTION_PENDING |
+| `ARCH-CTX-001`, `ARCH-CTX-002`, `ARCH-CTX-003`, `ARCH-CTX-004`, `ARCH-CTX-005`, `ARCH-CTX-006`, `ARCH-CTX-007` | docs/ARCHITECTURE.md + docs/AI_RUNTIME.md | Context Engine | P1 | deterministic context fixtures | ADOPTION_PENDING |
+| `ARCH-DOM-001`, `ARCH-DOM-002`, `ARCH-DOM-003` | docs/ARCHITECTURE.md | Domain ownership | owning P1–P4 gate + P5 final | architecture/import + cross-domain integration | ADOPTION_PENDING |
+| `ARCH-FE-001`, `ARCH-FE-002`, `ARCH-FE-003`, `ARCH-FE-004`, `ARCH-FE-005` | docs/ARCHITECTURE.md + local Chat README | Chat frontend ownership | owning P1–P4 gate | import/owner guard + nearest component/browser tests | ADOPTION_PENDING |
+| `ARCH-FILE-001`, `ARCH-FILE-002`, `ARCH-FILE-003`, `ARCH-FILE-004`, `ARCH-FILE-005`, `ARCH-FILE-006` | docs/ARCHITECTURE.md | File Processing | P2 | malicious/oversize/mime-spoof parser tests | ADOPTION_PENDING |
+| `ARCH-MIG-001`, `ARCH-MIG-002`, `ARCH-MIG-003` | docs/ARCHITECTURE.md + docs/MAINTAINABILITY.md | Bounded migration | each migration package + P5 final | characterization + diff/owner cleanup evidence | ADOPTION_PENDING |
+| `ARCH-MSG-001`, `ARCH-MSG-002`, `ARCH-MSG-003`, `ARCH-MSG-004`, `ARCH-MSG-005`, `ARCH-MSG-006`, `ARCH-MSG-007` | docs/ARCHITECTURE.md | Conversation Graph | P1 | PostgreSQL branch/attempt/request integration | ADOPTION_PENDING |
+| `ARCH-PART-001`, `ARCH-PART-002`, `ARCH-PART-003` | docs/ARCHITECTURE.md | Message Part registry | P1/P3 | versioned schema + unsupported-part tests | ADOPTION_PENDING |
+| `ARCH-PROV-001`, `ARCH-PROV-002`, `ARCH-PROV-003` | docs/AI_RUNTIME.md | Conversation Provider adapters | P4 | fake transport/provider contract tests | ADOPTION_PENDING |
+| `ARCH-RSP-001`, `ARCH-RSP-002`, `ARCH-RSP-003`, `ARCH-RSP-004` | docs/AI_RUNTIME.md + docs/UX.md | Response pipeline | P1 | response policy + serializer tests | ADOPTION_PENDING |
+| `ARCH-SEC-001`, `ARCH-SEC-002`, `ARCH-SEC-003`, `ARCH-SEC-004`, `ARCH-SEC-005` | docs/ARCHITECTURE.md | Security trust boundary | P2/P3/P5 | prompt-injection/sandbox/cross-account negative tests | ADOPTION_PENDING |
+| `ARCH-SPEND-001`, `ARCH-SPEND-002`, `ARCH-SPEND-003`, `ARCH-SPEND-004`, `ARCH-SPEND-005` | docs/ARCHITECTURE.md | Spend Authority | P4 | financial race/reconcile/mixed-source tests | ADOPTION_PENDING |
+| `ARCH-TEST-001`, `ARCH-TEST-002` | docs/ARCHITECTURE.md | Test architecture | each owning P1–P5 gate | required owner suites + exact-head CI/live evidence split | ADOPTION_PENDING |
+| `ARCH-TOOL-001`, `ARCH-TOOL-002`, `ARCH-TOOL-003`, `ARCH-TOOL-004`, `ARCH-TOOL-005` | docs/ARCHITECTURE.md + docs/AI_RUNTIME.md | Tool Orchestrator | P3/P4 | idempotency/confirmation/job handoff | ADOPTION_PENDING |
+| `CHAT-P-ACT-001`, `CHAT-P-ACT-002`, `CHAT-P-ACT-003`, `CHAT-P-ACT-004`, `CHAT-P-ACT-005` | docs/UX.md | Message actions / Clipboard | P1 | serializer unit + real browser clipboard | ADOPTION_PENDING |
+| `CHAT-P-ADMIN-001`, `CHAT-P-ADMIN-002`, `CHAT-P-ADMIN-003`, `CHAT-P-ADMIN-004`, `CHAT-P-ADMIN-005` | docs/ADMIN.md | Admin model authority | P4 | permission/CAS/audit/effective projection | ADOPTION_PENDING |
+| `CHAT-P-ART-001` | Issue #222 + docs/ARCHITECTURE.md | Artifact logical versions | P3 | artifact/version integration | ADOPTION_PENDING |
+| `CHAT-P-COMP-001`, `CHAT-P-COMP-002`, `CHAT-P-COMP-005`, `CHAT-P-COMP-006` | docs/UX.md + docs/AI_RUNTIME.md | Composer / model selection | P1 | browser E2E + request snapshot/admission | ADOPTION_PENDING |
+| `CHAT-P-COMP-003`, `CHAT-P-COMP-004` | docs/UX.md + docs/AI_RUNTIME.md | Composer / model selection | P2 | browser E2E + request snapshot/admission | ADOPTION_PENDING |
+| `CHAT-P-CTX-001`, `CHAT-P-CTX-002`, `CHAT-P-CTX-003`, `CHAT-P-CTX-004`, `CHAT-P-CTX-006`, `CHAT-P-CTX-007`, `CHAT-P-CTX-008`, `CHAT-P-CTX-009` | docs/ARCHITECTURE.md + docs/AI_RUNTIME.md | Context Engine | P1 | deterministic context/model-switch fixtures | ADOPTION_PENDING |
+| `CHAT-P-FILE-001`, `CHAT-P-FILE-002`, `CHAT-P-FILE-003`, `CHAT-P-FILE-004`, `CHAT-P-FILE-005`, `CHAT-P-FILE-006`, `CHAT-P-FILE-007`, `CHAT-P-FILE-008`, `CHAT-P-FILE-009` | docs/ARCHITECTURE.md | File Processing | P2 | parser/provenance/security integration | ADOPTION_PENDING |
+| `CHAT-P-FMT-001`, `CHAT-P-FMT-002`, `CHAT-P-FMT-003`, `CHAT-P-FMT-004`, `CHAT-P-FMT-005` | Issue #222 + docs/AI_RUNTIME.md | Response Formatting Policy | P1 | provider-neutral prompt/response contract tests | ADOPTION_PENDING |
+| `CHAT-P-GEN-001`, `CHAT-P-GEN-002`, `CHAT-P-GEN-003`, `CHAT-P-GEN-004`, `CHAT-P-GEN-005` | docs/ARCHITECTURE.md | Generated File Runtime | P3 | structural file validation + Media delivery | ADOPTION_PENDING |
+| `CHAT-P-IMG-001`, `CHAT-P-IMG-002`, `CHAT-P-IMG-003`, `CHAT-P-IMG-004` | Issue #222 + docs/AI_RUNTIME.md | Image capability flow | P3 | Job/Media/version/quote integration | ADOPTION_PENDING |
+| `CHAT-P-LIFE-001`, `CHAT-P-LIFE-002`, `CHAT-P-LIFE-003`, `CHAT-P-LIFE-004`, `CHAT-P-LIFE-005`, `CHAT-P-LIFE-006`, `CHAT-P-LIFE-007`, `CHAT-P-LIFE-008`, `CHAT-P-LIFE-009`, `CHAT-P-LIFE-010`, `CHAT-P-LIFE-011` | Issue #222 + docs/ARCHITECTURE.md | Conversation lifecycle | P1 | PostgreSQL lifecycle + browser recovery/idempotency | ADOPTION_PENDING |
+| `CHAT-P-MODEL-001`, `CHAT-P-MODEL-002`, `CHAT-P-MODEL-003`, `CHAT-P-MODEL-004` | docs/AI_RUNTIME.md + docs/ADMIN.md | Conversation model catalog | P4 | provider contract + effective-model tests | ADOPTION_PENDING |
+| `CHAT-P-NFR-001`, `CHAT-P-NFR-002`, `CHAT-P-NFR-003`, `CHAT-P-NFR-004`, `CHAT-P-NFR-005` | docs/UX.md + docs/MAINTAINABILITY.md | Release NFR | P5 | browser matrix + a11y + benchmark evidence | ADOPTION_PENDING |
+| `CHAT-P-RENDER-001`, `CHAT-P-RENDER-002`, `CHAT-P-RENDER-003`, `CHAT-P-RENDER-004`, `CHAT-P-RENDER-005`, `CHAT-P-RENDER-006` | docs/UX.md | Renderer | P1 | renderer fixtures + stream torture + browser | ADOPTION_PENDING |
+| `CHAT-P-SEC-001`, `CHAT-P-SEC-002`, `CHAT-P-SEC-003`, `CHAT-P-SEC-004` | docs/ARCHITECTURE.md + docs/AI_RUNTIME.md | Chat security boundary | P5 | cross-account + prompt-injection negative tests | ADOPTION_PENDING |
+| `CHAT-P-SPEND-001`, `CHAT-P-SPEND-002`, `CHAT-P-SPEND-003`, `CHAT-P-SPEND-004`, `CHAT-P-SPEND-005`, `CHAT-P-SPEND-006`, `CHAT-P-SPEND-007` | docs/PRODUCT.md + docs/ARCHITECTURE.md | Spend Authority | P4 | funding race/idempotency/reconcile tests | ADOPTION_PENDING |
+| `CHAT-P-SRC-001`, `CHAT-P-SRC-002`, `CHAT-P-SRC-003` | docs/ARCHITECTURE.md + docs/UX.md | Structured Sources | P2 | source provenance + renderer/browser | ADOPTION_PENDING |
+| `CHAT-P-UI-001`, `CHAT-P-UI-002`, `CHAT-P-UI-003`, `CHAT-P-UI-004` | Issue #222 + docs/UX.md | Chat UI/UX | P1 | browser geometry + a11y E2E | ADOPTION_PENDING |
+| `ENG-AUDIT-001` | docs/MAINTAINABILITY.md | Maintenance cadence | each owning P1–P5 package + P5 final | package delta / structural audit report | ADOPTION_PENDING |
+| `ENG-CLEAN-001`, `ENG-CLEAN-002`, `ENG-CLEAN-003` | docs/MAINTAINABILITY.md | Garbage cleanup | each owning P1–P5 package + P5 final | consumer proof + preserved coverage | ADOPTION_PENDING |
+| `ENG-DEP-001`, `ENG-DEP-002` | docs/MAINTAINABILITY.md | Dependency hygiene | each owning P1–P5 package + P5 final | dependency/license/bundle/security checks | ADOPTION_PENDING |
+| `ENG-DOC-001`, `ENG-DOC-002`, `ENG-DOC-003`, `ENG-DOC-004`, `ENG-DOC-005` | docs/MAINTAINABILITY.md + docs/DOCS_SYSTEM.md | Documentation architecture | each owning P1–P5 package + P5 final | check_docs + context route checks | ADOPTION_PENDING |
+| `ENG-FILE-001`, `ENG-FILE-002`, `ENG-FILE-003`, `ENG-FILE-004` | docs/MAINTAINABILITY.md | File budgets | each owning P1–P5 package + P5 final | architecture size/headroom checks | ADOPTION_PENDING |
+| `ENG-MOD-001`, `ENG-MOD-002`, `ENG-MOD-003` | docs/MAINTAINABILITY.md | Module ownership | each owning P1–P5 package + P5 final | import/owner review + nearest tests | ADOPTION_PENDING |
+| `ENG-PERF-001`, `ENG-PERF-002` | docs/MAINTAINABILITY.md + docs/UX.md | Performance acceptance | each owning P1–P5 package + P5 final | versioned benchmark profile + exact-head report | ADOPTION_PENDING |
+| `ENG-SPLIT-001`, `ENG-SPLIT-002`, `ENG-SPLIT-003` | docs/MAINTAINABILITY.md | Split-before-growth | each owning P1–P5 package + P5 final | characterization tests + size check | ADOPTION_PENDING |
+| `ENG-TEMP-001`, `ENG-TEMP-002` | docs/MAINTAINABILITY.md | Temporary code lifecycle | each owning P1–P5 package + P5 final | owner/expiry audit | ADOPTION_PENDING |
+| `ENG-TEST-001`, `ENG-TEST-002` | docs/MAINTAINABILITY.md | Test hygiene | each owning P1–P5 package + P5 final | coverage mapping + quarantine owner/expiry | ADOPTION_PENDING |
+
+### 5.1. Coverage invariant
+
+- В таблице присутствуют все MUST IDs Product/Architecture/Engineering review pack ровно один раз.
+- SHOULD/MAY/DEFERRED не маскируются как acceptance blockers.
+- При добавлении/удалении/смене gate любого MUST эта таблица обновляется тем же docs package.
+- Adoption в canonical docs меняет status группы на `ADOPTED`; implementation status меняется только при привязанном test/evidence, а не по заявлению.
+- Конкретные test paths/evidence IDs фиксируются при создании bounded implementation package; до этого test/evidence class задаёт обязательный тип доказательства и не считается `PASS`.
 
 ## 6. Current structural pressure
 

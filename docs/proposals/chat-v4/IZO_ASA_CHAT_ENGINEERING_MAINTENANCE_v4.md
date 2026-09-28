@@ -224,7 +224,8 @@ Audit выполняется немедленно, независимо от cad
 
 ---
 
-## 10. Performance debt
+
+## 10. Performance debt и измеримая acceptance
 
 Каждый Chat Structural Audit проверяет:
 
@@ -236,7 +237,18 @@ Audit выполняется немедленно, независимо от cad
 - oversized DOM history без pagination/virtualization;
 - long synchronous parser work в main UI thread.
 
-Оптимизация делается по измерению/профилю, а не заранее придуманным микрооптимизациям.
+Chat performance evidence разделяет:
+
+```text
+provider queue / TTFT / generation latency
+!=
+IZO ASA platform + browser rendering overhead
+```
+
+До P1 acceptance владелец фиксирует versioned benchmark profile с численными thresholds; implementer не придумывает их после измерения ради PASS. Profile содержит baseline device class, browser, thread/message size, stream rate, measurement points и p95/p99 там, где percentile имеет смысл. Минимальные измерения: input responsiveness during streaming, chunk→render overhead, large-thread open, scroll stability, large code/table render и memory/DOM growth. До owner-approved numeric profile соответствующий performance gate = `BLOCKED`.
+
+**ENG-PERF-001 [MUST]** — benchmark report отдельно показывает provider latency и platform/UI overhead и связывается с exact build/source checkpoint.  
+**ENG-PERF-002 [MUST]** — performance threshold нельзя ослаблять после failure без отдельного owner/architecture decision с причиной; оптимизация делается по profile/measurement, не по необоснованным микрооптимизациям.
 
 ---
 
