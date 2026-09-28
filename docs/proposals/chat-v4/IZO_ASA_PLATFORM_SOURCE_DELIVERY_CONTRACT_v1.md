@@ -24,7 +24,7 @@ IZO ASA развивается **source-first** и **Chat-first**.
 
 ## 2. Нормативная иерархия источников
 
-Для любого нового package агент проверяет источники **в этом порядке**:
+Каждый package имеет `SOURCE_AUDIT`, но глубина audit пропорциональна semantic scope. Когда требуется поиск источников, агент идёт **в этом порядке**:
 
 1. действующие canonical owners target-репозитория;
 2. фактический код/tests target-репозитория на fresh source SHA;
@@ -53,14 +53,14 @@ implementer proposal
 
 ### Requirements
 
-- **PLAT-SRC-001 [MUST]** — до product/code design package содержит source audit по иерархии выше.
-- **PLAT-SRC-002 [MUST]** — отсутствие поиска в donor/existing target нельзя выдавать за «решения нет».
+- **PLAT-SRC-001 [MUST]** — каждый package до product/code design содержит `SOURCE_AUDIT`; его режим и глубина пропорциональны semantic scope по §3.
+- **PLAT-SRC-002 [MUST]** — применимый donor/existing target нельзя игнорировать и затем выдавать отсутствие поиска за «решения нет»; для доказанно semantics-neutral `BOUNDED_LOCAL` donor разрешено отметить `NOT_REQUIRED` только с причиной по §3.
 - **PLAT-SRC-003 [MUST]** — implementer не выбирает новую observable product semantics молча; неизвестное решение маркируется `NEW_DECISION_REQUIRED`.
 - **PLAT-SRC-004 [MUST]** — `NEW_DECISION_REQUIRED` блокирует реализацию затронутой semantics до owner/approved-contract decision; не блокирует независимые уже определённые части package.
-- **PLAT-SRC-005 [MUST]** — source audit фиксирует repository, exact SHA/ref, paths/symbols, найденную semantics, conflicts и принятое решение.
+- **PLAT-SRC-005 [MUST]** — source audit фиксирует обязательные поля выбранного режима, применимые repository/exact SHA/ref/paths/symbols, найденную semantics, conflicts и принятое решение так, чтобы audit можно было повторить из GitHub.
 - **PLAT-SRC-006 [MUST]** — внешний ChatGPT/Claude/другой продукт может быть исследовательским benchmark, но не живой нормативной зависимостью. Выбранное поведение фиксируется в IZO ASA contract.
 - **PLAT-SRC-007 [MUST]** — production data, users, secrets, credentials и private runtime state никогда не используются как donor-content для переноса.
-- **PLAT-SRC-008 [MUST]** — старый snapshot/SHA не считается fresh автоматически; package получает текущий donor/target SHA перед сравнением.
+- **PLAT-SRC-008 [MUST]** — fresh target SHA обязателен для любого `SOURCE_AUDIT`; fresh donor SHA обязателен, когда donor comparison/reuse входит в audit scope. Старый snapshot/SHA не считается fresh автоматически.
 - **PLAT-SRC-009 [MUST]** — если current target уже имеет более безопасный/новый owner, donor не создаёт второй source of truth.
 - **PLAT-SRC-010 [MUST]** — handoff хранит source-audit/provenance в GitHub, чтобы следующий агент мог повторить решение без истории чата.
 
@@ -68,21 +68,55 @@ implementer proposal
 
 ## 3. Обязательный SOURCE_AUDIT до реализации
 
-Минимальный machine/human-readable отчёт package:
+Каждый package имеет ровно один явно указанный режим source audit:
+
+```text
+SOURCE_AUDIT_MODE
+FULL
+```
+
+или:
+
+```text
+SOURCE_AUDIT_MODE
+BOUNDED_LOCAL
+```
+
+### 3.1. `FULL`
+
+`FULL` обязателен, если package меняет хотя бы одно из следующего:
+
+- observable product behavior;
+- product/domain capability;
+- domain/data ownership;
+- security/auth semantics;
+- Credits/pricing/spend semantics;
+- provider semantics;
+- storage/lifecycle semantics;
+- publication/privacy behavior;
+- major UX workflow;
+- dedicated product surface;
+- donor reuse.
+
+Для product/domain work в Admin, Image, Gallery и Feed всегда используется `FULL`, включая требования `PLAT-DEL-010`.
+
+Минимальный machine/human-readable отчёт:
 
 ```text
 SOURCE_AUDIT
+SOURCE_AUDIT_MODE
+FULL
 
 TARGET_REPO
 TARGET_SHA
 TARGET_CANONICAL_OWNERS
-TARGET_EXISTING_CODE
-TARGET_EXISTING_TESTS
+TARGET_CODE
+TARGET_TESTS
 
 DONOR_REPO
 DONOR_SHA
 DONOR_PATHS
-DONOR_BEHAVIOR_FOUND
+DONOR_BEHAVIOR
 
 EXTERNAL_REFERENCES
 <none or exact references>
@@ -99,6 +133,51 @@ NEW_DECISIONS_REQUIRED
 IMPLEMENTATION_SCOPE
 <only gaps that remain>
 ```
+
+### 3.2. `BOUNDED_LOCAL`
+
+`BOUNDED_LOCAL` допустим только если одновременно истинны все условия:
+
+- change small/local;
+- observable semantics unchanged;
+- domain/owner boundary unchanged;
+- security/auth unchanged;
+- pricing/Credits/spend unchanged;
+- storage/persistence unchanged;
+- donor reuse отсутствует;
+- canonical target owner уже однозначно определяет поведение.
+
+Минимальный отчёт:
+
+```text
+SOURCE_AUDIT
+SOURCE_AUDIT_MODE
+BOUNDED_LOCAL
+
+TARGET_SHA
+TARGET_OWNER
+TARGET_PATHS
+NEAREST_TESTS
+
+OBSERVABLE_SEMANTICS_CHANGED
+NO
+
+OWNER_BOUNDARY_CHANGED
+NO
+
+DONOR_RESEARCH
+NOT_REQUIRED
+
+DONOR_SHA
+NOT_REQUIRED
+
+REASON
+semantics-preserving local change
+```
+
+`DONOR_RESEARCH = NOT_REQUIRED` и `DONOR_SHA = NOT_REQUIRED` допустимы только при выполнении всех условий `BOUNDED_LOCAL` и с указанной причиной. Такой режим означает, что audit остановился на достаточном canonical target owner/code/tests; он не разрешает придумывать новое behavior.
+
+Если в `BOUNDED_LOCAL` обнаружены new observable semantics, ambiguous owner, product decision или donor reuse proposal, bounded mode прекращается. Дальше package обязан перейти в `FULL` либо вернуть `NEW_DECISION_REQUIRED` для затронутой semantics.
 
 Если `NEW_DECISIONS_REQUIRED != none`, агент не должен «закрыть» эти решения кодом.
 
@@ -437,14 +516,16 @@ DC1 — 3D capability through Chat
 
 Package не может получить technical/product PASS, если:
 
-1. отсутствует `SOURCE_AUDIT`;
-2. применимый donor/target source проигнорирован без причины;
-3. есть скрытый `NEW_DECISION_REQUIRED`;
-4. donor code скопирован без classification/provenance;
-5. donor behavior конфликтует с approved target contract;
-6. specialist tab создаёт второй Jobs/Media/Credits/Catalog/provider owner;
-7. status «готово» не различает VISIBLE/FUNCTIONAL/ACCEPTED;
-8. handoff не позволяет другому агенту восстановить source reasoning из GitHub.
+1. отсутствует `SOURCE_AUDIT` либо не указан `SOURCE_AUDIT_MODE`;
+2. выбранный `FULL` или `BOUNDED_LOCAL` не соответствует semantic scope §3;
+3. `BOUNDED_LOCAL` заявляет donor `NOT_REQUIRED` без выполнения всех bounded-условий и причины;
+4. применимый donor/target source проигнорирован без причины;
+5. есть скрытый `NEW_DECISION_REQUIRED`;
+6. donor code скопирован без classification/provenance;
+7. donor behavior конфликтует с approved target contract;
+8. specialist tab создаёт второй Jobs/Media/Credits/Catalog/provider owner;
+9. status «готово» не различает VISIBLE/FUNCTIONAL/ACCEPTED;
+10. handoff не позволяет другому агенту восстановить source reasoning из GitHub.
 
 ---
 
@@ -474,7 +555,12 @@ Proposal snapshot/donor SHA остаются provenance и не перенося
 | `PLAT-VIS-001..004` | PRODUCT | product status/acceptance report | ADOPTION_PENDING |
 | `PLAT-DEL-001..003` | PRODUCT + AI_RUNTIME reference | delivery dependency/acceptance review | ADOPTION_PENDING |
 | `PLAT-DEL-004` | PRODUCT + ADMIN | P4/P5 admin acceptance evidence | ADOPTION_PENDING |
-| `PLAT-DEL-005..010` | PRODUCT/ARCHITECTURE/profile owner | boundary + product acceptance | ADOPTION_PENDING |
+| `PLAT-DEL-005` | PRODUCT + ARCHITECTURE | shared Media / Publication ownership boundary | ADOPTION_PENDING |
+| `PLAT-DEL-006` | PRODUCT | Feed FUNCTIONAL semantics / real-backend acceptance | ADOPTION_PENDING |
+| `PLAT-DEL-007` | PRODUCT | dedicated surface acceptance gate | ADOPTION_PENDING |
+| `PLAT-DEL-008` | PRODUCT | preview / VISIBLE / ACCEPTED semantics review | ADOPTION_PENDING |
+| `PLAT-DEL-009` | ARCHITECTURE | duplicate-domain-owner prohibition / architecture boundary evidence | ADOPTION_PENDING |
+| `PLAT-DEL-010` | MAINTAINABILITY | donor SOURCE_AUDIT policy; provenance/handoff evidence is recorded through DOCS_SYSTEM without creating a second normative owner | ADOPTION_PENDING |
 | `PLAT-DEL-011..012` | PRODUCT + DOCS_SYSTEM | delivery report/docs review | ADOPTION_PENDING |
 
 No platform requirement in this document is `IMPLEMENTED` merely because this proposal exists.
