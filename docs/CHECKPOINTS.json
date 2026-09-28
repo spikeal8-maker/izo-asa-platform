@@ -77,6 +77,23 @@
         "Review Source": 36321484335
       }
     },
+    "CHAT-VISION-001": {
+      "base_head": "67233e203436f56b77add709e04f01610ac462f3",
+      "independent_review": "unavailable",
+      "owner_actor": "spikeal8-maker",
+      "owner_waiver": true,
+      "owner_waiver_reason": "Independent read-only technical challenge review returned APPROVE with no technical blockers for exact SHA 2a2995ee47c8c369b512c1328f02d3eb662775a3. Structured independent GitHub review is unavailable because the authenticated GitHub actor is the repository owner.",
+      "owner_waiver_source": "2a2995ee47c8c369b512c1328f02d3eb662775a3",
+      "source_head": "2a2995ee47c8c369b512c1328f02d3eb662775a3",
+      "tested_merge_tree": "1a76aa3d442bef90111973e71a80990ed2a77348",
+      "type": "pr_merge_tree",
+      "verified_pr": 236,
+      "workflows": {
+        "Dependency Security": 36400306538,
+        "Foundation CI": 36400306529,
+        "Review Source": 36400306666
+      }
+    },
     "DOC-004": {
       "head": "001edb9953d642f4d06453505809c20512f4b2b3",
       "workflows": {

@@ -9,17 +9,17 @@
       "pr": 22,
       "state": "technical_ci_pass_draft"
     },
-    "working_branch": "codex/chat-vision-001",
+    "working_branch": "docs/chat-v4-adoption-001",
     "provider_direction": "fal.ai / fal-ai/flux-2/klein/4b",
     "merge_deployed": false,
     "current_package_base": {
-      "branch": "codex/chat-parity-001",
-      "sha": "67233e203436f56b77add709e04f01610ac462f3",
+      "branch": "codex/chat-vision-001",
+      "sha": "2a2995ee47c8c369b512c1328f02d3eb662775a3",
       "state": "verified_pr_merge_tree_checkpoint"
     },
     "next_branch_source": "verified_working_head"
   },
-  "active_package": "CHAT-VISION-001",
+  "active_package": "CHAT-V4-ADOPTION-001",
   "next_package": null,
   "rules": {
     "one_active_package": true,
@@ -35,7 +35,22 @@
     "near_limit_files_must_not_grow_without_split": true,
     "periodic_full_agent_economy_audit_every_product_packages": 5
   },
-  "parallel_lineages": [{"id":"OPENROUTER-LINEAGE","status":"reconciled_reference_only","do_not_continue_automatically":true,"prs":[15,16,17,19,20,21],"summary":"Reference only; never a continuation base."}],
+  "parallel_lineages": [
+    {
+      "id": "OPENROUTER-LINEAGE",
+      "status": "reconciled_reference_only",
+      "do_not_continue_automatically": true,
+      "prs": [
+        15,
+        16,
+        17,
+        19,
+        20,
+        21
+      ],
+      "summary": "Reference only; never a continuation base."
+    }
+  ],
   "packages": {
     "DOC-001": {"status": "historical_complete","depends_on": []},
     "DOC-002": {"status": "historical_complete","depends_on": ["DOC-001"]},
@@ -91,7 +106,8 @@
     "CHAT-UX-001": {"status": "technical_pass","depends_on": ["ADMIN-DONOR-CATALOG-001","UX-002"],"decides_next": true,"goal": "Compact Chat sidebar, mobile drawer and centered responsive empty state; preserve top bar and server model policy.","checkpoint": "CHAT-UX-001"},
     "LOCAL-ADMIN-ACCESS-001": {"status": "technical_pass","depends_on": ["CHAT-UX-001"],"decides_next": true,"goal": "Isolated local Admin bootstrap for one unverified account; production verification and permissions remain.","checkpoint": "LOCAL-ADMIN-ACCESS-001"},
     "CHAT-PARITY-001": {"status": "technical_pass","depends_on": ["LOCAL-ADMIN-ACCESS-001"],"decides_next": true,"goal": "Restore OpenRouter text chat and model choice; preserve Admin, improve response language and reading width.","checkpoint": "CHAT-PARITY-001"},
-    "CHAT-VISION-001": {"status": "active","depends_on": ["CHAT-PARITY-001"],"decides_next": true,"goal": "Add private Media-backed image attachments and vision chat with ownership, idempotency and restart safety."}
+    "CHAT-VISION-001": {"status": "technical_pass","depends_on": ["CHAT-PARITY-001"],"decides_next": true,"goal": "Add private Media-backed image attachments and vision chat with ownership, idempotency and restart safety.","checkpoint": "CHAT-VISION-001"},
+    "CHAT-V4-ADOPTION-001": {"status": "active","depends_on": ["CHAT-VISION-001"],"decides_next": true,"goal": "Adopt approved Chat v4 and Platform Source/Delivery contracts into canonical repository owners and prepare the repository for P1 implementation; no product runtime implementation."}
   },
   "status_meaning": {
     "active": "Current coding package.",
