@@ -16,5 +16,5 @@
 `begin-decided-next`: exact HEAD/CI/review или explicit owner waiver проверяются до новой ветки, state пишется только
 на ней. Для непринятого active package используется только `reconcile-continuation`.
 
-Активный пакет: **PRE-P1-STABILIZATION-001**. Следующий: **NONE**.
+Завершённый пакет: **PRE-P1-STABILIZATION-001**. Следующий: **NONE**.
 Параллельные lineages из PLAN нельзя использовать как base без reconciliation.

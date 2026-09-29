@@ -1,0 +1,33 @@
+{
+  "package_id": "PRE-P1-STATE-CLOSEOUT-001",
+  "base": "e93aff74be4283268c57b6edbc34d35d92ffa414",
+  "scope_class": "normal",
+  "risk": "medium",
+  "independent_review_required": true,
+  "max_files": 16,
+  "allowed": [
+    ".github/workflows/ci.yml",
+    "docs/CHECKPOINTS.json",
+    "docs/CURRENT.md",
+    "docs/DEVELOPMENT.md",
+    "docs/PLAN.json",
+    "tests/test_docs_system.py",
+    "tests/test_project_state_closeout.py",
+    "tests/test_repository_hygiene.py",
+    "tools/check_docs.py",
+    "tools/project_state_closeout.py",
+    "tools/project_state_model.py",
+    "tools/repository_hygiene.py",
+    "tools/scopes/pre-p1-hygiene-closeout-001.json",
+    "tools/scopes/pre-p1-state-closeout-001.json"
+  ],
+  "sensitive_approved": [
+    ".github/workflows/ci.yml",
+    "tools/check_docs.py",
+    "tools/project_state_closeout.py",
+    "tools/project_state_model.py",
+    "tools/repository_hygiene.py",
+    "tools/scopes/pre-p1-hygiene-closeout-001.json",
+    "tools/scopes/pre-p1-state-closeout-001.json"
+  ]
+}
