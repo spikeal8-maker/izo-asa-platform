@@ -21,9 +21,11 @@ def check_plan(errors: list[str], plan: dict) -> None:
         errors.append("PLAN schema_version must be 1")
     packages = plan.get("packages", {})
     active_id = plan.get("active_package")
+    active_status = packages.get(active_id, {}).get("status")
     active = [key for key, item in packages.items() if item.get("status") == "active"]
-    if active != [active_id]:
-        errors.append(f"exactly one active package must match active_package: {active}")
+    expected = [active_id] if active_status == "active" else []
+    if active_status not in {"active", "complete"} or active != expected:
+        errors.append(f"invalid package state: {active_id} {active_status} {active}")
     next_id = plan.get("next_package")
     if next_id is None:
         if not packages.get(active_id, {}).get("decides_next"):

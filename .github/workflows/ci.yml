@@ -33,14 +33,21 @@ jobs:
           python -m venv .venv
           .venv/bin/pip install -r requirements-dev.txt
           .venv/bin/pip check
-      - name: Unit and architecture checks
+      - name: Project state, docs and contracts
         run: |
+          .venv/bin/python tools/project_state.py show > /dev/null
+          .venv/bin/python tools/check_docs.py
           if ! .venv/bin/python tools/export_contracts.py --check; then
             .venv/bin/python tools/export_contracts.py
             git --no-pager diff -- packages/contracts/openapi.json
             exit 1
           fi
-          .venv/bin/python -m pytest
+      - name: Repository hygiene
+        env:
+          IZO_HYGIENE_BASE: ${{ github.event.pull_request.base.sha || github.event.before }}
+        run: .venv/bin/python tools/repository_hygiene.py --base "$IZO_HYGIENE_BASE"
+      - name: Unit and architecture checks
+        run: .venv/bin/python -m pytest
       - name: Install web
         working-directory: apps/web
         run: npm ci

@@ -1,0 +1,17 @@
+{
+  "package_id": "PRE-P1-STATE-CLOSEOUT-001",
+  "base": "9bed77548d07f113bc806b1e5016076edb2646e1",
+  "scope_class": "tiny",
+  "risk": "medium",
+  "independent_review_required": true,
+  "max_files": 4,
+  "allowed": [
+    "docs/PLAN.json",
+    "docs/CURRENT.md",
+    "docs/CHECKPOINTS.json",
+    "tools/scopes/pre-p1-state-closeout-001.json"
+  ],
+  "sensitive_approved": [
+    "tools/scopes/pre-p1-state-closeout-001.json"
+  ]
+}

@@ -68,7 +68,7 @@ SELF_REVIEW и CI. Требуется отдельное review evidence.
 
 ## 7. Общий CI и freeze
 
-После targeted PASS + self-review: `check_docs`, scope-check, generated contracts, diff/secret sanity, затем PR.
+После targeted PASS + self-review: `check_docs`, `repository_hygiene.py`, scope-check, generated contracts, diff/secret sanity, затем PR.
 Общий CI не заменяется локальными тестами. Skipped stage не является доказательством.
 
 После required workflows current working head замораживается; source/status больше не меняются.

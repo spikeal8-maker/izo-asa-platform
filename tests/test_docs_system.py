@@ -48,7 +48,7 @@ def test_plan_current_base_has_explicit_checkpoint_semantics_without_embedded_ev
     assert lineage["next_branch_source"] == "verified_working_head"
     assert lineage["working_branch"]
     active = plan["active_package"]
-    assert plan["packages"][active]["status"] == "active"
+    assert plan["packages"][active]["status"] in {"active", "complete"}
     base = lineage["current_package_base"]
     state = base.get("state")
     assert state in {"verified_pr_merge_tree_checkpoint", "reconciled_continuation_base"}
@@ -57,6 +57,17 @@ def test_plan_current_base_has_explicit_checkpoint_semantics_without_embedded_ev
     if state == "verified_pr_merge_tree_checkpoint":
         assert matching, f"current_package_base {base['sha']} has no immutable checkpoint evidence"
     assert all("evidence" not in item for item in plan["packages"].values())
+
+
+def test_docs_validator_accepts_terminal_complete_state():
+    sys.path.insert(0, str(ROOT / "tools"))
+    import check_docs
+    plan = json.loads((ROOT / "docs/PLAN.json").read_text(encoding="utf-8"))
+    plan["packages"][plan["active_package"]]["status"] = "complete"
+    errors = []
+    check_docs.check_plan(errors, plan)
+    assert errors == []
+
 
 def test_owner_product_shell_spec_is_canonical_and_explicit():
     text = (ROOT / "docs/UX_PRODUCT_SHELL.md").read_text(encoding="utf-8")

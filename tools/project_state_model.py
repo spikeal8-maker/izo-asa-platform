@@ -9,6 +9,7 @@ ROOT = Path(__file__).resolve().parents[1]
 PLAN_PATH = ROOT / "docs" / "PLAN.json"
 CHECKPOINTS_PATH = ROOT / "docs" / "CHECKPOINTS.json"
 READY_DEPENDENCY_STATUSES = {
+    "complete",
     "technical_pass",
     "technical_ci_pass_live_acceptance_pending",
     "historical_complete",
@@ -37,6 +38,7 @@ def render_current(plan: dict) -> str:
     base = lineage["current_package_base"]
     active, next_id = plan["active_package"], plan.get("next_package")
     next_text = next_id or "NONE"
+    label = "Завершённый" if plan["packages"][active]["status"] == "complete" else "Активный"
     return f'''# IZO ASA · текущая точка разработки
 
 <!-- runtime_base={runtime["branch"]}@{runtime["sha"]} -->
@@ -49,13 +51,13 @@ def render_current(plan: dict) -> str:
 
 ## Как продолжать
 
-Текущий package разрабатывается только в **working_branch**. `current_package_base` — его уже замороженный
-родитель и используется для ancestry-проверки; **не выбирать его вручную как base следующего package**.
+`working_branch` — canonical branch состояния. `current_package_base` — замороженный родитель для ancestry;
+**не выбирать его вручную как base следующего package**.
 Если `next_package` выбран — `begin-next`. Для `decides_next=true` + `next_package=NONE` —
 `begin-decided-next`: exact HEAD/CI/review или explicit owner waiver проверяются до новой ветки, state пишется только
 на ней. Для непринятого active package используется только `reconcile-continuation`.
 
-Активный пакет: **{active}**. Следующий: **{next_text}**.
+{label} пакет: **{active}**. Следующий: **{next_text}**.
 Параллельные lineages из PLAN нельзя использовать как base без reconciliation.
 '''
 
@@ -77,9 +79,11 @@ def validate_plan(plan: dict) -> None:
         raise ValueError("canonical_lineage.working_branch is required")
     packages = plan.get("packages", {})
     active_id = plan.get("active_package")
+    active_status = packages.get(active_id, {}).get("status")
     active = [key for key, item in packages.items() if item.get("status") == "active"]
-    if active != [active_id]:
-        raise ValueError(f"exactly one active package required: {active}")
+    expected = [active_id] if active_status == "active" else []
+    if active_status not in {"active", "complete"} or active != expected:
+        raise ValueError(f"invalid package state: {active_id} {active_status} {active}")
     for key, item in packages.items():
         deps = item.get("depends_on", [])
         if not isinstance(deps, list) or any(dep not in packages or dep == key for dep in deps):
