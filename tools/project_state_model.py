@@ -7,6 +7,7 @@ import re
 
 ROOT = Path(__file__).resolve().parents[1]
 PLAN_PATH = ROOT / "docs" / "PLAN.json"
+PACKAGES_PATH = ROOT / "docs" / "PACKAGES.json"
 CHECKPOINTS_PATH = ROOT / "docs" / "CHECKPOINTS.json"
 READY_DEPENDENCY_STATUSES = {
     "complete",
@@ -23,8 +24,28 @@ RECONCILIATION_GAPS = {
 INCOMPLETE_REFERENCE_STATUS = "superseded_incomplete_reference"
 
 
-def load_plan(root: Path = ROOT) -> dict:
+def load_live_plan(root: Path = ROOT) -> dict:
     return json.loads((root / "docs" / "PLAN.json").read_text(encoding="utf-8"))
+
+
+def load_packages(root: Path = ROOT) -> dict:
+    path = root / "docs" / "PACKAGES.json"
+    if path.exists():
+        value = json.loads(path.read_text(encoding="utf-8"))
+        if not isinstance(value, dict) or not isinstance(value.get("packages"), dict):
+            raise ValueError("PACKAGES.json requires a packages object")
+        return value["packages"]
+    legacy = load_live_plan(root).get("packages")
+    if isinstance(legacy, dict):
+        return legacy
+    raise ValueError("package registry missing")
+
+
+def load_plan(root: Path = ROOT) -> dict:
+    live = load_live_plan(root)
+    result = json.loads(json.dumps(live))
+    result["packages"] = load_packages(root)
+    return result
 
 
 def load_checkpoints(root: Path = ROOT) -> dict:
@@ -47,7 +68,7 @@ def render_current(plan: dict) -> str:
 <!-- active_package={active} -->
 <!-- next_package={next_text} -->
 
-Это короткая точка входа после `AGENTS.md`. Machine source of truth — `PLAN.json`.
+Это короткая точка входа после `AGENTS.md`. Live machine state — `PLAN.json`; package registry читается точечно через `project_state.py show-package <ID>`.
 
 ## Как продолжать
 
@@ -128,8 +149,12 @@ def dependency_problems(plan: dict, activate: str, *, finishing: str) -> list[st
     deps = item.get("depends_on", [])
     if finishing not in deps:
         problems.append(f"{activate} must directly depend on finishing package {finishing}")
+    finishing_status = packages.get(finishing, {}).get("status")
     for dep in deps:
-        status = "technical_pass" if dep == finishing else packages.get(dep, {}).get("status")
+        if dep == finishing:
+            status = "technical_pass" if finishing_status == "active" else finishing_status
+        else:
+            status = packages.get(dep, {}).get("status")
         if status not in READY_DEPENDENCY_STATUSES:
             problems.append(f"dependency {dep} is not ready: {status}")
     return problems
@@ -155,9 +180,13 @@ def transition(plan: dict, *, activate: str, next_id: str | None,
         if activate not in next_item.get("depends_on", []):
             raise ValueError(f"next package {next_id} must directly depend on activating package {activate}")
     result = json.loads(json.dumps(plan))
-    result["packages"][active]["status"] = "technical_pass"
-    result["packages"][active]["checkpoint"] = active
-    result["packages"][active].pop("evidence", None)
+    finishing_status = result["packages"][active]["status"]
+    if finishing_status == "active":
+        result["packages"][active]["status"] = "technical_pass"
+        result["packages"][active]["checkpoint"] = active
+        result["packages"][active].pop("evidence", None)
+    elif finishing_status != "complete":
+        raise ValueError(f"unsupported finishing package status {finishing_status}")
     result["packages"][activate]["status"] = "active"
     result["active_package"] = activate
     result["next_package"] = next_id
@@ -220,28 +249,18 @@ def reconcile_continuation_transition(plan: dict, *, activate: str, new_branch: 
 
 
 def serialize_plan(plan: dict) -> str:
-    """Deterministic compact PLAN JSON with bounded human-readable sections."""
-    def compact(value) -> str:
-        return json.dumps(value, ensure_ascii=False, separators=(",", ":"))
+    """Serialize only bounded live control-plane state."""
+    live = {
+        key: value for key, value in plan.items()
+        if key not in {"packages", "status_meaning"}
+    }
+    live["packages_ref"] = "PACKAGES.json"
+    return json.dumps(live, ensure_ascii=False, indent=2) + "\n"
 
-    lines = ["{"]
-    keys = list(plan)
-    for index, key in enumerate(keys):
-        value = plan[key]
-        comma = "," if index < len(keys) - 1 else ""
-        if key == "packages" and isinstance(value, dict):
-            lines.append(f'  {json.dumps(key)}: {{')
-            entries = [
-                f"{json.dumps(name, ensure_ascii=False)}:{compact(item)}"
-                for name, item in value.items()
-            ]
-            for start in range(0, len(entries), 4):
-                tail = "," if start + 4 < len(entries) else ""
-                lines.append("    " + ",".join(entries[start:start + 4]) + tail)
-            lines.append(f"  }}{comma}")
-        else:
-            lines.append(f'  {json.dumps(key)}:{compact(value)}{comma}')
-    return "\n".join([*lines, "}"]) + "\n"
+
+def serialize_packages(plan: dict) -> str:
+    value = {"schema_version": 1, "packages": plan["packages"]}
+    return json.dumps(value, ensure_ascii=False, indent=2, sort_keys=True) + "\n"
 
 
 def serialize_checkpoints(checkpoints: dict) -> str:
@@ -249,8 +268,10 @@ def serialize_checkpoints(checkpoints: dict) -> str:
 
 
 def write_state(plan: dict, checkpoints: dict | None = None, root: Path = ROOT) -> None:
-    (root / "docs" / "PLAN.json").write_bytes(serialize_plan(plan).encode("utf-8"))
-    (root / "docs" / "CURRENT.md").write_bytes(render_current(plan).encode("utf-8"))
+    docs = root / "docs"
+    (docs / "PLAN.json").write_bytes(serialize_plan(plan).encode("utf-8"))
+    (docs / "PACKAGES.json").write_bytes(serialize_packages(plan).encode("utf-8"))
+    (docs / "CURRENT.md").write_bytes(render_current(plan).encode("utf-8"))
     if checkpoints is not None:
-        (root / "docs" / "CHECKPOINTS.json").write_bytes(
+        (docs / "CHECKPOINTS.json").write_bytes(
             serialize_checkpoints(checkpoints).encode("utf-8"))

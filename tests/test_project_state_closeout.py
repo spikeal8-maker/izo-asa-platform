@@ -127,6 +127,7 @@ def test_closeout_rolls_back_state_and_branch_on_write_failure(tmp_path, monkeyp
 
     def broken_write(updated, checkpoints=None, root=tmp_path):
         (root / "docs" / "PLAN.json").write_text("partial", encoding="utf-8")
+        (root / "docs" / "PACKAGES.json").write_text("partial", encoding="utf-8")
         raise OSError("disk failure")
 
     monkeypatch.setattr(closeout, "write_state", broken_write)
@@ -138,4 +139,5 @@ def test_closeout_rolls_back_state_and_branch_on_write_failure(tmp_path, monkeyp
         )
     for name, data in originals.items():
         assert (docs / name).read_bytes() == data
+    assert not (docs / "PACKAGES.json").exists()
     assert calls == ["create", "rollback", "delete"]

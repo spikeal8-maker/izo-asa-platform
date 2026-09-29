@@ -77,7 +77,9 @@ def complete_current(plan: dict, *, branch: str, verified_pr: int,
     checkpoints = json.loads(json.dumps(load_checkpoints(root)))
     checkpoints.setdefault("checkpoints", {})[plan["active_package"]] = evidence
 
-    paths = [root / "docs" / name for name in ("PLAN.json", "CURRENT.md", "CHECKPOINTS.json")]
+    paths = [root / "docs" / name for name in (
+        "PLAN.json", "PACKAGES.json", "CURRENT.md", "CHECKPOINTS.json",
+    )]
     originals = {path: path.read_bytes() if path.exists() else None for path in paths}
     git("switch", "-c", branch, source_head, root=root)
     try:

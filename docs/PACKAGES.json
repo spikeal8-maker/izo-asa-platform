@@ -1,0 +1,497 @@
+{
+  "packages": {
+    "ACCESS-001": {
+      "checkpoint": "ACCESS-001",
+      "depends_on": [
+        "LINEAGE-001",
+        "AUTH-002",
+        "ADMIN-001"
+      ],
+      "status": "technical_pass"
+    },
+    "ACCOUNT-DATA-001": {
+      "depends_on": [
+        "AUTH-002",
+        "MEDIA-001",
+        "CREDIT-001",
+        "JOBS-001"
+      ],
+      "status": "planned"
+    },
+    "ADMIN-001": {
+      "depends_on": [
+        "AUTH-001",
+        "CREDIT-001"
+      ],
+      "status": "technical_pass"
+    },
+    "ADMIN-DONOR-CATALOG-001": {
+      "checkpoint": "ADMIN-DONOR-CATALOG-001",
+      "decides_next": true,
+      "depends_on": [
+        "CHAT-DEEPSEEK-001",
+        "ADMIN-001",
+        "CREDIT-001"
+      ],
+      "goal": "Admin entry, approved models and informational RUB prices; reuse shared domains without charges.",
+      "status": "technical_pass"
+    },
+    "API-001": {
+      "canonical_branch": "api/fal-klein-001",
+      "canonical_pr": 22,
+      "depends_on": [
+        "IMAGE-001"
+      ],
+      "model": "fal-ai/flux-2/klein/4b",
+      "provider": "fal.ai",
+      "status": "technical_ci_pass_live_acceptance_pending"
+    },
+    "AUDIO-001": {
+      "depends_on": [
+        "JOBS-001",
+        "MEDIA-001",
+        "API-001",
+        "UX-002"
+      ],
+      "status": "planned"
+    },
+    "AUTH-001": {
+      "depends_on": [
+        "F0-ACCEPT"
+      ],
+      "status": "technical_pass"
+    },
+    "AUTH-002": {
+      "depends_on": [
+        "AUTH-001"
+      ],
+      "status": "technical_pass"
+    },
+    "BILLING-001": {
+      "depends_on": [
+        "CREDIT-001",
+        "ENTITLEMENT-001",
+        "ADMIN-001",
+        "API-001",
+        "OPS-001"
+      ],
+      "status": "planned"
+    },
+    "CATALOG-001": {
+      "depends_on": [
+        "API-001",
+        "SETTINGS-001"
+      ],
+      "source_prs": [
+        20,
+        21
+      ],
+      "status": "superseded_reference"
+    },
+    "CATALOG-002": {
+      "depends_on": [
+        "SETTINGS-002",
+        "ACCESS-001",
+        "API-001",
+        "ADMIN-001"
+      ],
+      "goal": "Provider-neutral versioned catalog for fal/future adapters.",
+      "note": "PR #31 paused; resume after accepted checkpoint.",
+      "status": "planned"
+    },
+    "CATALOG-UI-002": {
+      "depends_on": [
+        "CATALOG-002",
+        "ADMIN-001",
+        "ACCESS-001"
+      ],
+      "goal": "Permission-correct admin catalog UI.",
+      "status": "planned"
+    },
+    "CHANGE-001": {
+      "depends_on": [
+        "IMAGE-001"
+      ],
+      "status": "technical_pass"
+    },
+    "CHAT-001": {
+      "depends_on": [
+        "AUTH-002",
+        "CREDIT-001",
+        "ENTITLEMENT-001",
+        "IMAGE-001",
+        "API-001",
+        "UX-002"
+      ],
+      "goal": "Planned durable text-chat runtime behind the chat-first shell.",
+      "status": "planned"
+    },
+    "CHAT-DEEPSEEK-001": {
+      "checkpoint": "CHAT-DEEPSEEK-001",
+      "decides_next": true,
+      "depends_on": [
+        "MAINT-STATE-003"
+      ],
+      "goal": "DeepSeek BYOK durable chat and Docker preview.",
+      "status": "technical_pass"
+    },
+    "CHAT-PARITY-001": {
+      "checkpoint": "CHAT-PARITY-001",
+      "decides_next": true,
+      "depends_on": [
+        "LOCAL-ADMIN-ACCESS-001"
+      ],
+      "goal": "Restore OpenRouter text chat and model choice; preserve Admin, improve response language and reading width.",
+      "status": "technical_pass"
+    },
+    "CHAT-UX-001": {
+      "checkpoint": "CHAT-UX-001",
+      "decides_next": true,
+      "depends_on": [
+        "ADMIN-DONOR-CATALOG-001",
+        "UX-002"
+      ],
+      "goal": "Compact Chat sidebar, mobile drawer and centered responsive empty state; preserve top bar and server model policy.",
+      "status": "technical_pass"
+    },
+    "CHAT-V4-ADOPTION-001": {
+      "checkpoint": "CHAT-V4-ADOPTION-001",
+      "decides_next": true,
+      "depends_on": [
+        "CHAT-VISION-001"
+      ],
+      "goal": "Adopt approved Chat v4 and Platform Source/Delivery contracts into canonical repository owners and prepare the repository for P1 implementation; no product runtime implementation.",
+      "status": "technical_pass"
+    },
+    "CHAT-VISION-001": {
+      "checkpoint": "CHAT-VISION-001",
+      "decides_next": true,
+      "depends_on": [
+        "CHAT-PARITY-001"
+      ],
+      "goal": "Add private Media-backed image attachments and vision chat with ownership, idempotency and restart safety.",
+      "status": "technical_pass"
+    },
+    "CREDIT-001": {
+      "depends_on": [
+        "AUTH-001"
+      ],
+      "status": "technical_pass"
+    },
+    "DOC-001": {
+      "depends_on": [],
+      "status": "historical_complete"
+    },
+    "DOC-002": {
+      "depends_on": [
+        "DOC-001"
+      ],
+      "status": "historical_complete"
+    },
+    "DOC-003": {
+      "depends_on": [
+        "DOC-002"
+      ],
+      "status": "historical_complete"
+    },
+    "DOC-004": {
+      "checkpoint": "DOC-004",
+      "depends_on": [
+        "API-001"
+      ],
+      "status": "technical_pass"
+    },
+    "DOC-004B": {
+      "checkpoint": "DOC-004B",
+      "depends_on": [
+        "DOC-004"
+      ],
+      "status": "technical_pass"
+    },
+    "DOC-004C": {
+      "checkpoint": "DOC-004C",
+      "depends_on": [
+        "DOC-004B"
+      ],
+      "status": "technical_pass"
+    },
+    "DOC-004D": {
+      "checkpoint": "DOC-004D",
+      "depends_on": [
+        "DOC-004C"
+      ],
+      "status": "technical_pass"
+    },
+    "ENTITLEMENT-001": {
+      "depends_on": [
+        "AUTH-001",
+        "CREDIT-001"
+      ],
+      "status": "technical_pass"
+    },
+    "F0-ACCEPT": {
+      "depends_on": [
+        "DOC-003"
+      ],
+      "status": "historical_technical_pass"
+    },
+    "FEED-001": {
+      "depends_on": [
+        "MEDIA-001",
+        "ADMIN-001",
+        "IMAGE-001",
+        "UX-002"
+      ],
+      "status": "planned"
+    },
+    "FRONTEND-001": {
+      "acceptance_gaps": [
+        "scope",
+        "independent_review",
+        "owner_visual_acceptance"
+      ],
+      "decides_next": true,
+      "depends_on": [
+        "MAINT-AGENT-002",
+        "GUEST-001",
+        "UX-002"
+      ],
+      "goal": "Historical chat shell/tokens; preserved pages and visual acceptance unapproved.",
+      "reference_head": "5c0e79b6fc3a7120207d0889b176fbfed3dab973",
+      "status": "superseded_incomplete_reference",
+      "superseded_by": "FRONTEND-002"
+    },
+    "FRONTEND-002": {
+      "checkpoint": "FRONTEND-002",
+      "continues": "FRONTEND-001",
+      "decides_next": true,
+      "depends_on": [
+        "MAINT-AGENT-002",
+        "GUEST-001",
+        "UX-002"
+      ],
+      "goal": "Continue the owner-revised frontend on the current canonical lineage.",
+      "status": "technical_pass"
+    },
+    "GUEST-001": {
+      "checkpoint": "GUEST-001",
+      "decides_next": true,
+      "depends_on": [
+        "MAINT-SIZE-001",
+        "UX-002",
+        "AUTH-002",
+        "JOBS-001",
+        "IMAGE-001"
+      ],
+      "goal": "Server-owned guest image-trial budget, abuse controls and same-owner claim.",
+      "status": "technical_pass"
+    },
+    "IMAGE-001": {
+      "depends_on": [
+        "UX-001",
+        "AUTH-002",
+        "ADMIN-001",
+        "JOBS-001"
+      ],
+      "status": "technical_pass"
+    },
+    "IMAGE-002": {
+      "depends_on": [
+        "IMAGE-001",
+        "MEDIA-001",
+        "API-001",
+        "UX-002"
+      ],
+      "status": "planned"
+    },
+    "JOBS-001": {
+      "depends_on": [
+        "CREDIT-001",
+        "ENTITLEMENT-001",
+        "MEDIA-001"
+      ],
+      "status": "technical_pass"
+    },
+    "LAUNCH-001": {
+      "depends_on": [
+        "F0-ACCEPT",
+        "AUTH-002",
+        "SUPPORT-001",
+        "ACCOUNT-DATA-001",
+        "OPS-001"
+      ],
+      "status": "planned"
+    },
+    "LINEAGE-001": {
+      "checkpoint": "LINEAGE-001",
+      "decides_next": true,
+      "depends_on": [
+        "DOC-004D",
+        "API-001"
+      ],
+      "status": "technical_pass"
+    },
+    "LOCAL-001": {
+      "depends_on": [
+        "JOBS-001",
+        "API-001",
+        "CATALOG-002"
+      ],
+      "status": "planned"
+    },
+    "LOCAL-ADMIN-ACCESS-001": {
+      "checkpoint": "LOCAL-ADMIN-ACCESS-001",
+      "decides_next": true,
+      "depends_on": [
+        "CHAT-UX-001"
+      ],
+      "goal": "Isolated local Admin bootstrap for one unverified account; production verification and permissions remain.",
+      "status": "technical_pass"
+    },
+    "MAINT-AGENT-002": {
+      "checkpoint": "MAINT-AGENT-002",
+      "decides_next": true,
+      "depends_on": [
+        "GUEST-001",
+        "MAINT-SIZE-001"
+      ],
+      "goal": "Bound agent context, file/scope growth, review gates and recurring audits.",
+      "status": "technical_pass"
+    },
+    "MAINT-SIZE-001": {
+      "checkpoint": "MAINT-SIZE-001",
+      "decides_next": true,
+      "depends_on": [
+        "UX-002"
+      ],
+      "goal": "Split oversized modules; enforce source/test/tool size limits.",
+      "status": "technical_pass"
+    },
+    "MAINT-STATE-003": {
+      "checkpoint": "MAINT-STATE-003",
+      "decides_next": true,
+      "depends_on": [
+        "FRONTEND-002"
+      ],
+      "goal": "Exact-SHA review and owner-waiver gate for decides_next transitions.",
+      "issues": [
+        166,
+        188
+      ],
+      "status": "technical_pass"
+    },
+    "MEDIA-001": {
+      "depends_on": [
+        "AUTH-001",
+        "ENTITLEMENT-001"
+      ],
+      "status": "technical_pass"
+    },
+    "NOTIFY-001": {
+      "depends_on": [
+        "AUTH-002",
+        "JOBS-001"
+      ],
+      "status": "planned"
+    },
+    "OPS-001": {
+      "depends_on": [
+        "IMAGE-001",
+        "API-001"
+      ],
+      "status": "planned"
+    },
+    "PLATFORM-001": {
+      "depends_on": [
+        "AUTH-002",
+        "IMAGE-001"
+      ],
+      "status": "planned"
+    },
+    "PLATFORM-002": {
+      "depends_on": [
+        "AUTH-002",
+        "IMAGE-001"
+      ],
+      "status": "planned"
+    },
+    "PRE-P1-STABILIZATION-001": {
+      "checkpoint": "PRE-P1-STABILIZATION-001",
+      "decides_next": true,
+      "depends_on": [
+        "CHAT-V4-ADOPTION-001"
+      ],
+      "goal": "Pre-P1 stabilization: canonicalize main, fix factual docs, add bounded quality/security/logging gates, protect main, classify stale PRs; no runtime changes.",
+      "status": "complete"
+    },
+    "PROFILE-001": {
+      "depends_on": [
+        "AUTH-001",
+        "MEDIA-001",
+        "UX-001"
+      ],
+      "status": "planned"
+    },
+    "SETTINGS-001": {
+      "depends_on": [
+        "API-001"
+      ],
+      "source_pr": 19,
+      "status": "superseded_reference"
+    },
+    "SETTINGS-002": {
+      "checkpoint": "SETTINGS-002",
+      "depends_on": [
+        "ACCESS-001",
+        "ENTITLEMENT-001",
+        "ADMIN-001"
+      ],
+      "status": "technical_pass"
+    },
+    "SUPPORT-001": {
+      "depends_on": [
+        "AUTH-002",
+        "ADMIN-001",
+        "MEDIA-001"
+      ],
+      "status": "planned"
+    },
+    "THREE-D-001": {
+      "depends_on": [
+        "JOBS-001",
+        "MEDIA-001",
+        "API-001",
+        "UX-002"
+      ],
+      "status": "planned"
+    },
+    "UX-001": {
+      "depends_on": [
+        "F0-ACCEPT"
+      ],
+      "status": "historical_implemented_design_unapproved"
+    },
+    "UX-002": {
+      "checkpoint": "UX-002",
+      "decides_next": true,
+      "depends_on": [
+        "SETTINGS-002",
+        "AUTH-002",
+        "IMAGE-001",
+        "ADMIN-001"
+      ],
+      "goal": "Historical signup/feed shell, neutral theme and responsive layout; superseded by FRONTEND-001.",
+      "status": "technical_pass"
+    },
+    "VIDEO-001": {
+      "depends_on": [
+        "JOBS-001",
+        "MEDIA-001",
+        "API-001",
+        "UX-002"
+      ],
+      "status": "planned"
+    }
+  },
+  "schema_version": 1
+}
