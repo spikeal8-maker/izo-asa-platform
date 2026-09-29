@@ -41,7 +41,9 @@ Generated contracts, lockfiles и machine-generated artifacts не режутс�
 
 ## 3. Бюджет контекста агента
 
-Обязательный старт `AGENTS.md + CURRENT.md` должен оставаться ≤ 6 KB.
+Обязательный старт `AGENTS.md + CURRENT.md`: target ≤ 4.5 KB, hard ≤ 6 KB.
+Live `PLAN.json`: target ≤ 4 KB, warning > 5 KB, hard < 6 KB. Исторический package registry не входит в default context:
+для конкретного package используется bounded query `project_state.py show-package <ID>`, а не чтение всего `PACKAGES.json`.
 
 Block-level locator:
 - сначала owner/symbol/anchor;
@@ -101,28 +103,32 @@ Waiver требует owner action, exact source SHA, `independent_review=unavai
 `begin-next` и `begin-decided-next` проверяют source HEAD, required CI и review/waiver до создания новой ветки.
 State/checkpoint пишутся только на новой ветке; ошибка записи откатывает файлы и созданную ветку.
 
-## 7. Непрерывный audit
+## 7. Итерационный structural audit
 
-Каждый package перед freeze обязан выполнить maintainability delta-audit:
-- список изменённых handwritten-файлов и их headroom;
-- новые/изменённые block/route context bytes;
-- scope size/class;
-- local-doc bytes и отсутствие mutable history;
-- новые owner boundaries;
-- generated/lock/artifact sanity;
-- self-review о том, не стала ли следующая правка дороже.
+Структурный cleanup привязан к принятым итерациям, а не к календарю:
 
-После каждых 5 завершённых продуктовых packages выполняется полный repository audit:
-- top handwritten files по bytes/lines;
-- top routes по initial context bytes;
-- directories с наибольшим local-doc budget;
-- stale/mutable docs;
-- map/shard growth;
-- duplicated ownership instructions;
-- tools/workflows, приблизившиеся к limits.
+- **EVERY PACKAGE** — перед freeze выполняется Maintenance Delta: changed handwritten headroom, context-route delta, scope, local-doc/state leakage, owner/dependency/temp-path delta и self-review стоимости следующей правки;
+- **EVERY 3 ACCEPTED PRODUCT PACKAGES** — targeted structural audit соответствующего активно развиваемого product/domain;
+- **EVERY 5 ACCEPTED PRODUCT PACKAGES** — full repository agent-economy audit: top handwritten owners/routes/docs, state/context growth, duplicate ownership, stale/temp paths, test/tool/workflow pressure.
 
-Audit создаёт отдельный maintenance package только если выявлен долг, который нельзя безопасно закрыть в следующем
-product package. Нельзя постоянно останавливать продукт ради косметического refactor; цель — предотвращать накопление долга.
+Audit запускается раньше cadence, если evidence показывает хотя бы одно:
+- live/default agent context >75% hard budget;
+- affected context route >75% hard budget;
+- changed handwritten owner входит в >80% warning zone либо near-limit owner требует дальнейшего роста;
+- duplicate live owner;
+- scope >40;
+- повторяющиеся temporary compatibility paths;
+- meaningful test duplication/slowdown;
+- state/history начинает попадать в default context.
+
+Hard-limit блокирует acceptance. Warning/threshold запускает анализ, но сам по себе не блокирует несвязанную product work.
+
+Findings классифицируются:
+- **COSMETIC** — не останавливает product development;
+- **LOCAL_DEBT** — закрывается в ближайшем подходящем product package;
+- **STRUCTURAL_BLOCKER** — bounded maintenance package до дальнейшего роста затронутой области.
+
+Audit не создаёт maintenance package автоматически. Цель — устранить structural blocker до дальнейшего роста, а не регулярно останавливать продукт ради косметического refactor.
 
 ## 8. Definition of Done любого будущего package
 
@@ -190,17 +196,15 @@ Implementer не выбирает новую observable semantics молча. Е
 Для **существенного user-visible Chat behavior**, не полностью определённого IZO ASA sources, перед `NEW_DECISION_REQUIRED` обязателен bounded comparison **обоих current ChatGPT и current Claude**. Используются свежие проверяемые official/current product sources или проверяемая current product surface на дату package.
 
 Benchmark record содержит date, source/reference, compared behavior, decision и reason; по применимости сравнивает clarity, interaction cost, discoverability, desktop/mobile, accessibility, recovery/persistence, safety/privacy и performance implications. Внешние продукты — research benchmark, не canonical specification. После решения authority становится IZO ASA canonical contract.
-## 11. Усиленная cadence Chat и cleanup
+## 11. Cleanup и freshness
 
-Каждый package сохраняет Maintenance Delta из §7. Дополнительно:
+Structural cadence полностью определяется accepted-package counters и threshold evidence из §7; календарного structural trigger нет.
 
-- после каждых **3 завершённых Chat product packages** выполняется targeted Chat Structural Audit;
-- если активная разработка Chat идёт **30 календарных дней** без трёх завершённых Chat packages, выполняется тот же targeted audit;
-- правило полного repository audit после каждых **5 product packages** сохраняется;
-- threshold-triggered audit выполняется раньше cadence при двух Chat production files в warning zone, scope >40, третьем temporary compatibility path одного owner, заметном test duplication/slowdown, duplicate live owner, context overflow или необходимости нарушить domain boundary.
+Calendar-based freshness допустима отдельно только для security/dependency monitoring, когда возраст advisory, dependency или upstream policy сам является предметом риска. Такая проверка не подменяет structural audit и не создаёт refactor package по времени.
 
-Chat Structural Audit проверяет top Chat files/headroom, duplicate responsibilities, orphan CSS/components/hooks, stale flags/temp paths, duplicate clients/adapters, renderer/tool/file dependency growth, slow/duplicate tests, local docs/context drift и dead endpoints/contracts/types.
-Temporary bridge/feature flag/dual path обязан иметь owner, reason, removal condition и acceptance gate expiry; бессрочный `TODO remove later` в accepted path запрещён. Если temp path пережил два packages после expiry, следующий package решает: удалить, formally extend с причиной или выделить maintenance package.
+Targeted product/domain audit проверяет top owner files/headroom, duplicate responsibilities, stale flags/temp paths, duplicate clients/adapters, dependency growth, slow/duplicate tests, local docs/context drift и dead contracts.
+
+Temporary bridge/feature flag/dual path обязан иметь owner, reason, removal condition и acceptance gate expiry; бессрочный `TODO remove later` в accepted path запрещён. Если temp path пережил два packages после expiry, следующий подходящий package обязан решить: удалить, formally extend с причиной либо классифицировать долг по §7.
 
 Garbage cleanup не удаляет accepted migrations, immutable ledger/audit/checkpoints, user Media/Artifacts, provenance reviews/history или live compatibility path без consumer proof. Test cleanup сохраняет invariant coverage.
 
