@@ -6,7 +6,7 @@
 <!-- active_package=PRE-P1-STABILIZATION-001 -->
 <!-- next_package=NONE -->
 
-Это короткая точка входа после `AGENTS.md`. Machine source of truth — `PLAN.json`.
+Это короткая точка входа после `AGENTS.md`. Live machine state — `PLAN.json`; package registry читается точечно через `project_state.py show-package <ID>`.
 
 ## Как продолжать
 
