@@ -72,8 +72,13 @@ SELF_REVIEW и CI. Требуется отдельное review evidence.
 Общий CI не заменяется локальными тестами. Skipped stage не является доказательством.
 
 После required workflows current working head замораживается; source/status больше не меняются.
-Следующий нормально принятый package запускается только `project_state.py begin-next`, который проверяет
-PR/source/workflows/dependencies, создаёт ветку от frozen source и уже там меняет PLAN/CURRENT/CHECKPOINTS.
+Предвыбранный successor запускается через `project_state.py begin-next`; package с `decides_next=true` и
+`next_package=NONE` — через `begin-decided-next`. State workflow создаёт новую ветку и атомарно меняет
+PLAN/PACKAGES/CURRENT/CHECKPOINTS. Для terminal `complete` запуск successor не понижает завершённый package.
+
+Lifecycle status contract: `active` — текущая работа; `planned_next` — явно выбранный successor;
+`technical_pass` — technical acceptance, merge/deploy не подразумеваются; `complete` — terminal и immutable;
+`planned` — не начат; historical/superseded statuses не становятся автоматически continuation base.
 
 `project_state.py reconcile-continuation` — отдельный fail-closed transition только для случая, когда active package
 нельзя честно принять, но его canonical branch уже продвинулась независимыми verified merges. Он сохраняет historical
@@ -84,20 +89,11 @@ Merge/deploy/live-provider call — отдельные действия.
 
 ## 8. Непрерывная сопровождаемость
 
-`MAINTAINABILITY.md` — часть Definition of Done каждого будущего package, а не отдельная разовая уборка.
+`MAINTAINABILITY.md` — часть Definition of Done каждого package и единственный owner structural cadence,
+threshold triggers и audit finding classes. Этот документ не создаёт второй календарь cleanup.
 
-На каждом package:
-1. architecture size guard;
-2. headroom regression guard;
-3. context route/block budgets;
-4. local-doc budget/stale-state guard;
-5. scope class/risk;
-6. maintainability delta в self-review.
-
-После каждых 5 завершённых product packages проводится полный agent-economy audit. Он ранжирует крупнейшие handwritten
-files, самые дорогие routes, локальные docs, map growth, duplicated ownership и tools/workflows у лимитов.
-Если долг существенный — создаётся maintenance package; если локальный — закрывается в ближайшем product package.
-Лимиты не увеличиваются автоматически.
+Controller обеспечивает Maintenance Delta и required gates текущего package, но COSMETIC/LOCAL_DEBT/
+STRUCTURAL_BLOCKER обрабатываются строго по `MAINTAINABILITY §7`. Hard limits не повышаются ради PASS.
 
 ## 9. Документация
 

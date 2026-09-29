@@ -57,11 +57,20 @@ def test_plan_current_base_has_explicit_checkpoint_semantics_without_embedded_ev
     assert plan["packages"][active]["status"] in {"active", "complete"}
     base = lineage["current_package_base"]
     state = base.get("state")
-    assert state in {"verified_pr_merge_tree_checkpoint", "reconciled_continuation_base"}
+    assert state in {
+        "verified_pr_merge_tree_checkpoint",
+        "reconciled_continuation_base",
+        "completed_package_successor_base",
+    }
     matching = [key for key, value in checkpoints["checkpoints"].items()
                 if value.get("source_head", value.get("head")) == base["sha"]]
     if state == "verified_pr_merge_tree_checkpoint":
         assert matching, f"current_package_base {base['sha']} has no immutable checkpoint evidence"
+    elif state == "completed_package_successor_base":
+        checkpoint = base.get("checkpoint")
+        assert checkpoint in checkpoints["checkpoints"]
+        assert plan["packages"][checkpoint]["status"] == "complete"
+        assert plan["packages"][checkpoint]["checkpoint"] == checkpoint
     assert all("evidence" not in item for item in plan["packages"].values())
 
 

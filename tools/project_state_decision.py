@@ -88,8 +88,11 @@ def decided_transition(plan: dict, *, candidate: dict, new_branch: str,
     result["packages"][activate]["status"] = "active"
     result["active_package"], result["next_package"] = activate, None
     lineage = result["canonical_lineage"]
-    lineage["current_package_base"] = {"branch": lineage["working_branch"], "sha": source_head,
-                                       "state": "verified_pr_merge_tree_checkpoint"}
+    base = {"branch": lineage["working_branch"], "sha": source_head,
+            "state": "verified_pr_merge_tree_checkpoint"}
+    if finishing_status == "complete":
+        base.update(state="completed_package_successor_base", checkpoint=active)
+    lineage["current_package_base"] = base
     lineage["working_branch"] = new_branch
     validate_plan(result)
     return result

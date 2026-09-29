@@ -82,9 +82,8 @@ def check_current(errors: list[str], plan: dict) -> None:
 def check_encoding_and_stable(errors: list[str]) -> None:
     markers = ("РЎ", "Рџ", "Р°", "РЅ", "Рµ", "Рє", "Рё", "Р»", "Рѕ", "СЃ", "С‚", "СЂ", "вЂ", "В·")
     candidates = list(ROOT.rglob("*.md")) + [
-        DOCS / "PLAN.json", DOCS / "PACKAGES.json", DOCS / "CHECKPOINTS.json",
-        DOCS / "CONTEXT_MAP.json", DOCS / "BLOCK_MAP.json", ROOT / "tests/context_cases.json"]
-    candidates = [path for path in candidates if path.exists()]
+        DOCS / "PLAN.json", DOCS / "PACKAGES.json", DOCS / "CHECKPOINTS.json", DOCS / "CONTEXT_MAP.json",
+        DOCS / "BLOCK_MAP.json", ROOT / "tests/context_cases.json"]
     for path in candidates:
         if ".git" in path.parts or "node_modules" in path.parts:
             continue

@@ -14,6 +14,9 @@ from project_state_model import (CHECKPOINTS_PATH, NEXT_PACKAGE_SOURCE_STATUSES,
     validate_ref, write_state)
 from project_state_decision import decided_transition, validate_decided_candidate
 from project_state_evidence import fetch_pr_evidence, fetch_review_evidence, validate_pr_evidence
+from project_state_workflow import (
+    active_scope, completed_source_evidence, state_paths, write_transition,
+)
 def run(args: list[str], *, root: Path = ROOT) -> str:
     result = subprocess.run(args, cwd=root, capture_output=True, text=True,
                             encoding="utf-8", errors="strict", timeout=30)
@@ -23,23 +26,6 @@ def run(args: list[str], *, root: Path = ROOT) -> str:
 def git(*args: str, root: Path = ROOT) -> str:
     return run(["git", *args], root=root)
 
-def active_scope(plan: dict, *, root: Path = ROOT) -> dict:
-    package = plan["active_package"]
-    path = root / "tools" / "scopes" / f"{package.lower()}.json"
-    if not path.is_file():
-        raise ValueError("active scope missing")
-    try:
-        value = json.loads(path.read_text(encoding="utf-8"))
-    except (OSError, json.JSONDecodeError) as exc:
-        raise ValueError("active scope malformed") from exc
-    if not isinstance(value, dict):
-        raise ValueError("active scope invalid")
-    risk, policy = value.get("risk"), value.get("independent_review_required")
-    if (value.get("package_id") != package or risk not in {"low", "medium", "high"}
-            or (policy is not None and type(policy) is not bool)
-            or (risk == "high" and policy is not True)):
-        raise ValueError("active scope invalid")
-    return value
 def show_package(plan: dict, package_id: str) -> dict:
     packages = plan["packages"]
     item = packages.get(package_id)
@@ -69,31 +55,6 @@ def verify_checkout(plan: dict, root: Path = ROOT) -> list[str]:
     if branch != lineage["working_branch"]:
         problems.append(f"checkout branch {branch} != PLAN working_branch {lineage['working_branch']}")
     return problems
-def _state_paths(root: Path, *, checkpoints: bool = True) -> list[Path]:
-    names = ["PLAN.json", "PACKAGES.json", "CURRENT.md"]
-    if checkpoints:
-        names.append("CHECKPOINTS.json")
-    return [root / "docs" / name for name in names]
-
-
-def _write_transition(plan: dict, updated: dict, evidence: dict, *, branch: str,
-                      current_branch: str, source_head: str, root: Path,
-                      record_checkpoint: bool = True) -> None:
-    checkpoints = json.loads(json.dumps(load_checkpoints(root)))
-    if record_checkpoint:
-        checkpoints.setdefault("checkpoints", {})[plan["active_package"]] = evidence
-    paths = _state_paths(root)
-    originals = {path: path.read_bytes() if path.exists() else None for path in paths}
-    git("switch", "-c", branch, source_head, root=root)
-    try:
-        write_state(updated, checkpoints, root=root)
-    except Exception:
-        for path, data in originals.items():
-            if data is None: path.unlink(missing_ok=True)
-            else: path.write_bytes(data)
-        git("switch", current_branch, root=root)
-        git("branch", "-D", branch, root=root)
-        raise
 def _transition_evidence(plan: dict, pr: int, source_head: str, review: dict, root: Path) -> dict:
     scope = active_scope(plan, root=root)
     evidence = fetch_pr_evidence(pr, source_head, root=root)
@@ -101,21 +62,6 @@ def _transition_evidence(plan: dict, pr: int, source_head: str, review: dict, ro
     return evidence
 
 
-def _completed_source_evidence(plan: dict, source_head: str, root: Path) -> dict:
-    active = plan["active_package"]
-    if plan["packages"][active].get("status") != "complete":
-        raise ValueError("completed-source evidence requires complete package")
-    if plan["packages"][active].get("checkpoint") != active:
-        raise ValueError("complete package checkpoint reference missing")
-    checkpoint = load_checkpoints(root).get("checkpoints", {}).get(active)
-    if not isinstance(checkpoint, dict):
-        raise ValueError("complete package checkpoint evidence missing")
-    return {
-        "type": "completed_checkpoint",
-        "source_head": source_head,
-        "checkpoint": active,
-        "checkpoint_source_head": checkpoint.get("source_head"),
-    }
 def begin_next(plan: dict, *, branch: str, activate: str, next_id: str | None,
                verified_pr: int, owner_waiver: bool = False,
                independent_review_unavailable: bool = False,
@@ -136,8 +82,10 @@ def begin_next(plan: dict, *, branch: str, activate: str, next_id: str | None,
     evidence = _transition_evidence(plan, verified_pr, source_head, review, root)
     updated = transition(plan, activate=activate, next_id=next_id, new_branch=branch,
                          source_head=source_head, evidence=evidence)
-    _write_transition(plan, updated, evidence, branch=branch, current_branch=current_branch,
-                      source_head=source_head, root=root)
+    write_transition(
+        plan, updated, evidence, branch=branch, current_branch=current_branch,
+        source_head=source_head, root=root, git_fn=git, write_state_fn=write_state,
+    )
     return updated, evidence
 def begin_decided_next(plan: dict, *, branch: str, candidate: dict, verified_pr: int | None,
                        owner_waiver: bool = False,
@@ -157,7 +105,7 @@ def begin_decided_next(plan: dict, *, branch: str, candidate: dict, verified_pr:
     validate_decided_candidate(plan, candidate)
     finishing_status = plan["packages"][plan["active_package"]]["status"]
     if finishing_status == "complete":
-        evidence = _completed_source_evidence(plan, source_head, root)
+        evidence = completed_source_evidence(plan, source_head, root)
         record_checkpoint = False
     else:
         if verified_pr is None:
@@ -169,8 +117,11 @@ def begin_decided_next(plan: dict, *, branch: str, candidate: dict, verified_pr:
         record_checkpoint = True
     updated = decided_transition(plan, candidate=candidate, new_branch=branch,
                                  source_head=source_head, evidence=evidence)
-    _write_transition(plan, updated, evidence, branch=branch, current_branch=current_branch,
-                      source_head=source_head, root=root, record_checkpoint=record_checkpoint)
+    write_transition(
+        plan, updated, evidence, branch=branch, current_branch=current_branch,
+        source_head=source_head, root=root, git_fn=git, write_state_fn=write_state,
+        record_checkpoint=record_checkpoint,
+    )
     return updated, evidence
 def reconcile_continuation(plan: dict, *, branch: str, activate: str,
                            reference_head: str, gaps: list[str],
@@ -188,7 +139,7 @@ def reconcile_continuation(plan: dict, *, branch: str, activate: str,
         raise ValueError("reference_head not ancestor of HEAD") from exc
     updated = reconcile_continuation_transition(plan, activate=activate, new_branch=branch,
         source_head=source_head, reference_head=reference_head, acceptance_gaps=gaps)
-    paths = _state_paths(root)
+    paths = state_paths(root)
     originals = {path: path.read_bytes() if path.exists() else None for path in paths}
     original_branch = plan["canonical_lineage"]["working_branch"]
     git("switch", "-c", branch, source_head, root=root)

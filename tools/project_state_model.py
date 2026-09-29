@@ -5,9 +5,12 @@ import json
 from pathlib import Path
 import re
 
+from project_state_registry import (
+    PACKAGES_PATH, PLAN_PATH, load_live_plan, load_packages, load_plan,
+    serialize_packages, serialize_plan, validate_live_base,
+)
+
 ROOT = Path(__file__).resolve().parents[1]
-PLAN_PATH = ROOT / "docs" / "PLAN.json"
-PACKAGES_PATH = ROOT / "docs" / "PACKAGES.json"
 CHECKPOINTS_PATH = ROOT / "docs" / "CHECKPOINTS.json"
 READY_DEPENDENCY_STATUSES = {
     "complete",
@@ -22,30 +25,6 @@ RECONCILIATION_GAPS = {
     "ci", "runtime", "operational",
 }
 INCOMPLETE_REFERENCE_STATUS = "superseded_incomplete_reference"
-
-
-def load_live_plan(root: Path = ROOT) -> dict:
-    return json.loads((root / "docs" / "PLAN.json").read_text(encoding="utf-8"))
-
-
-def load_packages(root: Path = ROOT) -> dict:
-    path = root / "docs" / "PACKAGES.json"
-    if path.exists():
-        value = json.loads(path.read_text(encoding="utf-8"))
-        if not isinstance(value, dict) or not isinstance(value.get("packages"), dict):
-            raise ValueError("PACKAGES.json requires a packages object")
-        return value["packages"]
-    legacy = load_live_plan(root).get("packages")
-    if isinstance(legacy, dict):
-        return legacy
-    raise ValueError("package registry missing")
-
-
-def load_plan(root: Path = ROOT) -> dict:
-    live = load_live_plan(root)
-    result = json.loads(json.dumps(live))
-    result["packages"] = load_packages(root)
-    return result
 
 
 def load_checkpoints(root: Path = ROOT) -> dict:
@@ -99,6 +78,7 @@ def validate_plan(plan: dict) -> None:
     if not lineage.get("working_branch"):
         raise ValueError("canonical_lineage.working_branch is required")
     packages = plan.get("packages", {})
+    validate_live_base(plan)
     active_id = plan.get("active_package")
     active_status = packages.get(active_id, {}).get("status")
     active = [key for key, item in packages.items() if item.get("status") == "active"]
@@ -191,9 +171,13 @@ def transition(plan: dict, *, activate: str, next_id: str | None,
     result["active_package"] = activate
     result["next_package"] = next_id
     lineage = result["canonical_lineage"]
-    lineage["current_package_base"] = {
+    base = {
         "branch": lineage["working_branch"], "sha": source_head,
-        "state": "verified_pr_merge_tree_checkpoint"}
+        "state": "verified_pr_merge_tree_checkpoint",
+    }
+    if finishing_status == "complete":
+        base.update(state="completed_package_successor_base", checkpoint=active)
+    lineage["current_package_base"] = base
     lineage["working_branch"] = new_branch
     if next_id is not None:
         result["packages"][next_id]["status"] = "planned_next"
@@ -246,21 +230,6 @@ def reconcile_continuation_transition(plan: dict, *, activate: str, new_branch: 
     lineage["working_branch"] = new_branch
     validate_plan(result)
     return result
-
-
-def serialize_plan(plan: dict) -> str:
-    """Serialize only bounded live control-plane state."""
-    live = {
-        key: value for key, value in plan.items()
-        if key not in {"packages", "status_meaning"}
-    }
-    live["packages_ref"] = "PACKAGES.json"
-    return json.dumps(live, ensure_ascii=False, indent=2) + "\n"
-
-
-def serialize_packages(plan: dict) -> str:
-    value = {"schema_version": 1, "packages": plan["packages"]}
-    return json.dumps(value, ensure_ascii=False, indent=2, sort_keys=True) + "\n"
 
 
 def serialize_checkpoints(checkpoints: dict) -> str:
