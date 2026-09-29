@@ -22,7 +22,7 @@ jobs:
       - &source-checkout
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd
         with: {persist-credentials: false, fetch-depth: 0}
-      - uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97
         with: {python-version: '3.13'}
       - uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38
         with: {node-version: '24'}
@@ -231,7 +231,7 @@ jobs:
     timeout-minutes: 8
     steps:
       - *source-checkout
-      - uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97
         with: {python-version: '3.13'}
       - name: First-run Windows configuration and root-key preservation
         shell: python
