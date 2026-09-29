@@ -63,6 +63,7 @@ def create_app(config: Settings | None = None,
         try:
             response = await call_next(request)
         except Exception:
+            logger.exception("Unhandled HTTP exception request_id=%s", request_id)
             response = JSONResponse(
                 {"error": {"code": "internal_error", "request_id": request_id}},
                 status_code=500,

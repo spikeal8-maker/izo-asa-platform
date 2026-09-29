@@ -1,9 +1,13 @@
 import itertools
 import json
+import logging
+import socket
+import sys
 from pathlib import Path
 from uuid import uuid4
 
 import pytest
+from fastapi import Request
 from fastapi.testclient import TestClient
 from pydantic import ValidationError
 from izo.app import create_app
@@ -24,6 +28,48 @@ def test_liveness_is_not_readiness(ready):
         assert r.json() == {"ready": ready}
         assert len(r.headers["X-Request-ID"]) == 32
         assert r.headers["cache-control"] == "no-store"
+
+
+def test_unexpected_http_exception_is_logged_but_not_exposed(caplog, monkeypatch):
+    if sys.platform == "win32":
+        import _socket
+
+        original_connect = _socket.socket.connect
+
+        def loopback_only(sock, address):
+            host = address[0] if isinstance(address, tuple) and address else None
+            if host not in {"127.0.0.1", "::1"}:
+                raise AssertionError("Network is forbidden in unit tests")
+            return original_connect(sock, address)
+
+        monkeypatch.setattr(socket.socket, "connect", loopback_only)
+
+    app = create_app(Settings(), readiness=lambda: True)
+    dispatch = app.user_middleware[0].kwargs["dispatch"]
+    private_detail = "private-exception-detail"
+    request = Request({
+        "type": "http", "method": "GET", "path": "/__test__/unexpected",
+        "headers": [], "query_string": b"", "scheme": "http",
+        "server": ("test", 80), "client": ("test", 1),
+    })
+
+    async def unexpected(_request):
+        raise RuntimeError(private_detail)
+
+    with caplog.at_level(logging.ERROR, logger="izo.http"):
+        coroutine = dispatch(request, unexpected)
+        with pytest.raises(StopIteration) as completed:
+            coroutine.send(None)
+    response = completed.value.value
+
+    request_id = response.headers["X-Request-ID"]
+    assert response.status_code == 500
+    assert json.loads(response.body) == {"error": {"code": "internal_error", "request_id": request_id}}
+    assert private_detail not in response.body.decode("utf-8")
+    exception_records = [record for record in caplog.records if record.exc_info]
+    assert len(exception_records) == 1
+    assert request_id in exception_records[0].getMessage()
+    assert str(exception_records[0].exc_info[1]) == private_detail
 
 
 def test_no_fake_generators_or_identity():

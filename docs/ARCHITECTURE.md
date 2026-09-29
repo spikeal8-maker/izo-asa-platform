@@ -8,23 +8,29 @@
 
 API-core не зависит от наличия GPU дома. Локальный исполнитель подключается исходящим HTTPS и не получает доступ к PostgreSQL. Внешние API вызываются только серверным адаптером. Общие contracts не превращают разные providers в одинаковые сервисы.
 
-## 2. Реальная карта Foundation
+## 2. Реальная карта текущей реализации
 
-| Файл/область | Что уже есть | Чего пока нет |
+Ниже описано **CURRENTLY IMPLEMENTED** на canonical lineage. Это не означает, что каждый домен уже
+полностью принят как продукт или готов к production; целевые/планируемые границы перечислены отдельно ниже.
+
+| Область | CURRENTLY IMPLEMENTED | TARGET / PLANNED |
 |---|---|---|
-| `apps/api/izo/app.py` | FastAPI factory и health/API shell | Продуктовые routes и авторизация |
-| `apps/api/izo/config.py` | Конфигурация foundation-стенда | Production secrets manager |
-| `apps/api/izo/contracts.py` | Modality, Executor, Capability, JobSpec, AssetRef | Public create-job API и полный model registry |
-| `apps/api/izo/generation.py` | Чистые правила routing/state | Персистентная очередь и реальный worker |
-| `apps/api/izo/health.py` | Проверки готовности зависимостей | Полный operational dashboard |
-| `apps/api/izo/storage.py` | Приватный S3 boundary | Пользовательская загрузка и проверка ownership |
-| `apps/api/migrations` | Alembic baseline | Пользователи, ledger, jobs и публикации |
-| `apps/web/src/shell` | Общая техническая оболочка | Утверждённый дизайн и продуктовые screens |
-| `apps/web/src/platform` | Presentation hint платформы | Доверенная Telegram/MAX identity |
-| `packages/contracts` | Экспорт OpenAPI | Отдельная схема каждого будущего домена |
-| `tests`, `apps/web/e2e` | Unit/architecture и browser shell tests | E2E реальной генерации и пользовательских прав |
+| `apps/api/izo/app.py` | FastAPI composition root; health/foundation и routes Accounts, Credits, Entitlements, Admin, Catalog, Access, Settings, Media, Jobs, Guest, Chat | Новые product surfaces добавляются только отдельными пакетами |
+| Accounts / Access | Регистрация/auth/session boundaries, staff permissions и access lifecycle | Дальнейшие account/product сценарии по отдельным contracts |
+| Credits / Entitlements / Settings | Ledger/reservation primitives, entitlement policy и versioned settings | Новые billing/product policies без второго источника баланса |
+| Admin / Catalog | Admin boundary и server-owned catalog projection | Расширение catalog/admin только через versioned contracts |
+| Media | Private S3-backed asset/upload ownership boundary | Новые media types и lifecycle по отдельным пакетам |
+| Jobs / Providers | Durable jobs, provider-call/recovery boundaries и fal provider implementation | Новые providers/models без обхода Jobs/Credits/Media |
+| Guest | Server-owned guest trial boundary | Дополнительные guest policies только с abuse/ownership gates |
+| Chat | Durable text/multi-provider/vision runtime текущего поколения | Chat v4 P1–P5 architecture остаётся target до отдельной реализации |
+| `apps/api/migrations` | Alembic lineage `0001_foundation` … `0015_chat_vision` | Новые migrations только вместе с реализуемым сценарием |
+| `apps/web` | React/TypeScript product shell, Chat/Admin/Image-related UI и browser acceptance | Новые surfaces и parity work по отдельным пакетам |
+| `packages/contracts` | Генерируемый OpenAPI artifact | Расширяется вместе с фактическим public API |
+| `tests`, `apps/web/e2e` | Unit, boundary, migration, integration и browser checks | Новые behavior-specific checks вместе с новыми contracts |
 
-Не объявлять файл `contracts.py` полной схемой продукта. JobSpec уже помечен internal server-owned: frontend не должен присылать owner, reserved_credits, provider endpoint или credentials как доверенные значения.
+`contracts.py` не является полной схемой продукта. Public DTO, server-owned state и domain-specific
+schemas остаются у своих владельцев; frontend не должен присылать owner, credits, provider endpoint
+или credentials как доверенные значения.
 
 ## 3. Целевые модули и владельцы данных
 

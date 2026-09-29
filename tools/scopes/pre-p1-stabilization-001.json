@@ -1,0 +1,26 @@
+{
+  "package_id": "PRE-P1-STABILIZATION-001",
+  "base": "2d6b64a520939bf7292e3f35990a96952e1f8a0c",
+  "scope_class": "normal",
+  "risk": "medium",
+  "independent_review_required": true,
+  "max_files": 12,
+  "allowed": [
+    "docs/STATUS.md",
+    "docs/ARCHITECTURE.md",
+    "docs/reviews/PRE-P1-STABILIZATION-001.md",
+    ".github/workflows/dependency-audit.yml",
+    "requirements.in",
+    "requirements.lock",
+    "apps/api/izo/app.py",
+    "tests/test_foundation.py",
+    "tests/test_dependency_security.py",
+    "tools/scopes/pre-p1-stabilization-001.json"
+  ],
+  "sensitive_approved": [
+    ".github/workflows/dependency-audit.yml",
+    "requirements.in",
+    "requirements.lock",
+    "tools/scopes/pre-p1-stabilization-001.json"
+  ]
+}

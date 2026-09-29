@@ -26,11 +26,23 @@ def test_security_runner_has_no_secrets_write_token_or_unreviewed_actions():
     assert "persist-credentials: false" in text
     assert "ubuntu-24.04" in text
     assert "node-version: '24'" in text
+    assert "python-version: '3.13'" in text
     for forbidden in ("secrets.", "pull_request_target", "self-hosted", "write-all", "contents: write"):
         assert forbidden not in text
     actions = re.findall(r"uses: ([^\s]+)", text)
-    assert len(actions) == 3
+    assert len(actions) == 4
     assert all(re.fullmatch(r"actions/[a-z-]+@[a-f0-9]{40}", action) for action in actions)
+
+
+def test_python_audit_is_pinned_and_blocks_known_vulnerabilities():
+    text = WORKFLOW.read_text(encoding="utf-8")
+    assert "pip-audit==2.10.1" in text
+    command = next(line.strip() for line in text.splitlines() if "python -m pip_audit --disable-pip" in line)
+    assert "--no-deps" in command
+    assert "-r requirements.lock" in command
+    assert "--format json" in command
+    assert "||" not in command and ";" not in command
+    assert "continue-on-error" not in text
 
 
 def test_audit_does_not_update_dependencies_or_execute_package_hooks():
@@ -48,6 +60,7 @@ def test_evidence_is_kept_on_failure_without_collecting_auth_fixtures():
     assert "if: always()" in artifact
     assert "if-no-files-found: error" in artifact
     paths = artifact.split("path: |\n", 1)[1].split("retention-days:", 1)[0]
+    assert "izo-python-dependency-audit.json" in paths
     assert "izo-dependency-audit.json" in paths
     assert "izo-dependency-versions.txt" in paths
     for forbidden in ("*", "izo-auth", "izo-email", "izo-credit", ".env", "node_modules"):
