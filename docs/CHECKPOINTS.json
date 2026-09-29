@@ -254,6 +254,23 @@
         "Review Source": 35775373259
       }
     },
+    "PRE-P1-STABILIZATION-001": {
+      "base_head": "e93aff74be4283268c57b6edbc34d35d92ffa414",
+      "independent_review": "unavailable",
+      "owner_actor": "spikeal8-maker",
+      "owner_waiver": true,
+      "owner_waiver_reason": "Final exact-head independent read-only challenge APPROVE for source 9bed77548d07f113bc806b1e5016076edb2646e1; separate GitHub reviewer actor unavailable. Owner authorizes only PRE-P1 terminal closeout; Chat P1 remains unstarted.",
+      "owner_waiver_source": "9bed77548d07f113bc806b1e5016076edb2646e1",
+      "source_head": "9bed77548d07f113bc806b1e5016076edb2646e1",
+      "tested_merge_tree": "229b17177c3b7d4077bb28ac34f1102e61d482d5",
+      "type": "pr_merge_tree",
+      "verified_pr": 250,
+      "workflows": {
+        "Dependency Security": 36590236563,
+        "Foundation CI": 36590236580,
+        "Review Source": 36590236588
+      }
+    },
     "SETTINGS-002": {
       "base_head": "fbb3ba01232c0b31682db0f37a070300d95335ed",
       "source_head": "220d302dc238889da066c1799652d4b036007de3",
