@@ -12,6 +12,12 @@ ROOT = Path(__file__).resolve().parents[1]
 REPORT_LIMIT = 500 * 1024
 ALLOWLIST_LIMIT = 1024 * 1024
 FAIL_LIMIT = 5 * 1024 * 1024
+ROOT_CONTEXT_TARGET = 4_500
+ROOT_CONTEXT_HARD = 6_000
+PLAN_TARGET = 4_000
+PLAN_WARNING = 5_000
+PLAN_HARD = 6_000
+NEAR_LIMIT_RATIO = 0.80
 
 PROD_RULES = (
     ("apps/api/izo/", {".py"}, 300, 12_000),
@@ -78,6 +84,11 @@ def _old_size(root: Path, base: str, raw: str) -> int:
     return len(result.stdout) if result.returncode == 0 else 0
 
 
+def _size(root: Path, raw: str) -> int:
+    path = root / raw
+    return path.stat().st_size if path.is_file() else 0
+
+
 def _handwritten_rule(raw: str):
     path = PurePosixPath(raw)
     if ".generated." in path.name:
@@ -142,6 +153,8 @@ def scan(root: Path = ROOT, *, base: str | None = None,
     changed = _changed_paths(root, base)
     failures: list[tuple[str, str]] = []
     reports: list[tuple[str, str]] = []
+    near_limit: list[dict[str, object]] = []
+    changed_near_limit: list[dict[str, object]] = []
     total_bytes = 0
     over_500 = over_1m = over_5m = 0
 
@@ -186,7 +199,19 @@ def scan(root: Path = ROOT, *, base: str | None = None,
             failures.append((raw, f"handwritten hard byte limit {size}>{max_bytes}"))
         if lines > max_lines:
             failures.append((raw, f"handwritten hard line limit {lines}>{max_lines}"))
-        if base and raw in changed and size > int(max_bytes * 0.80):
+        is_near = size > int(max_bytes * NEAR_LIMIT_RATIO) or lines > int(max_lines * NEAR_LIMIT_RATIO)
+        if is_near:
+            entry = {
+                "path": raw,
+                "bytes": size,
+                "lines": lines,
+                "max_bytes": max_bytes,
+                "max_lines": max_lines,
+            }
+            near_limit.append(entry)
+            if raw in changed:
+                changed_near_limit.append(entry)
+        if base and raw in changed and size > int(max_bytes * NEAR_LIMIT_RATIO):
             old = _old_size(root, base, raw)
             if not old or size > old:
                 failures.append((
@@ -194,6 +219,8 @@ def scan(root: Path = ROOT, *, base: str | None = None,
                     f"near-limit handwritten file grew {old}->{size} above 80% of {max_bytes}; split responsibility",
                 ))
 
+    root_context_bytes = _size(root, "AGENTS.md") + _size(root, "docs/CURRENT.md")
+    live_plan_bytes = _size(root, "docs/PLAN.json")
     return {
         "tracked_files": len(paths),
         "tracked_bytes": total_bytes,
@@ -201,6 +228,17 @@ def scan(root: Path = ROOT, *, base: str | None = None,
         "files_over_1mb": over_1m,
         "files_over_5mb": over_5m,
         "tracked_junk": sum(1 for _, reason in failures if "junk" in reason),
+        "root_context_bytes": root_context_bytes,
+        "root_context_target": ROOT_CONTEXT_TARGET,
+        "root_context_hard_limit": ROOT_CONTEXT_HARD,
+        "live_plan_bytes": live_plan_bytes,
+        "live_plan_target": PLAN_TARGET,
+        "live_plan_warning": PLAN_WARNING,
+        "live_plan_hard_limit": PLAN_HARD,
+        "near_limit_handwritten": sorted(near_limit, key=lambda item: str(item["path"])),
+        "changed_near_limit_handwritten": sorted(
+            changed_near_limit, key=lambda item: str(item["path"])
+        ),
         "failures": sorted(set(failures)),
         "reports": sorted(set(reports)),
         "base": base,
@@ -221,9 +259,17 @@ def main() -> int:
     if args.json:
         print(json.dumps(result, ensure_ascii=False, indent=2))
     else:
-        for key in ("tracked_files", "tracked_bytes", "files_over_500kb",
-                    "files_over_1mb", "files_over_5mb", "tracked_junk"):
+        for key in (
+            "tracked_files", "tracked_bytes", "files_over_500kb", "files_over_1mb",
+            "files_over_5mb", "tracked_junk", "root_context_bytes", "root_context_target",
+            "root_context_hard_limit", "live_plan_bytes", "live_plan_target",
+            "live_plan_warning", "live_plan_hard_limit",
+        ):
             print(f"{key.upper()} {result[key]}")
+        for item in result["near_limit_handwritten"]:
+            print(f"NEAR_LIMIT\t{item['path']}\t{item['bytes']} bytes\t{item['lines']} lines")
+        for item in result["changed_near_limit_handwritten"]:
+            print(f"CHANGED_NEAR_LIMIT\t{item['path']}\t{item['bytes']} bytes\t{item['lines']} lines")
         for raw, reason in result["reports"]:
             print(f"REPORT\t{raw}\t{reason}")
         if result["failures"]:

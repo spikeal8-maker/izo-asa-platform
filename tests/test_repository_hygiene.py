@@ -47,6 +47,24 @@ def test_clean_repo_passes(tmp_path):
     assert not hygiene.scan(root)["failures"]
 
 
+def test_context_and_plan_sizes_are_reported_without_becoming_new_failures(tmp_path):
+    root = repo(tmp_path)
+    (root / "docs").mkdir()
+    (root / "AGENTS.md").write_text("a" * 120, encoding="utf-8")
+    (root / "docs/CURRENT.md").write_text("c" * 80, encoding="utf-8")
+    (root / "docs/PLAN.json").write_text('{"canonical_lineage":{}}', encoding="utf-8")
+    commit_all(root)
+    result = hygiene.scan(root, base=None)
+    assert result["root_context_bytes"] == 200
+    assert result["root_context_target"] == 4500
+    assert result["root_context_hard_limit"] == 6000
+    assert result["live_plan_bytes"] == len('{"canonical_lineage":{}}')
+    assert result["live_plan_target"] == 4000
+    assert result["live_plan_warning"] == 5000
+    assert result["live_plan_hard_limit"] == 6000
+    assert not result["failures"]
+
+
 @pytest.mark.parametrize("raw", [
     "runtime/app.log",
     "runtime/state.sqlite",
@@ -125,3 +143,9 @@ def test_near_limit_source_growth_fails(tmp_path):
     commit_all(root, "growth")
     result = hygiene.scan(root, base=base)
     assert "near-limit handwritten file grew" in reasons(result)
+    assert [item["path"] for item in result["near_limit_handwritten"]] == [
+        "apps/api/izo/near_limit.py"
+    ]
+    assert [item["path"] for item in result["changed_near_limit_handwritten"]] == [
+        "apps/api/izo/near_limit.py"
+    ]
