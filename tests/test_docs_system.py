@@ -58,6 +58,17 @@ def test_plan_current_base_has_explicit_checkpoint_semantics_without_embedded_ev
         assert matching, f"current_package_base {base['sha']} has no immutable checkpoint evidence"
     assert all("evidence" not in item for item in plan["packages"].values())
 
+
+def test_docs_validator_accepts_terminal_complete_state():
+    sys.path.insert(0, str(ROOT / "tools"))
+    import check_docs
+    plan = json.loads((ROOT / "docs/PLAN.json").read_text(encoding="utf-8"))
+    plan["packages"][plan["active_package"]]["status"] = "complete"
+    errors = []
+    check_docs.check_plan(errors, plan)
+    assert errors == []
+
+
 def test_owner_product_shell_spec_is_canonical_and_explicit():
     text = (ROOT / "docs/UX_PRODUCT_SHELL.md").read_text(encoding="utf-8")
     for required in ("Главная поверхность продукта — Chat", "Лента/Explore", "Обычная регистрация открытая",
