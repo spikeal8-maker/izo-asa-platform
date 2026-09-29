@@ -44,7 +44,6 @@ def complete_transition(plan: dict, evidence: dict) -> dict:
     result["packages"][active]["status"] = "complete"
     result["packages"][active]["checkpoint"] = active
     result["packages"][active].pop("evidence", None)
-    result.setdefault("status_meaning", {})["complete"] = "Frozen checkpoint; no successor has started."
     validate_plan(result)
     return result
 
