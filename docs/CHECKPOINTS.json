@@ -77,6 +77,23 @@
         "Review Source": 36321484335
       }
     },
+    "CHAT-V4-ADOPTION-001": {
+      "base_head": "2a2995ee47c8c369b512c1328f02d3eb662775a3",
+      "independent_review": "unavailable",
+      "owner_actor": "spikeal8-maker",
+      "owner_waiver": true,
+      "owner_waiver_reason": "Owner authorizes freeze of exact E0 SHA 811410e3cada4498161415bc279ce9a9f033ab6a after successful exact-head CI and technical review; waiver is limited to this E0 transition and does not authorize P1.",
+      "owner_waiver_source": "811410e3cada4498161415bc279ce9a9f033ab6a",
+      "source_head": "811410e3cada4498161415bc279ce9a9f033ab6a",
+      "tested_merge_tree": "afb1c0d32692feb3278cb7d298889b9ecedad294",
+      "type": "pr_merge_tree",
+      "verified_pr": 238,
+      "workflows": {
+        "Dependency Security": 36497695888,
+        "Foundation CI": 36497695762,
+        "Review Source": 36497695795
+      }
+    },
     "CHAT-VISION-001": {
       "base_head": "67233e203436f56b77add709e04f01610ac462f3",
       "independent_review": "unavailable",
