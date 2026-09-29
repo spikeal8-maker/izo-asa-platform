@@ -1,0 +1,34 @@
+{
+  "base": "8880dd2084ad43e239391037a707bea43ea763f7",
+  "max_files": 24,
+  "allowed": [
+    ".github/workflows/ci.yml",
+    "apps/api/izo/accounts/credit_access.py",
+    "apps/api/izo/accounts/routes.py",
+    "apps/api/izo/app.py",
+    "apps/api/izo/credits/AGENTS.md",
+    "apps/api/izo/credits/README.md",
+    "apps/api/izo/credits/__init__.py",
+    "apps/api/izo/credits/repository.py",
+    "apps/api/izo/credits/routes.py",
+    "apps/api/izo/credits/schemas.py",
+    "apps/api/izo/credits/service.py",
+    "apps/api/izo/credits/tables.py",
+    "apps/api/migrations/versions/0004_credits.py",
+    "docs/STATUS.md",
+    "packages/contracts/openapi.json",
+    "tests/test_credit_boundaries.py",
+    "tests/test_credit_migration.py",
+    "tests/test_credits.py",
+    "tests/test_credits_http.py",
+    "tools/credit_acceptance.py",
+    "tools/scopes/credit-001.json"
+  ],
+  "sensitive_approved": [
+    ".github/workflows/ci.yml",
+    "apps/api/migrations/versions/0004_credits.py",
+    "apps/api/izo/credits/AGENTS.md",
+    "tools/scopes/credit-001.json",
+    "tools/credit_acceptance.py"
+  ]
+}

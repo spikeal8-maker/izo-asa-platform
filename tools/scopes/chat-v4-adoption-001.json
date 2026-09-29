@@ -1,0 +1,53 @@
+{
+  "package_id": "CHAT-V4-ADOPTION-001",
+  "base": "2a2995ee47c8c369b512c1328f02d3eb662775a3",
+  "scope_class": "cross_domain",
+  "risk": "high",
+  "independent_review_required": true,
+  "max_files": 25,
+  "domains": [
+    "governance",
+    "product-docs",
+    "chat-docs",
+    "state-tooling"
+  ],
+  "non_goals": [
+    "No product runtime implementation",
+    "No P1 code",
+    "No migrations/provider/Credits/Media/Jobs runtime changes",
+    "No merge or deploy"
+  ],
+  "allowed": [
+    "AGENTS.md",
+    "apps/api/izo/chat/README.md",
+    "apps/web/src/shell/chat/README.md",
+    "docs/ADMIN.md",
+    "docs/AI_RUNTIME.md",
+    "docs/ARCHITECTURE.md",
+    "docs/CONTEXT_MAP.json",
+    "docs/DEVELOPMENT.md",
+    "docs/DOCS_SYSTEM.md",
+    "docs/MAINTAINABILITY.md",
+    "docs/PRODUCT.md",
+    "docs/UX.md",
+    "docs/proposals/chat-v4/IZO_ASA_CHAT_PRODUCT_SPEC_v4.md",
+    "docs/proposals/chat-v4/IZO_ASA_CHAT_ARCHITECTURE_CONTRACT_v4.md",
+    "docs/proposals/chat-v4/IZO_ASA_CHAT_ENGINEERING_MAINTENANCE_v4.md",
+    "docs/proposals/chat-v4/IZO_ASA_CHAT_V4_ADOPTION_TRACEABILITY.md",
+    "docs/proposals/chat-v4/IZO_ASA_PLATFORM_SOURCE_DELIVERY_CONTRACT_v1.md",
+    "docs/proposals/chat-v4/README.md",
+    "docs/reviews/CHAT-V4-ADOPTION-001.md",
+    "tools/scopes/chat-v4-adoption-001.json",
+    "docs/CHECKPOINTS.json",
+    "docs/CURRENT.md",
+    "docs/PLAN.json",
+    "tools/project_state_model.py",
+    "tests/test_project_state.py"
+  ],
+  "sensitive_approved": [
+    "AGENTS.md",
+    "tools/scopes/chat-v4-adoption-001.json",
+    "tools/project_state_model.py"
+  ],
+  "large_scope_reason": "E0 canonical adoption is a cross-domain documentation/governance package. Its stacked PR necessarily includes the three repository state-transition files, plus a bounded project-state serialization repair required by Foundation CI. No product runtime implementation is included."
+}

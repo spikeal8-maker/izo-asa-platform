@@ -1,0 +1,33 @@
+name: Review Source
+on:
+  pull_request: {}
+permissions:
+  contents: read
+concurrency:
+  group: review-source-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  snapshot:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 3
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd
+        with: {persist-credentials: false}
+      - name: Archive tracked source only
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p "$RUNNER_TEMP/izo-review-source"
+          git archive --format=tar HEAD | gzip -n > "$RUNNER_TEMP/izo-review-source/source.tar.gz"
+          git rev-parse HEAD > "$RUNNER_TEMP/izo-review-source/commit.txt"
+          git rev-parse 'HEAD^{tree}' > "$RUNNER_TEMP/izo-review-source/tree.txt"
+          git ls-tree -r -z HEAD > "$RUNNER_TEMP/izo-review-source/files.git-tree"
+          cd "$RUNNER_TEMP/izo-review-source"
+          sha256sum source.tar.gz > SHA256SUMS
+      - name: Save immutable review input
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: review-source
+          path: ${{ runner.temp }}/izo-review-source/
+          retention-days: 7
+          if-no-files-found: error

@@ -1,0 +1,32 @@
+{
+  "base": "001edb9953d642f4d06453505809c20512f4b2b3",
+  "max_files": 19,
+  "allowed": [
+    "AGENTS.md",
+    "README.md",
+    "apps/api/izo/jobs/README.md",
+    "docs/BLOCK_MAP.json",
+    "docs/CURRENT.md",
+    "docs/DEVELOPMENT.md",
+    "docs/DOCS_SYSTEM.md",
+    "docs/INDEX.md",
+    "docs/NEXT.md",
+    "docs/PLAN.json",
+    "docs/STATUS.md",
+    "docs/reviews/DOC-004B.md",
+    "tests/context_cases.json",
+    "tests/test_docs_system.py",
+    "tests/test_project_state.py",
+    "tools/check_docs.py",
+    "tools/context.py",
+    "tools/project_state.py",
+    "tools/scopes/doc-004b.json"
+  ],
+  "sensitive_approved": [
+    "AGENTS.md",
+    "tools/check_docs.py",
+    "tools/context.py",
+    "tools/project_state.py",
+    "tools/scopes/doc-004b.json"
+  ]
+}

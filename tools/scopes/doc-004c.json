@@ -1,0 +1,43 @@
+{
+  "base": "fe47e208809b5950b08c7133ba922d7be5742d24",
+  "max_files": 30,
+  "allowed": [
+    "AGENTS.md",
+    "README.md",
+    "apps/api/izo/admin/README.md",
+    "apps/api/izo/credits/README.md",
+    "apps/api/izo/entitlements/README.md",
+    "apps/api/izo/media/README.md",
+    "apps/web/security/README.md",
+    "docs/AI_RUNTIME.md",
+    "docs/BLOCK_MAP.json",
+    "docs/CURRENT.md",
+    "docs/DEVELOPMENT.md",
+    "docs/DOCS_SYSTEM.md",
+    "docs/NEXT.md",
+    "docs/OPERATIONS.md",
+    "docs/PLAN.json",
+    "docs/PRODUCT.md",
+    "docs/STATUS.md",
+    "docs/reviews/DOC-004C.md",
+    "tests/context_cases.json",
+    "tests/test_docs_system.py",
+    "tests/test_project_state.py",
+    "tools/check_docs.py",
+    "tools/context.py",
+    "tools/project_state.py",
+    "docs/history/local-maps-before-DOC-004C/admin.md",
+    "docs/history/local-maps-before-DOC-004C/credits.md",
+    "docs/history/local-maps-before-DOC-004C/entitlements.md",
+    "docs/history/local-maps-before-DOC-004C/media.md",
+    "docs/history/local-maps-before-DOC-004C/web-security.md",
+    "tools/scopes/doc-004c.json"
+  ],
+  "sensitive_approved": [
+    "AGENTS.md",
+    "tools/check_docs.py",
+    "tools/context.py",
+    "tools/project_state.py",
+    "tools/scopes/doc-004c.json"
+  ]
+}

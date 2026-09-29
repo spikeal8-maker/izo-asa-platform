@@ -1,0 +1,34 @@
+{
+  "base": "e676be04d52dc998072a7779e83b6a78ddd5f601",
+  "max_files": 23,
+  "allowed": [
+    "apps/api/izo/accounts/README.md",
+    "docs/BLOCK_MAP.json",
+    "docs/CURRENT.md",
+    "docs/DOCS_SYSTEM.md",
+    "docs/PLAN.json",
+    "docs/history/local-maps-before-DOC-004D/accounts.md",
+    "docs/reviews/DOC-004D.md",
+    "tests/context_cases.json",
+    "tests/test_admin_boundaries.py",
+    "tests/test_auth_boundaries.py",
+    "tests/test_boundaries.py",
+    "tests/test_credit_boundaries.py",
+    "tests/test_docs_system.py",
+    "tests/test_email_boundaries.py",
+    "tests/test_entitlement_boundaries.py",
+    "tests/test_image_boundaries.py",
+    "tests/test_jobs_boundaries.py",
+    "tests/test_media_boundaries.py",
+    "tests/test_project_state.py",
+    "tests/test_web_boundaries.py",
+    "tools/check_docs.py",
+    "tools/project_state.py",
+    "tools/scopes/doc-004d.json"
+  ],
+  "sensitive_approved": [
+    "tools/check_docs.py",
+    "tools/project_state.py",
+    "tools/scopes/doc-004d.json"
+  ]
+}

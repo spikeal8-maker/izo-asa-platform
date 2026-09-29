@@ -1,0 +1,29 @@
+# CHAT-PARITY-001 · implementation contract
+
+## Before → after
+
+Before: the local preview on port 18080 has the Admin entry and revised shell, but Chat admits only DeepSeek text. It presents a file control whose selected file cannot be sent. The OpenRouter credential and model selection available in the separate port 5190 development checkout are absent. Chat has no server-owned preference for the response language and its reading column expands excessively on wide screens.
+
+After: the canonical preview supports server-owned OpenRouter BYOK credentials, a bounded model catalog and real text streaming alongside DeepSeek. The UI exposes provider settings and model choice, shows unknown RUB prices honestly, removes unsupported file/tool actions until their backend exists, and restores a bounded reading column. The server asks providers to answer in the user's language, defaulting to Russian for this Russian-language preview.
+
+## Package, scope and risk
+
+- Package `CHAT-PARITY-001`, branch `codex/chat-parity-001`, base `e7af398cfc731027ab2a526451f52ac98509cdbe`.
+- Finite cross-domain scope: at most 40 files, listed in `tools/scopes/chat-parity-001.json`. OpenRouter text is one end-to-end slice. Incoming images and vision require a subsequent package because the machine scope limit is hard.
+- Non-goals: image generation, image upload or vision, Credits debits, payments, RUB conversion from provider USD rates, real provider calls, copying old encrypted credentials/database, modifying the old checkout, merge or public release.
+- Risk: high for encrypted credentials, migration, provider admission and paid external execution. Browser cannot own provider keys or request retries. OpenRouter unknown outcomes quarantine the same thread and are not automatically retried. This preview has no in-app reconciliation endpoint; the warning asks the user to check the provider's result/charge before considering any manual action elsewhere.
+- Nearest acceptance: provider/credential HTTP and failure tests, migration upgrade, catalog admission and language wire tests, web provider settings/model picker E2E, responsive layout and existing Admin regressions; then complete CI and independent review or exact-SHA owner waiver.
+
+## Evidence and self-review
+
+The implementation now restores OpenRouter text BYOK, credential settings, server catalog admission, model search and a bounded Chat reading column. Unsupported file/tool actions are disabled. The server adds a Russian reply preference but model compliance is not guaranteed. Old and new Docker projects have separate databases/encryption roots; no credential was copied, and the user must enter their OpenRouter key in the new preview.
+
+Provider risk review found and fixed a missing-price-as-zero bug, remote catalog fetch under a database lock, repeated failed catalog fetches, overflow parsing, a cross-account request-ID preflight distinction, and a blind resend path after uncertain OpenRouter POST. The final path records an unknown marker before POST, retains it across timeout/stop/disconnect/restart, blocks new UUIDs in the same thread, and exposes an explicit warning during streaming, stop and thread reload. The marker uses the existing request error field. A new thread can be created manually, so the UI warns that a provider charge may already exist. In-app reconciliation remains future work; the single-worker local preview is not a multiworker execution design.
+
+Verification: isolated Linux profile: 57 focused tests passed, 1 PostgreSQL-gated case skipped; a populated PostgreSQL 17 migration smoke preserved the synthetic DeepSeek credential byte-for-byte and allowed an independent OpenRouter credential. The broad local Python run passed product tests; three Git-dependent cases could not run inside the minimal container and those three plus the machine-plan size case passed on the Windows host. Windows HTTP tests encounter the pre-existing loopback socket guard, so Linux remains the authoritative HTTP runner. Web build and focused provider E2E passed, including stop/reload warning.
+
+The local full Playwright matrix ran 791 cases: 671 passed, 117 expected skips, two failures and one flaky result. The phone/tablet compact rail transition and an obsolete 8K assertion were corrected without weakening the sidebar requirement; affected viewport checks then passed 51 cases with 10 expected skips, and the compact transition passed 20 repeated runs. Required GitHub CI must still run the full final revision. Scope is 40/40; OpenAPI export/check, docs/state, secret sanity and diff checks pass. Independent local security review: PASS with the same-thread quarantine limitation; this is not a GitHub APPROVED review.
+
+Local Docker preview `izo-catalog-preview` was rebuilt from runtime commit `ef74885057320aeffaf31f7af784ebeb4d588ee4` after a private PostgreSQL backup. Its forward migration is `0014_chat_multi_provider`; API readiness and `/` return 200, all web/API/database containers are healthy, and an unauthenticated OpenRouter catalog request returns 401. No real provider key was read or used for a paid call. The old port 5190 development checkout and its separate database remain untouched.
+
+Implementer SELF_REVIEW: **PASS** for this finite text-Chat slice. Every changed file is within the fixed scope; the original Admin permission path, top bar, compact sidebar, shared account/ledger boundaries, provider key secrecy and idempotent request IDs remain intact. Failure, restart, stop, catalog outage, malformed provider payload and cross-account cases have focused tests. No test or limit was weakened for a pass. Full required CI and exact-SHA review/owner-waiver evidence remain before technical acceptance. Image upload, vision and in-chat generation remain outstanding user-facing work.

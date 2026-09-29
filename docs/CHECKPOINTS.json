@@ -1,0 +1,283 @@
+{
+  "checkpoints": {
+    "ACCESS-001": {
+      "base_head": "a1de4b8fc551ba9b5ce3d1d88da7f1eaf378cd0e",
+      "source_head": "fbb3ba01232c0b31682db0f37a070300d95335ed",
+      "tested_merge_tree": "436512463e85a0dd44dfe449ad154065d027cbab",
+      "type": "pr_merge_tree",
+      "verified_pr": 29,
+      "workflows": {
+        "Dependency Security": 34710133920,
+        "Foundation CI": 34710133930,
+        "Review Source": 34710133922
+      }
+    },
+    "ADMIN-DONOR-CATALOG-001": {
+      "base_head": "93d9417070e65cdef16fd729b6c1046d5721061c",
+      "independent_review": "unavailable",
+      "owner_actor": "spikeal8-maker",
+      "owner_waiver": true,
+      "owner_waiver_reason": "Repository has no other participants; owner works alone; independent GitHub reviewer unavailable",
+      "owner_waiver_source": "ed1f79a6c53bdc3cab5d827d308ee661a61ebd20",
+      "source_head": "ed1f79a6c53bdc3cab5d827d308ee661a61ebd20",
+      "tested_merge_tree": "29b1c2b5dbaaa89bcdc57ee64968b0760d50171a",
+      "type": "pr_merge_tree",
+      "verified_pr": 232,
+      "workflows": {
+        "Dependency Security": 36317480579,
+        "Foundation CI": 36317480580,
+        "Review Source": 36317480597
+      }
+    },
+    "CHAT-DEEPSEEK-001": {
+      "base_head": "1120121c0fd1f6d9279aa3e95523bb48d5b906f8",
+      "independent_review": "unavailable",
+      "owner_actor": "spikeal8-maker",
+      "owner_waiver": true,
+      "owner_waiver_reason": "Я работаю над репозиторием один; другого GitHub reviewer нет.",
+      "owner_waiver_source": "d2d1d76ea86193dea1d83b0371c56216d0247dfb",
+      "source_head": "d2d1d76ea86193dea1d83b0371c56216d0247dfb",
+      "tested_merge_tree": "66f047fc4b6e8e7969d7e8880b80cad4178d18dd",
+      "type": "pr_merge_tree",
+      "verified_pr": 225,
+      "workflows": {
+        "Dependency Security": 36312041823,
+        "Foundation CI": 36312041826,
+        "Review Source": 36312041847
+      }
+    },
+    "CHAT-PARITY-001": {
+      "base_head": "e7af398cfc731027ab2a526451f52ac98509cdbe",
+      "independent_review": "unavailable",
+      "owner_actor": "spikeal8-maker",
+      "owner_waiver": true,
+      "owner_waiver_reason": "Repository has no other participants; owner explicitly approved waiver for exact source SHA 67233e203436f56b77add709e04f01610ac462f3 after all required CI checks passed.",
+      "owner_waiver_source": "67233e203436f56b77add709e04f01610ac462f3",
+      "source_head": "67233e203436f56b77add709e04f01610ac462f3",
+      "tested_merge_tree": "78bcb7f2f083a988eaa5464e5d1f6ce411f8870d",
+      "type": "pr_merge_tree",
+      "verified_pr": 235,
+      "workflows": {
+        "Dependency Security": 36354874491,
+        "Foundation CI": 36354874472,
+        "Review Source": 36354874463
+      }
+    },
+    "CHAT-UX-001": {
+      "base_head": "ed1f79a6c53bdc3cab5d827d308ee661a61ebd20",
+      "independent_review": "not_required",
+      "owner_waiver": false,
+      "source_head": "74bdd8916473975cc0b140feb93bc001f9fffd01",
+      "tested_merge_tree": "fed3746660b9cbf49997a15dcf5fe15b13601d99",
+      "type": "pr_merge_tree",
+      "verified_pr": 233,
+      "workflows": {
+        "Dependency Security": 36321484424,
+        "Foundation CI": 36321484422,
+        "Review Source": 36321484335
+      }
+    },
+    "CHAT-V4-ADOPTION-001": {
+      "base_head": "2a2995ee47c8c369b512c1328f02d3eb662775a3",
+      "independent_review": "unavailable",
+      "owner_actor": "spikeal8-maker",
+      "owner_waiver": true,
+      "owner_waiver_reason": "Owner authorizes freeze of exact E0 SHA 811410e3cada4498161415bc279ce9a9f033ab6a after successful exact-head CI and technical review; waiver is limited to this E0 transition and does not authorize P1.",
+      "owner_waiver_source": "811410e3cada4498161415bc279ce9a9f033ab6a",
+      "source_head": "811410e3cada4498161415bc279ce9a9f033ab6a",
+      "tested_merge_tree": "afb1c0d32692feb3278cb7d298889b9ecedad294",
+      "type": "pr_merge_tree",
+      "verified_pr": 238,
+      "workflows": {
+        "Dependency Security": 36497695888,
+        "Foundation CI": 36497695762,
+        "Review Source": 36497695795
+      }
+    },
+    "CHAT-VISION-001": {
+      "base_head": "67233e203436f56b77add709e04f01610ac462f3",
+      "independent_review": "unavailable",
+      "owner_actor": "spikeal8-maker",
+      "owner_waiver": true,
+      "owner_waiver_reason": "Independent read-only technical challenge review returned APPROVE with no technical blockers for exact SHA 2a2995ee47c8c369b512c1328f02d3eb662775a3. Structured independent GitHub review is unavailable because the authenticated GitHub actor is the repository owner.",
+      "owner_waiver_source": "2a2995ee47c8c369b512c1328f02d3eb662775a3",
+      "source_head": "2a2995ee47c8c369b512c1328f02d3eb662775a3",
+      "tested_merge_tree": "1a76aa3d442bef90111973e71a80990ed2a77348",
+      "type": "pr_merge_tree",
+      "verified_pr": 236,
+      "workflows": {
+        "Dependency Security": 36400306538,
+        "Foundation CI": 36400306529,
+        "Review Source": 36400306666
+      }
+    },
+    "DOC-004": {
+      "head": "001edb9953d642f4d06453505809c20512f4b2b3",
+      "workflows": {
+        "Dependency Security": 34637203194,
+        "Foundation CI": 34637203126,
+        "Review Source": 34637203153
+      }
+    },
+    "DOC-004B": {
+      "base_head": "001edb9953d642f4d06453505809c20512f4b2b3",
+      "source_head": "fe47e208809b5950b08c7133ba922d7be5742d24",
+      "tested_merge_tree": "b1c941966ea4fd53fd00322808e90adabbc28077",
+      "type": "pr_merge_tree",
+      "verified_pr": 24,
+      "workflows": {
+        "Dependency Security": 34647714532,
+        "Foundation CI": 34647714472,
+        "Review Source": 34647714613
+      }
+    },
+    "DOC-004C": {
+      "base_head": "fe47e208809b5950b08c7133ba922d7be5742d24",
+      "source_head": "e676be04d52dc998072a7779e83b6a78ddd5f601",
+      "tested_merge_tree": "63e4d16b181f6e95836cb67f5986245aca166d69",
+      "type": "pr_merge_tree",
+      "verified_pr": 25,
+      "workflows": {
+        "Dependency Security": 34657886265,
+        "Foundation CI": 34657886305,
+        "Review Source": 34657886205
+      }
+    },
+    "DOC-004D": {
+      "base_head": "e676be04d52dc998072a7779e83b6a78ddd5f601",
+      "source_head": "b53328d5e9e9111196d49062424cd7e386ac1eaa",
+      "tested_merge_tree": "062516b1f4fc22374728780044cb3d603cf0760b",
+      "type": "pr_merge_tree",
+      "verified_pr": 26,
+      "workflows": {
+        "Dependency Security": 34676568660,
+        "Foundation CI": 34676568698,
+        "Review Source": 34676568713
+      }
+    },
+    "FRONTEND-002": {
+      "base_head": "3f1bfae811b1e0e8b39226c04049d8f9a98c6087",
+      "independent_review": "unavailable",
+      "owner_actor": "spikeal8-maker",
+      "owner_waiver": true,
+      "owner_waiver_reason": "Only the repository-owner GitHub actor is available through the connected control plane; the owner explicitly authorizes this maintenance-only transition after exact-head technical review and required CI passed.",
+      "owner_waiver_source": "380064825f47ecf078b81f9f87d9dcdbd96b76ab",
+      "source_head": "380064825f47ecf078b81f9f87d9dcdbd96b76ab",
+      "tested_merge_tree": "3b46e8abf1c83d48597fdab1e3299a52d68977e3",
+      "type": "pr_merge_tree",
+      "verified_pr": 221,
+      "workflows": {
+        "Dependency Security": 35717764418,
+        "Foundation CI": 35717764550,
+        "Review Source": 35717764468
+      }
+    },
+    "GUEST-001": {
+      "base_head": "731105b1c8d16d9774c987a31b62ee7143383ccc",
+      "source_head": "d99abc6528f0c460b1b061dbfb9ea583d3c3b553",
+      "tested_merge_tree": "17428fd6facbfb957fe924b7f26bfff487479b64",
+      "type": "pr_merge_tree",
+      "verified_pr": 34,
+      "workflows": {
+        "Dependency Security": 34784388593,
+        "Foundation CI": 34784388584,
+        "Review Source": 34784388587
+      }
+    },
+    "LINEAGE-001": {
+      "base_head": "b53328d5e9e9111196d49062424cd7e386ac1eaa",
+      "source_head": "a1de4b8fc551ba9b5ce3d1d88da7f1eaf378cd0e",
+      "tested_merge_tree": "72cbdccf1b6b7b0954e3124fc97faef2908a1ac6",
+      "type": "pr_merge_tree",
+      "verified_pr": 28,
+      "workflows": {
+        "Dependency Security": 34687805585,
+        "Foundation CI": 34687805633,
+        "Review Source": 34687805595
+      }
+    },
+    "LOCAL-ADMIN-ACCESS-001": {
+      "base_head": "74bdd8916473975cc0b140feb93bc001f9fffd01",
+      "independent_review": "unavailable",
+      "owner_actor": "spikeal8-maker",
+      "owner_waiver": true,
+      "owner_waiver_reason": "Repository has no other participants; owner explicitly approved waiver for this exact SHA after required CI passed.",
+      "owner_waiver_source": "e7af398cfc731027ab2a526451f52ac98509cdbe",
+      "source_head": "e7af398cfc731027ab2a526451f52ac98509cdbe",
+      "tested_merge_tree": "e154fc126c176b61501b5c2fa61e41edd9f8f60c",
+      "type": "pr_merge_tree",
+      "verified_pr": 234,
+      "workflows": {
+        "Dependency Security": 36346002370,
+        "Foundation CI": 36346002386,
+        "Review Source": 36346002421
+      }
+    },
+    "MAINT-AGENT-002": {
+      "base_head": "d99abc6528f0c460b1b061dbfb9ea583d3c3b553",
+      "source_head": "37baf419c45970d02ce1fab75aea15cc9e8269a0",
+      "tested_merge_tree": "f9f84a7388da310fc7667bb8ec60ac516f130718",
+      "type": "pr_merge_tree",
+      "verified_pr": 35,
+      "workflows": {
+        "Dependency Security": 34839225059,
+        "Foundation CI": 34839225016,
+        "Review Source": 34839225009
+      }
+    },
+    "MAINT-SIZE-001": {
+      "base_head": "1ab67632de764ae38842f97888da058d74499c23",
+      "source_head": "731105b1c8d16d9774c987a31b62ee7143383ccc",
+      "tested_merge_tree": "75cc59df986cb72c2a129a548674ae4d4060f14d",
+      "type": "pr_merge_tree",
+      "verified_pr": 33,
+      "workflows": {
+        "Dependency Security": 34764639881,
+        "Foundation CI": 34764639890,
+        "Review Source": 34764639891
+      }
+    },
+    "MAINT-STATE-003": {
+      "base_head": "380064825f47ecf078b81f9f87d9dcdbd96b76ab",
+      "independent_review": "unavailable",
+      "owner_actor": "spikeal8-maker",
+      "owner_waiver": true,
+      "owner_waiver_reason": "Only GitHub actor spikeal8-maker is available; owner explicitly authorizes this one transition from exact source 1120121c0fd1f6d9279aa3e95523bb48d5b906f8 after Foundation CI 35775373392, Review Source 35775373259, and Dependency Security 35775373279 succeeded; waiver is not an independent APPROVE and does not carry to another SHA or future Chat code.",
+      "owner_waiver_source": "1120121c0fd1f6d9279aa3e95523bb48d5b906f8",
+      "source_head": "1120121c0fd1f6d9279aa3e95523bb48d5b906f8",
+      "tested_merge_tree": "0d6d3de074f3daaaa64619e75ac677d92469e96e",
+      "type": "pr_merge_tree",
+      "verified_pr": 224,
+      "workflows": {
+        "Dependency Security": 35775373279,
+        "Foundation CI": 35775373392,
+        "Review Source": 35775373259
+      }
+    },
+    "SETTINGS-002": {
+      "base_head": "fbb3ba01232c0b31682db0f37a070300d95335ed",
+      "source_head": "220d302dc238889da066c1799652d4b036007de3",
+      "tested_merge_tree": "5eb13f4f5749f071f977003dfbc71483c73f1fff",
+      "type": "pr_merge_tree",
+      "verified_pr": 30,
+      "workflows": {
+        "Dependency Security": 34718746429,
+        "Foundation CI": 34718746509,
+        "Review Source": 34718746473
+      }
+    },
+    "UX-002": {
+      "base_head": "220d302dc238889da066c1799652d4b036007de3",
+      "source_head": "1ab67632de764ae38842f97888da058d74499c23",
+      "tested_merge_tree": "bd714eafbd339536127960689d1bb340ce83ad27",
+      "type": "pr_merge_tree",
+      "verified_pr": 32,
+      "workflows": {
+        "Dependency Security": 34761737434,
+        "Foundation CI": 34761737440,
+        "Review Source": 34761737474
+      }
+    }
+  },
+  "schema_version": 1
+}

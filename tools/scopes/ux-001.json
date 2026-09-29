@@ -1,0 +1,8 @@
+{
+  "task": "UX-001 + explicitly requested economical development guard",
+  "base": "077bfdb8862a5bbf783b2e483f22b91ca10db3df",
+  "max_files": 32,
+  "allowed": ["apps/web/src/*", "apps/web/e2e/*", "apps/web/playwright.config.ts", "apps/web/AGENTS.md", "AGENTS.md", "docs/STATUS.md", "docs/DEVELOPMENT.md", "tools/check_change.py", "tools/scopes/ux-001.json", "tests/test_change_scope.py", "tests/test_web_boundaries.py"],
+  "sensitive_approved": ["AGENTS.md", "apps/web/AGENTS.md", "tools/check_change.py", "tools/scopes/ux-001.json"],
+  "non_goals": ["backend", "database", "billing", "providers", "workflow", "Docker", "dependencies", "licence", "production"]
+}

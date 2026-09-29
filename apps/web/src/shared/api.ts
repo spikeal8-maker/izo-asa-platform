@@ -1,0 +1,140 @@
+import type { components } from './api.generated'
+export type FoundationStatus = components['schemas']['FoundationStatus']
+export type AuthView = components['schemas']['AuthView']
+export type GuestView = components['schemas']['GuestView']
+export type SessionList = components['schemas']['SessionList']
+export type ChatPolicyView = components['schemas']['ChatPolicyView']
+export type CredentialView = components['schemas']['CredentialView']
+export type CredentialListView = { credentials: CredentialView[] }
+export type OpenRouterCatalogView = {
+  stale: boolean
+  fetched_at: number
+  models: { id: string; name: string; provider: string; context_length: number;
+    vision: boolean; input_per_million_usd: number | null;
+    output_per_million_usd: number | null }[]
+}
+export type ThreadView = components['schemas']['ThreadView']
+export type ThreadList = components['schemas']['ThreadList']
+export type MessageView = components['schemas']['MessageView']
+export type ThreadDetail = components['schemas']['ThreadDetail']
+export type ChatRequestView = components['schemas']['RequestView']
+
+export class ApiError extends Error {
+  constructor(public status: number, public code: string) { super(code) }
+}
+export const chatErrors: Record<string, string> = {
+  chat_preview_not_enabled: 'Этот аккаунт не допущен к локальному Chat preview.',
+  credential_not_verified: 'Подключите и проверьте API key выбранного провайдера.',
+  credential_rejected: 'Провайдер отклонил этот API key.',
+  credential_storage_unavailable: 'Хранилище ключей недоступно. Проверьте локальный root key.',
+  credential_unavailable: 'Сохранённый ключ недоступен или был отключён.',
+  credential_revision_conflict: 'Настройки ключа уже изменились. Обновите страницу.',
+  credential_in_use: 'Сначала остановите активный ответ, затем замените ключ.',
+  credential_check_failed: 'Провайдер не подтвердил подключение. Повторите проверку.',
+  provider_rejected: 'Провайдер отклонил проверку подключения.',
+  model_not_allowed: 'Выбранная модель не разрешена сервером.',
+  catalog_unavailable: 'Каталог OpenRouter временно недоступен.',
+  active_request_exists: 'В этом чате уже выполняется ответ.',
+  request_conflict: 'Повторный запрос имеет другие параметры.',
+  chat_rate_limited: 'Достигнут временный лимит Chat. Повторите позднее.',
+  provider_rate_limited: 'Провайдер ограничил частоту запросов.',
+  provider_balance: 'Провайдер не разрешил запрос для этого ключа.',
+  provider_empty_response: 'Провайдер вернул пустой ответ.',
+  provider_output_limit: 'Ответ достиг лимита длины. Попробуйте сузить запрос.',
+  provider_incomplete_response: 'Провайдер не завершил ответ штатно. Проверьте результат перед повторной отправкой.',
+  provider_outcome_unknown: 'Результат у провайдера неизвестен. Запрос мог быть оплачен. Не отправляйте его повторно, пока результат не проверен.',
+  provider_unavailable: 'Провайдер сейчас недоступен.',
+  provider_overloaded: 'Провайдер перегружен. Автоматический повтор не выполнялся.',
+  provider_stream_interrupted: 'Поток провайдера прервался. Частичный ответ сохранён.',
+  request_expired: 'Время выполнения запроса истекло.',
+  executor_restarted: 'Исполнитель был перезапущен. Частичный ответ сохранён.',
+}
+export function chatProviderProblem(code: string, provider?: string): string {
+  const label = provider === 'openrouter' ? 'OpenRouter'
+    : provider === 'deepseek' ? 'DeepSeek' : 'Провайдер'
+  if (code === 'provider_unavailable') return `${label} сейчас недоступен.`
+  if (code === 'provider_rate_limited') return `${label} ограничил частоту запросов.`
+  if (code === 'provider_overloaded') return `${label} перегружен. Автоматический повтор не выполнялся.`
+  if (code === 'provider_balance') return `${label} не разрешил запрос для этого ключа.`
+  if (code === 'provider_stream_interrupted') return `Поток ${label} прервался. Частичный ответ сохранён.`
+  return chatErrors[code] ?? 'Ответ завершился с ошибкой.'
+}
+export function chatProblem(reason: unknown): string {
+  if (reason instanceof ApiError) return chatErrors[reason.code]
+    ?? (reason.status === 401 ? 'Войдите в аккаунт.' : 'Сервер отклонил Chat-запрос.')
+  if (reason instanceof DOMException && reason.name === 'AbortError') return ''
+  return 'Связь с Chat прервалась. Новый платный запрос автоматически не запускался.'
+}
+type Options = {
+  method?: 'GET' | 'POST' | 'PATCH' | 'DELETE'
+  data?: unknown
+  csrf?: string
+  signal?: AbortSignal
+  timeoutMs?: number
+}
+async function responseFor(path: string, options: Options): Promise<Response> {
+  if (!path.startsWith('/api/v1/') || /[\\\r\n#]/.test(path)
+      || new URL(path, window.location.origin).origin !== window.location.origin)
+    throw new Error('Only the platform API is allowed')
+  const method = options.method ?? 'GET'
+  const headers: Record<string, string> = {}
+  if (method !== 'GET') {
+    headers['Content-Type'] = 'application/json'
+    headers['X-IZO-Request'] = 'web'
+    if (options.csrf) headers['X-CSRF-Token'] = options.csrf
+  }
+  const timeout = AbortSignal.timeout(options.timeoutMs ?? 15000)
+  const signal = options.signal ? AbortSignal.any([options.signal, timeout]) : timeout
+  const response = await fetch(path, { method, headers, credentials: 'same-origin',
+    cache: 'no-store', redirect: 'error', referrerPolicy: 'no-referrer', signal,
+    body: method === 'GET' ? undefined : JSON.stringify(options.data ?? {}) })
+  if (!response.ok) {
+    if (response.status === 401) window.dispatchEvent(new Event('izo:session-invalid'))
+    const body = await response.json().catch(() => null)
+    throw new ApiError(response.status, typeof body?.error?.code === 'string' ? body.error.code : 'api_unavailable')
+  }
+  return response
+}
+export async function apiRequest<T>(path: string, options: Options = {}): Promise<T> {
+  const response = await responseFor(path, options)
+  return response.status === 204 ? undefined as T : await response.json() as T
+}
+export async function apiStream(path: string, signal?: AbortSignal): Promise<Response> {
+  const response = await responseFor(path, { signal, timeoutMs: 90000 })
+  if (response.headers.get('content-type')?.split(';')[0] !== 'text/event-stream' || !response.body)
+    throw new Error('Invalid event stream')
+  return response
+}
+
+/** Read one authenticated PNG with a hard bound. Never prefetch a gallery's originals. */
+export async function apiImage(path: string, byteSize: number, expectedHash: string, signal?: AbortSignal): Promise<Blob> {
+  if (!Number.isSafeInteger(byteSize) || byteSize < 1 || byteSize > 65 * 1024 * 1024
+      || !/^[a-f0-9]{64}$/.test(expectedHash)) throw new Error('Invalid image metadata')
+  const response = await responseFor(path, { signal })
+  if (response.headers.get('content-type')?.split(';')[0] !== 'image/png' || !response.body)
+    throw new Error('Invalid image response')
+  const reader = response.body.getReader()
+  const chunks: Uint8Array<ArrayBuffer>[] = []
+  let total = 0
+  try {
+    while (true) {
+      const part = await reader.read()
+      if (part.done) break
+      total += part.value.byteLength
+      if (total > byteSize) throw new Error('Image exceeds declared size')
+      chunks.push(new Uint8Array(part.value))
+    }
+  } finally { await reader.cancel().catch(() => undefined); reader.releaseLock() }
+  if (total !== byteSize) throw new Error('Incomplete image')
+  const blob = new Blob(chunks, { type: 'image/png' })
+  const hash = Array.from(new Uint8Array(await crypto.subtle.digest('SHA-256', await blob.arrayBuffer())))
+    .map(value => value.toString(16).padStart(2, '0')).join('')
+  if (hash !== expectedHash) throw new Error('Image checksum mismatch')
+  return blob
+}
+export async function getFoundation(signal: AbortSignal): Promise<FoundationStatus> {
+  const data: unknown = await apiRequest('/api/v1/foundation', { signal })
+  if (!data || typeof data !== 'object' || !('stage' in data) || data.stage !== 'foundation'
+      || !('capabilities' in data) || !Array.isArray(data.capabilities)) throw new Error('Unexpected API contract')
+  return data as FoundationStatus
+}
