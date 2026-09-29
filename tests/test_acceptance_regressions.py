@@ -82,10 +82,18 @@ def test_unhandled_error_has_safe_body_headers_and_event(caplog):
     assert response.headers["cache-control"] == "no-store"
     assert response.headers["x-content-type-options"] == "nosniff"
     assert response.json() == {"error": {"code": "internal_error", "request_id": request_id}}
-    events = [json.loads(r.message) for r in caplog.records if r.name == "izo.http"]
+    structured_records = [
+        r for r in caplog.records if r.name == "izo.http" and r.message.startswith("{")
+    ]
+    events = [json.loads(r.message) for r in structured_records]
     error_event = next(e for e in events if e["request_id"] == request_id)
     assert error_event["status"] == 500
-    assert "TEST_PRIVATE" not in response.text + caplog.text
+    assert "TEST_PRIVATE" not in response.text
+    assert "TEST_PRIVATE_QUERY" not in "\n".join(r.message for r in structured_records)
+    exception_records = [r for r in caplog.records if r.name == "izo.http" and r.exc_info]
+    assert len(exception_records) == 1
+    assert request_id in exception_records[0].message
+    assert str(exception_records[0].exc_info[1]) == "TEST_PRIVATE_EXCEPTION"
 
 
 @pytest.mark.parametrize("status", [400, 403, 409, 429])

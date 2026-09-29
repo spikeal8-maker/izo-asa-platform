@@ -58,7 +58,7 @@ Focused evidence:
 - `tests/test_dependency_security.py` — PASS.
 - observability focused test — PASS.
 - `git diff --check` — PASS.
-- scope check: 10/12 paths maximum, outside scope 0, unapproved sensitive 0.
+- scope check: 14/16 paths maximum, outside scope 0, unapproved sensitive 0.
 - combined Windows local HTTP suite is not authoritative because the repository-wide no-network fixture conflicts with Windows AnyIO socketpair lifecycle; authoritative full suite remains GitHub Ubuntu/Python 3.13 CI.
 
 Full exact-head GitHub CI and independent challenge review remain required before canonical main convergence.
@@ -86,7 +86,7 @@ A focused unit test proves the public response excludes the private exception de
 - `project_state verify`: PASS
 - `check_docs`: PASS
 - project-state/review/dependency/docs/observability focused pytest: PASS
-- scope check: PASS, 10 files max 12, no outside/unapproved-sensitive paths
+- scope check: PASS, 14 files max 16, no outside/unapproved-sensitive paths
 - `git diff --check`: PASS
 - `pip-audit` after patch update: PASS
 
@@ -97,6 +97,17 @@ The Windows controller uses Python 3.11 while Foundation CI uses Python 3.13. Lo
 detached worktree at exact base `2d6b64a…`. Therefore this mismatch is not introduced by this package.
 No OpenAPI artifact is rewritten because no public API surface changed. Exact-head Foundation CI is
 the acceptance authority for the generated contract.
+
+## Exact-head CI repair after `4757cec5`
+
+Foundation CI run `36555708548` failed in unit checks for exactly two bounded reasons:
+
+- active-package scope used the state-transition SHA instead of the canonical package base required by the scope contract;
+- an older HTTP regression assumed every `izo.http` record was JSON and therefore could not coexist with the new `logger.exception` traceback record.
+
+The repair changes no product runtime. Scope now uses frozen E0 source `811410e3cada4498161415bc279ce9a9f033ab6a`, includes the three state-transition paths, and passes at 14/16 files. The regression test now distinguishes structured request events from the intentional server-side exception record while still proving private query/exception data is absent from the HTTP response and structured request event.
+
+Final exact-head CI remains required after this repair.
 
 ## Challenge finding: canonical main checkout
 
