@@ -2,7 +2,7 @@
   "schema_version":1,
   "project":"IZO ASA / OneNode Image Studio",
   "updated":"2026-09-22",
-  "canonical_lineage":{"runtime_base":{"branch":"api/fal-klein-001","sha":"faec39d6ae0b4f035ef0f86114494789acde3b46","pr":22,"state":"technical_ci_pass_draft"},"working_branch":"maint/pre-p1-stabilization-001","provider_direction":"fal.ai / fal-ai/flux-2/klein/4b","merge_deployed":false,"current_package_base":{"branch":"docs/chat-v4-adoption-001","sha":"811410e3cada4498161415bc279ce9a9f033ab6a","state":"verified_pr_merge_tree_checkpoint"},"next_branch_source":"verified_working_head"},
+  "canonical_lineage":{"runtime_base":{"branch":"api/fal-klein-001","sha":"faec39d6ae0b4f035ef0f86114494789acde3b46","pr":22,"state":"technical_ci_pass_draft"},"working_branch":"main","provider_direction":"fal.ai / fal-ai/flux-2/klein/4b","merge_deployed":false,"current_package_base":{"branch":"docs/chat-v4-adoption-001","sha":"811410e3cada4498161415bc279ce9a9f033ab6a","state":"verified_pr_merge_tree_checkpoint"},"next_branch_source":"verified_working_head"},
   "active_package":"PRE-P1-STABILIZATION-001",
   "next_package":null,
   "rules":{"one_active_package":true,"one_canonical_lineage":true,"continue_parallel_lineage_without_reconciliation":false,"live_external_spend_requires_owner_approval":true,"merge_or_deploy_requires_separate_owner_action":true,"verified_checkpoint_is_immutable":true,"state_transition_must_be_atomic":true,"ci_evidence_must_bind_source_head":true,"maintainability_audit_required_each_package":true,"context_budget_must_not_regress":true,"near_limit_files_must_not_grow_without_split":true,"periodic_full_agent_economy_audit_every_product_packages":5},

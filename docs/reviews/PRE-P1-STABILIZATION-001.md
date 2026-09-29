@@ -97,3 +97,16 @@ The Windows controller uses Python 3.11 while Foundation CI uses Python 3.13. Lo
 detached worktree at exact base `2d6b64a…`. Therefore this mismatch is not introduced by this package.
 No OpenAPI artifact is rewritten because no public API surface changed. Exact-head Foundation CI is
 the acceptance authority for the generated contract.
+
+## Challenge finding: canonical main checkout
+
+The first stabilization review at `5023f60cfd0c257d3dac915bc725aa00af3f0d14` found one blocker:
+after the convergence merge, `project_state verify` on branch `main` would reject the checkout because
+`canonical_lineage.working_branch` still named the temporary stabilization branch.
+
+Verdict for that SHA: **REQUEST_CHANGES**.
+
+The bounded state repair changes only `canonical_lineage.working_branch` to `main` and regenerates
+`CURRENT.md` through `project_state_model.write_state`. It does not change package status, E0
+checkpoint evidence, current package base, product runtime, or P1 scope. The final SHA must be
+re-reviewed and must pass `project_state verify` from a branch literally named `main`.

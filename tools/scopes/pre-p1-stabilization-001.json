@@ -8,6 +8,8 @@
   "allowed": [
     "docs/STATUS.md",
     "docs/ARCHITECTURE.md",
+    "docs/PLAN.json",
+    "docs/CURRENT.md",
     "docs/reviews/PRE-P1-STABILIZATION-001.md",
     ".github/workflows/dependency-audit.yml",
     "requirements.in",
