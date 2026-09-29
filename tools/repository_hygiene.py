@@ -35,6 +35,7 @@ JUNK_PATTERNS = (
     "*.b64", "*.base64", "*.chunk", "*-copy.*", "*_copy.*",
 )
 ARCHIVE_SUFFIXES = {".zip", ".tar", ".tgz", ".gz", ".bz2", ".xz", ".7z", ".rar"}
+PRIVATE_SUFFIXES = {".pem", ".key", ".p12", ".pfx"}
 BINARY_MAGIC = (
     ("zip", b"PK\x03\x04"), ("gzip", b"\x1f\x8b"), ("sqlite", b"SQLite format 3\x00"),
     ("pdf", b"%PDF-"), ("png", b"\x89PNG\r\n\x1a\n"), ("jpeg", b"\xff\xd8\xff"),
@@ -93,6 +94,10 @@ def _junk_reason(raw: str) -> str | None:
         return "tracked junk/runtime directory"
     if path.name in JUNK_NAMES or any(fnmatch.fnmatchcase(path.name, pattern) for pattern in JUNK_PATTERNS):
         return "tracked junk/temporary artifact"
+    if path.name == ".env" or (path.name.startswith(".env.") and path.name not in {".env.example", ".env.sample"}):
+        return "tracked private runtime artifact"
+    if path.suffix.lower() in PRIVATE_SUFFIXES:
+        return "tracked private key/container artifact"
     return None
 
 

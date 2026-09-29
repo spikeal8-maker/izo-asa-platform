@@ -52,6 +52,7 @@ def test_clean_repo_passes(tmp_path):
     "runtime/state.sqlite",
     "node_modules/pkg/index.js",
     "uploads/file.part",
+    ".env",
 ])
 def test_tracked_junk_fails(tmp_path, raw):
     root = repo(tmp_path)

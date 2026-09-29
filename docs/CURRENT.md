@@ -10,8 +10,8 @@
 
 ## Как продолжать
 
-Текущий package разрабатывается только в **working_branch**. `current_package_base` — его уже замороженный
-родитель и используется для ancestry-проверки; **не выбирать его вручную как base следующего package**.
+`working_branch` — canonical branch состояния. `current_package_base` — замороженный родитель для ancestry;
+**не выбирать его вручную как base следующего package**.
 Если `next_package` выбран — `begin-next`. Для `decides_next=true` + `next_package=NONE` —
 `begin-decided-next`: exact HEAD/CI/review или explicit owner waiver проверяются до новой ветки, state пишется только
 на ней. Для непринятого active package используется только `reconcile-continuation`.

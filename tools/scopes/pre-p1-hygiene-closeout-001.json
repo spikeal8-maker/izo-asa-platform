@@ -8,6 +8,7 @@
   "allowed": [
     ".github/workflows/ci.yml",
     "docs/DEVELOPMENT.md",
+    "docs/CURRENT.md",
     "tools/repository_hygiene.py",
     "tools/project_state_closeout.py",
     "tools/project_state_model.py",
