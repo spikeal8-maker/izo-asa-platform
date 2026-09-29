@@ -48,7 +48,7 @@ def test_plan_current_base_has_explicit_checkpoint_semantics_without_embedded_ev
     assert lineage["next_branch_source"] == "verified_working_head"
     assert lineage["working_branch"]
     active = plan["active_package"]
-    assert plan["packages"][active]["status"] == "active"
+    assert plan["packages"][active]["status"] in {"active", "complete"}
     base = lineage["current_package_base"]
     state = base.get("state")
     assert state in {"verified_pr_merge_tree_checkpoint", "reconciled_continuation_base"}

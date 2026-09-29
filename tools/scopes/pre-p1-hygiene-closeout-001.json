@@ -1,0 +1,26 @@
+{
+  "package_id": "PRE-P1-HYGIENE-CLOSEOUT-001",
+  "base": "e93aff74be4283268c57b6edbc34d35d92ffa414",
+  "scope_class": "normal",
+  "risk": "medium",
+  "independent_review_required": true,
+  "max_files": 10,
+  "allowed": [
+    ".github/workflows/ci.yml",
+    "docs/DEVELOPMENT.md",
+    "tools/repository_hygiene.py",
+    "tools/project_state_closeout.py",
+    "tools/project_state_model.py",
+    "tools/scopes/pre-p1-hygiene-closeout-001.json",
+    "tests/test_repository_hygiene.py",
+    "tests/test_project_state_closeout.py",
+    "tests/test_docs_system.py"
+  ],
+  "sensitive_approved": [
+    ".github/workflows/ci.yml",
+    "tools/repository_hygiene.py",
+    "tools/project_state_closeout.py",
+    "tools/project_state_model.py",
+    "tools/scopes/pre-p1-hygiene-closeout-001.json"
+  ]
+}
