@@ -5,7 +5,7 @@ import json
 import re
 
 from docs_context import DOCS, ROOT, check_blocks, check_context, check_coverage, load_json, load_map
-from project_state import READY_DEPENDENCY_STATUSES, render_current
+from project_state import READY_DEPENDENCY_STATUSES, load_plan, render_current
 
 
 def check_ref(errors: list[str], label: str, value: dict) -> None:
@@ -82,8 +82,9 @@ def check_current(errors: list[str], plan: dict) -> None:
 def check_encoding_and_stable(errors: list[str]) -> None:
     markers = ("РЎ", "Рџ", "Р°", "РЅ", "Рµ", "Рє", "Рё", "Р»", "Рѕ", "СЃ", "С‚", "СЂ", "вЂ", "В·")
     candidates = list(ROOT.rglob("*.md")) + [
-        DOCS / "PLAN.json", DOCS / "CHECKPOINTS.json", DOCS / "CONTEXT_MAP.json",
-        DOCS / "BLOCK_MAP.json", ROOT / "tests/context_cases.json"]
+        DOCS / "PLAN.json", DOCS / "PACKAGES.json", DOCS / "CHECKPOINTS.json",
+        DOCS / "CONTEXT_MAP.json", DOCS / "BLOCK_MAP.json", ROOT / "tests/context_cases.json"]
+    candidates = [path for path in candidates if path.exists()]
     for path in candidates:
         if ".git" in path.parts or "node_modules" in path.parts:
             continue
@@ -101,7 +102,7 @@ def check_encoding_and_stable(errors: list[str]) -> None:
 def main() -> int:
     errors: list[str] = []
     try:
-        plan = load_json(DOCS / "PLAN.json")
+        plan = load_plan(ROOT)
         checkpoints = load_json(DOCS / "CHECKPOINTS.json")
         context, context_sources = load_map(DOCS / "CONTEXT_MAP.json", "routes")
         blocks, block_sources = load_map(DOCS / "BLOCK_MAP.json", "blocks")
