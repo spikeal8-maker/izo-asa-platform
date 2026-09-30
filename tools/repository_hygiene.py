@@ -209,9 +209,10 @@ def scan(root: Path = ROOT, *, base: str | None = None,
                 "max_lines": max_lines,
             }
             near_limit.append(entry)
-        if base and raw in changed and is_near:
+        if base and raw in changed:
             old_size, old_lines = _old_dimensions(root, base, raw)
-            if not old_size or size > old_size or lines > old_lines:
+            old_near = old_size > int(max_bytes * NEAR_LIMIT_RATIO) or old_lines > int(max_lines * NEAR_LIMIT_RATIO)
+            if (is_near or old_near) and (not old_size or size > old_size or lines > old_lines):
                 failures.append((raw, f"near-limit handwritten file grew: bytes {old_size}->{size}, "
                                       f"lines {old_lines}->{lines}; split responsibility"))
 
