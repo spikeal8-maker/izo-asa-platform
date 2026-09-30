@@ -16,7 +16,7 @@ H="a"*40
 
 
 def test_historical_owner_waiver_requires_complete_pr250_statement():
-    from project_state_workflow import _historical_waiver_body
+    from project_state_workflow import _historical_waiver_body, _source_waiver_body
     source="9bed77548d07f113bc806b1e5016076edb2646e1"
     runs={"Foundation CI":{"databaseId":36590236580},
           "Dependency Security":{"databaseId":36590236563},
@@ -44,6 +44,31 @@ Verdict: APPROVE.
 No Chat P1 work started. Structured GitHub approval by a different account remains unavailable; terminal checkpoint may use exact-SHA owner waiver as designed."""
     assert _historical_waiver_body(body,source,runs)
     assert not _historical_waiver_body(body.replace("- hygiene PASS", "- hygiene PASS\nI reject any owner waiver."),source,runs)
+    reason=("Final exact-head independent read-only challenge APPROVE for source "
+            f"{source}; separate GitHub reviewer actor unavailable. Owner authorizes only "
+            "PRE-P1 terminal closeout; Chat P1 remains unstarted.")
+    assert _source_waiver_body(body,250,source,runs,reason)
+    assert not _source_waiver_body(body,250,source,runs,"fabricated reason")
+
+
+@pytest.mark.parametrize("mode", ["valid", "wrong-pr", "wrong-sha", "wrong-ci",
+                                  "extra-line", "quoted", "no-reason", "denial-reason"])
+def test_structured_source_checkpoint_waiver_has_exact_fields(mode):
+    from project_state_workflow import _structured_waiver_body
+    source="a"*40
+    ids={"Foundation CI":1,"Dependency Security":2,"Review Source":3}
+    body=(f"Owner waiver for source checkpoint PR #250: APPROVE\nSource HEAD: {source}\n"
+          "Independent review: unavailable\nReason: reviewer account unavailable\n"
+          "Foundation CI: 1 SUCCESS\nDependency Security: 2 SUCCESS\nReview Source: 3 SUCCESS")
+    if mode=="wrong-pr": body=body.replace("PR #250", "PR #251")
+    elif mode=="wrong-sha": body=body.replace(source,"b"*40)
+    elif mode=="wrong-ci": body=body.replace("Foundation CI: 1", "Foundation CI: 9")
+    elif mode=="extra-line": body=body.replace("Reason:","I reject any owner waiver.\nReason:")
+    elif mode=="quoted": body="> "+body
+    elif mode=="no-reason": body=body.replace("reviewer account unavailable", "")
+    elif mode=="denial-reason": body=body.replace("reviewer account unavailable", "I reject any owner waiver")
+    result=_structured_waiver_body(body,250,source,ids,source_checkpoint=True)
+    assert result==("reviewer account unavailable" if mode=="valid" else None)
 
 
 def complete_plan():

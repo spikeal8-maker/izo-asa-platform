@@ -151,8 +151,9 @@ def _merged_inputs():
         "headRefOid":head,"headRefName":"state/closeout","baseRefOid":base,
         "mergeCommit":{"oid":merge}}
     pr_runs=[{"name":name,"headSha":head,"event":"pull_request","status":"completed",
-              "conclusion":"success","databaseId":n,"prNumbers":[252],
-              "headBranch":"state/closeout"}
+               "conclusion":"success","databaseId":n,"prNumbers":[252],
+               "runAttempt":1,"updatedAt":"2026-09-29T15:58:44Z",
+               "headBranch":"state/closeout"}
              for n,name in enumerate(("Foundation CI","Dependency Security","Review Source"),1)]
     push_runs=[{"name":name,"headSha":merge,"event":"push","status":"completed",
                 "conclusion":"success","databaseId":n}

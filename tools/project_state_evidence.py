@@ -1,7 +1,6 @@
 """GitHub/CI evidence collection for project-state transitions."""
 from __future__ import annotations
 import json
-from datetime import datetime
 from pathlib import Path
 import re
 import subprocess
@@ -11,16 +10,6 @@ from project_state_model import ROOT
 from review_evidence import review_decision, review_required
 
 REQUIRED_WORKFLOWS = ("Foundation CI", "Dependency Security", "Review Source")
-
-
-def _time(value: str, label: str) -> datetime:
-    try:
-        parsed = datetime.fromisoformat(value.replace("Z", "+00:00"))
-    except (AttributeError, ValueError) as exc:
-        raise ValueError(f"{label} timestamp missing or invalid") from exc
-    if parsed.utcoffset() is None:
-        raise ValueError(f"{label} timestamp lacks timezone")
-    return parsed
 
 
 def run(args: list[str], *, root: Path = ROOT) -> str:
@@ -78,6 +67,7 @@ def _workflow_pages(value) -> list[dict]:
                     "status": item.get("status"), "conclusion": item.get("conclusion"),
                     "headSha": item.get("head_sha"), "event": item.get("event"),
                     "headBranch": item.get("head_branch"),
+                    "updatedAt": item.get("updated_at"),
                     "runAttempt": item.get("run_attempt"), "runNumber": item.get("run_number"),
                     "prNumbers": [p.get("number") for p in item.get("pull_requests", [])
                                   if isinstance(p, dict) and p.get("number") is not None]})
@@ -236,6 +226,7 @@ def fetch_review_evidence(scope: dict, pr_number: int, source_sha: str, *,
                           independent_review_unavailable: bool = False,
                           owner_waiver_source: str | None = None,
                           owner_waiver_reason: str | None = None,
+                          approved_before: str | None = None,
                           root: Path = ROOT) -> dict:
     if not review_required(scope):
         return {"independent_review": "not_required", "owner_waiver": False}
@@ -244,7 +235,11 @@ def fetch_review_evidence(scope: dict, pr_number: int, source_sha: str, *,
                      f"repos/{slug}/pulls/{pr_number}/reviews?per_page=100"], root=root)
     reviews = _flatten_pages(pages)
     actor = gh_json(["api", "user"], root=root).get("login") if owner_waiver else None
-    return review_decision(
+    decision = review_decision(
         scope, reviews, source_sha, owner_login=slug.split("/", 1)[0], actor_login=actor,
         owner_waiver=owner_waiver, independent_review_unavailable=independent_review_unavailable,
         owner_waiver_source=owner_waiver_source, owner_waiver_reason=owner_waiver_reason)
+    if approved_before is not None:
+        from project_state_provenance import require_current_approval_before
+        require_current_approval_before(reviews, decision, source_sha, approved_before)
+    return decision

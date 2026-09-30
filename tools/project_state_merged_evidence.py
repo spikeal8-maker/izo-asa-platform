@@ -4,11 +4,11 @@ from __future__ import annotations
 import re
 from pathlib import Path
 
-from project_state_evidence import _time
 from project_state_model import ROOT
-from project_state_workflow import (_package_state_at, _push_workflows,
-    _historical_waiver_body, _closeout_owner_waiver, REQUIRED_PR_JOBS,
+from project_state_workflow import (_package_state_at, REQUIRED_PR_JOBS,
     validate_merged_closeout_evidence)
+from project_state_provenance import (_time, _source_waiver_body,
+    _closeout_owner_waiver, require_pr_runs_before)
 
 
 def _checkpoint_introduction(source: str, head: str, package: str, checkpoint: dict,
@@ -79,6 +79,7 @@ def authenticate_initial_checkpoint(checkpoint: dict, closeout_pr: dict, slug: s
         raise ValueError("checkpoint introduction or PR creation does not precede closeout merge")
     # PR creation is server-attested; the author-controlled commit date only narrows this cutoff.
     cutoff = min(introduced, opened)
+    require_pr_runs_before(latest, cutoff.isoformat(), "checkpoint introduction")
     reviews = _flatten_pages(gh_json(["api", "--paginate", "--slurp",
         f"repos/{slug}/pulls/{number}/reviews?per_page=100"], root=root))
     reviews = [row for row in reviews if row.get("submitted_at")
@@ -89,13 +90,15 @@ def authenticate_initial_checkpoint(checkpoint: dict, closeout_pr: dict, slug: s
         comments = _flatten_pages(gh_json(["api", "--paginate", "--slurp",
             f"repos/{slug}/issues/{number}/comments?per_page=100"], root=root))
         for row in comments:
+            body = str(row.get("body") or "")
             if ((row.get("user") or {}).get("login") == owner
                     and row.get("author_association") == "OWNER"
                     and row.get("created_at")
                     and row.get("updated_at")
                     and _time(row["created_at"], "original owner comment") < cutoff
                     and _time(row["updated_at"], "original owner comment update") < cutoff
-                    and _historical_waiver_body(str(row.get("body") or ""), source, latest)):
+                    and _source_waiver_body(
+                        body, number, source, latest, checkpoint.get("owner_waiver_reason"))):
                 comment_id = row.get("id")
                 break
         if type(comment_id) is not int:
@@ -180,7 +183,8 @@ def fetch_merged_closeout_evidence(pr_number: int, source_head: str, package: st
                    if waiver is not None else {})
     # Closeout review stays mandatory even if the later active scope is downgraded.
     review = fetch_review_evidence({"risk": "high", "independent_review_required": True},
-                                   pr_number, head, root=root, **review_args)
+                                    pr_number, head, root=root, approved_before=pr["mergedAt"],
+                                    **review_args)
     evidence.update(review)
     if waiver is not None and review.get("owner_waiver") is True:
         evidence["closeout_waiver_comment_id"] = waiver[1]

@@ -87,6 +87,24 @@ review по exact closeout PR head либо отдельный exact-head owner 
 отсутствующего или несовпадающего evidence
 до создания ветки или записи state.
 
+For an initial checkpoint written by a later closeout PR, an existing source-PR owner waiver must be an
+unmodified owner-authored GitHub comment before the checkpoint first appears. Its full body has this form
+(replace the placeholders with the source PR number, exact source SHA, required run IDs, and a real reason):
+
+```text
+Owner waiver for source checkpoint PR #<number>: APPROVE
+Source HEAD: <40-character SHA>
+Independent review: unavailable
+Reason: <specific reason>
+Foundation CI: <run ID> SUCCESS
+Dependency Security: <run ID> SUCCESS
+Review Source: <run ID> SUCCESS
+```
+
+The run IDs must match the PR-specific required checks and successful PR runs before checkpoint introduction.
+The historical source-PR owner comment is accepted only as its exact recorded full body. A later closeout PR
+needs its own independent review or exact-head waiver before merge; source waiver evidence never transfers.
+
 Lifecycle status contract: `active` — текущая работа; `planned_next` — явно выбранный successor;
 `technical_pass` — technical acceptance, merge/deploy не подразумеваются; `complete` — terminal и immutable;
 `planned` — не начат; historical/superseded statuses не становятся автоматически continuation base.

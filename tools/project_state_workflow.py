@@ -5,8 +5,9 @@ import json
 import re
 from pathlib import Path
 
-from project_state_evidence import _time
 from project_state_model import load_checkpoints
+from project_state_provenance import (_historical_waiver_body, _structured_waiver_body,
+    _source_waiver_body, _closeout_owner_waiver, require_pr_runs_before)
 
 REQUIRED_PR_JOBS = {"Foundation CI": {"verify", "bootstrap-windows"},
                     "Dependency Security": {"npm-audit"}, "Review Source": {"snapshot"}}
@@ -132,58 +133,6 @@ def _push_workflows(runs: list[dict], source_head: str) -> dict[str, int]:
     return result
 
 
-def _historical_waiver_body(body: str, source: str, runs: dict) -> bool:
-    lines = [line.strip() for line in body.splitlines() if line.strip()]
-    permission = ("No Chat P1 work started. Structured GitHub approval by a different account remains unavailable; "
-                  "terminal checkpoint may use exact-SHA owner waiver as designed.")
-    prefix = ["FINAL EXACT-HEAD INDEPENDENT READ-ONLY CHALLENGE — APPROVE",
-              f"Source HEAD: `{source}`."]
-    checks = [f"- {name} {runs[name]['databaseId']} SUCCESS"
-              for name in ("Foundation CI", "Dependency Security", "Review Source")]
-    suffix = ["Verdict: APPROVE.", permission]
-    historical = ["Fresh clone:", "- hygiene PASS",
-                  "- tracked files 487 / tracked bytes 2,766,244",
-                  "- >500 KB 0 / >1 MB 0 / >5 MB 0 / tracked junk 0",
-                  "- focused hygiene + closeout + docs + boundaries + scope tests PASS",
-                  "- scope 11/12; outside 0; unapproved sensitive 0",
-                  "- terminal-state simulation: PRE-P1 status=complete, next=None",
-                  "- terminal PLAN bytes=9,995 (<10,000 hard context budget)",
-                  "- migrations changed 0", "- product runtime / Chat / providers changed 0"]
-    return lines in (prefix + checks + suffix, prefix + historical + checks + suffix)
-
-
-def _closeout_owner_waiver(pr_number: int, head: str, workflows: dict,
-                           merged_at: str, slug: str, *, root: Path) -> tuple[str, int] | None:
-    from project_state_evidence import gh_json, _flatten_pages
-
-    cutoff = _time(merged_at, "closeout merge")
-    comments = _flatten_pages(gh_json(["api", "--paginate", "--slurp",
-        f"repos/{slug}/issues/{pr_number}/comments?per_page=100"], root=root))
-    owner = slug.split("/", 1)[0]
-    for row in comments:
-        if ((row.get("user") or {}).get("login") != owner
-                or row.get("author_association") != "OWNER"):
-            continue
-        lines = [line.strip() for line in str(row.get("body") or "").splitlines()
-                 if line.strip()]
-        if len(lines) != 7 or not lines[3].startswith("Reason: "):
-            continue
-        reason = lines[3][len("Reason: "):]
-        expected = [f"Owner waiver for PR #{pr_number}: APPROVE",
-                    f"Source HEAD: {head}", "Independent review: unavailable",
-                    f"Reason: {reason}",
-                    *(f"{name}: {workflows[name]} SUCCESS" for name in
-                      ("Foundation CI", "Dependency Security", "Review Source"))]
-        if (lines != expected or not reason or len(reason) > 500
-                or type(row.get("id")) is not int
-                or not row.get("created_at") or not row.get("updated_at")):
-            continue
-        if max(_time(row[key], "closeout owner comment")
-               for key in ("created_at", "updated_at")) < cutoff:
-            return reason, row["id"]
-    return None
-
-
 def validate_merged_closeout_evidence(*, pr: dict, pr_runs: list[dict], push_runs: list[dict],
                                       merge_commit: dict, tested_commit: dict, rollup: dict,
                                       tested_sha: str, source_head: str,
@@ -212,6 +161,7 @@ def validate_merged_closeout_evidence(*, pr: dict, pr_runs: list[dict], push_run
     branch = pr.get("headRefName")
     pr_latest = latest_required_runs(pr_runs, head, pr_number,
                                      allow_detached=True, expected_branch=branch)
+    require_pr_runs_before(pr_latest, pr["mergedAt"], "closeout merge")
     validate_pr_rollup(pr_number, pr, pr_latest, rollup, REQUIRED_PR_JOBS)
     trees = [commit["commit"]["tree"]["sha"] if isinstance(commit.get("commit"), dict)
              and isinstance(commit["commit"].get("tree"), dict) else None

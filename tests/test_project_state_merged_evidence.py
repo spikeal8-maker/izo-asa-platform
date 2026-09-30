@@ -1,4 +1,4 @@
-"""Historical checkpoint authentication for merged closeout transitions."""
+"""Merged closeout transition and checkpoint preservation."""
 from __future__ import annotations
 
 import json
@@ -10,104 +10,25 @@ import pytest
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "tools"))
 
-import project_state_evidence as common
-from project_state_merged_evidence import authenticate_initial_checkpoint
-
-WAIVER_GAP = "authenticated pre-introduction"
-
-
-def _historical_case():
-    source, base, tested = "1" * 40, "2" * 40, "3" * 40
-    ids = {"Foundation CI": 11, "Dependency Security": 12, "Review Source": 13}
-    checkpoint = {"type": "pr_merge_tree", "source_head": source, "verified_pr": 250,
-                  "base_head": base, "tested_merge_tree": tested, "workflows": ids,
-                  "independent_review": "unavailable", "owner_waiver": True,
-                  "owner_actor": "owner", "owner_waiver_source": source,
-                  "owner_waiver_reason": "Independent reviewer unavailable."}
-    pr = {"headRefOid": source, "headRefName": "state/checkpoint", "baseRefOid": base}
-    jobs = ((11, "verify"), (11, "bootstrap-windows"), (12, "npm-audit"), (13, "snapshot"))
-    nodes = [{"__typename": "CheckRun", "name": name, "conclusion": "SUCCESS",
-              "isRequired": True, "checkSuite": {"workflowRun": {"databaseId": run_id}}}
-             for run_id, name in jobs]
-    rollup = {"number": 250, **pr, "statusCheckRollup": {"state": "SUCCESS",
-              "contexts": {"pageInfo": {"hasNextPage": False}, "nodes": nodes}}}
-    runs = {"workflow_runs": [{"id": run_id, "name": name, "head_sha": source,
-             "head_branch": "state/checkpoint", "event": "pull_request", "status": "completed",
-             "conclusion": "success", "pull_requests": []}
-             for name, run_id in ids.items()]}
-    comment = {"id": 42, "user": {"login": "owner"}, "author_association": "OWNER",
-               "created_at": "2026-09-29T15:39:17Z",
-               "updated_at": "2026-09-29T15:39:17Z",
-               "body": (f"FINAL EXACT-HEAD INDEPENDENT READ-ONLY CHALLENGE — APPROVE\n"
-                        f"Source HEAD: `{source}`.\n- Foundation CI 11 SUCCESS\n"
-                        "- Dependency Security 12 SUCCESS\n- Review Source 13 SUCCESS\n\n"
-                        "Verdict: APPROVE.\nNo Chat P1 work started. Structured GitHub approval by a different account "
-                        "remains unavailable; terminal checkpoint may use exact-SHA owner waiver as designed.")}
-    return checkpoint, pr, rollup, runs, comment, tested
+from test_project_state_source_checkpoint import _historical_case
+from test_project_state_closeout import _merged_inputs
+from project_state_workflow import validate_merged_closeout_evidence
 
 
-@pytest.mark.parametrize("mode,reason", [
-    ("valid", None), ("wrong-pr", "source PR head/base"),
-    ("wrong-run", "workflow run IDs"), ("wrong-tree", "tested merge tree mismatch"),
-    ("foreign-rollup", "absent from PR rollup"),
-    ("forged-waiver", WAIVER_GAP),
-    ("after-pr-open", WAIVER_GAP),
-    ("edited-after-introduction", WAIVER_GAP),
-    ("equal-introduction", WAIVER_GAP),
-    ("missing-update", WAIVER_GAP),
-    ("extra-denial", WAIVER_GAP),
-    ("quoted-waiver", WAIVER_GAP),
-    ("wrong-owner-actor", "owner waiver identity mismatch"),
-    ("review-before-introduction", None),
-    ("review-after-introduction", "requires structured independent"),
-])
-def test_initial_checkpoint_requires_original_pr_ci_and_owner_action(monkeypatch, mode, reason):
-    checkpoint, pr, rollup, runs, comment, tested = _historical_case()
-    reviews = []
-    if mode == "wrong-pr": pr["headRefOid"] = "9" * 40
-    elif mode == "wrong-run": checkpoint["workflows"]["Foundation CI"] = 99
-    elif mode == "wrong-tree": checkpoint["tested_merge_tree"] = "9" * 40
-    elif mode == "foreign-rollup": rollup["statusCheckRollup"]["contexts"]["nodes"] = []
-    elif mode == "forged-waiver": comment["user"]["login"] = "other"
-    elif mode == "edited-after-introduction": comment["updated_at"] = "2026-09-29T15:45:00Z"
-    elif mode == "equal-introduction": comment["created_at"] = "2026-09-29T15:41:57Z"
-    elif mode == "missing-update": comment.pop("updated_at")
-    elif mode == "extra-denial": comment["body"] = comment["body"].replace(
-        "Verdict: APPROVE.", "I reject any owner waiver.\nVerdict: APPROVE.")
-    elif mode == "quoted-waiver": comment["body"] = comment["body"].replace(
-        "Structured GitHub approval", "> Structured GitHub approval")
-    elif mode == "wrong-owner-actor": checkpoint["owner_actor"] = "other"
-    if mode.startswith("review-"):
-        checkpoint.update(independent_review="approved", owner_waiver=False,
-                          independent_review_source=checkpoint["source_head"],
-                          independent_review_actor="reviewer", independent_review_id=90)
-        reviews = [{"id": 90, "state": "APPROVED", "commit_id": checkpoint["source_head"],
-                    "submitted_at": ("2026-09-29T15:40:00Z" if mode == "review-before-introduction"
-                                     else "2026-09-29T15:45:00Z"),
-                    "user": {"login": "reviewer"}}]
-
-    monkeypatch.setattr(common, "fetch_pr_rollup", lambda *a, **k: rollup)
-    monkeypatch.setattr(common, "foundation_tested_sha", lambda *a, **k: tested)
-    def fake_gh(args, root):
-        path = " ".join(args)
-        if args[:2] == ["pr", "view"]: return pr
-        if "event=pull_request" in path: return [runs]
-        if f"commits/{tested}" in path:
-            return {"parents": [{"sha": checkpoint["base_head"]},
-                                {"sha": checkpoint["source_head"]}]}
-        if "/reviews?" in path: return [reviews]
-        if "/comments?" in path: return [[comment]]
-        raise AssertionError(args)
-    monkeypatch.setattr(common, "gh_json", fake_gh)
-    call = lambda: authenticate_initial_checkpoint(
-        checkpoint, {"mergedAt": "2026-09-29T16:00:00Z", "createdAt":
-                     "2026-09-29T15:38:00Z" if mode == "after-pr-open" else "2026-09-29T15:43:07Z"}, "owner/repo",
-        introduced_at="2026-09-29T15:41:57Z")
-    if reason:
-        with pytest.raises(ValueError, match=reason): call()
+@pytest.mark.parametrize("mode", ["late-rerun", "equal-merge", "missing-update", "missing-attempt"])
+def test_closeout_pr_ci_attempt_must_finish_before_merge(mode):
+    fixture = _merged_inputs()
+    run = fixture["pr_runs"][0]
+    if mode == "late-rerun":
+        run.update(runAttempt=2, updatedAt="2026-09-29T16:01:00Z")
+    elif mode == "equal-merge":
+        run["updatedAt"] = fixture["pr"]["mergedAt"]
+    elif mode == "missing-update":
+        run.pop("updatedAt")
     else:
-        assert call() == {"checkpoint_pr": 250, "checkpoint_waiver_comment_id":
-                          None if mode.startswith("review-") else 42}
+        run.pop("runAttempt")
+    with pytest.raises(ValueError, match="pre-closeout merge attempt"):
+        validate_merged_closeout_evidence(**fixture)
 
 
 def test_merged_closeout_requires_corresponding_checkpoint_and_review(monkeypatch):
@@ -127,6 +48,7 @@ def test_merged_closeout_requires_corresponding_checkpoint_and_review(monkeypatc
     def runs(names,sha,event,first):
         return {"workflow_runs":[{"id":n,"name":name,"head_sha":sha,"event":event,
             "status":"completed","conclusion":"success","run_attempt":1,
+            "updated_at":"2026-09-29T15:58:44Z",
             "head_branch":"state/closeout","pull_requests":[{"number":252}]}
             for n,name in enumerate(names,first)]}
     pr_runs=runs(("Foundation CI","Dependency Security","Review Source"),head,"pull_request",1)
@@ -186,7 +108,7 @@ def test_merged_closeout_requires_corresponding_checkpoint_and_review(monkeypatc
     result=merged.fetch_merged_closeout_evidence(252,merge,package,checkpoint,scope)
     assert result["source_head"]==merge and result["checkpoint"]==package
     assert result["checkpoint_waiver_comment_id"]==42
-    assert seen==[(252,head,{"root":evidence_module.ROOT})]
+    assert seen==[(252,head,{"root":evidence_module.ROOT,"approved_before":pr["mergedAt"]})]
     scope["independent_review_required"]=False
     merged.fetch_merged_closeout_evidence(252,merge,package,checkpoint,scope)
     source_records[package]=dict(checkpoint)
