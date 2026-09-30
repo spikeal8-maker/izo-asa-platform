@@ -87,9 +87,9 @@ review по exact closeout PR head либо отдельный exact-head owner 
 отсутствующего или несовпадающего evidence
 до создания ветки или записи state.
 
-For an initial checkpoint written by a later closeout PR, an existing source-PR owner waiver must be an
-unmodified owner-authored GitHub comment before the checkpoint first appears. Its full body has this form
-(replace the placeholders with the source PR number, exact source SHA, required run IDs, and a real reason):
+Если исходный checkpoint впервые вводится в истории более позднего closeout PR, waiver для source PR подтверждается
+GitHub-комментарием владельца. Новый structured waiver имеет ровно семь строк ниже: подставляются номер source PR,
+exact source SHA, ID обязательных PR runs и конкретная причина.
 
 ```text
 Owner waiver for source checkpoint PR #<number>: APPROVE
@@ -101,9 +101,17 @@ Dependency Security: <run ID> SUCCESS
 Review Source: <run ID> SUCCESS
 ```
 
-The run IDs must match the PR-specific required checks and successful PR runs before checkpoint introduction.
-The historical source-PR owner comment is accepted only as its exact recorded full body. A later closeout PR
-needs its own independent review or exact-head waiver before merge; source waiver evidence never transfers.
+Для source PR оба времени комментария, `created_at` и `updated_at`, должны быть строго раньше более раннего из
+момента первого введения checkpoint и `createdAt` closeout PR. Правка до этого порога допустима; после него waiver
+не принимается. Выбранные успешные обязательные PR runs должны завершиться (`updatedAt`) до того же порога, а ID
+в комментарии — совпадать с их PR-specific ID. Если используется structured independent review source PR, его
+`submitted_at` также должен быть раньше этого порога. Ранее зафиксированный legacy waiver принимается только при
+точном совпадении полного тела комментария.
+
+Для отдельного closeout PR выбранные успешные обязательные PR runs должны завершиться (`updatedAt`) строго до
+`mergedAt`. Его собственное structured independent review требует `submitted_at < mergedAt`; вместо review допустим
+отдельный exact-head owner waiver с `created_at < mergedAt` и `updated_at < mergedAt`. Waiver исходного checkpoint
+не переносится на closeout.
 
 Lifecycle status contract: `active` — текущая работа; `planned_next` — явно выбранный successor;
 `technical_pass` — technical acceptance, merge/deploy не подразумеваются; `complete` — terminal и immutable;
