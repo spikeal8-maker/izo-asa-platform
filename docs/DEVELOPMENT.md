@@ -71,10 +71,21 @@ SELF_REVIEW и CI. Требуется отдельное review evidence.
 После targeted PASS + self-review: `check_docs`, `repository_hygiene.py`, scope-check, generated contracts, diff/secret sanity, затем PR.
 Общий CI не заменяется локальными тестами. Skipped stage не является доказательством.
 
-После required workflows current working head замораживается; source/status больше не меняются.
+После required workflows принятый source head замораживается. Отдельный merged closeout PR для `complete` —
+единственный допустимый переход к новому HEAD по контракту ниже.
 Предвыбранный successor запускается через `project_state.py begin-next`; package с `decides_next=true` и
 `next_package=NONE` — через `begin-decided-next`. State workflow создаёт новую ветку и атомарно меняет
 PLAN/PACKAGES/CURRENT/CHECKPOINTS. Для terminal `complete` запуск successor не понижает завершённый package.
+
+Для `complete` source HEAD принимается либо ровно по source SHA immutable accepted checkpoint, либо по отдельному
+accepted merged closeout PR, указанному через `verified_pr`. Во втором случае head PR должен происходить от
+checkpoint source; после введения checkpoint его `complete` status и запись остаются неизменными, а current HEAD
+точно совпадает с merge commit PR. Обязательны required PR workflows с проверенным merge tree, совпадающим с деревом
+фактического merge commit, успешные required push workflows на exact merged HEAD, а также structured independent
+review по exact closeout PR head либо отдельный exact-head owner waiver для этого PR. Waiver исходного checkpoint
+не переносится на closeout. При нехватке любого evidence `begin-next`/`begin-decided-next` останавливаются с указанием
+отсутствующего или несовпадающего evidence
+до создания ветки или записи state.
 
 Lifecycle status contract: `active` — текущая работа; `planned_next` — явно выбранный successor;
 `technical_pass` — technical acceptance, merge/deploy не подразумеваются; `complete` — terminal и immutable;
