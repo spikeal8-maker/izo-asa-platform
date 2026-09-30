@@ -79,9 +79,10 @@ def _changed_paths(root: Path, base: str | None) -> set[str]:
     return {line for line in raw.decode("utf-8").splitlines() if line}
 
 
-def _old_size(root: Path, base: str, raw: str) -> int:
+def _old_dimensions(root: Path, base: str, raw: str) -> tuple[int, int]:
     result = subprocess.run(["git", "show", f"{base}:{raw}"], cwd=root, capture_output=True, timeout=30)
-    return len(result.stdout) if result.returncode == 0 else 0
+    data = result.stdout if result.returncode == 0 else b""
+    return len(data), len(data.decode("utf-8", "replace").splitlines())
 
 
 def _size(root: Path, raw: str) -> int:
@@ -154,7 +155,6 @@ def scan(root: Path = ROOT, *, base: str | None = None,
     failures: list[tuple[str, str]] = []
     reports: list[tuple[str, str]] = []
     near_limit: list[dict[str, object]] = []
-    changed_near_limit: list[dict[str, object]] = []
     total_bytes = 0
     over_500 = over_1m = over_5m = 0
 
@@ -209,15 +209,11 @@ def scan(root: Path = ROOT, *, base: str | None = None,
                 "max_lines": max_lines,
             }
             near_limit.append(entry)
-            if raw in changed:
-                changed_near_limit.append(entry)
-        if base and raw in changed and size > int(max_bytes * NEAR_LIMIT_RATIO):
-            old = _old_size(root, base, raw)
-            if not old or size > old:
-                failures.append((
-                    raw,
-                    f"near-limit handwritten file grew {old}->{size} above 80% of {max_bytes}; split responsibility",
-                ))
+        if base and raw in changed and is_near:
+            old_size, old_lines = _old_dimensions(root, base, raw)
+            if not old_size or size > old_size or lines > old_lines:
+                failures.append((raw, f"near-limit handwritten file grew: bytes {old_size}->{size}, "
+                                      f"lines {old_lines}->{lines}; split responsibility"))
 
     root_context_bytes = _size(root, "AGENTS.md") + _size(root, "docs/CURRENT.md")
     live_plan_bytes = _size(root, "docs/PLAN.json")
@@ -235,10 +231,8 @@ def scan(root: Path = ROOT, *, base: str | None = None,
         "live_plan_target": PLAN_TARGET,
         "live_plan_warning": PLAN_WARNING,
         "live_plan_hard_limit": PLAN_HARD,
-        "near_limit_handwritten": sorted(near_limit, key=lambda item: str(item["path"])),
-        "changed_near_limit_handwritten": sorted(
-            changed_near_limit, key=lambda item: str(item["path"])
-        ),
+        "near_limit_handwritten": near_limit,
+        "changed_near_limit_handwritten": [item for item in near_limit if item["path"] in changed],
         "failures": sorted(set(failures)),
         "reports": sorted(set(reports)),
         "base": base,
