@@ -155,10 +155,10 @@ def test_near_limit_line_growth_fails_without_byte_growth(tmp_path):
     root = repo(tmp_path)
     path = root / "apps/api/izo/near_limit.py"
     path.parent.mkdir(parents=True)
-    path.write_text("#\n" * 240 + "###\n", encoding="utf-8")
+    path.write_bytes(b"#\n" * 240 + b"###\n")
     base = commit_all(root, "base")
     old_size = path.stat().st_size
-    path.write_text("#\n" * 242, encoding="utf-8")
+    path.write_bytes(b"#\n" * 242)
     commit_all(root, "line growth")
     assert path.stat().st_size == old_size
     result = hygiene.scan(root, base=base)
@@ -173,10 +173,10 @@ def test_old_byte_near_limit_rejects_line_growth_after_byte_shrink(tmp_path):
     root = repo(tmp_path)
     path = root / "apps/api/izo/near_limit.py"
     path.parent.mkdir(parents=True)
-    path.write_text("# " + "x" * 9798 + "\n", encoding="utf-8")
+    path.write_bytes(b"# " + b"x" * 9798 + b"\n")
     base = commit_all(root, "base")
     assert path.stat().st_size == 9801
-    path.write_text(("# " + "x" * 92 + "\n") * 101 + "#\n", encoding="utf-8")
+    path.write_bytes((b"# " + b"x" * 92 + b"\n") * 101 + b"#\n")
     commit_all(root, "line growth after byte shrink")
     assert path.stat().st_size < int(12_000 * 0.80)
     result = hygiene.scan(root, base=base)
@@ -188,9 +188,9 @@ def test_old_byte_near_limit_allows_shrink_below_threshold(tmp_path):
     root = repo(tmp_path)
     path = root / "apps/api/izo/near_limit.py"
     path.parent.mkdir(parents=True)
-    path.write_text("# " + "x" * 9798 + "\n", encoding="utf-8")
+    path.write_bytes(b"# " + b"x" * 9798 + b"\n")
     base = commit_all(root, "base")
-    path.write_text("# " + "x" * 8998 + "\n", encoding="utf-8")
+    path.write_bytes(b"# " + b"x" * 8998 + b"\n")
     commit_all(root, "shrink")
     result = hygiene.scan(root, base=base)
     assert not result["failures"], reasons(result)
