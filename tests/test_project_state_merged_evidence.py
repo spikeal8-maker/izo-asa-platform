@@ -13,6 +13,8 @@ sys.path.insert(0, str(ROOT / "tools"))
 import project_state_evidence as common
 from project_state_merged_evidence import authenticate_initial_checkpoint
 
+WAIVER_GAP = "authenticated pre-introduction"
+
 
 def _historical_case():
     source, base, tested = "1" * 40, "2" * 40, "3" * 40
@@ -35,6 +37,7 @@ def _historical_case():
              for name, run_id in ids.items()]}
     comment = {"id": 42, "user": {"login": "owner"}, "author_association": "OWNER",
                "created_at": "2026-09-29T15:39:17Z",
+               "updated_at": "2026-09-29T15:39:17Z",
                "body": (f"FINAL EXACT-HEAD INDEPENDENT READ-ONLY CHALLENGE — APPROVE\n"
                         f"Source HEAD: `{source}`.\n- Foundation CI 11 SUCCESS\n"
                         "- Dependency Security 12 SUCCESS\n- Review Source 13 SUCCESS\n\n"
@@ -47,13 +50,13 @@ def _historical_case():
     ("valid", None), ("wrong-pr", "source PR head/base"),
     ("wrong-run", "workflow run IDs"), ("wrong-tree", "tested merge tree mismatch"),
     ("foreign-rollup", "absent from PR rollup"),
-    ("forged-waiver", "authenticated pre-introduction"),
-    ("after-pr-open", "authenticated pre-introduction"),
-    ("after-introduction", "authenticated pre-introduction"),
-    ("equal-introduction", "authenticated pre-introduction"),
-    ("withheld-waiver", "authenticated pre-introduction"),
-    ("extra-denial", "authenticated pre-introduction"),
-    ("quoted-waiver", "authenticated pre-introduction"),
+    ("forged-waiver", WAIVER_GAP),
+    ("after-pr-open", WAIVER_GAP),
+    ("edited-after-introduction", WAIVER_GAP),
+    ("equal-introduction", WAIVER_GAP),
+    ("missing-update", WAIVER_GAP),
+    ("extra-denial", WAIVER_GAP),
+    ("quoted-waiver", WAIVER_GAP),
     ("wrong-owner-actor", "owner waiver identity mismatch"),
     ("review-before-introduction", None),
     ("review-after-introduction", "requires structured independent"),
@@ -66,9 +69,9 @@ def test_initial_checkpoint_requires_original_pr_ci_and_owner_action(monkeypatch
     elif mode == "wrong-tree": checkpoint["tested_merge_tree"] = "9" * 40
     elif mode == "foreign-rollup": rollup["statusCheckRollup"]["contexts"]["nodes"] = []
     elif mode == "forged-waiver": comment["user"]["login"] = "other"
-    elif mode == "after-introduction": comment["created_at"] = "2026-09-29T15:45:00Z"
+    elif mode == "edited-after-introduction": comment["updated_at"] = "2026-09-29T15:45:00Z"
     elif mode == "equal-introduction": comment["created_at"] = "2026-09-29T15:41:57Z"
-    elif mode == "withheld-waiver": comment["body"] = comment["body"].replace("may use", "must not use")
+    elif mode == "missing-update": comment.pop("updated_at")
     elif mode == "extra-denial": comment["body"] = comment["body"].replace(
         "Verdict: APPROVE.", "I reject any owner waiver.\nVerdict: APPROVE.")
     elif mode == "quoted-waiver": comment["body"] = comment["body"].replace(
@@ -198,6 +201,7 @@ def test_merged_closeout_requires_corresponding_checkpoint_and_review(monkeypatc
         merged.fetch_merged_closeout_evidence(252,merge,package,checkpoint,scope)
     closeout_comments.append({"id":99,"user":{"login":"owner"},"author_association":"OWNER",
         "created_at":"2026-09-29T15:55:00Z",
+        "updated_at":"2026-09-29T15:55:00Z",
         "body":(f"Owner waiver for PR #252: APPROVE\nSource HEAD: {head}\n"
                 "Independent review: unavailable\nReason: other account unavailable\n"
                 "Foundation CI: 1 SUCCESS\nDependency Security: 2 SUCCESS\nReview Source: 3 SUCCESS")})

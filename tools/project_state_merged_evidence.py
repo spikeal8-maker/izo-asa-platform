@@ -4,8 +4,9 @@ from __future__ import annotations
 import re
 from pathlib import Path
 
+from project_state_evidence import _time
 from project_state_model import ROOT
-from project_state_workflow import (_package_state_at, _push_workflows, _time,
+from project_state_workflow import (_package_state_at, _push_workflows,
     _historical_waiver_body, _closeout_owner_waiver, REQUIRED_PR_JOBS,
     validate_merged_closeout_evidence)
 
@@ -91,7 +92,9 @@ def authenticate_initial_checkpoint(checkpoint: dict, closeout_pr: dict, slug: s
             if ((row.get("user") or {}).get("login") == owner
                     and row.get("author_association") == "OWNER"
                     and row.get("created_at")
+                    and row.get("updated_at")
                     and _time(row["created_at"], "original owner comment") < cutoff
+                    and _time(row["updated_at"], "original owner comment update") < cutoff
                     and _historical_waiver_body(str(row.get("body") or ""), source, latest)):
                 comment_id = row.get("id")
                 break

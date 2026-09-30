@@ -211,13 +211,15 @@ def test_merged_closeout_rejects_unrelated_pr_and_bad_ci(mode,reason):
 
 
 @pytest.mark.parametrize("mode", ["valid", "missing", "wrong-sha", "late", "equal",
-                                  "foreign-owner", "denied", "quoted", "wrong-ci", "no-reason"])
+                                  "edited", "missing-update", "foreign-owner", "denied",
+                                  "quoted", "wrong-ci", "no-reason"])
 def test_closeout_owner_waiver_requires_explicit_pr_bound_action(monkeypatch, mode):
     import project_state_evidence as common
     head = "4" * 40
     runs = {"Foundation CI": 1, "Dependency Security": 2, "Review Source": 3}
     comment = {"id": 99, "user": {"login": "owner"}, "author_association": "OWNER",
                "created_at": "2026-09-29T15:55:00Z",
+               "updated_at": "2026-09-29T15:55:00Z",
                "body": (f"Owner waiver for PR #252: APPROVE\nSource HEAD: {head}\n"
                         "Independent review: unavailable\nReason: other account unavailable\n"
                         "Foundation CI: 1 SUCCESS\nDependency Security: 2 SUCCESS\n"
@@ -225,6 +227,8 @@ def test_closeout_owner_waiver_requires_explicit_pr_bound_action(monkeypatch, mo
     if mode == "wrong-sha": comment["body"] = comment["body"].replace(head, "9" * 40)
     elif mode == "late": comment["created_at"] = "2026-09-29T16:01:00Z"
     elif mode == "equal": comment["created_at"] = "2026-09-29T16:00:00Z"
+    elif mode == "edited": comment["updated_at"] = "2026-09-29T16:01:00Z"
+    elif mode == "missing-update": comment.pop("updated_at")
     elif mode == "foreign-owner": comment["user"]["login"] = "other"
     elif mode == "denied": comment["body"] = comment["body"].replace("APPROVE", "REJECT")
     elif mode == "quoted": comment["body"] = "> " + comment["body"]

@@ -3,9 +3,9 @@ from __future__ import annotations
 
 import json
 import re
-from datetime import datetime
 from pathlib import Path
 
+from project_state_evidence import _time
 from project_state_model import load_checkpoints
 
 REQUIRED_PR_JOBS = {"Foundation CI": {"verify", "bootstrap-windows"},
@@ -132,16 +132,6 @@ def _push_workflows(runs: list[dict], source_head: str) -> dict[str, int]:
     return result
 
 
-def _time(value: str, label: str) -> datetime:
-    try:
-        parsed = datetime.fromisoformat(value.replace("Z", "+00:00"))
-    except (AttributeError, ValueError) as exc:
-        raise ValueError(f"{label} timestamp missing or invalid") from exc
-    if parsed.utcoffset() is None:
-        raise ValueError(f"{label} timestamp lacks timezone")
-    return parsed
-
-
 def _historical_waiver_body(body: str, source: str, runs: dict) -> bool:
     lines = [line.strip() for line in body.splitlines() if line.strip()]
     permission = ("No Chat P1 work started. Structured GitHub approval by a different account remains unavailable; "
@@ -185,9 +175,11 @@ def _closeout_owner_waiver(pr_number: int, head: str, workflows: dict,
                     *(f"{name}: {workflows[name]} SUCCESS" for name in
                       ("Foundation CI", "Dependency Security", "Review Source"))]
         if (lines != expected or not reason or len(reason) > 500
-                or type(row.get("id")) is not int or not row.get("created_at")):
+                or type(row.get("id")) is not int
+                or not row.get("created_at") or not row.get("updated_at")):
             continue
-        if _time(row["created_at"], "closeout owner comment") < cutoff:
+        if max(_time(row[key], "closeout owner comment")
+               for key in ("created_at", "updated_at")) < cutoff:
             return reason, row["id"]
     return None
 

@@ -1,6 +1,7 @@
 """GitHub/CI evidence collection for project-state transitions."""
 from __future__ import annotations
 import json
+from datetime import datetime
 from pathlib import Path
 import re
 import subprocess
@@ -10,6 +11,16 @@ from project_state_model import ROOT
 from review_evidence import review_decision, review_required
 
 REQUIRED_WORKFLOWS = ("Foundation CI", "Dependency Security", "Review Source")
+
+
+def _time(value: str, label: str) -> datetime:
+    try:
+        parsed = datetime.fromisoformat(value.replace("Z", "+00:00"))
+    except (AttributeError, ValueError) as exc:
+        raise ValueError(f"{label} timestamp missing or invalid") from exc
+    if parsed.utcoffset() is None:
+        raise ValueError(f"{label} timestamp lacks timezone")
+    return parsed
 
 
 def run(args: list[str], *, root: Path = ROOT) -> str:
