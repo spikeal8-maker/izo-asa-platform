@@ -146,17 +146,20 @@ def _historical_waiver_body(body: str, source: str, runs: dict) -> bool:
     lines = [line.strip() for line in body.splitlines() if line.strip()]
     permission = ("No Chat P1 work started. Structured GitHub approval by a different account remains unavailable; "
                   "terminal checkpoint may use exact-SHA owner waiver as designed.")
-    required = [f"Source HEAD: `{source}`.",
-                *(f"- {name} {runs[name]['databaseId']} SUCCESS"
-                  for name in ("Foundation CI", "Dependency Security", "Review Source")),
-                "Verdict: APPROVE.", permission]
-    if (not lines or lines[0] != "FINAL EXACT-HEAD INDEPENDENT READ-ONLY CHALLENGE — APPROVE"
-            or lines[-1] != permission or any(line.startswith(">") for line in lines)
-            or any(re.search(r"\b(?:do not|must not|waiver denied|waiver revoked)\b", line, re.I)
-                   for line in lines)):
-        return False
-    positions = [lines.index(line) for line in required if line in lines]
-    return len(positions) == len(required) and positions == sorted(positions)
+    prefix = ["FINAL EXACT-HEAD INDEPENDENT READ-ONLY CHALLENGE — APPROVE",
+              f"Source HEAD: `{source}`."]
+    checks = [f"- {name} {runs[name]['databaseId']} SUCCESS"
+              for name in ("Foundation CI", "Dependency Security", "Review Source")]
+    suffix = ["Verdict: APPROVE.", permission]
+    historical = ["Fresh clone:", "- hygiene PASS",
+                  "- tracked files 487 / tracked bytes 2,766,244",
+                  "- >500 KB 0 / >1 MB 0 / >5 MB 0 / tracked junk 0",
+                  "- focused hygiene + closeout + docs + boundaries + scope tests PASS",
+                  "- scope 11/12; outside 0; unapproved sensitive 0",
+                  "- terminal-state simulation: PRE-P1 status=complete, next=None",
+                  "- terminal PLAN bytes=9,995 (<10,000 hard context budget)",
+                  "- migrations changed 0", "- product runtime / Chat / providers changed 0"]
+    return lines in (prefix + checks + suffix, prefix + historical + checks + suffix)
 
 
 def _closeout_owner_waiver(pr_number: int, head: str, workflows: dict,

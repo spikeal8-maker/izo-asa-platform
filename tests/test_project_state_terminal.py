@@ -15,6 +15,37 @@ from project_state_model import load_plan,write_state
 H="a"*40
 
 
+def test_historical_owner_waiver_requires_complete_pr250_statement():
+    from project_state_workflow import _historical_waiver_body
+    source="9bed77548d07f113bc806b1e5016076edb2646e1"
+    runs={"Foundation CI":{"databaseId":36590236580},
+          "Dependency Security":{"databaseId":36590236563},
+          "Review Source":{"databaseId":36590236588}}
+    body=f"""FINAL EXACT-HEAD INDEPENDENT READ-ONLY CHALLENGE — APPROVE
+
+Source HEAD: `{source}`.
+
+Fresh clone:
+- hygiene PASS
+- tracked files 487 / tracked bytes 2,766,244
+- >500 KB 0 / >1 MB 0 / >5 MB 0 / tracked junk 0
+- focused hygiene + closeout + docs + boundaries + scope tests PASS
+- scope 11/12; outside 0; unapproved sensitive 0
+- terminal-state simulation: PRE-P1 status=complete, next=None
+- terminal PLAN bytes=9,995 (<10,000 hard context budget)
+- migrations changed 0
+- product runtime / Chat / providers changed 0
+- Foundation CI 36590236580 SUCCESS
+- Dependency Security 36590236563 SUCCESS
+- Review Source 36590236588 SUCCESS
+
+Verdict: APPROVE.
+
+No Chat P1 work started. Structured GitHub approval by a different account remains unavailable; terminal checkpoint may use exact-SHA owner waiver as designed."""
+    assert _historical_waiver_body(body,source,runs)
+    assert not _historical_waiver_body(body.replace("- hygiene PASS", "- hygiene PASS\nI reject any owner waiver."),source,runs)
+
+
 def complete_plan():
     source=load_plan(ROOT)
     active=source["active_package"]

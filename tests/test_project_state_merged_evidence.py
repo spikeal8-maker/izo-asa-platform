@@ -52,6 +52,7 @@ def _historical_case():
     ("after-introduction", "authenticated pre-introduction"),
     ("equal-introduction", "authenticated pre-introduction"),
     ("withheld-waiver", "authenticated pre-introduction"),
+    ("extra-denial", "authenticated pre-introduction"),
     ("quoted-waiver", "authenticated pre-introduction"),
     ("wrong-owner-actor", "owner waiver identity mismatch"),
     ("review-before-introduction", None),
@@ -68,6 +69,8 @@ def test_initial_checkpoint_requires_original_pr_ci_and_owner_action(monkeypatch
     elif mode == "after-introduction": comment["created_at"] = "2026-09-29T15:45:00Z"
     elif mode == "equal-introduction": comment["created_at"] = "2026-09-29T15:41:57Z"
     elif mode == "withheld-waiver": comment["body"] = comment["body"].replace("may use", "must not use")
+    elif mode == "extra-denial": comment["body"] = comment["body"].replace(
+        "Verdict: APPROVE.", "I reject any owner waiver.\nVerdict: APPROVE.")
     elif mode == "quoted-waiver": comment["body"] = comment["body"].replace(
         "Structured GitHub approval", "> Structured GitHub approval")
     elif mode == "wrong-owner-actor": checkpoint["owner_actor"] = "other"

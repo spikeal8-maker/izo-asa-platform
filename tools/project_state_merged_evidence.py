@@ -76,6 +76,7 @@ def authenticate_initial_checkpoint(checkpoint: dict, closeout_pr: dict, slug: s
     merged = _time(closeout_pr.get("mergedAt"), "closeout merge")
     if introduced >= merged or opened >= merged:
         raise ValueError("checkpoint introduction or PR creation does not precede closeout merge")
+    # PR creation is server-attested; the author-controlled commit date only narrows this cutoff.
     cutoff = min(introduced, opened)
     reviews = _flatten_pages(gh_json(["api", "--paginate", "--slurp",
         f"repos/{slug}/pulls/{number}/reviews?per_page=100"], root=root))
