@@ -201,10 +201,10 @@ def test_near_limit_without_growth_passes(tmp_path, shrinking):
     root = repo(tmp_path)
     path = root / "apps/api/izo/near_limit.py"
     path.parent.mkdir(parents=True)
-    path.write_text("#\n" * 242, encoding="utf-8")
+    path.write_bytes(b"#\n" * 242)
     base = commit_all(root, "base")
     if shrinking:
-        path.write_text("#\n" * 241, encoding="utf-8")
+        path.write_bytes(b"#\n" * 241)
         commit_all(root, "shrink")
     result = hygiene.scan(root, base=base)
     assert not result["failures"], reasons(result)

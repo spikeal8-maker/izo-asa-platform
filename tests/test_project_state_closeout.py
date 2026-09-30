@@ -10,6 +10,7 @@ ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "tools"))
 
 import project_state_closeout as closeout
+from project_state_workflow import validate_merged_closeout_evidence
 from project_state_model import load_plan, render_current, validate_plan
 
 H = "a" * 40
@@ -141,3 +142,53 @@ def test_closeout_rolls_back_state_and_branch_on_write_failure(tmp_path, monkeyp
         assert (docs / name).read_bytes() == data
     assert not (docs / "PACKAGES.json").exists()
     assert calls == ["create", "rollback", "delete"]
+
+
+def _merged_inputs():
+    checkpoint, head, base, merge, tree = "1"*40,"2"*40,"3"*40,"4"*40,"5"*40
+    pr={"state":"MERGED","mergedAt":"2026-09-29T15:59:52Z","isDraft":False,
+        "headRefOid":head,"headRefName":"state/closeout","baseRefOid":base,
+        "mergeCommit":{"oid":merge}}
+    pr_runs=[{"name":name,"headSha":head,"event":"pull_request","status":"completed",
+              "conclusion":"success","databaseId":n,"prNumbers":[252],
+              "headBranch":"state/closeout"}
+             for n,name in enumerate(("Foundation CI","Dependency Security","Review Source"),1)]
+    push_runs=[{"name":name,"headSha":merge,"event":"push","status":"completed",
+                "conclusion":"success","databaseId":n}
+               for n,name in enumerate(("Foundation CI","Dependency Security"),4)]
+    commit={"parents":[{"sha":base},{"sha":head}],"commit":{"tree":{"sha":"f"*40}}}
+    return dict(pr=pr,pr_runs=pr_runs,push_runs=push_runs,merge_commit=commit,
+                tested_commit=commit,tested_sha=tree,source_head=merge,
+                checkpoint_head=checkpoint,pr_number=252)
+
+
+def test_exact_merged_closeout_requires_both_ci_stages():
+    fixture=_merged_inputs()
+    for run in fixture["pr_runs"]: run["prNumbers"]=[]  # GitHub clears association after merge.
+    result=validate_merged_closeout_evidence(**fixture)
+    assert result["source_head"]==fixture["source_head"]
+    assert result["closeout_head"]==fixture["pr"]["headRefOid"]
+    assert result["push_workflows"]=={"Foundation CI":4,"Dependency Security":5}
+
+
+@pytest.mark.parametrize("mode,reason",[
+    ("later-head","mergeCommit"),("unmerged","merged PR"),
+    ("wrong-parents","parents"),("wrong-pr-ci","PR #252"),
+    ("missing-push","push workflow"),("failed-push","did not succeed"),
+    ("wrong-branch","branch"),("mismatched-tree","tree"),
+])
+def test_merged_closeout_rejects_unrelated_pr_and_bad_ci(mode,reason):
+    fixture=_merged_inputs()
+    if mode=="later-head": fixture["source_head"]="6"*40
+    elif mode=="unmerged": fixture["pr"]["state"]="OPEN"
+    elif mode=="wrong-parents": fixture["merge_commit"]={"parents":[{"sha":"9"*40}]}
+    elif mode=="wrong-pr-ci": fixture["pr_runs"][0]["prNumbers"]=[251]
+    elif mode=="wrong-branch":
+        fixture["pr_runs"][0].update(prNumbers=[],headBranch="other/closeout")
+    elif mode=="mismatched-tree":
+        fixture["tested_commit"]={"parents":fixture["merge_commit"]["parents"],
+                                   "commit":{"tree":{"sha":"e"*40}}}
+    elif mode=="missing-push": fixture["push_runs"]=fixture["push_runs"][1:]
+    else: fixture["push_runs"][0]["conclusion"]="failure"
+    with pytest.raises(ValueError,match=reason):
+        validate_merged_closeout_evidence(**fixture)
