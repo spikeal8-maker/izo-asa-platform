@@ -159,7 +159,10 @@ Subagent не расширяет scope самостоятельно. Нужен 
 
 Review-subagent — READ-ONLY: не исправляет собственный finding и не является implementer того же diff. Internal subagent review не заменяет required structured independent GitHub review или exact-SHA owner waiver.
 
-Controller обязан STOP при `NEW_DECISION_REQUIRED`, unexpected source HEAD change, scope collision, unresolved security/ownership conflict, required CI failure, review blocker, owner-only action или real spend/live operation без отдельного разрешения.
+При required CI failure или review blocker controller останавливает приёмку результата, freeze, следующий package и зависимые шаги. Если причина — обычный воспроизводимый дефект внутри уже разрешённого package/task scope, controller может диагностировать её и назначить ограниченный цикл исправления в текущем package. После исправления требуются полный required CI и повторный required review для нового exact source HEAD; бесконечные reruns и обход gates запрещены.
+
+Полный STOP до отдельного разрешения обязателен при `NEW_DECISION_REQUIRED`, unexpected source HEAD change, scope collision/expansion, unresolved security/ownership conflict, owner-only action, real spend/live operation или прямом запрете в task contract.
+
 ### Subagent handoff
 
 Минимальный handoff:
