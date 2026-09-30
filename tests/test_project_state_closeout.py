@@ -10,7 +10,8 @@ ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "tools"))
 
 import project_state_closeout as closeout
-from project_state_workflow import validate_merged_closeout_evidence
+import project_state_merged_evidence as merged_evidence
+from project_state_workflow import _closeout_owner_waiver, validate_merged_closeout_evidence
 from project_state_model import load_plan, render_current, validate_plan
 
 H = "a" * 40
@@ -207,3 +208,58 @@ def test_merged_closeout_rejects_unrelated_pr_and_bad_ci(mode,reason):
     else: fixture["push_runs"][0]["conclusion"]="failure"
     with pytest.raises(ValueError,match=reason):
         validate_merged_closeout_evidence(**fixture)
+
+
+@pytest.mark.parametrize("mode", ["valid", "missing", "wrong-sha", "late", "equal",
+                                  "foreign-owner", "denied", "quoted", "wrong-ci", "no-reason"])
+def test_closeout_owner_waiver_requires_explicit_pr_bound_action(monkeypatch, mode):
+    import project_state_evidence as common
+    head = "4" * 40
+    runs = {"Foundation CI": 1, "Dependency Security": 2, "Review Source": 3}
+    comment = {"id": 99, "user": {"login": "owner"}, "author_association": "OWNER",
+               "created_at": "2026-09-29T15:55:00Z",
+               "body": (f"Owner waiver for PR #252: APPROVE\nSource HEAD: {head}\n"
+                        "Independent review: unavailable\nReason: other account unavailable\n"
+                        "Foundation CI: 1 SUCCESS\nDependency Security: 2 SUCCESS\n"
+                        "Review Source: 3 SUCCESS")}
+    if mode == "wrong-sha": comment["body"] = comment["body"].replace(head, "9" * 40)
+    elif mode == "late": comment["created_at"] = "2026-09-29T16:01:00Z"
+    elif mode == "equal": comment["created_at"] = "2026-09-29T16:00:00Z"
+    elif mode == "foreign-owner": comment["user"]["login"] = "other"
+    elif mode == "denied": comment["body"] = comment["body"].replace("APPROVE", "REJECT")
+    elif mode == "quoted": comment["body"] = "> " + comment["body"]
+    elif mode == "wrong-ci": comment["body"] = comment["body"].replace("Foundation CI: 1", "Foundation CI: 8")
+    elif mode == "no-reason": comment["body"] = comment["body"].replace(
+        "Reason: other account unavailable", "Reason: ")
+    monkeypatch.setattr(common, "gh_json", lambda *a, **k: [[]] if mode == "missing" else [[comment]])
+    actual = _closeout_owner_waiver(252, head, runs, "2026-09-29T16:00:00Z",
+                                     "owner/repo", root=ROOT)
+    assert actual == (("other account unavailable", 99) if mode == "valid" else None)
+
+
+@pytest.mark.parametrize("mode,reason", [
+    ("valid", None), ("no-lineage", "cannot be established"),
+    ("no-date", "timestamp missing"), ("rewrite", "rewritten"),
+    ("removed", "removed"), ("status-regress", "complete status.*rewritten"),
+])
+def test_checkpoint_introduction_uses_first_immutable_lineage_commit(monkeypatch, mode, reason):
+    source, first, head = (letter * 40 for letter in "123")
+    checkpoint = {"source_head": source, "verified_pr": 250}
+    records = {first: checkpoint, head: checkpoint}
+    if mode == "rewrite": records[first] = {"verified_pr": 251}
+    if mode == "removed": records[head] = None
+    monkeypatch.setattr(merged_evidence, "_package_state_at", lambda sha, *a, **k: (
+        {"status": "active" if mode == "status-regress" and sha == head else "complete",
+         "checkpoint": "PRE-P1-STABILIZATION-001"}, records[sha], records[sha] is not None))
+    def fake_git(*args, root):
+        if args[0] == "rev-list":
+            return "" if mode == "no-lineage" else f"{first} {source}\n{head} {first}"
+        if args[:3] == ("show", "-s", "--format=%cI"):
+            return "" if mode == "no-date" else "2026-09-29T15:41:57Z"
+        raise AssertionError(args)
+    call = lambda: merged_evidence._checkpoint_introduction(
+        source, head, "PRE-P1-STABILIZATION-001", checkpoint, root=ROOT, git_fn=fake_git)
+    if reason:
+        with pytest.raises(ValueError, match=reason): call()
+    else:
+        assert call() == "2026-09-29T15:41:57+00:00"

@@ -5,11 +5,40 @@ import re
 from pathlib import Path
 
 from project_state_model import ROOT
-from project_state_workflow import (_package_state_at, _push_workflows,
-    REQUIRED_PR_JOBS, validate_merged_closeout_evidence)
+from project_state_workflow import (_package_state_at, _push_workflows, _time,
+    _historical_waiver_body, _closeout_owner_waiver, REQUIRED_PR_JOBS,
+    validate_merged_closeout_evidence)
+
+
+def _checkpoint_introduction(source: str, head: str, package: str, checkpoint: dict,
+                             *, root: Path, git_fn) -> str:
+    history = git_fn("rev-list", "--ancestry-path", "--reverse", "--topo-order",
+                     "--parents", f"{source}..{head}", root=root).splitlines()
+    present = {source: False}
+    first = []
+    for line in history:
+        sha, *parents = line.split()
+        if not re.fullmatch(r"[0-9a-f]{40}", sha):
+            raise ValueError("closeout checkpoint introduction history invalid")
+        item, record, exists = _package_state_at(sha, package, root=root, git_fn=git_fn)
+        if exists and (record != checkpoint or not isinstance(item, dict)
+                       or item.get("status") != "complete" or item.get("checkpoint") != package):
+            raise ValueError("accepted checkpoint or complete status was rewritten in closeout history")
+        if any(present.get(parent) is True for parent in parents):
+            if not exists:
+                raise ValueError("accepted checkpoint was removed in closeout history")
+        elif exists:
+            stamp = git_fn("show", "-s", "--format=%cI", sha, root=root).strip()
+            first.append(_time(stamp, "checkpoint introduction"))
+        present[sha] = exists
+    if present.get(head) is not True or not first:
+        raise ValueError("closeout checkpoint introduction cannot be established")
+    # Equal-second events have no provable order: evidence must be strictly earlier.
+    return min(first).isoformat()
+
 
 def authenticate_initial_checkpoint(checkpoint: dict, closeout_pr: dict, slug: str,
-                                    *, root: Path = ROOT) -> dict:
+                                    *, introduced_at: str, root: Path = ROOT) -> dict:
     from project_state_evidence import (gh_json, _workflow_pages, _flatten_pages,
         latest_required_runs, foundation_tested_sha, fetch_pr_rollup,
         validate_pr_rollup, REQUIRED_WORKFLOWS)
@@ -42,30 +71,31 @@ def authenticate_initial_checkpoint(checkpoint: dict, closeout_pr: dict, slug: s
     if parents != [pr["baseRefOid"], source]:
         raise ValueError("initial checkpoint tested merge tree parents mismatch")
 
-    cutoff = closeout_pr.get("mergedAt")
-    if not isinstance(cutoff, str) or not cutoff:
-        raise ValueError("closeout merge time missing for historical review evidence")
+    introduced = _time(introduced_at, "checkpoint introduction")
+    opened = _time(closeout_pr.get("createdAt"), "closeout PR creation")
+    merged = _time(closeout_pr.get("mergedAt"), "closeout merge")
+    if introduced >= merged or opened >= merged:
+        raise ValueError("checkpoint introduction or PR creation does not precede closeout merge")
+    cutoff = min(introduced, opened)
     reviews = _flatten_pages(gh_json(["api", "--paginate", "--slurp",
         f"repos/{slug}/pulls/{number}/reviews?per_page=100"], root=root))
-    reviews = [row for row in reviews if row.get("submitted_at") and row["submitted_at"] <= cutoff]
+    reviews = [row for row in reviews if row.get("submitted_at")
+               and _time(row["submitted_at"], "original PR review") < cutoff]
     owner = slug.split("/", 1)[0]
     comment_id = None
     if checkpoint.get("owner_waiver") is True:
         comments = _flatten_pages(gh_json(["api", "--paginate", "--slurp",
             f"repos/{slug}/issues/{number}/comments?per_page=100"], root=root))
         for row in comments:
-            body = str(row.get("body") or "").lower()
             if ((row.get("user") or {}).get("login") == owner
                     and row.get("author_association") == "OWNER"
-                    and row.get("created_at") and row["created_at"] <= cutoff
-                    and source in body and "verdict: approve" in body
-                    and "unavailable" in body
-                    and "may use exact-sha owner waiver" in body
-                    and all(str(latest[name]["databaseId"]) in body for name in REQUIRED_WORKFLOWS)):
+                    and row.get("created_at")
+                    and _time(row["created_at"], "original owner comment") < cutoff
+                    and _historical_waiver_body(str(row.get("body") or ""), source, latest)):
                 comment_id = row.get("id")
                 break
         if type(comment_id) is not int:
-            raise ValueError("initial checkpoint lacks authenticated pre-closeout exact-SHA owner waiver")
+            raise ValueError("initial checkpoint lacks authenticated pre-introduction exact-SHA owner waiver")
     decision = review_decision({"risk": "high"}, reviews, source, owner_login=owner,
         actor_login=owner if comment_id is not None else None,
         owner_waiver=comment_id is not None,
@@ -91,7 +121,7 @@ def fetch_merged_closeout_evidence(pr_number: int, source_head: str, package: st
         fetch_review_evidence)
     slug = repo_slug(root)
     pr = gh_json(["pr", "view", str(pr_number), "--repo", slug,
-                  "--json", "headRefOid,headRefName,baseRefOid,isDraft,state,mergedAt,mergeCommit"], root=root)
+                  "--json", "headRefOid,headRefName,baseRefOid,isDraft,state,createdAt,mergedAt,mergeCommit"], root=root)
     if not isinstance(pr, dict):
         raise ValueError("closeout PR evidence missing")
     head = pr.get("headRefOid")
@@ -111,8 +141,12 @@ def fetch_merged_closeout_evidence(pr_number: int, source_head: str, package: st
                              or prior_item.get("status") != "active"
                              or prior_item.get("checkpoint") is not None):
         raise ValueError("initial checkpoint creation requires active source package")
-    initial_provenance = (authenticate_initial_checkpoint(checkpoint, pr, slug, root=root)
-                          if not prior_exists else {})
+    introduced_at = (_checkpoint_introduction(checkpoint_head, head, package, checkpoint,
+                                               root=root, git_fn=git)
+                     if not prior_exists else None)
+    initial_provenance = (authenticate_initial_checkpoint(
+        checkpoint, pr, slug, introduced_at=introduced_at, root=root)
+        if introduced_at is not None else {})
     item, closeout_record, closeout_exists = _package_state_at(head, package, root=root, git_fn=git)
     if (not isinstance(item, dict) or item.get("status") != "complete"
             or item.get("checkpoint") != package
@@ -135,19 +169,17 @@ def fetch_merged_closeout_evidence(pr_number: int, source_head: str, package: st
     push_tree = foundation_tested_sha(evidence["push_workflows"]["Foundation CI"], slug, root=root)
     if push_tree != source_head:
         raise ValueError("merged HEAD Foundation CI did not test the exact merge commit")
-    prior_waiver = (checkpoint.get("owner_waiver") is True
-                    and checkpoint.get("independent_review") == "unavailable"
-                    and checkpoint.get("source_head") == head
-                    and checkpoint.get("owner_waiver_source") == head
-                    and checkpoint.get("owner_actor") == slug.split("/", 1)[0])
+    waiver = _closeout_owner_waiver(pr_number, head, evidence["workflows"],
+                                    pr.get("mergedAt"), slug, root=root)
     review_args = (dict(owner_waiver=True, independent_review_unavailable=True,
-                        owner_waiver_source=head,
-                        owner_waiver_reason=checkpoint.get("owner_waiver_reason"))
-                   if prior_waiver else {})
+                        owner_waiver_source=head, owner_waiver_reason=waiver[0])
+                   if waiver is not None else {})
     # Closeout review stays mandatory even if the later active scope is downgraded.
     review = fetch_review_evidence({"risk": "high", "independent_review_required": True},
                                    pr_number, head, root=root, **review_args)
     evidence.update(review)
+    if waiver is not None and review.get("owner_waiver") is True:
+        evidence["closeout_waiver_comment_id"] = waiver[1]
     evidence.update(initial_provenance)
     evidence["checkpoint"] = package
     return evidence

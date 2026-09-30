@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import json
 import re
+from datetime import datetime
 from pathlib import Path
 
 from project_state_model import load_checkpoints
@@ -129,6 +130,63 @@ def _push_workflows(runs: list[dict], source_head: str) -> dict[str, int]:
             raise ValueError(f"latest merged HEAD push workflow {name} did not succeed")
         result[name] = int(latest["databaseId"])
     return result
+
+
+def _time(value: str, label: str) -> datetime:
+    try:
+        parsed = datetime.fromisoformat(value.replace("Z", "+00:00"))
+    except (AttributeError, ValueError) as exc:
+        raise ValueError(f"{label} timestamp missing or invalid") from exc
+    if parsed.utcoffset() is None:
+        raise ValueError(f"{label} timestamp lacks timezone")
+    return parsed
+
+
+def _historical_waiver_body(body: str, source: str, runs: dict) -> bool:
+    lines = [line.strip() for line in body.splitlines() if line.strip()]
+    permission = ("No Chat P1 work started. Structured GitHub approval by a different account remains unavailable; "
+                  "terminal checkpoint may use exact-SHA owner waiver as designed.")
+    required = [f"Source HEAD: `{source}`.",
+                *(f"- {name} {runs[name]['databaseId']} SUCCESS"
+                  for name in ("Foundation CI", "Dependency Security", "Review Source")),
+                "Verdict: APPROVE.", permission]
+    if (not lines or lines[0] != "FINAL EXACT-HEAD INDEPENDENT READ-ONLY CHALLENGE — APPROVE"
+            or lines[-1] != permission or any(line.startswith(">") for line in lines)
+            or any(re.search(r"\b(?:do not|must not|waiver denied|waiver revoked)\b", line, re.I)
+                   for line in lines)):
+        return False
+    positions = [lines.index(line) for line in required if line in lines]
+    return len(positions) == len(required) and positions == sorted(positions)
+
+
+def _closeout_owner_waiver(pr_number: int, head: str, workflows: dict,
+                           merged_at: str, slug: str, *, root: Path) -> tuple[str, int] | None:
+    from project_state_evidence import gh_json, _flatten_pages
+
+    cutoff = _time(merged_at, "closeout merge")
+    comments = _flatten_pages(gh_json(["api", "--paginate", "--slurp",
+        f"repos/{slug}/issues/{pr_number}/comments?per_page=100"], root=root))
+    owner = slug.split("/", 1)[0]
+    for row in comments:
+        if ((row.get("user") or {}).get("login") != owner
+                or row.get("author_association") != "OWNER"):
+            continue
+        lines = [line.strip() for line in str(row.get("body") or "").splitlines()
+                 if line.strip()]
+        if len(lines) != 7 or not lines[3].startswith("Reason: "):
+            continue
+        reason = lines[3][len("Reason: "):]
+        expected = [f"Owner waiver for PR #{pr_number}: APPROVE",
+                    f"Source HEAD: {head}", "Independent review: unavailable",
+                    f"Reason: {reason}",
+                    *(f"{name}: {workflows[name]} SUCCESS" for name in
+                      ("Foundation CI", "Dependency Security", "Review Source"))]
+        if (lines != expected or not reason or len(reason) > 500
+                or type(row.get("id")) is not int or not row.get("created_at")):
+            continue
+        if _time(row["created_at"], "closeout owner comment") < cutoff:
+            return reason, row["id"]
+    return None
 
 
 def validate_merged_closeout_evidence(*, pr: dict, pr_runs: list[dict], push_runs: list[dict],
