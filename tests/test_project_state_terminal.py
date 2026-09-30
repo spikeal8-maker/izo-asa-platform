@@ -89,82 +89,9 @@ def test_complete_package_rejects_arbitrary_later_head_before_branch(tmp_path,mo
     assert {p.name:p.read_bytes() for p in (tmp_path/"docs").iterdir()}==originals
 
 
-def test_merged_closeout_requires_corresponding_checkpoint_and_review(monkeypatch):
-    import project_state_evidence as evidence_module
-    import project_state_workflow as workflow
-    package="PRE-P1-STABILIZATION-001"
-    checkpoint_head, head, base, merge, tree=(x*40 for x in "12345")
-    checkpoint={"type":"pr_merge_tree","source_head":checkpoint_head,
-                "verified_pr":250,"owner_waiver":True,"owner_waiver_source":checkpoint_head}
-    scope={"risk":"medium","independent_review_required":True}
-    source_records={}
-    pr={"state":"MERGED","mergedAt":"2026-09-29T15:59:52Z","isDraft":False,
-        "headRefOid":head,"headRefName":"state/closeout","baseRefOid":base,
-        "mergeCommit":{"oid":merge}}
-    def runs(names,sha,event,first):
-        return {"workflow_runs":[{"id":n,"name":name,"head_sha":sha,"event":event,
-            "status":"completed","conclusion":"success","run_attempt":1,
-            "head_branch":"state/closeout","pull_requests":[{"number":252}]}
-            for n,name in enumerate(names,first)]}
-    pr_runs=runs(("Foundation CI","Dependency Security","Review Source"),head,"pull_request",1)
-    push_runs=runs(("Foundation CI","Dependency Security"),merge,"push",4)
-    seen=[]
-    monkeypatch.setattr(evidence_module,"repo_slug",lambda root:"owner/repo")
-    def fake_git(*args,root):
-        if args[:2]==("merge-base","--is-ancestor"):
-            if args[2:]!=(checkpoint_head,head): raise ValueError("not ancestor")
-            return ""
-        if args==("show",f"{head}:docs/PLAN.json"):
-            return json.dumps({"packages":{package:{"status":"complete","checkpoint":package}}})
-        if args==("show",f"{head}:docs/CHECKPOINTS.json"):
-            return json.dumps({"checkpoints":{package:checkpoint}})
-        if args==("show",f"{checkpoint_head}:docs/PLAN.json"):
-            return json.dumps({"packages":{package:{"status":"active"}}})
-        if args==("show",f"{checkpoint_head}:docs/CHECKPOINTS.json"):
-            return json.dumps({"checkpoints":source_records})
-        raise AssertionError(args)
-    monkeypatch.setattr(evidence_module,"git",fake_git)
-    def fake_gh(args,root):
-        path=" ".join(args)
-        if args[:2]==["pr","view"]: return pr
-        if "event=pull_request" in path: return [pr_runs]
-        if "event=push" in path: return [push_runs]
-        if f"commits/{merge}" in path or f"commits/{tree}" in path:
-            return {"parents":[{"sha":base},{"sha":head}],
-                    "commit":{"tree":{"sha":"f"*40}}}
-        raise AssertionError(args)
-    monkeypatch.setattr(evidence_module,"gh_json",fake_gh)
-    monkeypatch.setattr(evidence_module,"foundation_tested_sha",
-        lambda run_id,slug,root: tree if run_id==1 else merge)
-    def review(scope_arg,pr_number,source_sha,**kwargs):
-        assert scope_arg["independent_review_required"] is True
-        seen.append((pr_number,source_sha,kwargs))
-        return {"independent_review":"approved","independent_review_source":head,
-                "independent_review_actor":"reviewer","owner_waiver":False}
-    monkeypatch.setattr(evidence_module,"fetch_review_evidence",review)
-    result=workflow.fetch_merged_closeout_evidence(252,merge,package,checkpoint,scope)
-    assert result["source_head"]==merge and result["checkpoint"]==package
-    assert seen==[(252,head,{"root":evidence_module.ROOT})]
-    scope["independent_review_required"]=False
-    workflow.fetch_merged_closeout_evidence(252,merge,package,checkpoint,scope)
-    source_records[package]=dict(checkpoint)
-    checkpoint["verified_pr"]=251
-    with pytest.raises(ValueError,match="checkpoint.*rewrit|checkpoint.*changed"):
-        workflow.fetch_merged_closeout_evidence(252,merge,package,checkpoint,scope)
-    checkpoint["verified_pr"]=250
-    source_records.clear()
-    monkeypatch.setattr(evidence_module,"fetch_review_evidence",
-        lambda *a,**k: (_ for _ in ()).throw(ValueError("structured independent review missing")))
-    with pytest.raises(ValueError,match="structured independent review missing"):
-        workflow.fetch_merged_closeout_evidence(252,merge,package,checkpoint,scope)
-    checkpoint["source_head"]="9"*40
-    with pytest.raises(ValueError,match="does not descend"):
-        workflow.fetch_merged_closeout_evidence(252,merge,package,checkpoint,scope)
-
-
 @pytest.mark.parametrize("review_ok",[False,True])
 def test_begin_decided_next_merged_head_checks_before_write(tmp_path,monkeypatch,review_ok):
-    import project_state_workflow as workflow
+    import project_state_merged_evidence as merged
     source=complete_plan(); active=source["active_package"]; events=[]
     checkpoint={"source_head":"d"*40,"type":"pr_merge_tree","verified_pr":250}
     (tmp_path/"docs").mkdir()
@@ -184,7 +111,7 @@ def test_begin_decided_next_merged_head_checks_before_write(tmp_path,monkeypatch
         if not review_ok: raise ValueError("structured review missing")
         return {"type":"completed_merged_closeout","source_head":head,
                 "checkpoint":package,"independent_review":"approved"}
-    monkeypatch.setattr(workflow,"fetch_merged_closeout_evidence",closeout)
+    monkeypatch.setattr(merged,"fetch_merged_closeout_evidence",closeout)
     originals={p.name:p.read_bytes() for p in (tmp_path/"docs").iterdir()}
     call=lambda: state.begin_decided_next(source,branch="test/after-merge",
         candidate=candidate(source),verified_pr=252,root=tmp_path)

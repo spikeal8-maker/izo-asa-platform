@@ -127,6 +127,47 @@ def latest_required_runs(runs: list[dict], expected_head: str, pr_number: int,
     return selected
 
 
+def fetch_pr_rollup(pr_number: int, slug: str, *, root: Path = ROOT) -> dict:
+    owner, repo = slug.split("/", 1)
+    query = ('query($owner:String!,$repo:String!,$number:Int!){repository(owner:$owner,name:$repo){'
+             'pullRequest(number:$number){number headRefOid headRefName baseRefOid '
+             'statusCheckRollup{state contexts(first:100){pageInfo{hasNextPage} '
+             'nodes{__typename ... on CheckRun{name conclusion '
+             'isRequired(pullRequestNumber:$number) '
+             'checkSuite{workflowRun{databaseId}}}}}}}}}')
+    data = gh_json(["api", "graphql", "-f", f"query={query}", "-f", f"owner={owner}",
+                    "-f", f"repo={repo}", "-F", f"number={pr_number}"], root=root)
+    payload = data.get("data") if isinstance(data, dict) else None
+    repository = payload.get("repository") if isinstance(payload, dict) else None
+    pr = repository.get("pullRequest") if isinstance(repository, dict) else None
+    if not isinstance(pr, dict):
+        raise ValueError(f"PR #{pr_number} status check rollup missing")
+    return pr
+
+
+def validate_pr_rollup(pr_number: int, pr: dict, selected: dict[str, dict],
+                       rollup: dict, required_jobs: dict[str, set[str]]) -> None:
+    if (rollup.get("number") != pr_number
+            or any(rollup.get(key) != pr.get(key)
+                   for key in ("headRefOid", "headRefName", "baseRefOid"))):
+        raise ValueError(f"PR #{pr_number} rollup identity does not match PR head/base")
+    status = rollup.get("statusCheckRollup") or {}
+    contexts = status.get("contexts") or {}
+    if (status.get("state") != "SUCCESS"
+            or (contexts.get("pageInfo") or {}).get("hasNextPage") is not False
+            or not isinstance(contexts.get("nodes"), list)):
+        raise ValueError(f"PR #{pr_number} required status check rollup incomplete")
+    for workflow, jobs in required_jobs.items():
+        run_id = selected[workflow].get("databaseId")
+        matched = {node.get("name") for node in contexts["nodes"] if isinstance(node, dict)
+                   and node.get("__typename") == "CheckRun"
+                   and node.get("isRequired") is True
+                   and node.get("conclusion") == "SUCCESS"
+                   and ((node.get("checkSuite") or {}).get("workflowRun") or {}).get("databaseId") == run_id}
+        if not jobs <= matched:
+            raise ValueError(f"PR #{pr_number} required {workflow} run {run_id} absent from PR rollup")
+
+
 def foundation_tested_sha(run_id: int, slug: str, *, root: Path = ROOT) -> str:
     log = run(["gh", "run", "view", str(run_id), "--repo", slug, "--log"], root=root)
     values = set(re.findall(r"IZO_BUILD_SHA:\s*([0-9a-f]{40})", log))
@@ -196,18 +237,3 @@ def fetch_review_evidence(scope: dict, pr_number: int, source_sha: str, *,
         scope, reviews, source_sha, owner_login=slug.split("/", 1)[0], actor_login=actor,
         owner_waiver=owner_waiver, independent_review_unavailable=independent_review_unavailable,
         owner_waiver_source=owner_waiver_source, owner_waiver_reason=owner_waiver_reason)
-
-
-def _push_workflows(runs: list[dict], source_head: str) -> dict[str, int]:
-    result = {}
-    for name in ("Foundation CI", "Dependency Security"):
-        matching = [r for r in runs if r.get("name") == name and r.get("headSha") == source_head
-                    and r.get("event") == "push"]
-        if not matching:
-            raise ValueError(f"merged HEAD {source_head} lacks push workflow {name}")
-        latest = max(matching, key=_freshness)
-        if (str(latest.get("status") or "").lower() != "completed"
-                or str(latest.get("conclusion") or "").lower() != "success"):
-            raise ValueError(f"latest merged HEAD push workflow {name} did not succeed")
-        result[name] = int(latest["databaseId"])
-    return result

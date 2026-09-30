@@ -5,7 +5,10 @@ import json
 import re
 from pathlib import Path
 
-from project_state_model import ROOT, load_checkpoints
+from project_state_model import load_checkpoints
+
+REQUIRED_PR_JOBS = {"Foundation CI": {"verify", "bootstrap-windows"},
+                    "Dependency Security": {"npm-audit"}, "Review Source": {"snapshot"}}
 
 
 def active_scope(plan: dict, *, root: Path) -> dict:
@@ -56,6 +59,7 @@ def completed_source_evidence(plan: dict, source_head: str, root: Path,
     if source_head != checkpoint["source_head"]:
         if verified_pr is None:
             raise ValueError("verified merged closeout PR required for HEAD beyond checkpoint source")
+        from project_state_merged_evidence import fetch_merged_closeout_evidence
         return fetch_merged_closeout_evidence(
             verified_pr, source_head, active, checkpoint, active_scope(plan, root=root), root=root,
         )
@@ -111,11 +115,28 @@ def _package_state_at(sha: str, package: str, *, root: Path, git_fn) -> tuple[di
     return items.get(package), records.get(package), package in records
 
 
+def _push_workflows(runs: list[dict], source_head: str) -> dict[str, int]:
+    from project_state_evidence import _freshness
+    result = {}
+    for name in ("Foundation CI", "Dependency Security"):
+        matching = [r for r in runs if r.get("name") == name and r.get("headSha") == source_head
+                    and r.get("event") == "push"]
+        if not matching:
+            raise ValueError(f"merged HEAD {source_head} lacks push workflow {name}")
+        latest = max(matching, key=_freshness)
+        if (str(latest.get("status") or "").lower() != "completed"
+                or str(latest.get("conclusion") or "").lower() != "success"):
+            raise ValueError(f"latest merged HEAD push workflow {name} did not succeed")
+        result[name] = int(latest["databaseId"])
+    return result
+
+
 def validate_merged_closeout_evidence(*, pr: dict, pr_runs: list[dict], push_runs: list[dict],
-                                      merge_commit: dict, tested_commit: dict,
+                                      merge_commit: dict, tested_commit: dict, rollup: dict,
                                       tested_sha: str, source_head: str,
                                       checkpoint_head: str, pr_number: int) -> dict:
-    from project_state_evidence import latest_required_runs, _push_workflows, REQUIRED_WORKFLOWS
+    from project_state_evidence import (latest_required_runs, REQUIRED_WORKFLOWS,
+        validate_pr_rollup)
     if not isinstance(pr, dict) or not isinstance(pr.get("mergeCommit"), dict):
         raise ValueError("closeout PR mergeCommit evidence missing")
     head, base = pr.get("headRefOid"), pr.get("baseRefOid")
@@ -138,6 +159,7 @@ def validate_merged_closeout_evidence(*, pr: dict, pr_runs: list[dict], push_run
     branch = pr.get("headRefName")
     pr_latest = latest_required_runs(pr_runs, head, pr_number,
                                      allow_detached=True, expected_branch=branch)
+    validate_pr_rollup(pr_number, pr, pr_latest, rollup, REQUIRED_PR_JOBS)
     trees = [commit["commit"]["tree"]["sha"] if isinstance(commit.get("commit"), dict)
              and isinstance(commit["commit"].get("tree"), dict) else None
              for commit in (merge_commit, tested_commit)]
@@ -152,68 +174,3 @@ def validate_merged_closeout_evidence(*, pr: dict, pr_runs: list[dict], push_run
             "closeout_head": head, "base_head": base, "tested_merge_tree": tested_sha,
             "workflows": {name: int(pr_latest[name]["databaseId"]) for name in REQUIRED_WORKFLOWS},
             "push_workflows": push_latest}
-
-
-def fetch_merged_closeout_evidence(pr_number: int, source_head: str, package: str,
-                                   checkpoint: dict, scope: dict, *, root: Path = ROOT) -> dict:
-    from project_state_evidence import (repo_slug, gh_json, git, _workflow_pages,
-        latest_required_runs, foundation_tested_sha,
-        fetch_review_evidence)
-    slug = repo_slug(root)
-    pr = gh_json(["pr", "view", str(pr_number), "--repo", slug,
-                  "--json", "headRefOid,headRefName,baseRefOid,isDraft,state,mergedAt,mergeCommit"], root=root)
-    if not isinstance(pr, dict):
-        raise ValueError("closeout PR evidence missing")
-    head = pr.get("headRefOid")
-    checkpoint_head = checkpoint.get("source_head")
-    if any(not isinstance(sha, str) or not re.fullmatch(r"[0-9a-f]{40}", sha)
-           for sha in (head, checkpoint_head)):
-        raise ValueError("closeout PR or checkpoint source SHA invalid")
-    try:
-        git("merge-base", "--is-ancestor", checkpoint_head, head, root=root)
-    except ValueError as exc:
-        raise ValueError("closeout PR head does not descend from accepted checkpoint source") from exc
-    prior_item, prior_record, prior_exists = _package_state_at(
-        checkpoint_head, package, root=root, git_fn=git)
-    if prior_exists and prior_record != checkpoint:
-        raise ValueError("accepted checkpoint was rewritten after its source commit")
-    if not prior_exists and (not isinstance(prior_item, dict)
-                             or prior_item.get("status") != "active"
-                             or prior_item.get("checkpoint") is not None):
-        raise ValueError("initial checkpoint creation requires active source package")
-    item, closeout_record, closeout_exists = _package_state_at(head, package, root=root, git_fn=git)
-    if (not isinstance(item, dict) or item.get("status") != "complete"
-            or item.get("checkpoint") != package
-            or not closeout_exists or closeout_record != checkpoint):
-        raise ValueError("closeout PR head does not preserve the complete accepted checkpoint")
-    pr_runs = _workflow_pages(gh_json(["api", "--paginate", "--slurp",
-        f"repos/{slug}/actions/runs?event=pull_request&head_sha={head}&per_page=100"], root=root))
-    foundation = latest_required_runs(pr_runs, head, pr_number, allow_detached=True,
-                                      expected_branch=pr.get("headRefName"))["Foundation CI"]
-    tested = foundation_tested_sha(int(foundation["databaseId"]), slug, root=root)
-    push_runs = _workflow_pages(gh_json(["api", "--paginate", "--slurp",
-        f"repos/{slug}/actions/runs?event=push&head_sha={source_head}&per_page=100"], root=root))
-    merge_commit = gh_json(["api", f"repos/{slug}/commits/{source_head}"], root=root)
-    tested_commit = gh_json(["api", f"repos/{slug}/commits/{tested}"], root=root)
-    evidence = validate_merged_closeout_evidence(
-        pr=pr, pr_runs=pr_runs, push_runs=push_runs, merge_commit=merge_commit,
-        tested_commit=tested_commit, tested_sha=tested, source_head=source_head,
-        checkpoint_head=checkpoint_head, pr_number=pr_number)
-    push_tree = foundation_tested_sha(evidence["push_workflows"]["Foundation CI"], slug, root=root)
-    if push_tree != source_head:
-        raise ValueError("merged HEAD Foundation CI did not test the exact merge commit")
-    prior_waiver = (checkpoint.get("owner_waiver") is True
-                    and checkpoint.get("independent_review") == "unavailable"
-                    and checkpoint.get("source_head") == head
-                    and checkpoint.get("owner_waiver_source") == head
-                    and checkpoint.get("owner_actor") == slug.split("/", 1)[0])
-    review_args = (dict(owner_waiver=True, independent_review_unavailable=True,
-                        owner_waiver_source=head,
-                        owner_waiver_reason=checkpoint.get("owner_waiver_reason"))
-                   if prior_waiver else {})
-    # Closeout review stays mandatory even if the later active scope is downgraded.
-    review = fetch_review_evidence({"risk": "high", "independent_review_required": True},
-                                   pr_number, head, root=root, **review_args)
-    evidence.update(review)
-    evidence["checkpoint"] = package
-    return evidence

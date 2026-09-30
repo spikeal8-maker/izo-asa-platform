@@ -157,8 +157,15 @@ def _merged_inputs():
                 "conclusion":"success","databaseId":n}
                for n,name in enumerate(("Foundation CI","Dependency Security"),4)]
     commit={"parents":[{"sha":base},{"sha":head}],"commit":{"tree":{"sha":"f"*40}}}
+    nodes=[{"__typename":"CheckRun","name":job,"conclusion":"SUCCESS",
+            "isRequired":True,"checkSuite":{"workflowRun":{"databaseId":run_id}}}
+           for run_id,job in ((1,"verify"),(1,"bootstrap-windows"),
+                              (2,"npm-audit"),(3,"snapshot"))]
+    rollup={"number":252,"headRefOid":head,"headRefName":"state/closeout",
+            "baseRefOid":base,"statusCheckRollup":{"state":"SUCCESS",
+            "contexts":{"pageInfo":{"hasNextPage":False},"nodes":nodes}}}
     return dict(pr=pr,pr_runs=pr_runs,push_runs=push_runs,merge_commit=commit,
-                tested_commit=commit,tested_sha=tree,source_head=merge,
+                tested_commit=commit,rollup=rollup,tested_sha=tree,source_head=merge,
                 checkpoint_head=checkpoint,pr_number=252)
 
 
@@ -176,6 +183,9 @@ def test_exact_merged_closeout_requires_both_ci_stages():
     ("wrong-parents","parents"),("wrong-pr-ci","PR #252"),
     ("missing-push","push workflow"),("failed-push","did not succeed"),
     ("wrong-branch","branch"),("mismatched-tree","tree"),
+    ("foreign-detached","absent from PR rollup"),
+    ("missing-rollup","rollup incomplete"),
+    ("missing-required-check","absent from PR rollup"),
 ])
 def test_merged_closeout_rejects_unrelated_pr_and_bad_ci(mode,reason):
     fixture=_merged_inputs()
@@ -188,6 +198,11 @@ def test_merged_closeout_rejects_unrelated_pr_and_bad_ci(mode,reason):
     elif mode=="mismatched-tree":
         fixture["tested_commit"]={"parents":fixture["merge_commit"]["parents"],
                                    "commit":{"tree":{"sha":"e"*40}}}
+    elif mode=="foreign-detached":
+        fixture["pr_runs"][0].update(prNumbers=[],databaseId=99)
+    elif mode=="missing-rollup": fixture["rollup"]["statusCheckRollup"]=None
+    elif mode=="missing-required-check":
+        fixture["rollup"]["statusCheckRollup"]["contexts"]["nodes"]=[]
     elif mode=="missing-push": fixture["push_runs"]=fixture["push_runs"][1:]
     else: fixture["push_runs"][0]["conclusion"]="failure"
     with pytest.raises(ValueError,match=reason):
