@@ -10,6 +10,33 @@ from review_evidence import (matching_structured_review, require_independent_rev
 from project_state_evidence import validate_pr_evidence  # noqa: E402
 
 
+def test_completed_review_evidence_rechecks_checkout_before_write(tmp_path, monkeypatch):
+    import project_state as state
+    from project_state_model import load_plan, write_state
+    source = load_plan(ROOT)
+    active, head = source["active_package"], "a" * 40
+    source["packages"][active].update(status="complete", checkpoint=active)
+    (tmp_path / "docs").mkdir()
+    write_state(source, {"schema_version": 1, "checkpoints": {
+        active: {"type": "pr_merge_tree", "source_head": head}}}, root=tmp_path)
+    heads = iter((head, "d" * 40))
+    events = []
+    def fake_git(*args, root):
+        if args == ("status", "--porcelain"): return ""
+        if args == ("branch", "--show-current"):
+            return source["canonical_lineage"]["working_branch"]
+        if args == ("rev-parse", "HEAD"): return next(heads)
+        if args[:2] == ("switch", "-c"): events.append("create"); return ""
+        raise AssertionError(args)
+    monkeypatch.setattr(state, "git", fake_git)
+    candidate = {"id": "TEST-AFTER-COMPLETE", "goal": "race fixture",
+                 "depends_on": [active], "decides_next": True}
+    with pytest.raises(ValueError, match="checkout changed"):
+        state.begin_decided_next(source, branch="test/after-complete",
+                                 candidate=candidate, verified_pr=None, root=tmp_path)
+    assert events == []
+
+
 def high_scope():
     return {"risk": "high", "independent_review_required": True}
 
@@ -232,4 +259,3 @@ def test_ci_from_other_pr_is_not_evidence():
     ]
     with pytest.raises(ValueError, match="PR #99"):
         _validate_runs(rows, head)
-

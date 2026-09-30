@@ -96,12 +96,15 @@ def _freshness(item: dict) -> tuple[int, int, int]:
     return tuple(result)
 
 
-def latest_required_runs(runs: list[dict], expected_head: str, pr_number: int) -> dict[str, dict]:
+def latest_required_runs(runs: list[dict], expected_head: str, pr_number: int,
+                         *, allow_detached: bool = False) -> dict[str, dict]:
     selected = {}
     for name in REQUIRED_WORKFLOWS:
         candidates = [item for item in runs if item.get("name") == name
                       and item.get("headSha") == expected_head
-                      and item.get("event") == "pull_request" and _pr_matches(item, pr_number)]
+                      and item.get("event") == "pull_request"
+                      and (_pr_matches(item, pr_number)
+                           or (allow_detached and item.get("prNumbers") == []))]
         if not candidates:
             raise ValueError(f"required workflow {name!r} has no run for PR #{pr_number} source head {expected_head}")
         latest = max(candidates, key=_freshness)
@@ -183,3 +186,50 @@ def fetch_review_evidence(scope: dict, pr_number: int, source_sha: str, *,
         scope, reviews, source_sha, owner_login=slug.split("/", 1)[0], actor_login=actor,
         owner_waiver=owner_waiver, independent_review_unavailable=independent_review_unavailable,
         owner_waiver_source=owner_waiver_source, owner_waiver_reason=owner_waiver_reason)
+
+
+def _push_workflows(runs: list[dict], source_head: str) -> dict[str, int]:
+    result = {}
+    for name in ("Foundation CI", "Dependency Security"):
+        matching = [r for r in runs if r.get("name") == name and r.get("headSha") == source_head
+                    and r.get("event") == "push"]
+        if not matching:
+            raise ValueError(f"merged HEAD {source_head} lacks push workflow {name}")
+        latest = max(matching, key=_freshness)
+        if (str(latest.get("status") or "").lower() != "completed"
+                or str(latest.get("conclusion") or "").lower() != "success"):
+            raise ValueError(f"latest merged HEAD push workflow {name} did not succeed")
+        result[name] = int(latest["databaseId"])
+    return result
+
+
+def validate_merged_closeout_evidence(*, pr: dict, pr_runs: list[dict], push_runs: list[dict],
+                                      merge_commit: dict, tested_commit: dict,
+                                      tested_sha: str, source_head: str,
+                                      checkpoint_head: str, pr_number: int) -> dict:
+    if not isinstance(pr, dict) or not isinstance(pr.get("mergeCommit"), dict):
+        raise ValueError("closeout PR mergeCommit evidence missing")
+    head, base = pr.get("headRefOid"), pr.get("baseRefOid")
+    merge = pr["mergeCommit"].get("oid")
+    if (str(pr.get("state", "")).upper() != "MERGED" or not pr.get("mergedAt")
+            or pr.get("isDraft") is True):
+        raise ValueError(f"closeout PR #{pr_number} is not an accepted merged PR")
+    if any(not isinstance(sha, str) or not re.fullmatch(r"[0-9a-f]{40}", sha)
+           for sha in (head, base, merge, checkpoint_head, source_head, tested_sha)):
+        raise ValueError("closeout PR or checkpoint has invalid exact SHA")
+    if merge != source_head:
+        raise ValueError(f"HEAD {source_head} != closeout PR #{pr_number} mergeCommit {merge}")
+    for label, commit in (("merge commit", merge_commit), ("tested PR merge tree", tested_commit)):
+        if (not isinstance(commit, dict) or not isinstance(commit.get("parents"), list)
+                or any(not isinstance(item, dict) for item in commit["parents"])):
+            raise ValueError(f"closeout PR #{pr_number} {label} parent evidence missing")
+        parents = [item.get("sha") for item in commit.get("parents", [])]
+        if parents != [base, head]:
+            raise ValueError(f"closeout PR #{pr_number} {label} does not match base/head parents")
+    pr_latest = latest_required_runs(pr_runs, head, pr_number, allow_detached=True)
+    push_latest = _push_workflows(push_runs, source_head)
+    return {"type": "completed_merged_closeout", "source_head": source_head,
+            "checkpoint_source_head": checkpoint_head, "verified_pr": pr_number,
+            "closeout_head": head, "base_head": base, "tested_merge_tree": tested_sha,
+            "workflows": {name: int(pr_latest[name]["databaseId"]) for name in REQUIRED_WORKFLOWS},
+            "push_workflows": push_latest}

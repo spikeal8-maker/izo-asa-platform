@@ -15,7 +15,8 @@ from project_state_model import (CHECKPOINTS_PATH, NEXT_PACKAGE_SOURCE_STATUSES,
 from project_state_decision import decided_transition, validate_decided_candidate
 from project_state_evidence import fetch_pr_evidence, fetch_review_evidence, validate_pr_evidence
 from project_state_workflow import (
-    active_scope, completed_source_evidence, state_paths, write_transition,
+    active_scope, assert_checkout_unchanged, completed_source_evidence, state_paths,
+    write_transition,
 )
 def run(args: list[str], *, root: Path = ROOT) -> str:
     result = subprocess.run(args, cwd=root, capture_output=True, text=True,
@@ -105,7 +106,11 @@ def begin_decided_next(plan: dict, *, branch: str, candidate: dict, verified_pr:
     validate_decided_candidate(plan, candidate)
     finishing_status = plan["packages"][plan["active_package"]]["status"]
     if finishing_status == "complete":
-        evidence = completed_source_evidence(plan, source_head, root)
+        if any((owner_waiver, independent_review_unavailable,
+                owner_waiver_source, owner_waiver_reason)):
+            raise ValueError("complete package cannot create a new owner waiver")
+        evidence = completed_source_evidence(plan, source_head, root, verified_pr=verified_pr)
+        assert_checkout_unchanged(source_head, current_branch, root=root, git_fn=git)
         record_checkpoint = False
     else:
         if verified_pr is None:
