@@ -96,6 +96,8 @@ cross-account access/release-network policy.
 4. полного required CI.
 
 Обычный PR comment, включая `INDEPENDENT_REVIEW PASS ...`, не доказывает reviewer identity.
+Единственное историческое исключение `legacy_pr252_review` принимает owner-authenticated pre-merge comment как
+legacy closeout evidence для строго зафиксированных там PR head и merge commit; это не правило для иных PR и не waiver.
 Если независимый GitHub actor недоступен, gate не удаляется: допускается только явный owner waiver transition.
 Waiver требует owner action, exact source SHA, `independent_review=unavailable` и причину; в checkpoint хранится
 как `owner_waiver=true` и не называется independent review. Неверный SHA или failed CI waiver не обходит.

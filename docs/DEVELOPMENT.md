@@ -113,6 +113,13 @@ Review Source: <run ID> SUCCESS
 отдельный exact-head owner waiver с `created_at < mergedAt` и `updated_at < mergedAt`. Waiver исходного checkpoint
 не переносится на closeout.
 
+Единственное историческое исключение, закреплённое в `legacy_pr252_review`, принимает owner-authenticated pre-merge
+comment как legacy closeout evidence лишь для зашитых в этом helper точных PR, head, merge commit и comment ID.
+Проверяются принадлежность комментария владельцу, время до merge, его неизменённое содержание с exact head, `APPROVE`
+и ID успешных обязательных CI runs, соответствие merge commit PR и canonical main lineage. Это не structured GitHub
+approval и не новый owner waiver. Для всех остальных closeout PR действует только предшествующий merge structured
+independent `APPROVED` review либо отдельный exact-head owner waiver.
+
 Lifecycle status contract: `active` — текущая работа; `planned_next` — явно выбранный successor;
 `technical_pass` — technical acceptance, merge/deploy не подразумеваются; `complete` — terminal и immutable;
 `planned` — не начат; historical/superseded statuses не становятся автоматически continuation base.
