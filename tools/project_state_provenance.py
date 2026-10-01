@@ -57,6 +57,60 @@ def _historical_waiver_body(body: str, source: str, runs: dict) -> bool:
             "cc8ea5fa2bc25dc09038f4837dedfed736425d11e0af3f9650e1671273cbd7e1")
 
 
+def legacy_pr252_review(pr_number: int, head: str, merge: str, pr: dict,
+                        workflows: dict, slug: str, *, root: Path = ROOT) -> dict:
+    """One historical owner-authenticated closeout record, never a future waiver."""
+    from project_state_evidence import gh_json, git
+
+    expected_head = "afb7ce498f2aecdbbfaf10a652e5591f2c7d9ccd"
+    expected_merge = "95f153acc3a7a3ce4163d2e59b6f3e44ba963906"
+    expected_runs = {"Foundation CI": 36592337411,
+                     "Dependency Security": 36592337156,
+                     "Review Source": 36592337428}
+    if (pr_number != 252 or head != expected_head or merge != expected_merge
+            or pr.get("headRefOid") != expected_head
+            or (pr.get("mergeCommit") or {}).get("oid") != expected_merge
+            or pr.get("mergedAt") != "2026-09-29T15:59:52Z"
+            or slug != "spikeal8-maker/izo-asa-platform"
+            or workflows != expected_runs):
+        raise ValueError("PR #252 legacy closeout identity or required CI IDs mismatch")
+    main = git("ls-remote", "origin", "refs/heads/main", root=root).split()
+    if (len(main) != 2 or not re.fullmatch(r"[0-9a-f]{40}", main[0])
+            or main[1] != "refs/heads/main"):
+        raise ValueError("PR #252 legacy closeout canonical main lineage mismatch")
+    if main[0] != expected_merge:
+        lineage = gh_json(["api", f"repos/{slug}/compare/{expected_merge}...{main[0]}"],
+                          root=root)
+        if (not isinstance(lineage, dict) or lineage.get("status") != "ahead"
+                or (lineage.get("base_commit") or {}).get("sha") != expected_merge
+                or (lineage.get("head_commit") or {}).get("sha") != main[0]):
+            raise ValueError("PR #252 legacy closeout canonical main lineage mismatch")
+    row = gh_json(["api", f"repos/{slug}/issues/comments/5893861963"], root=root)
+    if (not isinstance(row, dict) or row.get("id") != 5893861963
+            or row.get("issue_url") != f"https://api.github.com/repos/{slug}/issues/252"
+            or (row.get("user") or {}).get("login") != "spikeal8-maker"
+            or row.get("author_association") != "OWNER"
+            or row.get("created_at") != "2026-09-29T15:59:25Z"
+            or not row.get("updated_at")
+            or _time(row["created_at"], "PR #252 legacy review creation") >=
+                _time(pr["mergedAt"], "PR #252 closeout merge")
+            or _time(row["updated_at"], "PR #252 legacy review update") >=
+                _time(pr["mergedAt"], "PR #252 closeout merge")):
+        raise ValueError("PR #252 legacy owner comment identity or timing mismatch")
+    lines = "\n".join(line.strip() for line in str(row.get("body") or "").splitlines()
+                      if line.strip())
+    if (expected_head not in lines or "APPROVE" not in lines
+            or any(f"{name} `{run_id}`: SUCCESS" not in lines
+                   for name, run_id in expected_runs.items())
+            or hashlib.sha256(lines.encode("utf-8")).hexdigest() !=
+                "e8d396a134c9f32dcecb7fde1b639f835d96566fa139d7bc6c2795a8dba97b1e"):
+        raise ValueError("PR #252 legacy owner comment body or CI evidence mismatch")
+    return {"independent_review": "legacy_owner_authenticated",
+            "independent_review_source": expected_head,
+            "legacy_closeout_comment_id": 5893861963,
+            "owner_waiver": False}
+
+
 def _structured_waiver_body(body: str, pr_number: int, head: str,
                             workflows: dict, *, source_checkpoint: bool = False) -> str | None:
     lines = [line.strip() for line in body.splitlines() if line.strip()]

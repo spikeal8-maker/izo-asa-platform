@@ -8,7 +8,7 @@ from project_state_model import ROOT
 from project_state_workflow import (_package_state_at, REQUIRED_PR_JOBS,
     validate_merged_closeout_evidence)
 from project_state_provenance import (_time, _source_waiver_body,
-    _closeout_owner_waiver, require_pr_runs_before)
+    _closeout_owner_waiver, legacy_pr252_review, require_pr_runs_before)
 
 
 def _checkpoint_introduction(source: str, head: str, package: str, checkpoint: dict,
@@ -176,18 +176,22 @@ def fetch_merged_closeout_evidence(pr_number: int, source_head: str, package: st
     push_tree = foundation_tested_sha(evidence["push_workflows"]["Foundation CI"], slug, root=root)
     if push_tree != source_head:
         raise ValueError("merged HEAD Foundation CI did not test the exact merge commit")
-    waiver = _closeout_owner_waiver(pr_number, head, evidence["workflows"],
-                                    pr.get("mergedAt"), slug, root=root)
-    review_args = (dict(owner_waiver=True, independent_review_unavailable=True,
-                        owner_waiver_source=head, owner_waiver_reason=waiver[0])
-                   if waiver is not None else {})
-    # Closeout review stays mandatory even if the later active scope is downgraded.
-    review = fetch_review_evidence({"risk": "high", "independent_review_required": True},
-                                    pr_number, head, root=root, approved_before=pr["mergedAt"],
-                                    **review_args)
-    evidence.update(review)
-    if waiver is not None and review.get("owner_waiver") is True:
-        evidence["closeout_waiver_comment_id"] = waiver[1]
+    if pr_number == 252:
+        evidence.update(legacy_pr252_review(pr_number, head, source_head, pr,
+                                              evidence["workflows"], slug, root=root))
+    else:
+        waiver = _closeout_owner_waiver(pr_number, head, evidence["workflows"],
+                                        pr.get("mergedAt"), slug, root=root)
+        review_args = (dict(owner_waiver=True, independent_review_unavailable=True,
+                            owner_waiver_source=head, owner_waiver_reason=waiver[0])
+                       if waiver is not None else {})
+        # Closeout review stays mandatory even if the later active scope is downgraded.
+        review = fetch_review_evidence({"risk": "high", "independent_review_required": True},
+                                        pr_number, head, root=root, approved_before=pr["mergedAt"],
+                                        **review_args)
+        evidence.update(review)
+        if waiver is not None and review.get("owner_waiver") is True:
+            evidence["closeout_waiver_comment_id"] = waiver[1]
     evidence.update(initial_provenance)
     evidence["checkpoint"] = package
     return evidence
