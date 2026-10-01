@@ -66,6 +66,8 @@ def _workflow_pages(value) -> list[dict]:
                     "databaseId": item.get("id"), "name": item.get("name"),
                     "status": item.get("status"), "conclusion": item.get("conclusion"),
                     "headSha": item.get("head_sha"), "event": item.get("event"),
+                    "headBranch": item.get("head_branch"),
+                    "updatedAt": item.get("updated_at"),
                     "runAttempt": item.get("run_attempt"), "runNumber": item.get("run_number"),
                     "prNumbers": [p.get("number") for p in item.get("pull_requests", [])
                                   if isinstance(p, dict) and p.get("number") is not None]})
@@ -96,13 +98,25 @@ def _freshness(item: dict) -> tuple[int, int, int]:
     return tuple(result)
 
 
-def latest_required_runs(runs: list[dict], expected_head: str, pr_number: int) -> dict[str, dict]:
+def latest_required_runs(runs: list[dict], expected_head: str, pr_number: int,
+                         *, allow_detached: bool = False,
+                         expected_branch: str | None = None) -> dict[str, dict]:
+    if allow_detached and not expected_branch:
+        raise ValueError("detached PR workflow evidence requires exact head branch")
     selected = {}
     for name in REQUIRED_WORKFLOWS:
         candidates = [item for item in runs if item.get("name") == name
                       and item.get("headSha") == expected_head
-                      and item.get("event") == "pull_request" and _pr_matches(item, pr_number)]
+                      and item.get("event") == "pull_request"
+                      and (not allow_detached or item.get("headBranch") == expected_branch)
+                      and (_pr_matches(item, pr_number)
+                           or (allow_detached and item.get("prNumbers") == []))]
         if not candidates:
+            if allow_detached and any(item.get("name") == name
+                    and item.get("headSha") == expected_head
+                    and item.get("event") == "pull_request"
+                    and item.get("headBranch") != expected_branch for item in runs):
+                raise ValueError(f"required workflow {name!r} has wrong PR head branch")
             raise ValueError(f"required workflow {name!r} has no run for PR #{pr_number} source head {expected_head}")
         latest = max(candidates, key=_freshness)
         status = str(latest.get("status") or "completed").lower()
@@ -112,6 +126,47 @@ def latest_required_runs(runs: list[dict], expected_head: str, pr_number: int) -
                              f"{expected_head} is {status}/{conclusion or 'none'}")
         selected[name] = latest
     return selected
+
+
+def fetch_pr_rollup(pr_number: int, slug: str, *, root: Path = ROOT) -> dict:
+    owner, repo = slug.split("/", 1)
+    query = ('query($owner:String!,$repo:String!,$number:Int!){repository(owner:$owner,name:$repo){'
+             'pullRequest(number:$number){number headRefOid headRefName baseRefOid '
+             'statusCheckRollup{state contexts(first:100){pageInfo{hasNextPage} '
+             'nodes{__typename ... on CheckRun{name conclusion '
+             'isRequired(pullRequestNumber:$number) '
+             'checkSuite{workflowRun{databaseId}}}}}}}}}')
+    data = gh_json(["api", "graphql", "-f", f"query={query}", "-f", f"owner={owner}",
+                    "-f", f"repo={repo}", "-F", f"number={pr_number}"], root=root)
+    payload = data.get("data") if isinstance(data, dict) else None
+    repository = payload.get("repository") if isinstance(payload, dict) else None
+    pr = repository.get("pullRequest") if isinstance(repository, dict) else None
+    if not isinstance(pr, dict):
+        raise ValueError(f"PR #{pr_number} status check rollup missing")
+    return pr
+
+
+def validate_pr_rollup(pr_number: int, pr: dict, selected: dict[str, dict],
+                       rollup: dict, required_jobs: dict[str, set[str]]) -> None:
+    if (rollup.get("number") != pr_number
+            or any(rollup.get(key) != pr.get(key)
+                   for key in ("headRefOid", "headRefName", "baseRefOid"))):
+        raise ValueError(f"PR #{pr_number} rollup identity does not match PR head/base")
+    status = rollup.get("statusCheckRollup") or {}
+    contexts = status.get("contexts") or {}
+    if (status.get("state") != "SUCCESS"
+            or (contexts.get("pageInfo") or {}).get("hasNextPage") is not False
+            or not isinstance(contexts.get("nodes"), list)):
+        raise ValueError(f"PR #{pr_number} required status check rollup incomplete")
+    for workflow, jobs in required_jobs.items():
+        run_id = selected[workflow].get("databaseId")
+        matched = {node.get("name") for node in contexts["nodes"] if isinstance(node, dict)
+                   and node.get("__typename") == "CheckRun"
+                   and node.get("isRequired") is True
+                   and node.get("conclusion") == "SUCCESS"
+                   and ((node.get("checkSuite") or {}).get("workflowRun") or {}).get("databaseId") == run_id}
+        if not jobs <= matched:
+            raise ValueError(f"PR #{pr_number} required {workflow} run {run_id} absent from PR rollup")
 
 
 def foundation_tested_sha(run_id: int, slug: str, *, root: Path = ROOT) -> str:
@@ -171,6 +226,7 @@ def fetch_review_evidence(scope: dict, pr_number: int, source_sha: str, *,
                           independent_review_unavailable: bool = False,
                           owner_waiver_source: str | None = None,
                           owner_waiver_reason: str | None = None,
+                          approved_before: str | None = None,
                           root: Path = ROOT) -> dict:
     if not review_required(scope):
         return {"independent_review": "not_required", "owner_waiver": False}
@@ -179,7 +235,11 @@ def fetch_review_evidence(scope: dict, pr_number: int, source_sha: str, *,
                      f"repos/{slug}/pulls/{pr_number}/reviews?per_page=100"], root=root)
     reviews = _flatten_pages(pages)
     actor = gh_json(["api", "user"], root=root).get("login") if owner_waiver else None
-    return review_decision(
+    decision = review_decision(
         scope, reviews, source_sha, owner_login=slug.split("/", 1)[0], actor_login=actor,
         owner_waiver=owner_waiver, independent_review_unavailable=independent_review_unavailable,
         owner_waiver_source=owner_waiver_source, owner_waiver_reason=owner_waiver_reason)
+    if approved_before is not None:
+        from project_state_provenance import require_current_approval_before
+        require_current_approval_before(reviews, decision, source_sha, approved_before)
+    return decision

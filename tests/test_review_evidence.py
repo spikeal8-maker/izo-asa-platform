@@ -155,6 +155,34 @@ def test_review_fetch_keeps_second_page_latest_verdict(monkeypatch):
     assert result["independent_review"] == "approved"
     assert result["independent_review_id"] == 2
 
+
+@pytest.mark.parametrize("mode", ["early", "late", "equal", "missing", "revoked", "replaced"])
+def test_closeout_current_approval_must_precede_merge(monkeypatch, mode):
+    import project_state_evidence as evidence_module
+    head, merge = "a" * 40, "2026-09-29T16:00:00Z"
+    reviews = [{"id": 1, "state": "APPROVED", "commit_id": head,
+                "submitted_at": "2026-09-29T15:55:00Z", "user": {"login": "reviewer"}}]
+    if mode == "late": reviews[0]["submitted_at"] = "2026-09-29T16:01:00Z"
+    elif mode == "equal": reviews[0]["submitted_at"] = merge
+    elif mode == "missing": reviews[0].pop("submitted_at")
+    elif mode in {"revoked", "replaced"}:
+        reviews.append({"id": 2, "state": "CHANGES_REQUESTED" if mode == "revoked" else "DISMISSED",
+                        "commit_id": head, "submitted_at": "2026-09-29T16:01:00Z",
+                        "user": {"login": "reviewer"}})
+        if mode == "replaced":
+            reviews.append({"id": 3, "state": "APPROVED", "commit_id": head,
+                            "submitted_at": "2026-09-29T16:02:00Z",
+                            "user": {"login": "other"}})
+    monkeypatch.setattr(evidence_module, "repo_slug", lambda root=None: "owner/repo")
+    monkeypatch.setattr(evidence_module, "gh_json", lambda *a, **k: [reviews])
+    call = lambda: evidence_module.fetch_review_evidence(high_scope(), 252, head,
+                                                          approved_before=merge)
+    if mode == "early":
+        assert call()["independent_review_id"] == 1
+    else:
+        with pytest.raises(ValueError, match="precede|changes requested"):
+            call()
+
 def _runs_for_freshness(head, foundation_rows):
     other = [
         {"name": "Dependency Security", "headSha": head, "event": "pull_request",
@@ -232,4 +260,3 @@ def test_ci_from_other_pr_is_not_evidence():
     ]
     with pytest.raises(ValueError, match="PR #99"):
         _validate_runs(rows, head)
-

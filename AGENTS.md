@@ -1,65 +1,45 @@
 # IZO ASA · обязательные правила coding-агента
 
-Цель: безопасная правка должна требовать минимального достаточного контекста. Текущая ветка/пакет/следующий шаг
-живут только в `docs/CURRENT.md` и `docs/PLAN.json`.
+Цель: безопасная правка с минимальным достаточным контекстом.
 
 ## Старт
 
 1. Прочитать `docs/CURRENT.md`; выполнить `python tools/project_state.py verify`.
-2. Запустить `python tools/context.py --task "<задача>"` или выбрать точный `--key`.
-3. При `CONTEXT BLOCK` читать owner только вокруг SYMBOL/ANCHOR. Не открывать файл целиком заранее.
-4. `AMBIGUOUS`/`NOT RESOLVED` → искать точный visible text/symbol/API path, не угадывать.
-5. До кода зафиксировать `до → после`, package/task, base, finite scope, non-goals, риск и ближайший test.
+2. Найти точный block/route через `tools/context.py`; при ambiguity не угадывать.
+3. Зафиксировать goal, base, finite scope, non-goals, risk и nearest tests.
+4. Package history читать только точечно: `project_state.py show-package <ID>`.
+   `PACKAGES.json`, CHECKPOINTS, reviews и history — не default context.
 
 ## Неподвижные границы
 
-- Account / Credits / Jobs / Media общие для providers и клиентов; второй ledger/auth/gallery запрещён.
-- Browser не владеет identity, permissions, price, provider key/config, object key, attempt/fence.
-- Ownership/permissions проверяет backend.
-- Unknown paid outcome сначала reconcile; blind retry запрещён.
-- Реальные ключи/расходы, платежи, почта, боты, DNS, merge/deploy/release требуют отдельного разрешения.
-- Unit/UI не используют production сеть/секреты; integration работает на изолированных DB/S3.
+- Account / Credits / Jobs / Media — shared owners; второй auth/ledger/gallery запрещён.
+- Backend владеет identity, permissions, ownership, price и provider/storage authority.
+- Unknown paid outcome сначала reconcile; blind paid retry запрещён.
+- Unit/UI не используют production secrets/network/data; integration изолирован.
+- Расходы, платежи, DNS, merge/deploy/release и owner-only actions требуют отдельного разрешения.
 
-## Экономный цикл
+## Рабочий цикл
 
-`LOCATE → SCOPE → failing/acceptance case → minimal IMPLEMENT → TARGETED TEST → SELF_REVIEW → full CI → FREEZE`.
+`LOCATE → SOURCE_AUDIT → SCOPE → acceptance case → minimal change → TARGETED TEST → SELF_REVIEW → required CI → FREEZE`.
 
-Не ослаблять tests/limits и не расширять scope ради PASS.
-
-Файлы, context routes, local docs и scope обязаны соблюдать `docs/MAINTAINABILITY.md`.
-Near-limit файл не увеличивается дальше без split. Limit нельзя повышать автоматически после failure.
-
-## SELF_REVIEW
-
-После реализации агент прекращает добавлять функции и проверяет:
-- решена ли исходная задача;
-- каждый ли изменённый файл нужен;
-- нет ли ownership/security/idempotency/retry/cost/privacy regression;
-- покрыты ли error/race/refresh/restart cases по риску;
-- не ослаблена ли проверка ради PASS;
-- не выросла ли стоимость следующей агентской правки;
-- корректны ли local README/block/route/test.
-
-Verdict: `PASS`, `FIX_REQUIRED`, `ESCALATE`. High-risk области требуют отдельного independent review по
+Не ослаблять tests/limits и не расширять scope ради PASS. Budgets, Source-First, audit cadence и risk review —
 `docs/MAINTAINABILITY.md`.
+## Git/state safety
 
-## Scope, CI и freeze
+Нельзя `reset --hard`, force-push, чистить чужой WIP, auto-merge или auto-deploy.
+PLAN/PACKAGES/CURRENT/CHECKPOINTS меняет только repository state workflow.
+Следующий package не стартует вручную; `complete` — terminal status и не понижается.
 
-Machine scope конечен. Нельзя `reset --hard`, force-push, чистить чужой WIP, auto-merge или auto-deploy.
-Перед push: docs/scope/generated/diff/secret sanity и профильные tests. Полный CI перед технической приёмкой не урезается.
+## Multi-agent и review
 
-После успешных required workflows current working head замораживается. PR workflow evidence называется
-`pr_merge_tree`, если checkout был synthetic merge. Следующий package запускается только через
-`tools/project_state.py begin-next`, который проверяет source head, dependencies и CI evidence и создаёт новую ветку.
+Controller/subagent contract, one-writer isolation, delegation, reviewer separation и STOP conditions —
+`docs/DEVELOPMENT.md`. Internal review не заменяет required GitHub review/owner waiver.
 
-Статусы IMPLEMENTED / SELF_REVIEWED / TESTED / PUSHED / INDEPENDENTLY_REVIEWED / MERGED / DEPLOYED /
-OPERATIONALLY_VERIFIED не склеиваются словом «готово».
+## SELF_REVIEW и handoff
 
-## Документация и handoff
+Проверить: исходную задачу, минимальность diff, ownership/security/idempotency/cost/privacy,
+risk-specific error/race/restart cases, budgets, docs/routes и отсутствие ослабленных gates.
+Verdict: `PASS | FIX_REQUIRED | ESCALATE`.
 
-`docs/DOCS_SYSTEM.md` определяет владельца фактов. Новый MASTER_PLAN/NOW/ROADMAP запрещён.
-Multi-agent work следует `docs/DEVELOPMENT.md`; orchestration contract здесь не дублируется.
-History/reviews/checkpoints не являются default context.
-
-Handoff: package, branch/base, фактический diff, проверки, открытые риски и один следующий шаг.
-Не переносить весь чат, reasoning или большие логи.
+Documentation ownership — `docs/DOCS_SYSTEM.md`; новый MASTER_PLAN/NOW/ROADMAP запрещён.
+Handoff: package, branch/base, diff, tests/CI, риски и один следующий шаг; без reasoning/больших логов.

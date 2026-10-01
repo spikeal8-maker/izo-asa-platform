@@ -47,6 +47,24 @@ def test_clean_repo_passes(tmp_path):
     assert not hygiene.scan(root)["failures"]
 
 
+def test_context_and_plan_sizes_are_reported_without_becoming_new_failures(tmp_path):
+    root = repo(tmp_path)
+    (root / "docs").mkdir()
+    (root / "AGENTS.md").write_text("a" * 120, encoding="utf-8")
+    (root / "docs/CURRENT.md").write_text("c" * 80, encoding="utf-8")
+    (root / "docs/PLAN.json").write_text('{"canonical_lineage":{}}', encoding="utf-8")
+    commit_all(root)
+    result = hygiene.scan(root, base=None)
+    assert result["root_context_bytes"] == 200
+    assert result["root_context_target"] == 4500
+    assert result["root_context_hard_limit"] == 6000
+    assert result["live_plan_bytes"] == len('{"canonical_lineage":{}}')
+    assert result["live_plan_target"] == 4000
+    assert result["live_plan_warning"] == 5000
+    assert result["live_plan_hard_limit"] == 6000
+    assert not result["failures"]
+
+
 @pytest.mark.parametrize("raw", [
     "runtime/app.log",
     "runtime/state.sqlite",
@@ -125,3 +143,68 @@ def test_near_limit_source_growth_fails(tmp_path):
     commit_all(root, "growth")
     result = hygiene.scan(root, base=base)
     assert "near-limit handwritten file grew" in reasons(result)
+    assert [item["path"] for item in result["near_limit_handwritten"]] == [
+        "apps/api/izo/near_limit.py"
+    ]
+    assert [item["path"] for item in result["changed_near_limit_handwritten"]] == [
+        "apps/api/izo/near_limit.py"
+    ]
+
+
+def test_near_limit_line_growth_fails_without_byte_growth(tmp_path):
+    root = repo(tmp_path)
+    path = root / "apps/api/izo/near_limit.py"
+    path.parent.mkdir(parents=True)
+    path.write_bytes(b"#\n" * 240 + b"###\n")
+    base = commit_all(root, "base")
+    old_size = path.stat().st_size
+    path.write_bytes(b"#\n" * 242)
+    commit_all(root, "line growth")
+    assert path.stat().st_size == old_size
+    result = hygiene.scan(root, base=base)
+    assert "near-limit handwritten file grew" in reasons(result)
+    assert "lines 241->242" in reasons(result)
+    assert [item["path"] for item in result["changed_near_limit_handwritten"]] == [
+        "apps/api/izo/near_limit.py"
+    ]
+
+
+def test_old_byte_near_limit_rejects_line_growth_after_byte_shrink(tmp_path):
+    root = repo(tmp_path)
+    path = root / "apps/api/izo/near_limit.py"
+    path.parent.mkdir(parents=True)
+    path.write_bytes(b"# " + b"x" * 9798 + b"\n")
+    base = commit_all(root, "base")
+    assert path.stat().st_size == 9801
+    path.write_bytes((b"# " + b"x" * 92 + b"\n") * 101 + b"#\n")
+    commit_all(root, "line growth after byte shrink")
+    assert path.stat().st_size < int(12_000 * 0.80)
+    result = hygiene.scan(root, base=base)
+    assert "near-limit handwritten file grew" in reasons(result)
+    assert "lines 1->102" in reasons(result)
+
+
+def test_old_byte_near_limit_allows_shrink_below_threshold(tmp_path):
+    root = repo(tmp_path)
+    path = root / "apps/api/izo/near_limit.py"
+    path.parent.mkdir(parents=True)
+    path.write_bytes(b"# " + b"x" * 9798 + b"\n")
+    base = commit_all(root, "base")
+    path.write_bytes(b"# " + b"x" * 8998 + b"\n")
+    commit_all(root, "shrink")
+    result = hygiene.scan(root, base=base)
+    assert not result["failures"], reasons(result)
+
+
+@pytest.mark.parametrize("shrinking", [False, True])
+def test_near_limit_without_growth_passes(tmp_path, shrinking):
+    root = repo(tmp_path)
+    path = root / "apps/api/izo/near_limit.py"
+    path.parent.mkdir(parents=True)
+    path.write_bytes(b"#\n" * 242)
+    base = commit_all(root, "base")
+    if shrinking:
+        path.write_bytes(b"#\n" * 241)
+        commit_all(root, "shrink")
+    result = hygiene.scan(root, base=base)
+    assert not result["failures"], reasons(result)

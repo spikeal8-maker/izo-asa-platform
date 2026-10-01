@@ -6,15 +6,20 @@ ROOT=Path(__file__).resolve().parents[1]
 sys.path.insert(0,str(ROOT/"tools"))
 from project_state_decision import decided_transition,validate_decided_candidate
 from project_state_evidence import validate_pr_evidence
+from project_state_model import load_plan,write_state
 H,B,C="a"*40,"b"*40,"c"*40
-def base_plan(): return json.loads((ROOT/"docs/PLAN.json").read_text(encoding="utf-8"))
+def base_plan():
+    s=load_plan(ROOT)
+    s["packages"][s["active_package"]]["status"]="active"
+    return s
 def candidate(s=None,package_id="TEST-DYNAMIC"):
     s=s or base_plan(); return {"id":package_id,"goal":"bounded control-plane fixture","depends_on":[s["active_package"]],"decides_next":True}
 def evidence(head=H):
     return {"type":"pr_merge_tree","source_head":head,"verified_pr":99,"base_head":B,"tested_merge_tree":C,"workflows":{"Foundation CI":1,"Dependency Security":2,"Review Source":3},"independent_review":"unavailable","owner_waiver":True,"owner_actor":"owner","owner_waiver_source":head,"owner_waiver_reason":"fixture"}
 def _scope(s,risk="medium"): return {"package_id":s["active_package"],"risk":risk}
-def _write_docs(root,s,with_scope=True):
-    docs=root/"docs"; docs.mkdir(); (docs/"PLAN.json").write_text(json.dumps(s),encoding="utf-8"); (docs/"CURRENT.md").write_text("old-current",encoding="utf-8"); (docs/"CHECKPOINTS.json").write_text('{"schema_version":1,"checkpoints":{}}',encoding="utf-8")
+def _write_docs(root,s,with_scope=True,checkpoints=None):
+    docs=root/"docs"; docs.mkdir()
+    write_state(s, checkpoints or {"schema_version":1,"checkpoints":{}}, root=root)
     if with_scope:
         p=root/"tools/scopes"; p.mkdir(parents=True); (p/f"{s['active_package'].lower()}.json").write_text(json.dumps(_scope(s)),encoding="utf-8")
 def _git(s,events):
@@ -33,6 +38,7 @@ def test_decides_next_null_can_register_and_activate_atomically():
     assert u["packages"][old]["status"]=="technical_pass"; assert u["packages"][old]["checkpoint"]==old
     assert u["packages"]["TEST-DYNAMIC"]["status"]=="active"; assert u["active_package"]=="TEST-DYNAMIC" and u["next_package"] is None
     assert u["canonical_lineage"]["current_package_base"]["sha"]==H
+
 def test_dynamic_candidate_rejects_non_decider_bad_fields_and_dependencies():
     s=base_plan(); s["packages"][s["active_package"]]["decides_next"]=False
     with pytest.raises(ValueError,match="decide next"): validate_decided_candidate(s,candidate(s))
@@ -57,7 +63,7 @@ def test_failed_ci_stops_before_branch_creation(tmp_path,monkeypatch):
     assert calls==[]
 def test_failure_after_branch_creation_rolls_back_files_and_branch(tmp_path,monkeypatch):
     import project_state as state
-    s=base_plan(); _write_docs(tmp_path,s); names=("PLAN.json","CURRENT.md","CHECKPOINTS.json"); originals={n:(tmp_path/"docs"/n).read_bytes() for n in names}; calls=[]
+    s=base_plan(); _write_docs(tmp_path,s); names=("PLAN.json","PACKAGES.json","CURRENT.md","CHECKPOINTS.json"); originals={n:(tmp_path/"docs"/n).read_bytes() for n in names}; calls=[]
     monkeypatch.setattr(state,"git",_git(s,calls)); monkeypatch.setattr(state,"fetch_pr_evidence",lambda *a,**k:evidence()); monkeypatch.setattr(state,"fetch_review_evidence",lambda *a,**k:{"independent_review":"unavailable","owner_waiver":True,"owner_actor":"owner","owner_waiver_source":H,"owner_waiver_reason":"fixture"})
     def broken(updated,checkpoints=None,root=tmp_path):
         for n in names: (root/"docs"/n).write_text("partial",encoding="utf-8")

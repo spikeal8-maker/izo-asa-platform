@@ -6,7 +6,7 @@
 ## 1. Уровни контекста
 
 1. `AGENTS.md` — короткие долговечные правила.
-2. `CURRENT.md` + `PLAN.json` — текущий package, base, branch, dependency graph.
+2. `CURRENT.md` + `PLAN.json` — короткий live control-plane. Package/dependency slice запрашивается через `project_state.py show-package <ID>`; весь `PACKAGES.json` не является default context.
 3. `BLOCK_MAP.json` → точный UI/API block; `CONTEXT_MAP.json` → fallback route.
 4. Local README/AGENTS и затем предметные specs — только при конкретной зависимости.
 5. `CHECKPOINTS.json`, `reviews/`, `history/` — provenance/history; не default context.
@@ -15,7 +15,8 @@
 
 | Факт | Владелец |
 |---|---|
-| Current package/base/branch/dependencies | `PLAN.json` |
+| Current package/base/branch/live refs | `PLAN.json` |
+| Package registry/dependencies/checkpoint refs | `PACKAGES.json` через `project_state.py show-package <ID>` |
 | Immutable CI evidence | `CHECKPOINTS.json` |
 | Короткое текущее состояние | `CURRENT.md` |
 | Block owner/symbol/anchor/test | `BLOCK_MAP.json` |
@@ -38,8 +39,7 @@
 `AGENTS → CURRENT/verify → block locator → surrounding source block/test`.
 Если block неизвестен: `route → local README → owner source/test`.
 
-Большой предметный документ открывается только по зависимости. Lockfiles, generated contracts, CHECKPOINTS,
-history и соседние feature по умолчанию закрыты. Бюджеты initial context обязательны по `MAINTAINABILITY.md`.
+Большой предметный документ открывается только по зависимости. Lockfiles, generated contracts, `PACKAGES.json`, CHECKPOINTS, history и соседние feature по умолчанию закрыты. Бюджеты initial context обязательны по `MAINTAINABILITY.md`.
 
 ## 4. Local ownership contract
 
@@ -56,8 +56,8 @@ README не является журналом. Domain-local Markdown счита�
 
 ## 5. Plan/checkpoints/freeze
 
-`PLAN.json` различает runtime base, current-package base и working branch.
-PLAN хранит короткие checkpoint refs; evidence находится в CHECKPOINTS.
+`PLAN.json` различает runtime base, current-package base и working branch и хранит только bounded live state.
+`PACKAGES.json` хранит package registry/dependencies/checkpoint refs; обычный agent читает его только через targeted `show-package`. Evidence находится в CHECKPOINTS.
 
 После required CI working head замораживается без status commit. PR evidence помечается `pr_merge_tree`, если проверен
 synthetic merge. `project_state.py begin-next` проверяет evidence/dependencies, создаёт следующую ветку от frozen source,
@@ -70,7 +70,7 @@ synthetic merge. `project_state.py begin-next` проверяет evidence/depen
 3. Новый domain имеет local README + route; ключевые операции имеют block ID.
 4. Local live docs укладываются в aggregate budget и не содержат mutable history.
 5. Route/block initial context укладывается в budget.
-6. PLAN/CURRENT меняются только на новой ветке при state transition.
+6. PLAN/PACKAGES/CURRENT меняются только repository state workflow при state transition.
 7. CI evidence находится в CHECKPOINTS.
 8. STATUS содержит только доказанные факты.
 9. Stable docs не содержат mutable SHA/PR.
@@ -112,7 +112,7 @@ GitHub-first handoff materializes source-critical specs/reviews/patches в branc
 |---|---|
 | Source hierarchy / audit mode / donor / NEW_DECISION | `MAINTAINABILITY.md` |
 | Controller/subagent execution process | `DEVELOPMENT.md` |
-| Current package/branch/checkpoint | `PLAN.json` / `CURRENT.md` / `CHECKPOINTS.json` |
+| Current package/branch/checkpoint | `PLAN.json` / `PACKAGES.json` / `CURRENT.md` / `CHECKPOINTS.json` |
 | Package source audit / adoption evidence | `reviews/<ID>.md` |
 
 Controller/subagent process не дублируется в AGENTS или feature README: там допускается только короткий route к `DEVELOPMENT.md`.

@@ -71,9 +71,58 @@ SELF_REVIEW и CI. Требуется отдельное review evidence.
 После targeted PASS + self-review: `check_docs`, `repository_hygiene.py`, scope-check, generated contracts, diff/secret sanity, затем PR.
 Общий CI не заменяется локальными тестами. Skipped stage не является доказательством.
 
-После required workflows current working head замораживается; source/status больше не меняются.
-Следующий нормально принятый package запускается только `project_state.py begin-next`, который проверяет
-PR/source/workflows/dependencies, создаёт ветку от frozen source и уже там меняет PLAN/CURRENT/CHECKPOINTS.
+После required workflows принятый source head замораживается. Отдельный merged closeout PR для `complete` —
+единственный допустимый переход к новому HEAD по контракту ниже.
+Предвыбранный successor запускается через `project_state.py begin-next`; package с `decides_next=true` и
+`next_package=NONE` — через `begin-decided-next`. State workflow создаёт новую ветку и атомарно меняет
+PLAN/PACKAGES/CURRENT/CHECKPOINTS. Для terminal `complete` запуск successor не понижает завершённый package.
+
+Для `complete` source HEAD принимается либо ровно по source SHA immutable accepted checkpoint, либо по отдельному
+accepted merged closeout PR, указанному через `verified_pr`. Во втором случае head PR должен происходить от
+checkpoint source; после введения checkpoint его `complete` status и запись остаются неизменными, а current HEAD
+точно совпадает с merge commit PR. Обязательны required PR workflows с проверенным merge tree, совпадающим с деревом
+фактического merge commit, успешные required push workflows на exact merged HEAD, а также structured independent
+review по exact closeout PR head либо отдельный exact-head owner waiver для этого PR. Waiver исходного checkpoint
+не переносится на closeout. При нехватке любого evidence `begin-next`/`begin-decided-next` останавливаются с указанием
+отсутствующего или несовпадающего evidence
+до создания ветки или записи state.
+
+Если исходный checkpoint впервые вводится в истории более позднего closeout PR, waiver для source PR подтверждается
+GitHub-комментарием владельца. Новый structured waiver имеет ровно семь строк ниже: подставляются номер source PR,
+exact source SHA, ID обязательных PR runs и конкретная причина.
+
+```text
+Owner waiver for source checkpoint PR #<number>: APPROVE
+Source HEAD: <40-character SHA>
+Independent review: unavailable
+Reason: <specific reason>
+Foundation CI: <run ID> SUCCESS
+Dependency Security: <run ID> SUCCESS
+Review Source: <run ID> SUCCESS
+```
+
+Для source PR оба времени комментария, `created_at` и `updated_at`, должны быть строго раньше более раннего из
+момента первого введения checkpoint и `createdAt` closeout PR. Правка до этого порога допустима; после него waiver
+не принимается. Выбранные успешные обязательные PR runs должны завершиться (`updatedAt`) до того же порога, а ID
+в комментарии — совпадать с их PR-specific ID. Если используется structured independent review source PR, его
+`submitted_at` также должен быть раньше этого порога. Ранее зафиксированный legacy waiver принимается только при
+точном совпадении полного тела комментария.
+
+Для отдельного closeout PR выбранные успешные обязательные PR runs должны завершиться (`updatedAt`) строго до
+`mergedAt`. Его собственное structured independent review требует `submitted_at < mergedAt`; вместо review допустим
+отдельный exact-head owner waiver с `created_at < mergedAt` и `updated_at < mergedAt`. Waiver исходного checkpoint
+не переносится на closeout.
+
+Единственное историческое исключение, закреплённое в `legacy_pr252_review`, принимает owner-authenticated pre-merge
+comment как legacy closeout evidence лишь для зашитых в этом helper точных PR, head, merge commit и comment ID.
+Проверяются принадлежность комментария владельцу, время до merge, его неизменённое содержание с exact head, `APPROVE`
+и ID успешных обязательных CI runs, соответствие merge commit PR и canonical main lineage. Это не structured GitHub
+approval и не новый owner waiver. Для всех остальных closeout PR действует только предшествующий merge structured
+independent `APPROVED` review либо отдельный exact-head owner waiver.
+
+Lifecycle status contract: `active` — текущая работа; `planned_next` — явно выбранный successor;
+`technical_pass` — technical acceptance, merge/deploy не подразумеваются; `complete` — terminal и immutable;
+`planned` — не начат; historical/superseded statuses не становятся автоматически continuation base.
 
 `project_state.py reconcile-continuation` — отдельный fail-closed transition только для случая, когда active package
 нельзя честно принять, но его canonical branch уже продвинулась независимыми verified merges. Он сохраняет historical
@@ -84,20 +133,11 @@ Merge/deploy/live-provider call — отдельные действия.
 
 ## 8. Непрерывная сопровождаемость
 
-`MAINTAINABILITY.md` — часть Definition of Done каждого будущего package, а не отдельная разовая уборка.
+`MAINTAINABILITY.md` — часть Definition of Done каждого package и единственный owner structural cadence,
+threshold triggers и audit finding classes. Этот документ не создаёт второй календарь cleanup.
 
-На каждом package:
-1. architecture size guard;
-2. headroom regression guard;
-3. context route/block budgets;
-4. local-doc budget/stale-state guard;
-5. scope class/risk;
-6. maintainability delta в self-review.
-
-После каждых 5 завершённых product packages проводится полный agent-economy audit. Он ранжирует крупнейшие handwritten
-files, самые дорогие routes, локальные docs, map growth, duplicated ownership и tools/workflows у лимитов.
-Если долг существенный — создаётся maintenance package; если локальный — закрывается в ближайшем product package.
-Лимиты не увеличиваются автоматически.
+Controller обеспечивает Maintenance Delta и required gates текущего package, но COSMETIC/LOCAL_DEBT/
+STRUCTURAL_BLOCKER обрабатываются строго по `MAINTAINABILITY §7`. Hard limits не повышаются ради PASS.
 
 ## 9. Документация
 
@@ -157,13 +197,16 @@ Writing task без этого contract не стартует.
 Subagent не расширяет scope самостоятельно. Нужен новый path/domain → вернуть `NEED_SCOPE_EXPANSION`; controller повторяет source/ownership/scope analysis и только затем выдаёт изменённый assignment.
 ### State, conflicts и reviewer
 
-Только controller + repository state workflow меняют `PLAN.json`, `CURRENT.md`, `CHECKPOINTS.json`, active/next package и checkpoint/freeze state. Ordinary subagent state-файлы не меняет.
+Только controller + repository state workflow меняют `PLAN.json`, `PACKAGES.json`, `CURRENT.md`, `CHECKPOINTS.json`, active/next package и checkpoint/freeze state. Ordinary subagent state-файлы не меняет.
 
 Если subagents предлагают разные product semantics, controller не выбирает по вкусу: применяется canonical source hierarchy из `MAINTAINABILITY.md`. Если ответа нет — `NEW_DECISION_REQUIRED`.
 
 Review-subagent — READ-ONLY: не исправляет собственный finding и не является implementer того же diff. Internal subagent review не заменяет required structured independent GitHub review или exact-SHA owner waiver.
 
-Controller обязан STOP при `NEW_DECISION_REQUIRED`, unexpected source HEAD change, scope collision, unresolved security/ownership conflict, required CI failure, review blocker, owner-only action или real spend/live operation без отдельного разрешения.
+При required CI failure или review blocker controller останавливает приёмку результата, freeze, следующий package и зависимые шаги. Если причина — обычный воспроизводимый дефект внутри уже разрешённого package/task scope, controller может диагностировать её и назначить ограниченный цикл исправления в текущем package. После исправления требуются полный required CI и повторный required review для нового exact source HEAD; бесконечные reruns и обход gates запрещены.
+
+Полный STOP до отдельного разрешения обязателен при `NEW_DECISION_REQUIRED`, unexpected source HEAD change, scope collision/expansion, unresolved security/ownership conflict, owner-only action, real spend/live operation или прямом запрете в task contract.
+
 ### Subagent handoff
 
 Минимальный handoff:

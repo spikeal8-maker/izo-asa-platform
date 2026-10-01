@@ -16,6 +16,12 @@ def run_context(task: str):
         cwd=ROOT, capture_output=True, text=True, timeout=10)
 
 
+def full_plan() -> dict:
+    sys.path.insert(0, str(ROOT / "tools"))
+    from project_state_model import load_plan
+    return load_plan(ROOT)
+
+
 def test_documentation_validator_passes():
     result = subprocess.run([sys.executable, str(ROOT / "tools/check_docs.py")], cwd=ROOT,
                             capture_output=True, text=True, timeout=10)
@@ -41,7 +47,7 @@ def test_routing_corpus_prefers_correct_or_safe_failure():
 
 
 def test_plan_current_base_has_explicit_checkpoint_semantics_without_embedded_evidence():
-    plan = json.loads((ROOT / "docs/PLAN.json").read_text(encoding="utf-8"))
+    plan = full_plan()
     checkpoints = json.loads((ROOT / "docs/CHECKPOINTS.json").read_text(encoding="utf-8"))
     lineage = plan["canonical_lineage"]
     assert lineage["runtime_base"]["branch"] == "api/fal-klein-001"
@@ -51,18 +57,27 @@ def test_plan_current_base_has_explicit_checkpoint_semantics_without_embedded_ev
     assert plan["packages"][active]["status"] in {"active", "complete"}
     base = lineage["current_package_base"]
     state = base.get("state")
-    assert state in {"verified_pr_merge_tree_checkpoint", "reconciled_continuation_base"}
+    assert state in {
+        "verified_pr_merge_tree_checkpoint",
+        "reconciled_continuation_base",
+        "completed_package_successor_base",
+    }
     matching = [key for key, value in checkpoints["checkpoints"].items()
                 if value.get("source_head", value.get("head")) == base["sha"]]
     if state == "verified_pr_merge_tree_checkpoint":
         assert matching, f"current_package_base {base['sha']} has no immutable checkpoint evidence"
+    elif state == "completed_package_successor_base":
+        checkpoint = base.get("checkpoint")
+        assert checkpoint in checkpoints["checkpoints"]
+        assert plan["packages"][checkpoint]["status"] == "complete"
+        assert plan["packages"][checkpoint]["checkpoint"] == checkpoint
     assert all("evidence" not in item for item in plan["packages"].values())
 
 
 def test_docs_validator_accepts_terminal_complete_state():
     sys.path.insert(0, str(ROOT / "tools"))
     import check_docs
-    plan = json.loads((ROOT / "docs/PLAN.json").read_text(encoding="utf-8"))
+    plan = full_plan()
     plan["packages"][plan["active_package"]]["status"] = "complete"
     errors = []
     check_docs.check_plan(errors, plan)
@@ -132,3 +147,37 @@ def test_boundary_tests_use_explicit_utf8_reads():
     for path in (ROOT / "tests").glob("*boundaries.py"):
         text = path.read_text(encoding="utf-8")
         assert ".read_text()" not in text, path
+
+
+def test_root_default_context_hits_target_and_preserves_hard_limit():
+    total = (ROOT / "AGENTS.md").stat().st_size + (ROOT / "docs/CURRENT.md").stat().st_size
+    assert total <= 4_500
+    assert total <= 6_000
+
+
+def test_package_registry_is_targeted_not_default_context():
+    sys.path.insert(0, str(ROOT / "tools"))
+    import context as routing
+    context = routing.load_map(ROOT / "docs/CONTEXT_MAP.json", "routes")
+    for key, route in context["routes"].items():
+        assert "docs/PACKAGES.json" not in route.get("read_first", []), key
+    docs_route = context["routes"]["docs.system"]
+    assert "docs/PACKAGES.json" in docs_route.get("do_not_read_by_default", [])
+    assert "show-package <ID>" in (ROOT / "AGENTS.md").read_text(encoding="utf-8")
+
+
+def test_structural_audit_cadence_is_iteration_based():
+    text = (ROOT / "docs/MAINTAINABILITY.md").read_text(encoding="utf-8")
+    assert "EVERY PACKAGE" in text
+    assert "EVERY 3 ACCEPTED PRODUCT PACKAGES" in text
+    assert "EVERY 5 ACCEPTED PRODUCT PACKAGES" in text
+    assert "30 календарных дней" not in text
+    for marker in (
+        "live/default agent context >75% hard budget",
+        "affected context route >75% hard budget",
+        "changed handwritten owner входит в >80% warning zone",
+        "scope >40",
+        "state/history начинает попадать в default context",
+        "COSMETIC", "LOCAL_DEBT", "STRUCTURAL_BLOCKER",
+    ):
+        assert marker in text
