@@ -1,0 +1,17 @@
+{
+  "package_id": "PRE-P1-STRUCTURAL-CLOSEOUT-001",
+  "base": "56477c327018619572edf28376cb651acd834901",
+  "scope_class": "tiny",
+  "risk": "medium",
+  "independent_review_required": true,
+  "max_files": 4,
+  "allowed": [
+    "docs/CHECKPOINTS.json",
+    "docs/CURRENT.md",
+    "docs/PACKAGES.json",
+    "tools/scopes/pre-p1-structural-closeout-001.json"
+  ],
+  "sensitive_approved": [
+    "tools/scopes/pre-p1-structural-closeout-001.json"
+  ]
+}

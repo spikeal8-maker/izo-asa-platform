@@ -425,12 +425,13 @@
       "status": "complete"
     },
     "PRE-P1-STRUCTURAL-MAINTENANCE-001": {
+      "checkpoint": "PRE-P1-STRUCTURAL-MAINTENANCE-001",
       "decides_next": true,
       "depends_on": [
         "PRE-P1-STABILIZATION-001"
       ],
       "goal": "Reduce live agent/state context, preserve terminal lifecycle, make structural maintenance iteration-based, and extend existing repository hygiene reporting; no product runtime changes.",
-      "status": "active"
+      "status": "complete"
     },
     "PROFILE-001": {
       "depends_on": [
