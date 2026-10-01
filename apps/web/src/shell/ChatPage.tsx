@@ -8,6 +8,7 @@ import { ChatMessage } from './chat/ChatMessage'
 import { ChatSidebar } from './chat/ChatSidebar'
 import { leaveChatMedia } from './chat/AttachmentControl'
 import { useChatRuntime } from './chat/useChatRuntime'
+import { useChatScroll } from './chat/useChatScroll'
 import { useVisualViewport } from './chat/useVisualViewport'
 import './chat.css'
 import './chat/ChatRuntime.css'
@@ -24,6 +25,7 @@ onThemeChange: (value: 'light' | 'dark') => void
 onLogout: () => void
 }) {
 const runtime = useChatRuntime(auth)
+const chatScroll = useChatScroll(auth?.account.id, runtime.currentChatId, runtime.messages)
 useEffect(() => () => leaveChatMedia(auth?.account.id), [auth?.account.id])
 const [desktop, setDesktop] = useState(() => window.matchMedia(desktopQuery).matches)
 const [expanded, setExpanded] = useState(initiallyExpanded)
@@ -65,18 +67,19 @@ requestAnimationFrame(() => drawerOpener.current?.focus())
 function closeSidebar() { if (desktop) setDesktopExpanded(false); else closeDrawer() }
 function newChat() {
 if (runtime.busy || runtime.pendingAdmission) return
+chatScroll.remember()
 runtime.newChat()
 setComposerVersion(value => value + 1)
 if (!desktop) closeDrawer()
 }
 async function openChat(chat: (typeof runtime.history)[number]) {
 if (runtime.busy || runtime.pendingAdmission) return
-if (!desktop) closeDrawer()
-setComposerVersion(value => value + 1)
-await runtime.openChat(chat)
+  chatScroll.remember()
+  if (!desktop) closeDrawer()
+  if (await runtime.openChat(chat)) setComposerVersion(value => value + 1)
 }
 const empty = runtime.messages.length === 0
-const disabled = !auth || !runtime.policy
+const disabled = !auth || !runtime.policy || runtime.openingThread
 const composer = <ChatComposer key={`${auth?.account.id ?? 'guest'}:${composerVersion}`}
 auth={auth} policy={runtime.policy} credentials={runtime.credentials}
 catalogError={runtime.catalogError}
@@ -122,7 +125,7 @@ onError={runtime.setError} />}
 {composer}
 </div>
 : <>
-<div className="chat-scroll" aria-live="polite"><div className="chat-column">
+<div ref={chatScroll.scrollRef} onScroll={chatScroll.onScroll} className="chat-scroll" aria-live="polite"><div className="chat-column">
 <div className="chat-turns">
 {runtime.messages.map(message =>
 <ChatMessage key={message.id} message={message} auth={auth} />)}

@@ -1,0 +1,22 @@
+{
+  "package_id": "P1-CHAT-SCROLL-001",
+  "base": "a38796af702c698cda68ef2135c047823ba3b52b",
+  "scope_class": "normal",
+  "risk": "medium",
+  "independent_review_required": true,
+  "max_files": 9,
+  "allowed": [
+    "docs/PLAN.json",
+    "docs/PACKAGES.json",
+    "docs/CURRENT.md",
+    "apps/web/src/shell/ChatPage.tsx",
+    "apps/web/src/shell/chat/useChatRuntime.ts",
+    "apps/web/src/shell/chat/useThreadSelection.ts",
+    "apps/web/src/shell/chat/useChatScroll.ts",
+    "apps/web/e2e/chat-scroll.spec.ts",
+    "tools/scopes/p1-chat-scroll-001.json"
+  ],
+  "sensitive_approved": [
+    "tools/scopes/p1-chat-scroll-001.json"
+  ]
+}

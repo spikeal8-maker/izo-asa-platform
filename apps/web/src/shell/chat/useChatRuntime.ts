@@ -2,13 +2,14 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import {
 apiRequest, apiStream, ApiError, chatProviderProblem,
 type AuthView, type ChatPolicyView, type ChatRequestView, type CredentialListView, type CredentialView,
-type MessageView, type ThreadDetail, type ThreadList, type ThreadView,
+type MessageView, type ThreadList, type ThreadView,
 } from '../../shared/api'
 import { consumeSse, useChatCatalog, useCredentialSync } from './useChatCatalog'
 import { providerFor } from './modelCatalog'
-import { chatImageProblem, chatProblem, forgetChatOperations, lastChatWarning, resolveChatAttachments, type ChatAttachmentDraft } from './chatAttachments'
+import { chatImageProblem, chatProblem, forgetChatOperations, resolveChatAttachments, type ChatAttachmentDraft } from './chatAttachments'
 import { beginChatMedia, endChatMedia } from './AttachmentControl'
 import { admitChatRequest, nextChatRequest, PreflightProblem, type PendingChatRequest } from './useChatPreflight'
+import { useThreadSelection } from './useThreadSelection'
 export function useChatRuntime(auth: AuthView | null | undefined) {
 const [basePolicy, setBasePolicy] = useState<ChatPolicyView | null>(null)
 const [credentials, setCredentials] = useState<CredentialView[]>([])
@@ -25,21 +26,12 @@ const { policy, catalogError } = useChatCatalog(auth, basePolicy)
 const streamController = useRef<AbortController | null>(null)
 const resumeAttempted = useRef(new Set<string>())
 const pendingRequest = useRef<PendingChatRequest | null>(null)
-const refreshHistory = useCallback(async (signal?: AbortSignal) => {
-if (!auth) return
-const list = await apiRequest<ThreadList>('/api/v1/chat/threads', { signal })
-setHistory(list.threads)
-}, [auth?.account.id])
-const loadThread = useCallback(async (threadId: string, signal?: AbortSignal) => {
-const detail = await apiRequest<ThreadDetail>(
-`/api/v1/chat/threads/${threadId}`, { signal })
-setCurrentChatId(detail.thread.id); setMessages(detail.messages)
-const warning = await lastChatWarning(detail.messages, signal)
-if (warning) setError(warning)
-return detail
-}, [])
+const { selection, selectThread, selected, loadThread, refreshHistory,
+openingThread, resetSelection, openThread, canSendTo } = useThreadSelection(
+auth?.account.id, { chatId: setCurrentChatId, messages: setMessages, history: setHistory, error: setError })
 useEffect(() => {
 streamController.current?.abort()
+resetSelection()
 setBasePolicy(null); setCredentials([]); setHistory([]); setMessages([])
 setCurrentChatId(null); idle(); setError('')
 resumeAttempted.current.clear()
@@ -62,6 +54,7 @@ return () => controller.abort()
 useEffect(() => () => streamController.current?.abort(), [])
 const streamRequest = useCallback(async (requestId: string, threadId: string) => {
 const controller = new AbortController()
+const at = selection.current
 streamController.current?.abort(); streamController.current = controller
 setBusy(true); setActiveRequestId(requestId)
 setMessages(current => current.map(message =>
@@ -71,6 +64,7 @@ try {
 const response = await apiStream(
 `/api/v1/chat/requests/${requestId}/events`, controller.signal)
 await consumeSse(response, (name, data) => {
+if (!selected(threadId, at)) return
 if (name === 'text.delta' && typeof data.text === 'string') {
 setMessages(current => current.map(message =>
 message.request_id === requestId && message.role === 'assistant'
@@ -87,12 +81,16 @@ setError(data.code === 'provider_outcome_unknown' || data.reason === 'provider_o
 }
 })
 } catch (reason) {
-if (!controller.signal.aborted) setError(chatProblem(reason))
+if (!controller.signal.aborted && selected(threadId, at)) setError(chatProblem(reason))
 } finally {
-if (streamController.current === controller) streamController.current = null
-idle()
+if (streamController.current === controller) {
+streamController.current = null
+if (selected(threadId, at)) idle()
+}
+if (selected(threadId, at)) {
 try { await loadThread(threadId); await refreshHistory() }
-catch (reason) { setError(current => current || chatProblem(reason)) }
+catch (reason) { if (selected(threadId, at)) setError(current => current || chatProblem(reason)) }
+}
 }
 }, [loadThread, refreshHistory])
 useEffect(() => {
@@ -117,19 +115,16 @@ return () => controller.abort()
 }, [auth?.account.id, busy, currentChatId, messages, loadThread, streamRequest])
 function newChat() {
 if (busy) return
+resetSelection()
 setCurrentChatId(null); setMessages([]); setError('')
 }
-async function openChat(chat: ThreadView) {
-if (busy) return
-setError('')
-try { await loadThread(chat.id) }
-catch (reason) { setError(chatProblem(reason)) }
-}
+const openChat = (chat: ThreadView) => busy ? Promise.resolve(false) : openThread(chat.id, currentChatId)
 async function send(text: string, selectedModelId: string, attachments: ChatAttachmentDraft[] = []): Promise<boolean> {
 const selectedModel = policy?.models.find(item => item.id === selectedModelId)
 const selectedCredential = selectedModel
   ? credentials.find(item => item.provider === providerFor(selectedModel)) : null
-if (!auth || !selectedModel || busy || !selectedCredential?.verified) return false
+if (!auth || !selectedModel || busy || !selectedCredential?.verified
+  || !canSendTo(currentChatId, auth.account.id)) return false
 setError(''); setBusy(true)
 beginChatMedia(auth.account.id)
 try {
@@ -143,6 +138,7 @@ const thread = await apiRequest<ThreadView>('/api/v1/chat/threads', {
 method: 'POST', csrf: auth.csrf_token, data: { title: null },
 })
 threadId = thread.id; setCurrentChatId(threadId)
+selectThread(threadId)
 }
 } catch (reason) {
 setBusy(false); setError(chatProblem(reason)); return false
@@ -209,7 +205,7 @@ streamController.current?.abort()
 setCredential(value); idle()
 }
 return {
-policy, catalogError, credentials, history, messages, currentChatId, busy, activeRequestId,
+policy, catalogError, credentials, history, messages, currentChatId, openingThread, busy, activeRequestId,
 pendingAdmission: !!pendingRequest.current,
 error, setError, refreshPolicy, setCredential, credentialDisabled,
 newChat, openChat, send, stop,
