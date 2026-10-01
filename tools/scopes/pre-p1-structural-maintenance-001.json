@@ -4,8 +4,8 @@
   "scope_class": "cross_domain",
   "risk": "medium",
   "independent_review_required": true,
-  "max_files": 31,
-  "large_scope_reason": "Bounded pre-P1 structural maintenance spans state tooling, documentation/context governance, and existing hygiene reporting; provenance and source-checkpoint test helpers keep stage evidence readable below file-size warnings; the only runtime dependency exception is the security hotfix pin urllib3 2.7.0 to 2.8.0, with no product runtime source change.",
+  "max_files": 32,
+  "large_scope_reason": "Bounded pre-P1 structural maintenance spans state tooling, documentation/context governance, and existing hygiene reporting; provenance and source-checkpoint test helpers keep stage evidence readable below file-size warnings; security dependency exceptions are urllib3 2.7.0 to 2.8.0 and the transitive brace-expansion lock resolution 2.1.4 to 2.1.7, with no product runtime source change.",
   "domains": [
     "state-tooling",
     "documentation-context",
@@ -13,7 +13,7 @@
   ],
   "non_goals": [
     "No Chat P1 implementation",
-    "No product runtime source changes; only the urllib3 2.8.0 security pin is permitted",
+    "No product runtime source changes; only the urllib3 2.8.0 pin and brace-expansion 2.1.7 lock resolution are permitted",
     "No Chat/Admin/Image/Gallery/Feed runtime source changes",
     "No migrations/providers/Credits/Media/Jobs semantics",
     "No Ruff or mass-format debt cleanup",
@@ -22,6 +22,7 @@
   "allowed": [
     "AGENTS.md",
     "requirements.lock",
+    "apps/web/package-lock.json",
     "docs/CONTEXT_MAP.json",
     "docs/CURRENT.md",
     "docs/DEVELOPMENT.md",
@@ -55,6 +56,7 @@
   "sensitive_approved": [
     "AGENTS.md",
     "requirements.lock",
+    "apps/web/package-lock.json",
     "tools/check_docs.py",
     "tools/project_state.py",
     "tools/project_state_evidence.py",
