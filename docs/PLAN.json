@@ -9,18 +9,18 @@
       "pr": 22,
       "state": "technical_ci_pass_draft"
     },
-    "working_branch": "codex/p1-chat-scroll-001",
+    "working_branch": "codex/p1-chat-history-paging-001",
     "provider_direction": "fal.ai / fal-ai/flux-2/klein/4b",
     "merge_deployed": false,
     "current_package_base": {
-      "branch": "sub/prep1-integration-glue-001",
-      "sha": "a38796af702c698cda68ef2135c047823ba3b52b",
+      "branch": "codex/p1-chat-scroll-001",
+      "sha": "dc31a725f97281537e0c718a56d8fd4dc8804433",
       "state": "completed_package_successor_base",
-      "checkpoint": "PRE-P1-STRUCTURAL-MAINTENANCE-001"
+      "checkpoint": "P1-CHAT-SCROLL-001"
     },
     "next_branch_source": "verified_working_head"
   },
-  "active_package": "P1-CHAT-SCROLL-001",
+  "active_package": "P1-CHAT-HISTORY-PAGING-001",
   "next_package": null,
   "rules": {
     "one_active_package": true,
