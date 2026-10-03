@@ -31,7 +31,17 @@ const [desktop, setDesktop] = useState(() => window.matchMedia(desktopQuery).mat
 const [expanded, setExpanded] = useState(initiallyExpanded)
 const [drawerOpen, setDrawerOpen] = useState(false)
 const [composerVersion, setComposerVersion] = useState(0)
+const composerChatId = useRef(runtime.currentChatId)
+const openPending = useRef(false)
 const drawerOpener = useRef<HTMLButtonElement>(null)
+useLayoutEffect(() => {
+if (!openPending.current) { composerChatId.current = runtime.currentChatId; return }
+if (runtime.openingThread) return
+openPending.current = false
+if (composerChatId.current === runtime.currentChatId) return
+composerChatId.current = runtime.currentChatId
+setComposerVersion(value => value + 1)
+}, [runtime.currentChatId, runtime.openingThread])
 useVisualViewport()
 useEffect(() => {
 const media = window.matchMedia(desktopQuery)
@@ -68,6 +78,8 @@ function closeSidebar() { if (desktop) setDesktopExpanded(false); else closeDraw
 function newChat() {
 if (runtime.busy || runtime.pendingAdmission) return
 chatScroll.remember()
+openPending.current = false
+composerChatId.current = null
 runtime.newChat()
 setComposerVersion(value => value + 1)
 if (!desktop) closeDrawer()
@@ -76,7 +88,12 @@ async function openChat(chat: (typeof runtime.history)[number]) {
 if (runtime.busy || runtime.pendingAdmission) return
   chatScroll.remember()
   if (!desktop) closeDrawer()
-  if (await runtime.openChat(chat)) setComposerVersion(value => value + 1)
+  openPending.current = true
+  if (await runtime.openChat(chat) && openPending.current) {
+    openPending.current = false
+    composerChatId.current = chat.id
+    setComposerVersion(value => value + 1)
+  }
 }
 const empty = runtime.messages.length === 0
 const disabled = !auth || !runtime.policy || runtime.openingThread

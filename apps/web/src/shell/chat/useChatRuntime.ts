@@ -109,7 +109,7 @@ else void loadThread(currentChatId)
 }).catch(reason => { if (!stale()) setError(chatProblem(reason))
 }).finally(() => { if (stale()) claim.release() })
 return () => controller.abort()
-}, [auth?.account.id, busy, currentChatId, messages, loadThread, streamRequest])
+}, [auth?.account.id, busy, currentChatId, messages, openingThread, loadThread, streamRequest])
 function newChat() {
 if (busy) return
 resetSelection()

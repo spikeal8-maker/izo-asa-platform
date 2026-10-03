@@ -4,7 +4,8 @@
   "scope_class": "normal",
   "risk": "medium",
   "independent_review_required": true,
-  "max_files": 9,
+  "max_files": 10,
+  "scope_expansion_reason": "Split selection-race regressions from the near-limit scroll spec after two exact-head review findings.",
   "allowed": [
     "docs/PLAN.json",
     "docs/PACKAGES.json",
@@ -14,6 +15,7 @@
     "apps/web/src/shell/chat/useThreadSelection.ts",
     "apps/web/src/shell/chat/useChatScroll.ts",
     "apps/web/e2e/chat-scroll.spec.ts",
+    "apps/web/e2e/chat-selection-races.spec.ts",
     "tools/scopes/p1-chat-scroll-001.json"
   ],
   "sensitive_approved": [
