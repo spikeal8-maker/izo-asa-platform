@@ -4,7 +4,7 @@ from __future__ import annotations
 from threading import Lock
 from uuid import UUID
 
-from fastapi import APIRouter, Request
+from fastapi import APIRouter, Query, Request
 from fastapi.exceptions import RequestValidationError
 from fastapi.exception_handlers import request_validation_exception_handler
 from fastapi.responses import JSONResponse, StreamingResponse
@@ -17,7 +17,7 @@ from .provider_openrouter import FakeOpenRouterProvider, OpenRouterProvider
 from .execution import FakeDeepSeekProvider
 from .schemas import (
     ChatPolicyView, OpenRouterCatalogView,
-    RequestCreate, RequestView, ThreadCreate, ThreadDetail,
+    RequestCreate, RequestView, ThreadCreate, ThreadDetail, MessagePage,
     ThreadList, ThreadView,
 )
 from .service import ChatError, ChatService
@@ -166,6 +166,14 @@ def attach_chat(app, database_config, accounts_provider) -> None:
         return service.thread_detail(
             bearer(request, service),
             thread_id)
+
+    @router.get(
+        "/threads/{thread_id}/messages", response_model=MessagePage)
+    def older_messages(thread_id: UUID, request: Request,
+                       before_sequence: int = Query(ge=1, le=9223372036854775807)):
+        service = runtime_service(request)
+        return service.older_messages(
+            bearer(request, service), thread_id, before_sequence)
 
     @router.post(
         "/threads/{thread_id}/requests",

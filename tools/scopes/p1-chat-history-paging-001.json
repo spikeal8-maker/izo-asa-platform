@@ -1,0 +1,42 @@
+{
+  "package_id": "P1-CHAT-HISTORY-PAGING-001",
+  "base": "dc31a725f97281537e0c718a56d8fd4dc8804433",
+  "scope_class": "cross_domain",
+  "risk": "high",
+  "independent_review_required": true,
+  "max_files": 40,
+  "large_scope_reason": "One bounded older-message flow crosses the account-owned Chat API, generated public contract, browser history state, scroll anchoring and focused service/browser regressions. The existing near-limit runtime is split before adding more behavior.",
+  "domains": ["chat-api", "web-chat", "contracts", "tests", "governance"],
+  "non_goals": [
+    "No thread-list pagination or search, branch/attempt, Context Engine or renderer/action work",
+    "No Admin, BYOK, provider control, spend authority, live provider call or deploy"
+  ],
+  "allowed": [
+    "docs/CURRENT.md",
+    "docs/PLAN.json",
+    "docs/PACKAGES.json",
+    "docs/reviews/P1-CHAT-HISTORY-PAGING-001-source-audit.md",
+    "tools/scopes/p1-chat-history-paging-001.json",
+    "apps/api/izo/chat/README.md",
+    "apps/api/izo/chat/conversations.py",
+    "apps/api/izo/chat/history_pages.py",
+    "apps/api/izo/chat/routes.py",
+    "apps/api/izo/chat/schemas.py",
+    "apps/web/src/shared/api.ts",
+    "apps/web/src/shared/api.generated.ts",
+    "apps/web/src/shell/App.tsx",
+    "apps/web/src/shell/ChatPage.tsx",
+    "apps/web/src/shell/chat.css",
+    "apps/web/src/shell/chat/README.md",
+    "apps/web/src/shell/chat/useChatRuntime.ts",
+    "apps/web/src/shell/chat/useChatScroll.ts",
+    "apps/web/src/shell/chat/useThreadSelection.ts",
+    "apps/web/src/shell/chat/streamChatRequest.ts",
+    "apps/web/e2e/chat-history-paging.spec.ts",
+    "packages/contracts/openapi.json",
+    "tests/test_chat_history_paging.py"
+  ],
+  "sensitive_approved": [
+    "tools/scopes/p1-chat-history-paging-001.json"
+  ]
+}

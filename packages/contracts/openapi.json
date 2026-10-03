@@ -1779,6 +1779,34 @@
         "title": "MailReceipt",
         "type": "object"
       },
+      "MessagePage": {
+        "properties": {
+          "messages": {
+            "items": {
+              "$ref": "#/components/schemas/MessageView"
+            },
+            "title": "Messages",
+            "type": "array"
+          },
+          "next_before_sequence": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Next Before Sequence"
+          }
+        },
+        "required": [
+          "messages",
+          "next_before_sequence"
+        ],
+        "title": "MessagePage",
+        "type": "object"
+      },
       "MessageView": {
         "properties": {
           "attachments": {
@@ -2779,6 +2807,17 @@
             },
             "title": "Messages",
             "type": "array"
+          },
+          "next_before_sequence": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Next Before Sequence"
           },
           "thread": {
             "$ref": "#/components/schemas/ThreadView"
@@ -5439,6 +5478,60 @@
           }
         },
         "summary": "Thread",
+        "tags": [
+          "chat"
+        ]
+      }
+    },
+    "/api/v1/chat/threads/{thread_id}/messages": {
+      "get": {
+        "operationId": "older_messages_api_v1_chat_threads__thread_id__messages_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "thread_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Thread Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "before_sequence",
+            "required": true,
+            "schema": {
+              "maximum": 9223372036854775807,
+              "minimum": 1,
+              "title": "Before Sequence",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MessagePage"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Older Messages",
         "tags": [
           "chat"
         ]

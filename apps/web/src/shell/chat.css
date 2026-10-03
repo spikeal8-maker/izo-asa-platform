@@ -83,6 +83,7 @@
 }
 .chat-start-state .chat-start-note { text-align: center; }
 .chat-turns { padding-top: var(--chat-gap-xs); }
+.chat-load-older { display: block; margin: 0 auto var(--chat-gap-md); padding: var(--chat-gap-sm) var(--chat-gap-md); }
 .chat-turn {
   display: flex;
   margin: 0 0 var(--chat-gap-lg);

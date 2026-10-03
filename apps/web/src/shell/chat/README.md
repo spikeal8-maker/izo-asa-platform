@@ -45,3 +45,11 @@ for rail/drawer/focus; `chat-responsive.spec.ts` for viewport geometry;
 This existing Chat shell remains the frontend owner. Product behavior: `docs/PRODUCT.md`; interaction/renderer acceptance: `docs/UX.md`; branch/context/domain boundaries: `docs/ARCHITECTURE.md`; source/process rules: `docs/MAINTAINABILITY.md` and `docs/DEVELOPMENT.md`. Proposal snapshots are provenance only.
 
 Nearest browser evidence remains `apps/web/e2e/chat-responsive.spec.ts` and `apps/web/e2e/chat-attachments.spec.ts` plus the current Chat acceptance suites. P1 converges this implementation; it does not create a parallel Chat page.
+
+Long-thread history loads older server pages through `useThreadSelection`; the
+exclusive sequence cursor and loaded messages live only in current account/thread
+UI state. `App.tsx` keys the Chat page by account identity so changing account
+clears its private history before paint. `useChatScroll` compensates for
+prepended height before paint so the reading position stays fixed. Late pages
+from a prior selection are ignored.
+`chat-history-paging.spec.ts` covers desktop/phone, reload and stale responses.

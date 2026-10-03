@@ -17,6 +17,7 @@ export type ThreadView = components['schemas']['ThreadView']
 export type ThreadList = components['schemas']['ThreadList']
 export type MessageView = components['schemas']['MessageView']
 export type ThreadDetail = components['schemas']['ThreadDetail']
+export type MessagePage = components['schemas']['MessagePage']
 export type ChatRequestView = components['schemas']['RequestView']
 
 export class ApiError extends Error {
