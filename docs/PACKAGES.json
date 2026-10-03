@@ -402,12 +402,13 @@
       "status": "planned"
     },
     "P1-CHAT-SCROLL-001": {
+      "checkpoint": "P1-CHAT-SCROLL-001",
       "decides_next": true,
       "depends_on": [
         "PRE-P1-STRUCTURAL-MAINTENANCE-001"
       ],
       "goal": "Keep streamed Chat replies in view only while the reader is near the bottom, and restore per-conversation reading position on history switch across desktop and phone; use the existing Chat UI and server history, with focused browser evidence.",
-      "status": "active"
+      "status": "complete"
     },
     "PLATFORM-001": {
       "depends_on": [
