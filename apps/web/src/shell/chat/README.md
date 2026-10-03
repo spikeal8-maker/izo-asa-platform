@@ -50,6 +50,7 @@ Long-thread history loads older server pages through `useThreadSelection`; the
 exclusive sequence cursor and loaded messages live only in current account/thread
 UI state. `App.tsx` keys the Chat page by account identity so changing account
 clears its private history before paint. `useChatScroll` compensates for
-prepended height before paint so the reading position stays fixed. Late pages
-from a prior selection are ignored.
+prepended content before paint and holds the visible message anchor through
+later private-image layout changes. User scroll input releases that anchor.
+Late pages from a prior selection are ignored.
 `chat-history-paging.spec.ts` covers desktop/phone, reload and stale responses.

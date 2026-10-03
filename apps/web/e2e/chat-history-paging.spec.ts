@@ -54,6 +54,38 @@ test('loads older messages once and keeps the reading position after prepend', a
   await expect(page.getByText(/^A message 1 /)).toHaveCount(0)
 })
 
+test('late image growth above the viewport keeps the same reading anchor', async ({ page }) => {
+  await workspace(page)
+  await page.route('**/api/v1/chat/threads', route => route.fulfill({ json: { threads: [A] } }))
+  await page.route(`**/api/v1/chat/threads/${A.id}`, route => route.fulfill({ json: {
+    thread: A, messages: Array.from({ length: 100 }, (_, i) => message(i + 21)), next_before_sequence: 21,
+  } }))
+  const attachment = { id: '44444444-4444-4444-8444-444444444444',
+    asset_id: '55555555-5555-4555-8555-555555555555', media_type: 'image/png',
+    byte_size: 128, width: 220, height: 260, sha256: 'a'.repeat(64), created_at: 1 }
+  await page.route(`**/api/v1/chat/threads/${A.id}/messages?before_sequence=21`, route => route.fulfill({ json: {
+    messages: [{ ...message(1), attachments: [attachment] }], next_before_sequence: null,
+  } }))
+  await page.goto('/')
+  await choose(page, A.title)
+  await expect(page.getByText(/^A message 120 /)).toBeAttached()
+  await scroll(page).evaluate(node => {
+    (node as HTMLElement).style.overflowAnchor = 'none'
+    node.scrollTop = 400
+  })
+  const reader = page.getByText(/^A message 25 /)
+  const before = await reader.boundingBox()
+  await page.getByRole('button', { name: 'Загрузить ранние сообщения' })
+    .evaluate(button => (button as HTMLButtonElement).click())
+  const image = page.locator('.chat-message-image')
+  await expect(image).toBeAttached()
+  await expect.poll(async () => (await reader.boundingBox())?.y).toBeCloseTo(before!.y, 0)
+  await image.evaluate(node => { (node as HTMLElement).style.height = '260px' })
+  await page.evaluate(() => new Promise<void>(resolve => requestAnimationFrame(() => requestAnimationFrame(() => resolve()))))
+  await expect.poll(async () => Math.abs(((await reader.boundingBox())?.y ?? 0) - before!.y))
+    .toBeLessThan(4)
+})
+
 for (const fails of [false, true]) test(`late ${fails ? 'error' : 'page'} cannot contaminate another selected thread`, async ({ page }) => {
   await workspace(page)
   const delayed = gate()
