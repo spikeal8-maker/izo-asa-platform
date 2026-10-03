@@ -152,6 +152,11 @@ class MessageView(BaseModel):
 class ThreadDetail(BaseModel):
     thread: ThreadView
     messages: list[MessageView]
+    next_before_sequence: int | None = None
+
+class MessagePage(BaseModel):
+    messages: list[MessageView]
+    next_before_sequence: int | None
 
 class RequestCreate(StrictInput):
     request_id: UUID

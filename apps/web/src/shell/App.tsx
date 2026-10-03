@@ -94,7 +94,7 @@ export function App() {
       {catalogAdmin ? <AdminCatalogPage auth={auth} /> : accessAdmin ? <AccessPage key={path} /> : admin ? <AdminPage key={path} path={path} /> : credits ? <CreditsPage />
         : security ? <SecurityPage key={path} mode={security} />
         : account ? <AccountPage key={path} mode={path === '/register' ? 'register' : path === '/login' ? 'login' : 'account'} />
-        : chat ? <ChatPage auth={auth} theme={theme} onThemeChange={setTheme} onLogout={() => void logout()} />
+        : chat ? <ChatPage key={auth?.account.id ?? 'guest'} auth={auth} theme={theme} onThemeChange={setTheme} onLogout={() => void logout()} />
         : feed ? <FeedPage /> : studio ? <Studio key={path} /> : gallery ? <Gallery key={path} />
         : detail ? <AssetPage key={path} id={path.slice('/gallery/'.length)} />
         : jobs ? <ResultPanel key={path} id={path === '/jobs' ? undefined : path.slice('/jobs/'.length)} />

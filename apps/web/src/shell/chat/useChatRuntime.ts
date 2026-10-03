@@ -1,15 +1,16 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import {
-apiRequest, apiStream, ApiError, chatProviderProblem,
+apiRequest, ApiError, chatProviderProblem,
 type AuthView, type ChatPolicyView, type ChatRequestView, type CredentialListView, type CredentialView,
 type MessageView, type ThreadList, type ThreadView,
 } from '../../shared/api'
-import { consumeSse, useChatCatalog, useCredentialSync } from './useChatCatalog'
+import { useChatCatalog, useCredentialSync } from './useChatCatalog'
 import { providerFor } from './modelCatalog'
 import { chatImageProblem, chatProblem, forgetChatOperations, resolveChatAttachments, type ChatAttachmentDraft } from './chatAttachments'
 import { beginChatMedia, endChatMedia } from './AttachmentControl'
 import { admitChatRequest, nextChatRequest, PreflightProblem, type PendingChatRequest } from './useChatPreflight'
 import { useThreadSelection } from './useThreadSelection'
+import { streamChatRequest } from './streamChatRequest'
 export function useChatRuntime(auth: AuthView | null | undefined) {
 const [basePolicy, setBasePolicy] = useState<ChatPolicyView | null>(null)
 const [credentials, setCredentials] = useState<CredentialView[]>([])
@@ -25,7 +26,7 @@ const publishCredentialChange = useCredentialSync(auth, setCredentials)
 const { policy, catalogError } = useChatCatalog(auth, basePolicy)
 const streamController = useRef<AbortController | null>(null)
 const pendingRequest = useRef<PendingChatRequest | null>(null)
-const { selection, selectThread, selected, loadThread, refreshHistory,
+const { selection, selectThread, selected, loadThread, loadOlder, olderCursor, loadingOlder, refreshHistory,
 openingThread, resetSelection, openThread, canSendTo, claimResume, clearResumeClaims, stopResume } = useThreadSelection(
 auth?.account.id, { chatId: setCurrentChatId, messages: setMessages, history: setHistory, error: setError })
 useEffect(() => {
@@ -52,45 +53,8 @@ return () => controller.abort()
 }, [auth?.account.id])
 useEffect(() => () => streamController.current?.abort(), [])
 const streamRequest = useCallback(async (requestId: string, threadId: string) => {
-const controller = new AbortController()
-const at = selection.current
-streamController.current?.abort(); streamController.current = controller
-setBusy(true); setActiveRequestId(requestId)
-setMessages(current => current.map(message =>
-message.request_id === requestId && message.role === 'assistant'
-? { ...message, content: '', state: 'partial' } : message))
-try {
-const response = await apiStream(
-`/api/v1/chat/requests/${requestId}/events`, controller.signal)
-await consumeSse(response, (name, data) => {
-if (!selected(threadId, at)) return
-if (name === 'text.delta' && typeof data.text === 'string') {
-setMessages(current => current.map(message =>
-message.request_id === requestId && message.role === 'assistant'
-? { ...message, content: message.content + data.text, state: 'partial' }
-: message))
-} else if (name === 'message.error' && typeof data.code === 'string') {
-setError(chatProviderProblem(data.code,
-  typeof data.provider === 'string' ? data.provider : undefined))
-} else if (name === 'message.interrupted') {
-setError(data.code === 'provider_outcome_unknown' || data.reason === 'provider_outcome_unknown'
-  ? chatProviderProblem('provider_outcome_unknown')
-  : data.reason === 'stopped' ? ''
-  : 'Ответ был прерван. Частичный текст сохранён.')
-}
-})
-} catch (reason) {
-if (!controller.signal.aborted && selected(threadId, at)) setError(chatProblem(reason))
-} finally {
-if (streamController.current === controller) {
-streamController.current = null
-if (selected(threadId, at)) idle()
-}
-if (selected(threadId, at)) {
-try { await loadThread(threadId); await refreshHistory() }
-catch (reason) { if (selected(threadId, at)) setError(current => current || chatProblem(reason)) }
-}
-}
+await streamChatRequest(requestId, threadId, { selection, selected, streamController,
+setBusy, setActiveRequestId, setMessages, setError, idle, loadThread, refreshHistory })
 }, [loadThread, refreshHistory])
 useEffect(() => {
 if (!auth || busy || !currentChatId) return
@@ -203,6 +167,8 @@ setCredential(value); idle()
 }
 return {
 policy, catalogError, credentials, history, messages, currentChatId, openingThread, busy, activeRequestId,
+loadOlder: (beforePrepend: () => void) => currentChatId && loadOlder(currentChatId, beforePrepend),
+olderCursor, loadingOlder,
 pendingAdmission: !!pendingRequest.current,
 error, setError, refreshPolicy, setCredential, credentialDisabled,
 newChat, openChat, send, stop,

@@ -5,9 +5,10 @@ from sqlalchemy.exc import IntegrityError
 from . import tables as t
 from .attachments import AttachmentMixin
 from .credentials import ChatError
+from .history_pages import older_messages, thread_detail
 from .request_state import RequestStateMixin, UNKNOWN_PAID_OUTCOME
 from .schemas import MessageView, RequestView, ThreadDetail, ThreadList, ThreadView
-from .schemas import MESSAGE_PAGE_LIMIT, MODEL_REVISION, REQUEST_WINDOW_LIMIT, THREAD_PAGE_LIMIT
+from .schemas import MODEL_REVISION, REQUEST_WINDOW_LIMIT, THREAD_PAGE_LIMIT
 from .schemas import OPENROUTER_AUTO_MODEL
 class ConversationMixin(AttachmentMixin, RequestStateMixin):
 	def create_thread(self, raw, csrf, title: str | None) -> ThreadView:
@@ -41,24 +42,9 @@ class ConversationMixin(AttachmentMixin, RequestStateMixin):
 			attachments=[cls._attachment_view(item) for item in attachment_rows],
 			created_at=row["created_at"], updated_at=row["updated_at"])
 	def thread_detail(self, raw, thread_id: UUID) -> ThreadDetail:
-		with self.engine.begin() as conn:
-			account, _ = self._account(conn, raw)
-			thread = conn.execute(sa.select(t.threads).where(
-				t.threads.c.id == thread_id,
-				t.threads.c.account_id == account["id"])).mappings().first()
-			if not thread:
-				raise ChatError(404, "thread_not_found")
-			rows = conn.execute(sa.select(t.messages).where(
-				t.messages.c.thread_id == thread_id).order_by(
-				t.messages.c.sequence.desc()).limit(
-				MESSAGE_PAGE_LIMIT)).mappings().all()
-			ordered = list(reversed(rows))
-			grouped = self._attachments_for_messages(
-				conn, account["id"], [row["id"] for row in ordered])
-		return ThreadDetail(
-			thread=self._thread_view(thread),
-			messages=[self._message_view(row, grouped.get(row["id"], ()))
-			          for row in ordered])
+		return thread_detail(self, raw, thread_id)
+	def older_messages(self, raw, thread_id: UUID, before_sequence: int):
+		return older_messages(self, raw, thread_id, before_sequence)
 	def create_request(self, raw, csrf, thread_id: UUID, command) -> RequestView:
 		# Resolve remote catalog IDs before acquiring the thread row lock. Durable
 		# request replays still work when the provider catalog is unavailable.
