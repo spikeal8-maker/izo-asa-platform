@@ -13,6 +13,7 @@ export function useThreadSelection(accountId: string | undefined, update: {
   const currentAccount = useRef(accountId)
   currentAccount.current = accountId
   const selection = useRef<Selection>({ accountId, threadId: null, version: 0 })
+  const resumeClaims = useRef(new Set<string>())
   const [openingThread, setOpeningThread] = useState(false)
 
   const selectThread = useCallback((threadId: string | null) => {
@@ -20,6 +21,15 @@ export function useThreadSelection(accountId: string | undefined, update: {
   }, [])
   const selected = useCallback((threadId: string, at: Selection) =>
     selection.current === at && currentAccount.current === at.accountId && at.threadId === threadId, [])
+  const claimResume = (threadId: string, requestId: string) => {
+    const at = selection.current
+    const key = `${requestId}:${at.version}`
+    if (!selected(threadId, at) || resumeClaims.current.has(requestId) || resumeClaims.current.has(key)) return null
+    resumeClaims.current.add(key)
+    return { current: () => selected(threadId, at), release: () => resumeClaims.current.delete(key) }
+  }
+  const clearResumeClaims = () => resumeClaims.current.clear()
+  const stopResume = (requestId: string) => resumeClaims.current.add(requestId)
 
   const refreshHistory = useCallback(async (signal?: AbortSignal) => {
     if (!accountId) return
@@ -72,5 +82,5 @@ export function useThreadSelection(accountId: string | undefined, update: {
     !openingThread && selection.current.accountId === owner && selection.current.threadId === threadId
 
   return { selection, selectThread, selected, loadThread, refreshHistory,
-    openingThread, resetSelection, openThread, canSendTo }
+    openingThread, resetSelection, openThread, canSendTo, claimResume, clearResumeClaims, stopResume }
 }

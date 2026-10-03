@@ -5,14 +5,29 @@ const threads = [
   { id: '11111111-1111-4111-8111-111111111131', title: 'Длинный разговор A', created_at: 1, updated_at: 2 },
   { id: '11111111-1111-4111-8111-111111111132', title: 'Длинный разговор B', created_at: 1, updated_at: 2 },
 ]
+const [A, B] = threads
 const messages = (label: string) => Array.from({ length: 25 }, (_, index) => ({
   id: `22222222-2222-4222-8222-${String(index + (label === 'A' ? 0 : 100)).padStart(12, '0')}`,
   role: 'user', sequence: index + 1, content: `${label} ${index} ` + 'Длинная строка разговора. '.repeat(12),
   state: 'complete', created_at: 1, updated_at: 1,
 }))
+const partial = (requestId: string, suffix: string) => ({
+  id: `22222222-2222-4222-8222-2222222222${suffix}`, request_id: requestId,
+  role: 'assistant', sequence: 26, content: '', state: 'partial', created_at: 1, updated_at: 1,
+})
 const scroll = (page: Page) => page.locator('.chat-scroll')
 const distanceFromBottom = (page: Page) => scroll(page).evaluate(node =>
   node.scrollHeight - node.clientHeight - node.scrollTop)
+const gate = () => {
+  let release!: () => void
+  const wait = new Promise<void>(r => { release = r })
+  return { wait, release }
+}
+test.beforeEach(({}, info) => test.skip(!['phone-small', 'laptop'].includes(info.project.name)))
+const setup = async (page: Page, items = threads) => {
+  await workspace(page)
+  await page.route('**/api/v1/chat/threads', route => route.fulfill({ json: { threads: items } }))
+}
 
 async function choose(page: Page, title: string) {
   if (await page.getByRole('button', { name: 'Открыть панель' }).isVisible()) {
@@ -21,79 +36,68 @@ async function choose(page: Page, title: string) {
   await page.getByRole('button', { name: title }).click()
 }
 
-test('delayed history load and A→B→A restore the reader viewport', async ({ page }, info) => {
-  test.skip(!['phone-small', 'laptop'].includes(info.project.name))
-  await workspace(page)
-  await page.route('**/api/v1/chat/threads', route => route.fulfill({ json: { threads } }))
-  let releaseB!: () => void
-  const waitB = new Promise<void>(resolve => { releaseB = resolve })
+test('delayed history load and A→B→A restore the reader viewport', async ({ page }) => {
+  await setup(page)
+  const delayedB = gate()
   await page.route('**/api/v1/chat/threads/*', async route => {
     const thread = threads.find(item => route.request().url().endsWith(item.id))!
-    if (thread === threads[1]) await waitB
-    await route.fulfill({ json: { thread, messages: messages(thread === threads[0] ? 'A' : 'B') } })
+    if (thread === B) await delayedB.wait
+    await route.fulfill({ json: { thread, messages: messages(thread === A ? 'A' : 'B') } })
   })
   await page.goto('/')
-  await choose(page, threads[0].title)
+  await choose(page, A.title)
   await expect(page.getByText(/^A 24 /)).toBeAttached()
   await expect.poll(() => distanceFromBottom(page)).toBeLessThanOrEqual(2)
   await scroll(page).evaluate(node => { node.scrollTop = 220 })
   await expect.poll(() => scroll(page).evaluate(node => node.scrollTop)).toBeGreaterThanOrEqual(200)
-  await choose(page, threads[1].title)
+  await choose(page, B.title)
   await expect(page.getByText(/^A 24 /)).toBeAttached()
   expect(await scroll(page).evaluate(node => node.scrollTop)).toBeGreaterThanOrEqual(200)
-  releaseB()
+  delayedB.release()
   await expect(page.getByText(/^B 24 /)).toBeAttached()
   await expect.poll(() => distanceFromBottom(page)).toBeLessThanOrEqual(2)
-  await choose(page, threads[0].title)
+  await choose(page, A.title)
   await expect(page.getByText(/^A 24 /)).toBeAttached()
   await expect.poll(() => scroll(page).evaluate(node => node.scrollTop)).toBeGreaterThanOrEqual(200)
   expect(await scroll(page).evaluate(node => node.scrollTop)).toBeLessThanOrEqual(240)
 })
 
-for (const staleFails of [false, true]) test(`latest selected thread ignores late ${staleFails ? 'error' : 'response'}`, async ({ page }, info) => {
-  test.skip(!['phone-small', 'laptop'].includes(info.project.name))
-  await workspace(page)
-  await page.route('**/api/v1/chat/threads', route => route.fulfill({ json: { threads } }))
-  let enteredA!: () => void
-  const requestedA = new Promise<void>(resolve => { enteredA = resolve })
-  let releaseA!: () => void
-  const waitA = new Promise<void>(resolve => { releaseA = resolve })
+for (const staleFails of [false, true]) test(`latest selected thread ignores late ${staleFails ? 'error' : 'response'}`, async ({ page }) => {
+  await setup(page)
+  const delayedA = gate()
   await page.route('**/api/v1/chat/threads/*', async route => {
-    const isA = route.request().url().endsWith(threads[0].id)
+    const isA = route.request().url().endsWith(A.id)
     if (isA) {
-      enteredA()
-      await waitA
+      await delayedA.wait
       if (staleFails) return route.fulfill({ status: 503, json: { code: 'unavailable' } })
     }
-    const thread = isA ? threads[0] : threads[1]
+    const thread = isA ? A : B
     return route.fulfill({ json: { thread, messages: messages(isA ? 'A' : 'B') } })
   })
   await page.goto('/')
-  await choose(page, threads[0].title)
+  const requestedA = page.waitForRequest(`**/api/v1/chat/threads/${A.id}`)
+  await choose(page, A.title)
   await requestedA
-  await choose(page, threads[1].title)
+  await choose(page, B.title)
   await expect(page.getByText(/^B 24 /)).toBeAttached()
-  const staleSettled = page.waitForEvent('requestfinished', request => request.url().endsWith(threads[0].id))
-  releaseA()
+  const staleSettled = page.waitForEvent('requestfinished', request => request.url().endsWith(A.id))
+  delayedA.release()
   await staleSettled
   await expect(page.getByText(/^B 24 /)).toBeAttached()
   await expect(page.getByText(/^A 24 /)).toHaveCount(0)
-  await expect(page.locator('.chat-history-item.active')).toHaveText(threads[1].title)
+  await expect(page.locator('.chat-history-item.active')).toHaveText(B.title)
   await expect(page.getByRole('alert')).toHaveCount(0)
 })
 
-for (const fails of [false, true]) test(`opening a thread ${fails ? 'fails safely' : 'cannot send to the old thread'}`, async ({ page }, info) => {
-  test.skip(!['phone-small', 'laptop'].includes(info.project.name))
-  await workspace(page)
+for (const fails of [false, true]) test(`opening a thread ${fails ? 'fails safely' : 'cannot send to the old thread'}`, async ({ page }) => {
+  await setup(page)
   const admitted: string[] = []
-  let releaseB!: () => void
-  const waitB = new Promise<void>(resolve => { releaseB = resolve })
-  await page.route('**/api/v1/chat/threads', route => route.fulfill({ json: { threads } }))
+  const delayedB = gate()
   await page.route('**/api/v1/chat/threads/*', async route => {
-    const isB = route.request().url().endsWith(threads[1].id)
-    if (isB) await waitB
+    const isB = route.request().url().endsWith(B.id)
+    if (isB) await delayedB.wait
     if (isB && fails) return route.fulfill({ status: 503, json: { code: 'unavailable' } })
-    const thread = isB ? threads[1] : threads[0]
+    const thread = isB ? B : A
     return route.fulfill({ json: { thread, messages: messages(isB ? 'B' : 'A') } })
   })
   await page.route('**/api/v1/chat/threads/*/requests', route => {
@@ -104,20 +108,20 @@ for (const fails of [false, true]) test(`opening a thread ${fails ? 'fails safel
     headers: { 'content-type': 'text/event-stream' }, body: 'event: message.completed\ndata: {}\n\n',
   }))
   await page.goto('/')
-  await choose(page, threads[0].title)
+  await choose(page, A.title)
   await expect(page.getByText(/^A 24 /)).toBeAttached()
   const draft = page.getByRole('textbox', { name: 'Сообщение' })
   await draft.fill('Проверить адресата')
-  await choose(page, threads[1].title)
+  await choose(page, B.title)
   await expect(page.getByText(/^A 24 /)).toBeAttached()
   await expect(draft).toBeDisabled()
   await page.locator('.chat-composer').evaluate(form => (form as HTMLFormElement).requestSubmit())
   expect(await draft.inputValue()).toBe('Проверить адресата')
   expect(admitted).toEqual([])
-  releaseB()
+  delayedB.release()
   if (fails) {
     await expect(page.getByRole('alert')).toBeVisible()
-    await expect(page.locator('.chat-history-item.active')).toHaveText(threads[0].title)
+    await expect(page.locator('.chat-history-item.active')).toHaveText(A.title)
     await expect(page.getByText(/^A 24 /)).toBeAttached()
     await expect(draft).toHaveValue('Проверить адресата')
   } else {
@@ -128,31 +132,89 @@ for (const fails of [false, true]) test(`opening a thread ${fails ? 'fails safel
   await expect(draft).toBeEnabled()
   await page.getByRole('button', { name: 'Отправить' }).click()
   await expect.poll(() => admitted).toEqual([
-    `/api/v1/chat/threads/${fails ? threads[0].id : threads[1].id}/requests`,
+    `/api/v1/chat/threads/${fails ? A.id : B.id}/requests`,
   ])
 })
 
-test('SSE text growth keeps a reader at their earlier position', async ({ page }, info) => {
-  test.skip(!['phone-small', 'laptop'].includes(info.project.name))
-  await workspace(page)
+for (const early of [false, true]) test(`stale A status: ${early ? 'early' : 'late'} return`, async ({ page }) => {
+  await setup(page)
+  const requestId = '33333333-3333-4333-8333-333333333334'
+  const assistant = partial(requestId, '98')
+  const delayedStatus = gate()
+  const delayedB = gate()
+  const admitted: string[] = []
+  let streamed = 0
+  let statusCalls = 0
+  await page.route('**/api/v1/chat/threads/*', async route => {
+    const isB = route.request().url().endsWith(B.id)
+    if (isB) await delayedB.wait
+    const thread = isB ? B : A
+    return route.fulfill({ json: { thread, messages: isB ? messages('B') : [...messages('A'), assistant] } })
+  })
+  await page.route(`**/api/v1/chat/requests/${requestId}`, async route => {
+    statusCalls += 1
+    await delayedStatus.wait
+    return route.fulfill({ json: { id: requestId, thread_id: A.id, state: 'streaming' } })
+  })
+  await page.route(`**/api/v1/chat/requests/${requestId}/events`, route => {
+    streamed += 1
+    return route.abort()
+  })
+  await page.route('**/api/v1/chat/threads/*/requests', route => {
+    admitted.push(new URL(route.request().url()).pathname)
+    return route.fulfill({ json: { id: route.request().postDataJSON().request_id, state: 'pending' } })
+  })
+  await page.goto('/')
+  const requested = page.waitForRequest(`**/api/v1/chat/requests/${requestId}`)
+  await choose(page, A.title)
+  await requested
+  await choose(page, B.title)
+  if (early) {
+    await choose(page, A.title)
+    await expect.poll(() => statusCalls).toBe(2)
+  }
+  await expect(page.getByText(/^A 24 /)).toBeAttached()
+  const statusFinished = page.waitForEvent('requestfinished', request =>
+    request.url().endsWith(`/api/v1/chat/requests/${requestId}`))
+  delayedStatus.release()
+  await statusFinished
+  await page.evaluate(() => new Promise<number>(requestAnimationFrame))
+  delayedB.release()
+  if (early) {
+    await expect.poll(() => streamed).toBe(1)
+    await expect(page.getByText(/^B 24 /)).toHaveCount(0)
+    return
+  }
+  await expect(page.getByText(/^B 24 /)).toBeAttached()
+  await expect(page.getByText(/^A 24 /)).toHaveCount(0)
+  await expect(page.getByRole('alert')).toHaveCount(0)
+  const draft = page.getByRole('textbox', { name: 'Сообщение' })
+  await expect(draft).toBeEnabled()
+  await expect(page.locator('[aria-label="Новый чат"]')).toBeEnabled()
+  await expect(page.locator('.chat-history-item').first()).toBeEnabled()
+  expect(streamed).toBe(0)
+  await draft.fill('Ответить в B')
+  await page.getByRole('button', { name: 'Отправить' }).click()
+  await expect.poll(() => admitted).toEqual([`/api/v1/chat/threads/${B.id}/requests`])
+  await expect(draft).toBeEnabled()
+  await choose(page, A.title)
+  await expect.poll(() => streamed).toBe(1)
+})
+
+test('SSE text growth keeps a reader at their earlier position', async ({ page }) => {
+  await setup(page, [A])
   const requestId = '33333333-3333-4333-8333-333333333333'
   const streamed = 'Продолжение ответа. '.repeat(90)
-  const assistant = { id: '22222222-2222-4222-8222-222222222299', request_id: requestId,
-    role: 'assistant', sequence: 26, content: '', state: 'partial', created_at: 1, updated_at: 1 }
+  const assistant = partial(requestId, '99')
   let completed = false
-  let entered!: () => void
-  const requested = new Promise<void>(resolve => { entered = resolve })
-  let release!: () => void
-  const gate = new Promise<void>(resolve => { release = resolve })
-  await page.route('**/api/v1/chat/threads', route => route.fulfill({ json: { threads: [threads[0]] } }))
-  await page.route(`**/api/v1/chat/threads/${threads[0].id}`, route => route.fulfill({ json: {
-    thread: threads[0], messages: [...messages('A'), { ...assistant,
+  const delayedStatus = gate()
+  await page.route(`**/api/v1/chat/threads/${A.id}`, route => route.fulfill({ json: {
+    thread: A, messages: [...messages('A'), { ...assistant,
       content: completed ? streamed : '', state: completed ? 'complete' : 'partial' }],
   } }))
   await page.route(`**/api/v1/chat/requests/${requestId}`, async route => {
-    entered()
-    await gate
-    return route.fulfill({ json: { id: requestId, thread_id: threads[0].id, state: 'streaming' } })
+    await delayedStatus.wait
+    return route.fulfill({ json: { id: requestId, thread_id: A.id, state: 'streaming' } })
   })
   await page.route(`**/api/v1/chat/requests/${requestId}/events`, route => {
     completed = true
@@ -160,25 +222,24 @@ test('SSE text growth keeps a reader at their earlier position', async ({ page }
       body: `event: text.delta\ndata: ${JSON.stringify({ text: streamed })}\n\nevent: message.completed\ndata: {}\n\n` })
   })
   await page.goto('/')
-  await choose(page, threads[0].title)
+  const requested = page.waitForRequest(`**/api/v1/chat/requests/${requestId}`)
+  await choose(page, A.title)
   await requested
   await expect(page.getByText(/^A 24 /)).toBeAttached()
   await scroll(page).evaluate(node => { node.scrollTop = 200 })
   await expect.poll(() => scroll(page).evaluate(node => node.scrollTop)).toBeGreaterThanOrEqual(180)
-  release()
+  delayedStatus.release()
   await expect(page.getByText(/^Продолжение ответа/)).toBeAttached()
   await expect.poll(() => scroll(page).evaluate(node => node.scrollTop)).toBeLessThanOrEqual(240)
 })
 
-test('content growth follows only a reader near the end', async ({ page }, info) => {
-  test.skip(!['phone-small', 'laptop'].includes(info.project.name))
-  await workspace(page)
-  await page.route('**/api/v1/chat/threads', route => route.fulfill({ json: { threads: [threads[0]] } }))
-  await page.route(`**/api/v1/chat/threads/${threads[0].id}`, route => route.fulfill({
-    json: { thread: threads[0], messages: messages('A') },
+test('content growth follows only a reader near the end', async ({ page }) => {
+  await setup(page, [A])
+  await page.route(`**/api/v1/chat/threads/${A.id}`, route => route.fulfill({
+    json: { thread: A, messages: messages('A') },
   }))
   await page.goto('/')
-  await choose(page, threads[0].title)
+  await choose(page, A.title)
   await expect(page.getByText(/^A 24 /)).toBeAttached()
   await expect.poll(() => distanceFromBottom(page)).toBeLessThanOrEqual(2)
   await scroll(page).evaluate(node => {

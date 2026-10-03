@@ -24,17 +24,16 @@ const refreshPolicy = () => apiRequest<ChatPolicyView>('/api/v1/chat/policy').th
 const publishCredentialChange = useCredentialSync(auth, setCredentials)
 const { policy, catalogError } = useChatCatalog(auth, basePolicy)
 const streamController = useRef<AbortController | null>(null)
-const resumeAttempted = useRef(new Set<string>())
 const pendingRequest = useRef<PendingChatRequest | null>(null)
 const { selection, selectThread, selected, loadThread, refreshHistory,
-openingThread, resetSelection, openThread, canSendTo } = useThreadSelection(
+openingThread, resetSelection, openThread, canSendTo, claimResume, clearResumeClaims, stopResume } = useThreadSelection(
 auth?.account.id, { chatId: setCurrentChatId, messages: setMessages, history: setHistory, error: setError })
 useEffect(() => {
 streamController.current?.abort()
 resetSelection()
 setBasePolicy(null); setCredentials([]); setHistory([]); setMessages([])
 setCurrentChatId(null); idle(); setError('')
-resumeAttempted.current.clear()
+clearResumeClaims()
 pendingRequest.current = null
 if (!auth) return
 const controller = new AbortController()
@@ -95,22 +94,20 @@ catch (reason) { if (selected(threadId, at)) setError(current => current || chat
 }, [loadThread, refreshHistory])
 useEffect(() => {
 if (!auth || busy || !currentChatId) return
-const assistant = [...messages].reverse().find(
-message => message.role === 'assistant' && message.state === 'partial')
-if (!assistant || resumeAttempted.current.has(assistant.request_id)) return
-resumeAttempted.current.add(assistant.request_id)
+const id = [...messages].reverse().find(message =>
+message.role === 'assistant' && message.state === 'partial')?.request_id
+if (!id) return
+const claim = claimResume(currentChatId, id)
+if (!claim) return
 const controller = new AbortController()
-apiRequest<ChatRequestView>(
-`/api/v1/chat/requests/${assistant.request_id}`,
-{ signal: controller.signal },
-).then(request => {
-if (controller.signal.aborted) return
+const stale = () => controller.signal.aborted || !claim.current()
+apiRequest<ChatRequestView>(`/api/v1/chat/requests/${id}`, { signal: controller.signal }).then(request => {
+if (stale()) return
 if (request.state === 'pending' || request.state === 'streaming')
 void streamRequest(request.id, currentChatId)
 else void loadThread(currentChatId)
-}).catch(reason => {
-if (!controller.signal.aborted) setError(chatProblem(reason))
-})
+}).catch(reason => { if (!stale()) setError(chatProblem(reason))
+}).finally(() => { if (stale()) claim.release() })
 return () => controller.abort()
 }, [auth?.account.id, busy, currentChatId, messages, loadThread, streamRequest])
 function newChat() {
@@ -184,7 +181,7 @@ const stopped = await apiRequest<ChatRequestView>(
 `/api/v1/chat/requests/${requestId}/stop`, {
 method: 'POST', csrf: auth.csrf_token, data: {},
 })
-resumeAttempted.current.add(requestId)
+stopResume(requestId)
 streamController.current?.abort()
 const outcomeWarning = stopped.error_code === 'provider_outcome_unknown'
   ? chatProviderProblem(stopped.error_code) : ''
