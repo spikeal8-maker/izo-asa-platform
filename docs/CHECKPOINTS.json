@@ -254,6 +254,23 @@
         "Review Source": 35775373259
       }
     },
+    "P1-CHAT-SCROLL-001": {
+      "base_head": "a38796af702c698cda68ef2135c047823ba3b52b",
+      "independent_review": "unavailable",
+      "owner_actor": "spikeal8-maker",
+      "owner_waiver": true,
+      "owner_waiver_reason": "Structured independent GitHub APPROVED review is unavailable through the connected owner actor; separate read-only review, focused browser regression, exact-head CI and fresh GitHub Codex review passed.",
+      "owner_waiver_source": "1de74f79c47885b4e6ff1b1abfd0e695ae8858fd",
+      "source_head": "1de74f79c47885b4e6ff1b1abfd0e695ae8858fd",
+      "tested_merge_tree": "ee0ee1e14a709461bd69013fa2e67ac562112e4a",
+      "type": "pr_merge_tree",
+      "verified_pr": 255,
+      "workflows": {
+        "Dependency Security": 37112301322,
+        "Foundation CI": 37112301297,
+        "Review Source": 37112301315
+      }
+    },
     "PRE-P1-STABILIZATION-001": {
       "base_head": "e93aff74be4283268c57b6edbc34d35d92ffa414",
       "independent_review": "unavailable",
