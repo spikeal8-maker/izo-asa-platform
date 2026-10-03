@@ -18,9 +18,11 @@ export function useThreadSelection(accountId: string | undefined, update: {
   const [olderCursor, setOlderCursor] = useState<number | null>(null)
   const [loadingOlder, setLoadingOlder] = useState(false)
   const loadedThread = useRef<string | null>(null)
-  const pendingOlder = useRef(false)
+  const pendingOlder = useRef<{ at: Selection; controller: AbortController } | null>(null)
 
   const selectThread = useCallback((threadId: string | null) => {
+    pendingOlder.current?.controller.abort()
+    pendingOlder.current = null
     selection.current = { accountId: currentAccount.current, threadId, version: selection.current.version + 1 }
   }, [])
   const selected = useCallback((threadId: string, at: Selection) =>
@@ -70,12 +72,14 @@ export function useThreadSelection(accountId: string | undefined, update: {
   const loadOlder = useCallback(async (threadId: string, beforePrepend: () => void) => {
     const at = selection.current
     const cursor = olderCursor
-    if (!selected(threadId, at) || cursor === null || pendingOlder.current) return
-    pendingOlder.current = true
+    if (!selected(threadId, at) || cursor === null || pendingOlder.current?.at === at) return
+    const pending = { at, controller: new AbortController() }
+    pendingOlder.current = pending
     setLoadingOlder(true)
     try {
       const page = await apiRequest<MessagePage>(
-        `/api/v1/chat/threads/${threadId}/messages?before_sequence=${cursor}`)
+        `/api/v1/chat/threads/${threadId}/messages?before_sequence=${cursor}`,
+        { signal: pending.controller.signal })
       if (!selected(threadId, at)) return
       if (page.messages.length) {
         beforePrepend()
@@ -89,8 +93,10 @@ export function useThreadSelection(accountId: string | undefined, update: {
     } catch (reason) {
       if (selected(threadId, at)) update.error(`Не удалось загрузить ранние сообщения. ${chatProblem(reason)}`)
     } finally {
-      pendingOlder.current = false
-      if (selected(threadId, at)) setLoadingOlder(false)
+      if (pendingOlder.current === pending) {
+        pendingOlder.current = null
+        if (selected(threadId, at)) setLoadingOlder(false)
+      }
     }
   }, [olderCursor, selected, update.messages, update.error])
 

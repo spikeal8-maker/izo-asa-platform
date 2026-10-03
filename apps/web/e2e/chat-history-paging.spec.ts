@@ -82,6 +82,37 @@ for (const fails of [false, true]) test(`late ${fails ? 'error' : 'page'} cannot
   await expect(page.getByRole('alert')).toHaveCount(0)
 })
 
+test('a pending A page does not block loading older messages in B', async ({ page }) => {
+  await workspace(page)
+  const delayedA = gate()
+  await page.route('**/api/v1/chat/threads', route => route.fulfill({ json: { threads: [A, B] } }))
+  for (const thread of [A, B]) {
+    await page.route(`**/api/v1/chat/threads/${thread.id}`, route => route.fulfill({ json: {
+      thread, messages: Array.from({ length: 100 }, (_, i) => message(i + 21, thread === A ? 'A' : 'B')),
+      next_before_sequence: 21,
+    } }))
+  }
+  await page.route(`**/api/v1/chat/threads/${A.id}/messages?before_sequence=21`, async route => {
+    await delayedA.wait
+    await route.fulfill({ json: { messages: [message(1)], next_before_sequence: null } })
+  })
+  await page.route(`**/api/v1/chat/threads/${B.id}/messages?before_sequence=21`, route => route.fulfill({ json: {
+    messages: [message(1, 'B')], next_before_sequence: null,
+  } }))
+  await page.goto('/')
+  await choose(page, A.title)
+  const requestedA = page.waitForRequest(`**/api/v1/chat/threads/${A.id}/messages?before_sequence=21`)
+  await page.getByRole('button', { name: 'Загрузить ранние сообщения' }).click()
+  await requestedA
+  await choose(page, B.title)
+  await expect(page.getByText(/^B message 120 /)).toBeAttached()
+  await expect(page.getByRole('button', { name: 'Загрузить ранние сообщения' })).toBeEnabled()
+  await page.getByRole('button', { name: 'Загрузить ранние сообщения' }).click()
+  await expect(page.getByText(/^B message 1 /)).toBeAttached()
+  delayedA.release()
+  await expect(page.getByText(/^A message 1 /)).toHaveCount(0)
+})
+
 test('logout clears a pending older-page read', async ({ page }) => {
   await workspace(page)
   await page.route('**/api/v1/auth/logout', route => route.fulfill({ status: 204, body: '' }))
