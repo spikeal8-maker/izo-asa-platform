@@ -103,7 +103,7 @@ Dependency Security: <run ID> SUCCESS
 Review Source: <run ID> SUCCESS
 ```
 
-`Review Source` — историческое имя required workflow, который только фиксирует immutable source snapshot/tree для последующего review evidence. Это **не** code approval и не замена independent reviewer; GitHub UI показывает run-name `Review Source snapshot (not code approval)`.
+`Review Source` — историческое имя required workflow, который только фиксирует immutable source snapshot/tree для последующего review evidence. Это **не** code approval и не замена independent reviewer; сам workflow пишет это пояснение в GitHub Step Summary, сохраняя стабильное имя `Review Source` для исторического evidence.
 
 Для source PR оба времени комментария, `created_at` и `updated_at`, должны быть строго раньше более раннего из
 момента первого введения checkpoint и `createdAt` closeout PR. Правка до этого порога допустима; после него waiver
