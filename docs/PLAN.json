@@ -4,7 +4,7 @@
   "updated": "2026-09-22",
   "canonical_lineage": {
     "runtime_base": {
-      "branch": "api/fal-klein-001",
+      "branch": "main",
       "sha": "faec39d6ae0b4f035ef0f86114494789acde3b46",
       "pr": 22,
       "state": "technical_ci_pass_draft"
