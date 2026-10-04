@@ -33,6 +33,34 @@ def _matches_any(path: str, patterns: tuple[str, ...]) -> bool:
     return any(fnmatch.fnmatchcase(path, pattern) for pattern in patterns)
 
 
+def _git_text(root: Path, *args: str) -> str:
+    result = subprocess.run(["git", *args], cwd=root, capture_output=True, text=True,
+                            encoding="utf-8", errors="strict", timeout=30)
+    if result.returncode:
+        raise ValueError(result.stderr.strip() or "git command failed")
+    return result.stdout.strip()
+
+
+def _local_mechanical_closeout(paths: list[str], base: str, *, root: Path) -> bool:
+    from project_state_mechanical_closeout import mechanical_state_only_closeout
+
+    head = _git_text(root, "rev-parse", "HEAD")
+    plan = json.loads(_git_text(root, "show", f"{base}:docs/PLAN.json"))
+    package = plan.get("active_package")
+    if not isinstance(package, str) or not package:
+        return False
+    checkpoints = json.loads(_git_text(root, "show", f"{head}:docs/CHECKPOINTS.json"))
+    checkpoint = checkpoints.get("checkpoints", {}).get(package)
+    if not isinstance(checkpoint, dict):
+        return False
+    rows = [[{"filename": path, "status": "modified"} for path in paths]]
+    return mechanical_state_only_closeout(
+        0, head, base, package, checkpoint, "local/repo", root=root,
+        git_fn=lambda *args, root=root: _git_text(root, *args),
+        gh_fn=lambda args, root=root: rows,
+    )
+
+
 def select_scope(paths: list[str], *, root: Path = ROOT) -> Path | None:
     changed = [
         root / path for path in paths
@@ -48,6 +76,8 @@ def evaluate(base: str, actor: str, *, root: Path = ROOT) -> dict:
     if not paths:
         return {"scope_ok": True, "mode": "empty", "paths": []}
     if set(paths).issubset(STATE_ONLY):
+        if not _local_mechanical_closeout(paths, base, root=root):
+            raise ValueError("state-only pull request is not an exact mechanical closeout")
         return {"scope_ok": True, "mode": "state_only", "paths": paths}
 
     scope_path = select_scope(paths, root=root)

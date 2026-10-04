@@ -17,9 +17,17 @@ def test_state_only_diff_needs_no_separate_scope(monkeypatch):
     monkeypatch.setattr(guard, "changed_paths", lambda root, base: [
         "docs/CURRENT.md", "docs/PACKAGES.json",
     ])
+    monkeypatch.setattr(guard, "_local_mechanical_closeout", lambda *a, **k: True)
     result = guard.evaluate("a" * 40, "owner", root=ROOT)
     assert result["scope_ok"] is True
     assert result["mode"] == "state_only"
+
+
+def test_state_only_diff_that_is_not_mechanical_fails(monkeypatch):
+    monkeypatch.setattr(guard, "changed_paths", lambda root, base: ["docs/CURRENT.md"])
+    monkeypatch.setattr(guard, "_local_mechanical_closeout", lambda *a, **k: False)
+    with pytest.raises(ValueError, match="not an exact mechanical closeout"):
+        guard.evaluate("a" * 40, "owner", root=ROOT)
 
 
 def test_ordinary_pr_without_changed_scope_fails(monkeypatch):
