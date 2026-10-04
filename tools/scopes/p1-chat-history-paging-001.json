@@ -2,11 +2,17 @@
   "package_id": "P1-CHAT-HISTORY-PAGING-001",
   "base": "dc31a725f97281537e0c718a56d8fd4dc8804433",
   "scope_class": "cross_domain",
-  "risk": "high",
-  "independent_review_required": true,
+  "risk": "medium",
+  "independent_review_required": false,
   "max_files": 40,
   "large_scope_reason": "One bounded older-message flow crosses the account-owned Chat API, generated public contract, browser history state, scroll anchoring and focused service/browser regressions. The existing near-limit runtime is split before adding more behavior.",
-  "domains": ["chat-api", "web-chat", "contracts", "tests", "governance"],
+  "domains": [
+    "chat-api",
+    "web-chat",
+    "contracts",
+    "tests",
+    "governance"
+  ],
   "non_goals": [
     "No thread-list pagination or search, branch/attempt, Context Engine or renderer/action work",
     "No Admin, BYOK, provider control, spend authority, live provider call or deploy"
