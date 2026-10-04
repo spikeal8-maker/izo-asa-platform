@@ -5,9 +5,9 @@
 
 ## 1. Роли
 
-Владелец задаёт пользовательский результат и принимает дизайн, реальные расходы, merge/release.
-Implementer локализует задачу, делает минимальный diff и tests. SELF_REVIEW выполняется тем же агентом после реализации.
-Independent reviewer — отдельный проход для high-risk изменений; self-review им не считается.
+Владелец задаёт пользовательский результат и принимает новые product/security semantics, реальные расходы и owner-only merge/release gates. Владелец **не является обычным QA-исполнителем**: routine code/browser/visual regression должен быть найден агентами до owner preview.
+Controller отвечает за decomposition, subagent dispatch, integration, повторные fix/review cycles и доказательство exact candidate. Implementer локализует задачу, делает минимальный diff и tests. SELF_REVIEW выполняется тем же агентом после реализации.
+Independent code reviewer не является implementer того же diff. Для user-visible UI отдельный browser/visual reviewer проверяет фактический build. Эти проверки дополняют, а для high-risk не заменяют required GitHub review evidence.
 
 ## 2. LOCATE
 
@@ -66,6 +66,8 @@ Verdict: `PASS`, `FIX_REQUIRED`, `ESCALATE`.
 credentials/secrets, cross-account access, release/network policy. Такой package не получает checkpoint только на основании
 SELF_REVIEW и CI. Требуется отдельное review evidence.
 
+`scope_class=cross_domain`, большой file-count или одновременное изменение API+web **сами по себе не делают package high-risk**. Обычные Chat history/scroll/renderer/actions остаются low/medium, если не затрагивают перечисленные high-risk boundaries. Risk повышается по семантике и trust boundary, а не ради формального review gate.
+
 ## 7. Общий CI и freeze
 
 После targeted PASS + self-review: `check_docs`, `repository_hygiene.py`, scope-check, generated contracts, diff/secret sanity, затем PR.
@@ -109,9 +111,18 @@ Review Source: <run ID> SUCCESS
 точном совпадении полного тела комментария.
 
 Для отдельного closeout PR выбранные успешные обязательные PR runs должны завершиться (`updatedAt`) строго до
-`mergedAt`. Его собственное structured independent review требует `submitted_at < mergedAt`; вместо review допустим
-отдельный exact-head owner waiver с `created_at < mergedAt` и `updated_at < mergedAt`. Waiver исходного checkpoint
-не переносится на closeout.
+`mergedAt`. Если closeout содержит runtime/product/test/schema/security изменение, его собственное structured independent
+review требует `submitted_at < mergedAt`; вместо review допустим отдельный exact-head owner waiver с
+`created_at < mergedAt` и `updated_at < mergedAt`. Waiver исходного checkpoint не переносится на такой содержательный closeout.
+
+**Mechanical state-only closeout** — исключение из повторного human-review gate. Он допустим только если machine validator
+доказывает одновременно: source product PR уже принят с требуемым exact-head evidence; closeout HEAD происходит от принятого
+source/merge; diff ограничен canonical state/checkpoint файлами и их machine-generated evidence; runtime/product/tests/schema/
+security не меняются; immutable checkpoint не переписывается; required CI и state/docs/hygiene проверки зелёные. Такой closeout
+не получает второй independent code review/owner waiver за тот же product diff: его отдельное доказательство — state validator +
+exact-head CI. Merge остаётся owner-only, но owner может одной явной authorization заранее связать product merge и следующий
+machine-verified state-only closeout, чтобы controller не прерывал владельца второй раз. Любое отклонение от state-only allowlist
+немедленно возвращает обычный closeout review/waiver contract.
 
 Единственное историческое исключение, закреплённое в `legacy_pr252_review`, принимает owner-authenticated pre-merge
 comment как legacy closeout evidence лишь для зашитых в этом helper точных PR, head, merge commit и comment ID.
@@ -152,8 +163,12 @@ STRUCTURAL_BLOCKER обрабатываются строго по `MAINTAINABILI
 
 ## 10. Handoff
 
-Несколько абзацев: package/task, branch/base, diff, tests/CI environment, risks, maintainability delta и один следующий шаг.
+Внутренний handoff между агентами: package/task, branch/base, diff, tests/CI environment, risks, maintainability delta и один следующий шаг.
 Не переносить chain-of-thought, полный чат, огромные логи или repository synopsis.
+
+Owner-facing status короче внутреннего handoff и не перекладывает QA на владельца. Формат: `ЭТАП`, `ЧТО ГОТОВО`,
+`ЧТО СЕЙЧАС ДЕЛАЮТ БОТЫ`, `QUALITY (code/browser/visual/CI)`, `ЧТО УВИЖУ`, `НУЖЕН ЛИ ВЛАДЕЛЕЦ`.
+Если owner action не нужен, controller продолжает работу; status не является STOP-событием.
 
 ## 11. Controller / subagent orchestration
 
@@ -203,9 +218,38 @@ Subagent не расширяет scope самостоятельно. Нужен 
 
 Review-subagent — READ-ONLY: не исправляет собственный finding и не является implementer того же diff. Internal subagent review не заменяет required structured independent GitHub review или exact-SHA owner waiver.
 
-При required CI failure или review blocker controller останавливает приёмку результата, freeze, следующий package и зависимые шаги. Если причина — обычный воспроизводимый дефект внутри уже разрешённого package/task scope, controller может диагностировать её и назначить ограниченный цикл исправления в текущем package. После исправления требуются полный required CI и повторный required review для нового exact source HEAD; бесконечные reruns и обход gates запрещены.
+При required CI failure или review blocker controller останавливает **приёмку текущего candidate**, freeze и зависимые шаги, но не перекладывает обычное исправление на владельца. Если причина — воспроизводимый дефект внутри уже разрешённого package/task scope, controller обязан назначить bounded fix-subagent, затем новый read-only review и проверки. После исправления требуются полный required CI и повторный required review для нового exact source HEAD; бесконечные reruns и обход gates запрещены.
 
-Полный STOP до отдельного разрешения обязателен при `NEW_DECISION_REQUIRED`, unexpected source HEAD change, scope collision/expansion, unresolved security/ownership conflict, owner-only action, real spend/live operation или прямом запрете в task contract.
+Для user-visible package до owner preview применяется delegated quality loop:
+
+```text
+IMPLEMENTER(S)
+→ integration
+→ SELF_REVIEW
+→ independent code reviewer
+→ browser/visual reviewer
+→ targeted tests
+→ required CI
+→ fresh GitHub review when configured
+→ finding ? FIX-SUBAGENT → re-review/retest : freeze candidate
+```
+
+Browser/visual reviewer работает на фактическом exact build, а не на описании implementer. Минимум: desktop+phone, light+dark,
+long/empty/error state по применимости, console errors, видимый текст/labels, computed contrast/color для критичного prose,
+overflow/geometry, build/source provenance. Он не обновляет screenshot baseline только ради сокрытия regression.
+
+Полный STOP до отдельного разрешения обязателен только при `NEW_DECISION_REQUIRED`, unexpected source HEAD change,
+реальном scope collision/expansion за пределы уже разрешённого package, unresolved security/ownership conflict, owner-only
+merge/deploy/release action, real spend/live operation или прямом запрете в task contract. Обычный bug, CSS/visual regression,
+review finding, focused test failure и scope-preserving fix — внутренний bot-to-bot цикл, а не owner interruption.
+
+### Owner preview cadence и delegated development
+
+Внутренние quality gates выполняются для каждого package, но owner preview — **product milestone, а не ручной gate каждого технического slice**. Controller показывает владельцу результат после meaningful visible UX milestone (обычно группа связанных bounded slices) либо когда требуется реальное product decision. До показа обязательны code review PASS, browser/visual review PASS, required CI PASS и exact source/build provenance.
+
+Владелец оценивает продукт через несколько простых сценариев, а не проверяет SHA, DOM, console, race или CSS за агентов. Если reviewer может доказать проблему автоматически, она должна быть найдена до owner preview.
+
+Для заранее разрешённого non-sensitive P1 work controller продолжает package→package без status-stop. Новый owner interrupt требуется только по STOP-условиям выше. Это не отменяет owner-only merge/release policy: разрешения можно **коалесцировать** в один понятный gate, но нельзя выдумывать их задним числом.
 
 ### Subagent handoff
 
