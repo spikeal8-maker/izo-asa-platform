@@ -103,6 +103,8 @@ export function useChatScroll(ownerId: string | undefined, threadId: string | nu
     if (node.firstElementChild) observer.observe(node.firstElementChild)
     const cancelAnchor = () => { prepend.current = null; readingAnchor.current = null }
     const onScrollKey = (event: KeyboardEvent) => {
+      const target = event.target instanceof Element ? event.target : null
+      if (target?.closest('input, textarea, select, [contenteditable="true"]')) return
       if (['ArrowUp', 'ArrowDown', 'PageUp', 'PageDown', 'Home', 'End', ' '].includes(event.key))
         cancelAnchor()
     }

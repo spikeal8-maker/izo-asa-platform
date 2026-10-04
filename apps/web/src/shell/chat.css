@@ -91,6 +91,7 @@
   line-height: 1.58;
 }
 .chat-turn-user { justify-content: flex-end; }
+.chat-assistant-message > p { color: var(--color-text); }
 .chat-user-bubble {
   max-width: min(78%, 760px);
   padding: var(--chat-gap-sm) var(--chat-gap-md);

@@ -80,6 +80,10 @@ test('late image growth above the viewport keeps the same reading anchor', async
   const image = page.locator('.chat-message-image')
   await expect(image).toBeAttached()
   await expect.poll(async () => (await reader.boundingBox())?.y).toBeCloseTo(before!.y, 0)
+  const composer = page.getByRole('textbox', { name: 'Сообщение' })
+  await expect(composer).toBeEnabled()
+  await composer.focus()
+  await composer.press('Space')
   await image.evaluate(node => { (node as HTMLElement).style.height = '260px' })
   await page.evaluate(() => new Promise<void>(resolve => requestAnimationFrame(() => requestAnimationFrame(() => resolve()))))
   await expect.poll(async () => Math.abs(((await reader.boundingBox())?.y ?? 0) - before!.y))
@@ -167,4 +171,26 @@ test('logout clears a pending older-page read', async ({ page }) => {
   await expect(page.getByText(/^A message 120 /)).toHaveCount(0)
   delayed.release()
   await expect(page.getByText(/^A message 1 /)).toHaveCount(0)
+})
+
+test('assistant prose uses primary theme text and has no visible role heading', async ({ page }) => {
+  await workspace(page)
+  const assistant = { ...message(1), role: 'assistant', content: 'Основной ответ ассистента' }
+  await page.route('**/api/v1/chat/threads', route => route.fulfill({ json: { threads: [A] } }))
+  await page.route(`**/api/v1/chat/threads/${A.id}`, route => route.fulfill({ json: {
+    thread: A, messages: [assistant], next_before_sequence: null,
+  } }))
+  await page.goto('/')
+  await choose(page, A.title)
+  const prose = page.locator('.chat-assistant-message > p')
+  await expect(prose).toHaveText('Основной ответ ассистента')
+  for (const theme of ['light', 'dark']) {
+    await page.evaluate(value => { document.documentElement.dataset.theme = value }, theme)
+    const [proseColor, bodyColor] = await Promise.all([
+      prose.evaluate(node => getComputedStyle(node).color),
+      page.locator('body').evaluate(node => getComputedStyle(node).color),
+    ])
+    expect(proseColor).toBe(bodyColor)
+  }
+  await expect(page.getByText(/^(Ответ бота|Ответ ассистента|Assistant|AI response)$/)).toHaveCount(0)
 })

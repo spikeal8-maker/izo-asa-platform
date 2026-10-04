@@ -26,4 +26,4 @@ bounded 100-message responses, a visible older-message action, deduplication,
 stale-selection rejection and scroll anchoring. Excludes thread-list pagination,
 branch/attempt, Context Engine, renderer/actions and P4 provider/Admin semantics.
 
-Risk classification: **medium**. This package changes account-owned Chat history pagination and viewport behavior but does not change auth, permissions, Credits/financial semantics, migrations, paid-provider lifecycle, credentials/secrets, cross-account access or release/network policy. cross_domain describes bounded file/domain span, not a security risk class. Separate read-only review remains useful quality evidence but is not a mandatory high-risk GitHub approval gate.
+Risk classification: **high**. The UI/scroll work is ordinary P1 behavior, but this slice adds a new account-owned private-history read endpoint and therefore changes a cross-account access boundary. The endpoint is fail-closed by `(thread_id, account_id)` ownership and foreign-account tests, but canonical high-risk review remains required. `cross_domain` alone is not the reason for high risk.
