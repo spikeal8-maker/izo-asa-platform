@@ -3,14 +3,34 @@ updates:
   - package-ecosystem: npm
     directory: /apps/web
     schedule: {interval: weekly}
-    open-pull-requests-limit: 3
+    open-pull-requests-limit: 2
+    groups:
+      web-non-major:
+        patterns: ["*"]
+        update-types: ["minor", "patch"]
+
   - package-ecosystem: pip
     directory: /
     schedule: {interval: weekly}
-    open-pull-requests-limit: 3
+    open-pull-requests-limit: 2
+    groups:
+      python-non-major:
+        patterns: ["*"]
+        update-types: ["minor", "patch"]
+
   - package-ecosystem: docker
     directory: /infra
     schedule: {interval: weekly}
+    open-pull-requests-limit: 1
+    groups:
+      infra-non-major:
+        patterns: ["*"]
+        update-types: ["minor", "patch"]
+
   - package-ecosystem: github-actions
     directory: /
     schedule: {interval: weekly}
+    open-pull-requests-limit: 1
+    groups:
+      github-actions:
+        patterns: ["*"]

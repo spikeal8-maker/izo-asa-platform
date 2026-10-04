@@ -89,6 +89,11 @@ Scope фиксирует `risk`: `low | medium | high`.
 `high` обязателен для auth/permissions/credits/financial semantics/migrations/provider paid lifecycle/secrets/
 cross-account access/release-network policy.
 
+Risk определяется **семантикой и trust boundary**, а не количеством файлов. `cross_domain`, API+web diff, generated contract
+или большой bounded scope сами по себе не являются причиной `risk=high`. Обычные Chat history/scroll/renderer/actions,
+не затрагивающие перечисленные sensitive boundaries, по умолчанию классифицируются low/medium. Искусственное повышение
+risk ради дополнительного owner/review gate запрещено так же, как его искусственное понижение ради обхода gate.
+
 Для `high` package checkpoint нельзя считать технически принятым без:
 1. implementer SELF_REVIEW;
 2. профильных negative/race/idempotency/restart tests;
@@ -101,6 +106,10 @@ legacy closeout evidence для строго зафиксированных та
 Если независимый GitHub actor недоступен, gate не удаляется: допускается только явный owner waiver transition.
 Waiver требует owner action, exact source SHA, `independent_review=unavailable` и причину; в checkpoint хранится
 как `owner_waiver=true` и не называется independent review. Неверный SHA или failed CI waiver не обходит.
+
+Повторный human review не требуется для machine-proven **mechanical state-only closeout**, определённого в
+`DEVELOPMENT.md`: такой closeout не пересматривает product diff и обязан fail-closed при любом выходе за state/checkpoint
+allowlist. Это исключение не распространяется на runtime/test/schema/security изменения.
 
 `begin-next` и `begin-decided-next` проверяют source HEAD, required CI и review/waiver до создания новой ветки.
 State/checkpoint пишутся только на новой ветке; ошибка записи откатывает файлы и созданную ветку.
@@ -130,6 +139,10 @@ Findings классифицируются:
 - **LOCAL_DEBT** — закрывается в ближайшем подходящем product package;
 - **STRUCTURAL_BLOCKER** — bounded maintenance package до дальнейшего роста затронутой области.
 
+Но дефект, уже видимый в текущем candidate и нарушающий canonical UX/acceptance его package, нельзя понижать до
+`LOCAL_DEBT` только чтобы показать preview владельцу. Такой finding исправляет bot-to-bot loop до visual acceptance.
+Владелец не является первым visual regression detector.
+
 Audit не создаёт maintenance package автоматически. Цель — устранить structural blocker до дальнейшего роста, а не регулярно останавливать продукт ради косметического refactor.
 
 ## 8. Definition of Done любого будущего package
@@ -142,6 +155,8 @@ Package не получает `technical_pass`, если:
 - live local docs содержат историю/ветку/старый SHA;
 - scope расширен без явного основания;
 - high-risk package не получил structured independent review и не имеет допустимого explicit owner waiver;
+- user-visible candidate не прошёл обязательный browser/visual review по `DEVELOPMENT.md`;
+- owner preview не привязан к exact source/build provenance;
 - CI стал зелёным после ослабления limit/test вместо исправления архитектуры.
 
 ## 9. MAINT-AGENT-002
@@ -209,5 +224,9 @@ Targeted product/domain audit проверяет top owner files/headroom, dupli
 Temporary bridge/feature flag/dual path обязан иметь owner, reason, removal condition и acceptance gate expiry; бессрочный `TODO remove later` в accepted path запрещён. Если temp path пережил два packages после expiry, следующий подходящий package обязан решить: удалить, formally extend с причиной либо классифицировать долг по §7.
 
 Garbage cleanup не удаляет accepted migrations, immutable ledger/audit/checkpoints, user Media/Artifacts, provenance reviews/history или live compatibility path без consumer proof. Test cleanup сохраняет invariant coverage.
+
+Merged same-repository head branches считаются ephemeral: после merge и после того, как ветка перестала быть live state reference, cleanup-workflow удаляет её автоматически; provenance остаётся в PR, merge commit и checkpoint. Default branch, protected branches, open-PR heads и ветки из canonical `working_branch`/`runtime_base`/`current_package_base` не удаляются.
+
+Dependabot остаётся включённым, но routine version updates группируются по ecosystem и имеют небольшой open-PR limit, чтобы dependency maintenance не создавал десятки параллельных веток. Security remediation не отключается ради уменьшения количества PR; security finding может быть выделен в отдельный bounded package.
 
 Новая dependency допускается только для current requirement после license/maintenance/security и duplicate-framework проверки; unused dependency удаляется ближайшим safe cleanup. Flaky test чинится либо получает reproducible quarantine с owner/expiry; permanent ignore без owner запрещён.

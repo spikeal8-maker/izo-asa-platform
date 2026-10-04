@@ -20,6 +20,19 @@
 
 Unit/CI остаются изолированными от реального AI spend. Канонический fal worker уже имеет внешний adapter contract, но live key/provider billing не считаются принятыми только из-за наличия ключа. Внешний egress разрешается только provider worker в явно настроенной среде; PostgreSQL/S3 ради AI в интернет не открываются.
 
+### 2.1. Development visual preview
+
+Owner-facing visual preview — артефакт разработки, а не production/staging acceptance. Перед передачей URL владельцу controller и отдельный browser/visual reviewer обязаны доказать:
+- exact source SHA и фактический build/image SHA;
+- что запущен именно этот build, а не stale container/fixture;
+- режим провайдера явно помечен `FAKE` или `LIVE`;
+- code review, browser/visual review и применимый CI завершены;
+- screenshots/DOM evidence относятся к тому же build.
+
+Владелец оценивает пользовательский результат, но не должен вручную устанавливать provenance, искать console/CSS regression или первым обнаруживать очевидный visual defect. Не прошедший internal visual review preview владельцу как «готовый результат» не показывается.
+
+`FAKE` preview может доказывать interaction/geometry/state, но не доказывает live provider functionality. `LIVE` provider check остаётся отдельной owner-authorized операцией с bounded spend и не запускается агентами автоматически.
+
 ## 3. Production-топология — целевое решение
 
 Для первого сервера: HTTPS edge, immutable web/API images, отдельный worker-процесс, PostgreSQL и S3-compatible storage. Managed или self-hosted БД/storage выбираются оператором отдельно. Kubernetes и большое количество микросервисов не требуются для первого выпуска.
