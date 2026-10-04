@@ -46,6 +46,12 @@ jobs:
         env:
           IZO_HYGIENE_BASE: ${{ github.event.pull_request.base.sha || github.event.before }}
         run: .venv/bin/python tools/repository_hygiene.py --base "$IZO_HYGIENE_BASE"
+      - name: Pull request scope guard
+        if: github.event_name == 'pull_request'
+        env:
+          IZO_SCOPE_BASE: ${{ github.event.pull_request.base.sha }}
+          IZO_SCOPE_ACTOR: ${{ github.actor }}
+        run: .venv/bin/python tools/ci_scope_guard.py --base "$IZO_SCOPE_BASE" --actor "$IZO_SCOPE_ACTOR"
       - name: Unit and architecture checks
         run: .venv/bin/python -m pytest
       - name: Install web

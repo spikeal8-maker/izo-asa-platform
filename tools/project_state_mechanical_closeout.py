@@ -37,7 +37,7 @@ def source_scope_at(sha: str, package: str, *, root: Path, git_fn) -> dict:
 
 def mechanical_state_only_closeout(pr_number: int, head: str, checkpoint_head: str,
                                    package: str, checkpoint: dict, slug: str, *,
-                                   root: Path, git_fn, gh_fn) -> bool:
+                                   root: Path, git_fn, gh_fn, merge_head: str | None = None) -> bool:
     """Prove a closeout is exactly the deterministic state transition, nothing else."""
     from project_state_evidence import _flatten_pages
 
@@ -96,11 +96,14 @@ def mechanical_state_only_closeout(pr_number: int, head: str, checkpoint_head: s
         "docs/CURRENT.md": render_current(expected),
         "docs/CHECKPOINTS.json": serialize_checkpoints(expected_checkpoints),
     }
-    for filename, text in expected_text.items():
-        try:
-            actual = git_fn("show", f"{head}:{filename}", root=root)
-        except ValueError:
-            return False
-        if actual.strip() != text.strip():
-            return False
+    for candidate in (head, merge_head):
+        if candidate is None:
+            continue
+        for filename, text in expected_text.items():
+            try:
+                actual = git_fn("show", f"{candidate}:{filename}", root=root)
+            except ValueError:
+                return False
+            if actual.strip() != text.strip():
+                return False
     return True

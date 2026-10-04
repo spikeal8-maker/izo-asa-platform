@@ -103,6 +103,8 @@ Dependency Security: <run ID> SUCCESS
 Review Source: <run ID> SUCCESS
 ```
 
+`Review Source` — историческое имя required workflow, который только фиксирует immutable source snapshot/tree для последующего review evidence. Это **не** code approval и не замена independent reviewer; GitHub UI показывает run-name `Review Source snapshot (not code approval)`.
+
 Для source PR оба времени комментария, `created_at` и `updated_at`, должны быть строго раньше более раннего из
 момента первого введения checkpoint и `createdAt` closeout PR. Правка до этого порога допустима; после него waiver
 не принимается. Выбранные успешные обязательные PR runs должны завершиться (`updatedAt`) до того же порога, а ID
@@ -121,7 +123,15 @@ source/merge; diff ограничен canonical state/checkpoint файлами 
 security не меняются; immutable checkpoint не переписывается; required CI и state/docs/hygiene проверки зелёные. Такой closeout
 не получает второй independent code review/owner waiver за тот же product diff: его отдельное доказательство — state validator +
 exact-head CI. Merge остаётся owner-only, но owner может одной явной authorization заранее связать product merge и следующий
-machine-verified state-only closeout, чтобы controller не прерывал владельца второй раз. Любое отклонение от state-only allowlist
+machine-verified state-only closeout, чтобы controller не прерывал владельца второй раз. Для durable authorization владелец оставляет на source product PR exact comment из трёх строк:
+
+```text
+Owner merge authorization for PR #<PR>: APPROVE
+Source HEAD: <40-char SHA>
+Mechanical closeout merge: AUTHORIZED
+```
+
+Comment обязан принадлежать repository owner, быть привязан к exact source SHA и существовать до checkpoint introduction. Его ID сохраняется в checkpoint evidence и повторно аутентифицируется перед использованием. Такая authorization не разрешает содержательный closeout, deploy, live spend или другой PR. Любое отклонение от state-only allowlist
 немедленно возвращает обычный closeout review/waiver contract.
 
 Единственное историческое исключение, закреплённое в `legacy_pr252_review`, принимает owner-authenticated pre-merge

@@ -1,0 +1,48 @@
+{
+  "package_id": "DEV-WORKFLOW-OPT-001",
+  "base": "dc31a725f97281537e0c718a56d8fd4dc8804433",
+  "scope_class": "cross_domain",
+  "risk": "high",
+  "independent_review_required": true,
+  "max_files": 20,
+  "large_scope_reason": "One bounded governance optimization aligns controller/subagent policy, exact state-closeout evidence, CI scope enforcement, dependency hygiene and merged-branch cleanup. It changes repository-control tooling and GitHub Actions but no product runtime.",
+  "domains": ["governance", "project-state", "ci", "dependency-hygiene", "branch-hygiene", "docs"],
+  "non_goals": [
+    "No Chat runtime, provider, credential, Credits, schema/migration or product behavior change",
+    "No deploy, production operation, live provider call or owner authorization fabrication"
+  ],
+  "allowed": [
+    ".github/dependabot.yml",
+    ".github/workflows/ci.yml",
+    ".github/workflows/delete-merged-branch.yml",
+    ".github/workflows/review-source.yml",
+    "docs/DEVELOPMENT.md",
+    "docs/MAINTAINABILITY.md",
+    "docs/OPERATIONS.md",
+    "docs/UX.md",
+    "tests/test_ci_scope_guard.py",
+    "tests/test_project_state_mechanical_closeout.py",
+    "tests/test_project_state_source_checkpoint.py",
+    "tests/test_project_state_owner_authorization.py",
+    "tools/ci_scope_guard.py",
+    "tools/project_state_checkpoint_provenance.py",
+    "tools/project_state_closeout.py",
+    "tools/project_state_mechanical_closeout.py",
+    "tools/project_state_merged_evidence.py",
+    "tools/project_state_owner_authorization.py",
+    "tools/scopes/dev-workflow-opt-001.json"
+  ],
+  "sensitive_approved": [
+    ".github/dependabot.yml",
+    ".github/workflows/ci.yml",
+    ".github/workflows/delete-merged-branch.yml",
+    ".github/workflows/review-source.yml",
+    "tools/ci_scope_guard.py",
+    "tools/project_state_checkpoint_provenance.py",
+    "tools/project_state_closeout.py",
+    "tools/project_state_mechanical_closeout.py",
+    "tools/project_state_merged_evidence.py",
+    "tools/project_state_owner_authorization.py",
+    "tools/scopes/dev-workflow-opt-001.json"
+  ]
+}

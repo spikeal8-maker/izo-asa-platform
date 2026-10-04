@@ -12,6 +12,15 @@ from project_state_workflow import (_package_state_at, REQUIRED_PR_JOBS,
 from project_state_provenance import _closeout_owner_waiver, legacy_pr252_review
 
 
+def _checkpoint_introduction(source: str, head: str, package: str, checkpoint: dict,
+                             *, root: Path, git_fn) -> str:
+    """Compatibility wrapper preserving historical test/monkeypatch seam."""
+    return checkpoint_introduction(
+        source, head, package, checkpoint, root=root, git_fn=git_fn,
+        state_at_fn=_package_state_at,
+    )
+
+
 def fetch_merged_closeout_evidence(pr_number: int, source_head: str, package: str,
                                    checkpoint: dict, scope: dict, *, root: Path = ROOT) -> dict:
     from project_state_evidence import (repo_slug, gh_json, git, _workflow_pages,
@@ -39,7 +48,7 @@ def fetch_merged_closeout_evidence(pr_number: int, source_head: str, package: st
                              or prior_item.get("status") != "active"
                              or prior_item.get("checkpoint") is not None):
         raise ValueError("initial checkpoint creation requires active source package")
-    introduced_at = (checkpoint_introduction(checkpoint_head, head, package, checkpoint,
+    introduced_at = (_checkpoint_introduction(checkpoint_head, head, package, checkpoint,
                                                root=root, git_fn=git)
                      if not prior_exists else None)
     source_scope = (source_scope_at(checkpoint_head, package, root=root, git_fn=git)
@@ -75,7 +84,7 @@ def fetch_merged_closeout_evidence(pr_number: int, source_head: str, package: st
                                               evidence["workflows"], slug, root=root))
     elif mechanical_state_only_closeout(
             pr_number, head, checkpoint_head, package, checkpoint, slug,
-            root=root, git_fn=git, gh_fn=gh_json):
+            root=root, git_fn=git, gh_fn=gh_json, merge_head=source_head):
         evidence.update(independent_review="not_required", owner_waiver=False,
                         mechanical_state_only_closeout=True)
     else:

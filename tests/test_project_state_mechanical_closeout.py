@@ -16,7 +16,7 @@ from project_state_registry import serialize_packages, serialize_plan
 
 
 def fixture():
-    source, head = "8" * 40, "9" * 40
+    source, head, merge = "8" * 40, "9" * 40, "a" * 40
     plan = load_plan()
     package = plan["active_package"]
     plan["packages"][package]["status"] = "active"
@@ -62,11 +62,11 @@ def fixture():
         {"filename": name, "status": "modified"}
         for name in ("docs/CHECKPOINTS.json", "docs/CURRENT.md", "docs/PACKAGES.json")
     ]
-    return source, head, package, checkpoint, source_files, head_files, rows
+    return source, head, merge, package, checkpoint, source_files, head_files, rows
 
 
 def test_exact_generated_state_is_mechanical_closeout():
-    source, head, package, checkpoint, source_files, head_files, rows = fixture()
+    source, head, merge, package, checkpoint, source_files, head_files, rows = fixture()
 
     def git_fn(*args, root):
         sha, filename = args[1].split(":", 1)
@@ -78,12 +78,12 @@ def test_exact_generated_state_is_mechanical_closeout():
 
     assert mechanical_state_only_closeout(
         77, head, source, package, checkpoint, "owner/repo",
-        root=ROOT, git_fn=git_fn, gh_fn=gh_fn,
+        root=ROOT, git_fn=git_fn, gh_fn=gh_fn, merge_head=merge,
     )
 
 
 def test_runtime_file_or_tampered_state_fails_closed():
-    source, head, package, checkpoint, source_files, head_files, rows = fixture()
+    source, head, merge, package, checkpoint, source_files, head_files, rows = fixture()
 
     def git_fn(*args, root):
         sha, filename = args[1].split(":", 1)
@@ -95,12 +95,29 @@ def test_runtime_file_or_tampered_state_fails_closed():
     rows.append({"filename": "tools/project_state.py", "status": "modified"})
     assert not mechanical_state_only_closeout(
         77, head, source, package, checkpoint, "owner/repo",
-        root=ROOT, git_fn=git_fn, gh_fn=gh_fn,
+        root=ROOT, git_fn=git_fn, gh_fn=gh_fn, merge_head=merge,
     )
     rows.pop()
 
     head_files["docs/CURRENT.md"] += "tampered\n"
     assert not mechanical_state_only_closeout(
         77, head, source, package, checkpoint, "owner/repo",
-        root=ROOT, git_fn=git_fn, gh_fn=gh_fn,
+        root=ROOT, git_fn=git_fn, gh_fn=gh_fn, merge_head=merge,
+    )
+
+    head_files["docs/CURRENT.md"] = head_files["docs/CURRENT.md"].removesuffix("tampered\n")
+    merge_files = dict(head_files)
+    merge_files["docs/CURRENT.md"] += "concurrent-main-change\n"
+
+    def merge_git_fn(*args, root):
+        sha, filename = args[1].split(":", 1)
+        if sha == source:
+            return source_files[filename]
+        if sha == merge:
+            return merge_files[filename]
+        return head_files[filename]
+
+    assert not mechanical_state_only_closeout(
+        77, head, source, package, checkpoint, "owner/repo",
+        root=ROOT, git_fn=merge_git_fn, gh_fn=gh_fn, merge_head=merge,
     )

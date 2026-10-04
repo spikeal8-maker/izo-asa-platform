@@ -66,6 +66,8 @@ def complete_current(plan: dict, *, branch: str, verified_pr: int,
 
     scope = active_scope(plan, root=root)
     evidence = fetch_pr_evidence(verified_pr, source_head, root=root)
+    from project_state_owner_authorization import fetch_authorization
+    evidence.update(fetch_authorization(verified_pr, source_head, root=root))
     evidence.update(fetch_review_evidence(
         scope, verified_pr, source_head, root=root,
         owner_waiver=owner_waiver,

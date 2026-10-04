@@ -10,7 +10,8 @@ from project_state_workflow import _package_state_at, REQUIRED_PR_JOBS
 
 
 def checkpoint_introduction(source: str, head: str, package: str, checkpoint: dict,
-                            *, root: Path, git_fn) -> str:
+                            *, root: Path, git_fn, state_at_fn=None) -> str:
+    state_at = state_at_fn or _package_state_at
     history = git_fn(
         "rev-list", "--ancestry-path", "--reverse", "--topo-order",
         "--parents", f"{source}..{head}", root=root,
@@ -21,7 +22,7 @@ def checkpoint_introduction(source: str, head: str, package: str, checkpoint: di
         sha, *parents = line.split()
         if not re.fullmatch(r"[0-9a-f]{40}", sha):
             raise ValueError("closeout checkpoint introduction history invalid")
-        item, record, exists = _package_state_at(sha, package, root=root, git_fn=git_fn)
+        item, record, exists = state_at(sha, package, root=root, git_fn=git_fn)
         if exists and (
             record != checkpoint
             or not isinstance(item, dict)
@@ -175,4 +176,8 @@ def authenticate_initial_checkpoint(
         for key in ("independent_review_source", "independent_review_actor", "independent_review_id")
     ):
         raise ValueError("initial checkpoint structured review identity mismatch")
-    return {"checkpoint_pr": number, "checkpoint_waiver_comment_id": comment_id}
+    from project_state_owner_authorization import authenticate_checkpoint_authorization
+    authorization = authenticate_checkpoint_authorization(
+        checkpoint, number, source, slug, before=cutoff.isoformat(), root=root,
+    )
+    return {"checkpoint_pr": number, "checkpoint_waiver_comment_id": comment_id, **authorization}

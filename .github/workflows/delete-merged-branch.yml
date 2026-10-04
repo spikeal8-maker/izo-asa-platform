@@ -14,7 +14,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Delete merged branches not referenced by live state
-        uses: actions/github-script@v9
+        uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3
         with:
           script: |
             const { owner, repo } = context.repo;
@@ -62,7 +62,11 @@ jobs:
                 head: `${owner}:${branch.name}`,
                 per_page: 20,
               })).data;
-              if (!closed.some(pr => pr.merged_at)) continue;
+              const merged = closed.find(pr => pr.merged_at && pr.head?.sha === branch.commit.sha);
+              if (!merged) {
+                core.info(`Skipped ${branch.name}: current tip was not the merged PR head`);
+                continue;
+              }
               try {
                 await github.rest.git.deleteRef({
                   owner,
