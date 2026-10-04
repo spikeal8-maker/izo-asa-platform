@@ -1,0 +1,80 @@
+name: Delete stale merged branches
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  pull-requests: read
+
+jobs:
+  delete-stale-merged:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Delete merged branches not referenced by live state
+        uses: actions/github-script@v9
+        with:
+          script: |
+            const { owner, repo } = context.repo;
+            const repository = (await github.rest.repos.get({ owner, repo })).data;
+            const planFile = (await github.rest.repos.getContent({
+              owner,
+              repo,
+              path: "docs/PLAN.json",
+              ref: repository.default_branch,
+            })).data;
+            if (Array.isArray(planFile) || !("content" in planFile)) {
+              core.setFailed("docs/PLAN.json is not a file");
+              return;
+            }
+            const plan = JSON.parse(Buffer.from(planFile.content, "base64").toString("utf8"));
+            const lineage = plan.canonical_lineage || {};
+            const keep = new Set([
+              repository.default_branch,
+              lineage.working_branch,
+              lineage.runtime_base?.branch,
+              lineage.current_package_base?.branch,
+            ].filter(Boolean));
+
+            const openPulls = await github.paginate(github.rest.pulls.list, {
+              owner,
+              repo,
+              state: "open",
+              per_page: 100,
+            });
+            for (const pr of openPulls) {
+              if (pr.head.repo?.full_name === `${owner}/${repo}`) keep.add(pr.head.ref);
+            }
+
+            const branches = await github.paginate(github.rest.repos.listBranches, {
+              owner,
+              repo,
+              per_page: 100,
+            });
+            for (const branch of branches) {
+              if (keep.has(branch.name) || branch.protected) continue;
+              const closed = (await github.rest.pulls.list({
+                owner,
+                repo,
+                state: "closed",
+                head: `${owner}:${branch.name}`,
+                per_page: 20,
+              })).data;
+              if (!closed.some(pr => pr.merged_at)) continue;
+              try {
+                await github.rest.git.deleteRef({
+                  owner,
+                  repo,
+                  ref: `heads/${branch.name}`,
+                });
+                core.info(`Deleted merged branch ${branch.name}`);
+              } catch (error) {
+                if (error.status === 404 || error.status === 422) {
+                  core.info(`Skipped ${branch.name}: absent or protected`);
+                  continue;
+                }
+                throw error;
+              }
+            }

@@ -225,4 +225,8 @@ Temporary bridge/feature flag/dual path обязан иметь owner, reason, r
 
 Garbage cleanup не удаляет accepted migrations, immutable ledger/audit/checkpoints, user Media/Artifacts, provenance reviews/history или live compatibility path без consumer proof. Test cleanup сохраняет invariant coverage.
 
+Merged same-repository head branches считаются ephemeral: после merge и после того, как ветка перестала быть live state reference, cleanup-workflow удаляет её автоматически; provenance остаётся в PR, merge commit и checkpoint. Default branch, protected branches, open-PR heads и ветки из canonical `working_branch`/`runtime_base`/`current_package_base` не удаляются.
+
+Dependabot остаётся включённым, но routine version updates группируются по ecosystem и имеют небольшой open-PR limit, чтобы dependency maintenance не создавал десятки параллельных веток. Security remediation не отключается ради уменьшения количества PR; security finding может быть выделен в отдельный bounded package.
+
 Новая dependency допускается только для current requirement после license/maintenance/security и duplicate-framework проверки; unused dependency удаляется ближайшим safe cleanup. Flaky test чинится либо получает reproducible quarantine с owner/expiry; permanent ignore без owner запрещён.
