@@ -6,15 +6,16 @@ STATUS содержит **проверенные факты**, а не roadmap. 
 
 ## Последний frozen canonical checkpoint
 
-`CHAT-V4-ADOPTION-001` принят как documentation/governance checkpoint от exact source:
+`P1-CHAT-SCROLL-001` принят как текущий frozen canonical checkpoint от exact source:
 
-- source SHA `811410e3cada4498161415bc279ce9a9f033ab6a`, PR #238;
-- base `codex/chat-vision-001@2a2995ee47c8c369b512c1328f02d3eb662775a3`;
-- Foundation CI `36497695762` — SUCCESS;
-- Dependency Security `36497695888` — SUCCESS;
-- Review Source `36497695795` — SUCCESS;
-- runtime/product implementation в E0 не менялась;
-- Chat P1 в E0 не начинался.
+- source SHA `1de74f79c47885b4e6ff1b1abfd0e695ae8858fd`, PR #255;
+- base `a38796af702c698cda68ef2135c047823ba3b52b`;
+- Foundation CI `37112301297` — SUCCESS;
+- Dependency Security `37112301322` — SUCCESS;
+- Review Source `37112301315` — SUCCESS.
+
+Ему предшествовали принятые canonical checkpoints `PRE-P1-STABILIZATION-001` и
+`PRE-P1-STRUCTURAL-MAINTENANCE-001`.
 
 Freeze/checkpoint записан штатным project-state transition; authoritative evidence находится в
 `docs/CHECKPOINTS.json`. Это не означает production deploy или разрешение на provider spend.
