@@ -1,6 +1,6 @@
 # IZO ASA · текущая точка разработки
 
-<!-- runtime_base=main@faec39d6ae0b4f035ef0f86114494789acde3b46 -->
+<!-- runtime_base=api/fal-klein-001@faec39d6ae0b4f035ef0f86114494789acde3b46 -->
 <!-- current_package_base=main@dc31a725f97281537e0c718a56d8fd4dc8804433 -->
 <!-- working_branch=codex/p1-chat-history-paging-001 -->
 <!-- active_package=P1-CHAT-HISTORY-PAGING-001 -->
