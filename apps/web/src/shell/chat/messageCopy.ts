@@ -15,7 +15,7 @@ type CopyNode = {
 function inline(node: CopyNode): string {
   if (node.type === 'html') return ''
   if (node.type === 'break') return '\n'
-  if (node.type === 'image') return node.alt || ''
+  if (node.type === 'image' || node.type === 'imageReference') return node.alt || ''
   if (node.value !== undefined) return node.value
   return (node.children || []).map(inline).join('')
 }
@@ -27,7 +27,7 @@ function block(node: CopyNode, depth = 0): string {
   if (node.type === 'table') return (node.children || []).map(row =>
     (row.children || []).map(inline).join('\t')).join('\n')
   if (node.type === 'list') return (node.children || []).map((item, index) => {
-    const marker = node.ordered ? `${(node.start || 1) + index}. ` : '- '
+    const marker = node.ordered ? `${(node.start ?? 1) + index}. ` : '- '
     const task = item.checked === null || item.checked === undefined ? '' : item.checked ? '[x] ' : '[ ] '
     const parts = (item.children || []).map(child => block(child, depth + 1)).filter(Boolean)
     const first = parts.shift() || ''

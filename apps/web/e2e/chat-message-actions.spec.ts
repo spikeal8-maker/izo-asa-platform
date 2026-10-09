@@ -2,7 +2,7 @@ import { expect, test } from '@playwright/test'
 import { workspace } from './workspace-fixtures'
 
 const thread = { id: '11111111-1111-4111-8111-111111111141', title: 'Copy test', created_at: 1, updated_at: 2 }
-const assistant = '**Bold** [link](https://example.invalid)\n\n- [x] Done\n- [ ] Next\n\n| Name | Value |\n| --- | --- |\n| A | B |\n\n```js\nconst x = 1\n```'
+const assistant = '**Bold** [link](https://example.invalid)\n\n- [x] Done\n- [ ] Next\n\n0. Zero\n1. One\n\n![diagram][asset]\n\n[asset]: https://example.invalid/image.png\n\n| Name | Value |\n| --- | --- |\n| A | B |\n\n```js\nconst x = 1\n```'
 const messages = [
   { id: '22222222-2222-4222-8222-222222222241', request_id: '33333333-3333-4333-8333-333333333341', role: 'user', sequence: 1, content: 'Hello **literal**', state: 'complete', attachments: [], created_at: 1, updated_at: 1 },
   { id: '22222222-2222-4222-8222-222222222242', request_id: '33333333-3333-4333-8333-333333333342', role: 'assistant', sequence: 2, content: assistant, state: 'complete', attachments: [], created_at: 2, updated_at: 2 },
@@ -33,7 +33,7 @@ test('copies saved user text, assistant plain text, and exact Markdown after rel
   await answer.getByRole('button', { name: 'Копировать Markdown' }).click()
   expect(await page.evaluate(() => (window as any).__copied)).toEqual([
     'Hello **literal**',
-    'Bold link\n\n- [x] Done\n- [ ] Next\n\nName\tValue\nA\tB\n\nconst x = 1',
+    'Bold link\n\n- [x] Done\n- [ ] Next\n\n0. Zero\n1. One\n\ndiagram\n\nName\tValue\nA\tB\n\nconst x = 1',
     assistant,
   ])
   await page.reload()
