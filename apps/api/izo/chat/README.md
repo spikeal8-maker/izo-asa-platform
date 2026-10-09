@@ -48,3 +48,9 @@ model catalog's `input_modalities` and is captured on request admission.
 Current Chat implementation remains the owner described above. Future convergence reads product behavior from `docs/PRODUCT.md`, conversation/data boundaries from `docs/ARCHITECTURE.md`, provider/runtime rules from `docs/AI_RUNTIME.md`, and process/source rules from `docs/MAINTAINABILITY.md` + `docs/DEVELOPMENT.md`. Proposal snapshots are provenance, not default live authority.
 
 Nearest current tests: `tests/test_chat.py`, `tests/test_chat_vision.py`, `tests/test_chat_vision_http.py` plus provider-specific Chat tests. P1 must converge these owners rather than invent a second Chat backend.
+
+History reads use `history_pages.py`: thread detail returns the latest 100 messages and
+`next_before_sequence`; `GET /threads/{id}/messages?before_sequence=N` returns
+the next older bounded page. The cursor is exclusive over the thread's unique
+monotonic sequence. Both reads verify account ownership before loading messages
+or attachments. Nearest paging tests are `tests/test_chat_history_paging.py`.

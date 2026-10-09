@@ -401,6 +401,14 @@
       ],
       "status": "planned"
     },
+    "P1-CHAT-HISTORY-PAGING-001": {
+      "decides_next": true,
+      "depends_on": [
+        "P1-CHAT-SCROLL-001"
+      ],
+      "goal": "Let account owners load messages older than the latest 100 in a long Chat thread with server-owned stable pagination, no duplicates or skipped messages, preserved reading position, safe thread/account switching and reload on desktop and phone. Exclude thread-list search, branch/attempt, Context Engine, renderer/actions, and P4.",
+      "status": "active"
+    },
     "P1-CHAT-SCROLL-001": {
       "checkpoint": "P1-CHAT-SCROLL-001",
       "decides_next": true,

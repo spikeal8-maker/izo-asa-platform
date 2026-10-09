@@ -144,6 +144,11 @@ onError={runtime.setError} />}
 : <>
 <div ref={chatScroll.scrollRef} onScroll={chatScroll.onScroll} className="chat-scroll" aria-live="polite"><div className="chat-column">
 <div className="chat-turns">
+{runtime.olderCursor !== null && <button type="button" className="chat-load-older"
+disabled={runtime.loadingOlder || runtime.openingThread}
+onClick={() => void runtime.loadOlder(chatScroll.preparePrepend)}>
+{runtime.loadingOlder ? 'Загружаем…' : 'Загрузить ранние сообщения'}
+</button>}
 {runtime.messages.map(message =>
 <ChatMessage key={message.id} message={message} auth={auth} />)}
 {runtime.error && <div className="chat-runtime-note" role="alert">

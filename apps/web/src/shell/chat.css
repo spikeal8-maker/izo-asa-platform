@@ -83,6 +83,7 @@
 }
 .chat-start-state .chat-start-note { text-align: center; }
 .chat-turns { padding-top: var(--chat-gap-xs); }
+.chat-load-older { display: block; margin: 0 auto var(--chat-gap-md); padding: var(--chat-gap-sm) var(--chat-gap-md); }
 .chat-turn {
   display: flex;
   margin: 0 0 var(--chat-gap-lg);
@@ -90,6 +91,7 @@
   line-height: 1.58;
 }
 .chat-turn-user { justify-content: flex-end; }
+.chat-assistant-message > p { color: var(--color-text); }
 .chat-user-bubble {
   max-width: min(78%, 760px);
   padding: var(--chat-gap-sm) var(--chat-gap-md);
