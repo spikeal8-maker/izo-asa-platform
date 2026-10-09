@@ -27,20 +27,7 @@ def run(args: list[str], *, root: Path = ROOT) -> str:
 def git(*args: str, root: Path = ROOT) -> str:
     return run(["git", *args], root=root)
 
-def show_package(plan: dict, package_id: str) -> dict:
-    packages = plan["packages"]
-    item = packages.get(package_id)
-    if item is None:
-        raise ValueError(f"unknown package {package_id}")
-    dependencies = {
-        dep: {
-            key: value for key, value in packages[dep].items()
-            if key in {"status", "checkpoint", "goal"}
-        }
-        for dep in item.get("depends_on", [])
-    }
-    return {"package_id": package_id, "package": item, "dependencies": dependencies}
-
+from project_state_package_view import show_package
 
 def verify_checkout(plan: dict, root: Path = ROOT) -> list[str]:
     validate_plan(plan)
@@ -57,11 +44,10 @@ def verify_checkout(plan: dict, root: Path = ROOT) -> list[str]:
         problems.append(f"checkout branch {branch} != PLAN working_branch {lineage['working_branch']}")
     return problems
 def _transition_evidence(plan: dict, pr: int, source_head: str, review: dict, root: Path) -> dict:
-    scope = active_scope(plan, root=root)
-    evidence = fetch_pr_evidence(pr, source_head, root=root)
-    evidence.update(fetch_review_evidence(scope, pr, source_head, root=root, **review))
-    return evidence
-
+    from project_state_transition_evidence import merged_transition_evidence
+    return merged_transition_evidence(plan, pr, source_head, review, root,
+        active_scope=active_scope, fetch_pr_evidence=fetch_pr_evidence,
+        fetch_review_evidence=fetch_review_evidence)
 
 def begin_next(plan: dict, *, branch: str, activate: str, next_id: str | None,
                verified_pr: int, owner_waiver: bool = False,

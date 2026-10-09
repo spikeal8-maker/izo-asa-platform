@@ -185,34 +185,18 @@ def merge_ref_sha(pr_number: int, *, root: Path = ROOT) -> str:
     return sha
 
 
-def validate_pr_evidence(*, pr: dict, runs: list[dict], merge_sha: str,
-                         merge_commit: dict, expected_head: str, pr_number: int,
-                         foundation_tree: str) -> dict:
-    if pr.get("headRefOid") != expected_head:
-        raise ValueError(f"PR #{pr_number} head {pr.get('headRefOid')} != expected {expected_head}")
-    if str(pr.get("state", "")).upper() != "OPEN":
-        raise ValueError(f"PR #{pr_number} must still be open while used as checkpoint evidence")
-    latest = latest_required_runs(runs, expected_head, pr_number)
-    successful = {name: int(latest[name]["databaseId"]) for name in REQUIRED_WORKFLOWS}
-    parents = [item.get("sha") for item in merge_commit.get("parents", [])]
-    base_head = pr.get("baseRefOid")
-    if expected_head not in parents or base_head not in parents:
-        raise ValueError(f"PR merge tree {merge_sha} does not contain current source/base parents")
-    if not re.fullmatch(r"[0-9a-f]{40}", merge_sha):
-        raise ValueError("merge tree SHA is invalid")
-    if foundation_tree != merge_sha:
-        raise ValueError(f"Foundation CI tested merge tree {foundation_tree}, current PR merge tree is {merge_sha}")
-    return {"type": "pr_merge_tree", "source_head": expected_head, "verified_pr": pr_number,
-            "base_head": base_head, "tested_merge_tree": merge_sha, "workflows": successful}
-
+from project_state_open_pr import validate_pr_evidence
 
 def fetch_pr_evidence(pr_number: int, expected_head: str, *, root: Path = ROOT) -> dict:
     slug = repo_slug(root)
     pr = gh_json(["pr", "view", str(pr_number), "--repo", slug,
-                  "--json", "headRefOid,baseRefOid,isDraft,state,url"], root=root)
+                  "--json", "headRefOid,headRefName,baseRefOid,isDraft,state,url,mergedAt,mergeCommit"], root=root)
     pages = gh_json(["api", "--paginate", "--slurp",
                      f"repos/{slug}/actions/runs?event=pull_request&head_sha={expected_head}&per_page=100"], root=root)
     runs = _workflow_pages(pages)
+    if str(pr.get("state", "")).upper() == "MERGED":
+        from project_state_merged_source import validate_merged_source_pr
+        return validate_merged_source_pr(pr_number, expected_head, pr, runs, slug, root=root)
     latest = latest_required_runs(runs, expected_head, pr_number)
     merge_sha = merge_ref_sha(pr_number, root=root)
     merge_commit = gh_json(["api", f"repos/{slug}/commits/{merge_sha}"], root=root)

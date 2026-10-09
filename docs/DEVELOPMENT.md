@@ -73,6 +73,12 @@ SELF_REVIEW и CI. Требуется отдельное review evidence.
 
 После required workflows принятый source head замораживается. Отдельный merged closeout PR для `complete` —
 единственный допустимый переход к новому HEAD по контракту ниже.
+Если source PR активного package уже слит до `begin-decided-next`, workflow принимает прежний exact source
+HEAD только при доказанном merge этого же PR: текущий canonical `main` равен его exact merge commit,
+родители merge commit совпадают с PR base/head, а required PR CI и status rollup относятся к этому
+HEAD. Tested merge tree должен совпадать с деревом фактического merge commit. Review или owner waiver
+должны относиться к exact source HEAD и предшествовать merge; waiver другого SHA не переносится.
+Checkpoint при таком переходе записывает исходный source HEAD и отдельно verified merge commit.
 Предвыбранный successor запускается через `project_state.py begin-next`; package с `decides_next=true` и
 `next_package=NONE` — через `begin-decided-next`. State workflow создаёт новую ветку и атомарно меняет
 PLAN/PACKAGES/CURRENT/CHECKPOINTS. Для terminal `complete` запуск successor не понижает завершённый package.
