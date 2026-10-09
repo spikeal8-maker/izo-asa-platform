@@ -309,6 +309,25 @@
         "Review Source": 37112301315
       }
     },
+    "P1-CHAT-THREAD-PAGING-001": {
+      "base_head": "f382a533639917064aacb23832273ef5fa7a744e",
+      "independent_review": "unavailable",
+      "merged_source_commit": "563e39658e541d3943158dc29fe32363b0597b49",
+      "owner_actor": "spikeal8-maker",
+      "owner_waiver": true,
+      "owner_waiver_reason": "Structured independent GitHub APPROVED reviewer actor is unavailable because the connected actor is the repository owner; separate read-only review passed on this exact HEAD and required exact-head CI is 3/3 SUCCESS.",
+      "owner_waiver_source": "085f3d892cb09b9c36df43fcc74bccd2ba461791",
+      "source_head": "085f3d892cb09b9c36df43fcc74bccd2ba461791",
+      "source_waiver_comment_id": 6088128515,
+      "tested_merge_tree": "5fa7ffc6cf4001447b5d2e6b87147e9e20883c8a",
+      "type": "pr_merge_tree",
+      "verified_pr": 264,
+      "workflows": {
+        "Dependency Security": 37980869455,
+        "Foundation CI": 37980869424,
+        "Review Source": 37980869378
+      }
+    },
     "PRE-P1-STABILIZATION-001": {
       "base_head": "e93aff74be4283268c57b6edbc34d35d92ffa414",
       "independent_review": "unavailable",

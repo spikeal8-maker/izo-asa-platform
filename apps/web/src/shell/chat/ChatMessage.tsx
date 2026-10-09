@@ -1,9 +1,10 @@
-import { isValidElement, useState, type ReactNode } from 'react'
+import { isValidElement, useEffect, useState, type ReactNode } from 'react'
 import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
 import './ChatRenderer.css'
 import type { AuthView, MessageView as Message } from '../../shared/api'
 import { usePrivateImageUrl } from '../../shared/usePrivateImageUrl'
+import { plainMessageText } from './messageCopy'
 
 type Attachment = NonNullable<Message['attachments']>[number]
 
@@ -57,6 +58,26 @@ function CodeBlock({ children }: { children?: ReactNode }) {
   </div>
 }
 
+function MessageActions({ content, assistant }: { content: string; assistant: boolean }) {
+  const [feedback, setFeedback] = useState('')
+  useEffect(() => { setFeedback('') }, [content])
+
+  async function copy(markdown: boolean) {
+    try {
+      await navigator.clipboard.writeText(markdown ? content : assistant ? plainMessageText(content) : content)
+      setFeedback(markdown ? 'Markdown скопирован' : 'Скопировано')
+    } catch {
+      setFeedback('Не удалось скопировать. Проверьте доступ к буферу обмена.')
+    }
+  }
+
+  return <div className="chat-message-actions">
+    <button type="button" disabled={!content} onClick={() => void copy(false)}>Копировать</button>
+    {assistant && <button type="button" disabled={!content} onClick={() => void copy(true)}>Копировать Markdown</button>}
+    <span role="status" aria-live="polite">{feedback}</span>
+  </div>
+}
+
 export function ChatMessage({ message, auth }: { message: Message; auth: AuthView | null | undefined }) {
   if (message.role === 'user') {
     return <div className="chat-turn chat-turn-user" data-message-id={message.id}>
@@ -66,6 +87,7 @@ export function ChatMessage({ message, auth }: { message: Message; auth: AuthVie
         </div> : null}
         {message.content && <div>{message.content}</div>}
       </div>
+      <MessageActions content={message.content} assistant={false} />
     </div>
   }
 
@@ -92,5 +114,6 @@ export function ChatMessage({ message, auth }: { message: Message; auth: AuthVie
             : 'Ответ завершился с ошибкой.'}
         </div>}
     </div>
+    <MessageActions content={message.content} assistant />
   </div>
 }

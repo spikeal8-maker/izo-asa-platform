@@ -410,6 +410,14 @@
       "goal": "Let account owners load messages older than the latest 100 in a long Chat thread with server-owned stable pagination, no duplicates or skipped messages, preserved reading position, safe thread/account switching and reload on desktop and phone. Exclude thread-list search, branch/attempt, Context Engine, renderer/actions, and P4.",
       "status": "technical_pass"
     },
+    "P1-CHAT-MESSAGE-COPY-001": {
+      "decides_next": true,
+      "depends_on": [
+        "P1-CHAT-THREAD-PAGING-001"
+      ],
+      "goal": "Add accessible Copy and Copy Markdown actions for saved assistant messages and Copy for user messages in Chat, using message content rather than DOM/toolbars, with clear clipboard feedback on desktop and phone. Preserve existing code-block copy and safe renderer. Exclude regenerate/edit/branch/attempt, Context Engine, provider/Admin and P4.",
+      "status": "active"
+    },
     "P1-CHAT-RENDERER-GFM-001": {
       "checkpoint": "P1-CHAT-RENDERER-GFM-001",
       "decides_next": true,
@@ -429,12 +437,13 @@
       "status": "complete"
     },
     "P1-CHAT-THREAD-PAGING-001": {
+      "checkpoint": "P1-CHAT-THREAD-PAGING-001",
       "decides_next": true,
       "depends_on": [
         "P1-CHAT-RENDERER-GFM-001"
       ],
       "goal": "Let account owners load conversations older than the latest 50 in Chat with server-owned stable cursor pagination, no duplicates or skipped threads, owner isolation, and safe desktop/phone sidebar behavior. Exclude thread search, branch/attempt, Context Engine, provider/Admin and P4.",
-      "status": "active"
+      "status": "technical_pass"
     },
     "PLATFORM-001": {
       "depends_on": [
