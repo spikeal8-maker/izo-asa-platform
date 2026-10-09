@@ -39,7 +39,8 @@ class ConversationMixin(AttachmentMixin, RequestStateMixin):
 				payload = json.loads(base64.urlsafe_b64decode(cursor + '=' * (-len(cursor) % 4)))
 				if (set(payload) != {'v', 'updated_at', 'id'} or payload['v'] != 1
 						or type(payload['updated_at']) is not int
-						or not 0 <= payload['updated_at'] <= 2**63 - 1):
+						or not 0 <= payload['updated_at'] <= 2**63 - 1
+						or type(payload['id']) is not str):
 					raise ValueError()
 				boundary = (payload['updated_at'], UUID(payload['id']))
 			except (ValueError, TypeError, KeyError, UnicodeDecodeError, binascii.Error):

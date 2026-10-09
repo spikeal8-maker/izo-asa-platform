@@ -1,5 +1,8 @@
 """Account-owned thread history extends beyond the first 50 rows."""
 
+import base64
+import json
+
 import pytest
 
 from izo.chat.credentials import ChatError
@@ -30,3 +33,8 @@ def test_thread_pages_have_stable_tie_order_and_owner_isolation(chat_env):
     assert [item.id for item in service.list_threads(bob.bearer).threads] == [foreign]
     with pytest.raises(ChatError, match='invalid_thread_cursor'):
         service.list_threads(alice.bearer, 'not-a-cursor')
+    for bad_id in (123, {}, None):
+        payload = {'v': 1, 'updated_at': clock[0], 'id': bad_id}
+        malformed = base64.urlsafe_b64encode(json.dumps(payload).encode()).decode().rstrip('=')
+        with pytest.raises(ChatError, match='invalid_thread_cursor'):
+            service.list_threads(alice.bearer, malformed)
