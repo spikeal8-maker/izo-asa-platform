@@ -1,14 +1,15 @@
 {
   "package_id": "P1-CHAT-MESSAGE-COPY-001",
-  "base": "18e7be36703d93cb700b66262a82e3f39b100c9d",
-  "scope_class": "normal",
+  "base": "085f3d892cb09b9c36df43fcc74bccd2ba461791",
+  "scope_class": "cross_domain",
   "risk": "medium",
   "independent_review_required": true,
-  "max_files": 9,
+  "max_files": 13,
+  "large_scope_reason": "The canonical state workflow checkpoints the previous thread-paging package on this branch; the bounded product change remains within web Chat message actions and nearest browser tests.",
   "domains": ["web-chat", "tests", "governance"],
   "non_goals": [
     "No backend, provider, Admin, branch/attempt, edit, regenerate, or Context Engine changes",
-    "No paid provider call, deploy, or state transition"
+    "No paid provider call, deploy, or additional state transition"
   ],
   "allowed": [
     "apps/web/package.json",
@@ -16,7 +17,11 @@
     "apps/web/src/shell/chat/ChatMessage.tsx",
     "apps/web/src/shell/chat/ChatRenderer.css",
     "apps/web/src/shell/chat/messageCopy.ts",
-    "apps/web/e2e/chat-message-copy.spec.ts",
+    "apps/web/e2e/chat-message-actions.spec.ts",
+    "docs/CHECKPOINTS.json",
+    "docs/CURRENT.md",
+    "docs/PACKAGES.json",
+    "docs/PLAN.json",
     "docs/reviews/P1-CHAT-MESSAGE-COPY-001-source-audit.md",
     "tools/scopes/p1-chat-message-copy-001.json"
   ],
