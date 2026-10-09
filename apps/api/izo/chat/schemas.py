@@ -127,6 +127,7 @@ class ThreadView(BaseModel):
 
 class ThreadList(BaseModel):
     threads: list[ThreadView]
+    next_cursor: str | None = None
 
 class AttachmentView(BaseModel):
     id: UUID

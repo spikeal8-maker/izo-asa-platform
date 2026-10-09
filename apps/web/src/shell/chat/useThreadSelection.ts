@@ -1,5 +1,5 @@
 import { useCallback, useRef, useState, type Dispatch, type SetStateAction } from 'react'
-import { apiRequest, type MessagePage, type MessageView, type ThreadDetail, type ThreadList, type ThreadView } from '../../shared/api'
+import { apiRequest, type MessagePage, type MessageView, type ThreadDetail } from '../../shared/api'
 import { chatProblem, lastChatWarning } from './chatAttachments'
 
 export type Selection = { accountId: string | undefined; threadId: string | null; version: number }
@@ -7,7 +7,6 @@ export type Selection = { accountId: string | undefined; threadId: string | null
 export function useThreadSelection(accountId: string | undefined, update: {
   chatId: (value: string | null) => void
   messages: Dispatch<SetStateAction<MessageView[]>>
-  history: (value: ThreadView[]) => void
   error: (value: string) => void
 }) {
   const currentAccount = useRef(accountId)
@@ -36,12 +35,6 @@ export function useThreadSelection(accountId: string | undefined, update: {
   }
   const clearResumeClaims = () => resumeClaims.current.clear()
   const stopResume = (requestId: string) => resumeClaims.current.add(requestId)
-
-  const refreshHistory = useCallback(async (signal?: AbortSignal) => {
-    if (!accountId) return
-    const list = await apiRequest<ThreadList>('/api/v1/chat/threads', { signal })
-    if (currentAccount.current === accountId) update.history(list.threads)
-  }, [accountId, update.history])
 
   const loadThread = useCallback(async (threadId: string, signal?: AbortSignal) => {
     const at = selection.current
@@ -135,6 +128,6 @@ export function useThreadSelection(accountId: string | undefined, update: {
   const canSendTo = (threadId: string | null, owner: string) =>
     !openingThread && selection.current.accountId === owner && selection.current.threadId === threadId
 
-  return { selection, selectThread, selected, loadThread, loadOlder, olderCursor, loadingOlder, refreshHistory,
+  return { selection, selectThread, selected, loadThread, loadOlder, olderCursor, loadingOlder,
     openingThread, resetSelection, openThread, canSendTo, claimResume, clearResumeClaims, stopResume }
 }

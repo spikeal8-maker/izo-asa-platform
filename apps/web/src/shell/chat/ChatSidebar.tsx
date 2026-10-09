@@ -4,10 +4,14 @@ import { Icon } from '../../shared/ui/Icon'
 import { AccountMenu } from '../TopBar'
 import './ChatSidebar.css'
 
-export function ChatSidebar({ auth, history, currentChatId, busy, theme, onThemeChange, onLogout,
+export function ChatSidebar({ auth, history, historyCursor, loadingHistory, onLoadMoreHistory,
+  currentChatId, busy, theme, onThemeChange, onLogout,
   compact, drawerOpen, hiddenFromKeyboard, onNewChat, onOpenChat, onClose, onExpand }: {
   auth: AuthView | null | undefined
   history: ThreadView[]
+  historyCursor: string | null
+  loadingHistory: boolean
+  onLoadMoreHistory: () => void
   currentChatId: string | null
   busy: boolean
   theme: 'light' | 'dark'
@@ -120,6 +124,9 @@ export function ChatSidebar({ auth, history, currentChatId, busy, theme, onTheme
       {visibleHistory.map(chat => <button className={chat.id === currentChatId ? 'chat-history-item active' : 'chat-history-item'}
         key={chat.id} onClick={() => onOpenChat(chat)} disabled={busy}
         title={chat.title}>{chat.title}</button>)}
+      {historyCursor && <button className="chat-history-more" onClick={onLoadMoreHistory}
+        disabled={loadingHistory} aria-label="Загрузить ранние чаты">
+        {loadingHistory ? 'Загружаем…' : 'Загрузить ранние чаты'}</button>}
     </div></>}
 
     {auth && <div className="chat-sidebar-bottom">

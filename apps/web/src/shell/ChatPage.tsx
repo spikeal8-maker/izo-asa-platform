@@ -108,6 +108,8 @@ className={`chat-page ${empty ? 'is-empty' : ''} ${sidebarOpen ? 'sidebar-open' 
 aria-label="Чат ИЗО АСА">
 <ChatSidebar
 auth={auth} history={runtime.history} currentChatId={runtime.currentChatId}
+historyCursor={runtime.historyCursor} loadingHistory={runtime.loadingHistory}
+onLoadMoreHistory={() => void runtime.loadMoreHistory()}
 busy={runtime.busy} theme={theme} onThemeChange={onThemeChange} onLogout={onLogout}
 compact={compact} drawerOpen={!desktop && drawerOpen} hiddenFromKeyboard={!desktop && !drawerOpen}
 onNewChat={newChat} onOpenChat={chat => void openChat(chat)}

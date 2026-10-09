@@ -54,3 +54,9 @@ History reads use `history_pages.py`: thread detail returns the latest 100 messa
 the next older bounded page. The cursor is exclusive over the thread's unique
 monotonic sequence. Both reads verify account ownership before loading messages
 or attachments. Nearest paging tests are `tests/test_chat_history_paging.py`.
+
+Thread-list reads in `thread_pages.py` return at most 50 account-owned rows in creation order.
+`next_cursor` is an exclusive immutable `(created_at, id)` keyset boundary for
+`GET /threads?cursor=...`; malformed cursors fail closed. The cursor grants no
+ownership and every page applies the account filter. Nearest tests:
+`tests/test_chat_thread_paging.py`.

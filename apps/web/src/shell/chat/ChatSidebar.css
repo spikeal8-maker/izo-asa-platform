@@ -107,6 +107,12 @@
   white-space: nowrap;
 }
 .chat-history-item:hover, .chat-history-item.active { background: color-mix(in srgb, var(--color-text) 6%, transparent); }
+.chat-history-more {
+  width: 100%; min-height: var(--chat-control-size); border: 0; border-radius: 10px;
+  background: transparent; color: var(--color-accent); cursor: pointer;
+}
+.chat-history-more:hover { background: color-mix(in srgb, var(--color-text) 6%, transparent); }
+.chat-history-more:disabled { cursor: progress; opacity: .65; }
 .chat-sidebar-bottom {
   margin-top: auto;
   padding: var(--chat-gap-sm);

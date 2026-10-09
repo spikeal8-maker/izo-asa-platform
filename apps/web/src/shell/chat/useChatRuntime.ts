@@ -10,29 +10,32 @@ import { chatImageProblem, chatProblem, forgetChatOperations, resolveChatAttachm
 import { beginChatMedia, endChatMedia } from './AttachmentControl'
 import { admitChatRequest, nextChatRequest, PreflightProblem, type PendingChatRequest } from './useChatPreflight'
 import { useThreadSelection } from './useThreadSelection'
+import { useThreadHistory } from './useThreadHistory'
 import { streamChatRequest } from './streamChatRequest'
 export function useChatRuntime(auth: AuthView | null | undefined) {
 const [basePolicy, setBasePolicy] = useState<ChatPolicyView | null>(null)
 const [credentials, setCredentials] = useState<CredentialView[]>([])
-const [history, setHistory] = useState<ThreadView[]>([])
 const [messages, setMessages] = useState<MessageView[]>([])
 const [currentChatId, setCurrentChatId] = useState<string | null>(null)
 const [busy, setBusy] = useState(false)
 const [activeRequestId, setActiveRequestId] = useState<string | null>(null)
 const [error, setError] = useState('')
+const { history, setHistory, historyCursor, setHistoryCursor, loadingHistory,
+  resetHistory, loadMoreHistory, refreshHistory } = useThreadHistory(auth?.account.id, setError)
 const idle = () => {setBusy(false);setActiveRequestId(null)}
 const refreshPolicy = () => apiRequest<ChatPolicyView>('/api/v1/chat/policy').then(setBasePolicy)
 const publishCredentialChange = useCredentialSync(auth, setCredentials)
 const { policy, catalogError } = useChatCatalog(auth, basePolicy)
 const streamController = useRef<AbortController | null>(null)
 const pendingRequest = useRef<PendingChatRequest | null>(null)
-const { selection, selectThread, selected, loadThread, loadOlder, olderCursor, loadingOlder, refreshHistory,
+const { selection, selectThread, selected, loadThread, loadOlder, olderCursor, loadingOlder,
 openingThread, resetSelection, openThread, canSendTo, claimResume, clearResumeClaims, stopResume } = useThreadSelection(
-auth?.account.id, { chatId: setCurrentChatId, messages: setMessages, history: setHistory, error: setError })
+auth?.account.id, { chatId: setCurrentChatId, messages: setMessages, error: setError })
 useEffect(() => {
+resetHistory()
 streamController.current?.abort()
 resetSelection()
-setBasePolicy(null); setCredentials([]); setHistory([]); setMessages([])
+setBasePolicy(null); setCredentials([]); setMessages([])
 setCurrentChatId(null); idle(); setError('')
 clearResumeClaims()
 pendingRequest.current = null
@@ -45,7 +48,7 @@ apiRequest<ThreadList>('/api/v1/chat/threads', { signal: controller.signal }),
 ]).then(([p, c, h]) => {
 if (controller.signal.aborted) return
 setBasePolicy(p)
-setCredentials(c.credentials); setHistory(h.threads)
+setCredentials(c.credentials); setHistory(h.threads); setHistoryCursor(h.next_cursor ?? null)
 }).catch(reason => {
 if (!controller.signal.aborted) setError(chatProblem(reason))
 })
@@ -166,7 +169,8 @@ streamController.current?.abort()
 setCredential(value); idle()
 }
 return {
-policy, catalogError, credentials, history, messages, currentChatId, openingThread, busy, activeRequestId,
+policy, catalogError, credentials, history, historyCursor, loadingHistory, loadMoreHistory,
+messages, currentChatId, openingThread, busy, activeRequestId,
 loadOlder: (beforePrepend: () => void) => currentChatId && loadOlder(currentChatId, beforePrepend),
 olderCursor, loadingOlder,
 pendingAdmission: !!pendingRequest.current,

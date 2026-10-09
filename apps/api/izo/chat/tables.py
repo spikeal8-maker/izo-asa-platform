@@ -42,6 +42,7 @@ threads = sa.Table("chat_threads", metadata,
     sa.Column("updated_at", sa.BigInteger, nullable=False),
     sa.CheckConstraint("next_sequence >= 1", name="chat_thread_sequence"))
 sa.Index("ix_chat_threads_owner_time", threads.c.account_id, threads.c.updated_at, threads.c.id)
+sa.Index("ix_chat_threads_owner_created", threads.c.account_id, threads.c.created_at, threads.c.id)
 
 requests = sa.Table("chat_requests", metadata,
     sa.Column("id", sa.Uuid, primary_key=True),

@@ -6,9 +6,10 @@ from . import tables as t
 from .attachments import AttachmentMixin
 from .credentials import ChatError
 from .history_pages import older_messages, thread_detail
+from .thread_pages import list_threads, thread_view
 from .request_state import RequestStateMixin, UNKNOWN_PAID_OUTCOME
 from .schemas import MessageView, RequestView, ThreadDetail, ThreadList, ThreadView
-from .schemas import MODEL_REVISION, REQUEST_WINDOW_LIMIT, THREAD_PAGE_LIMIT
+from .schemas import MODEL_REVISION, REQUEST_WINDOW_LIMIT
 from .schemas import OPENROUTER_AUTO_MODEL
 class ConversationMixin(AttachmentMixin, RequestStateMixin):
 	def create_thread(self, raw, csrf, title: str | None) -> ThreadView:
@@ -23,17 +24,9 @@ class ConversationMixin(AttachmentMixin, RequestStateMixin):
 			id=thread_id, title=safe, created_at=now, updated_at=now)
 	@staticmethod
 	def _thread_view(row) -> ThreadView:
-		return ThreadView(
-			id=row["id"], title=row["title"],
-			created_at=row["created_at"], updated_at=row["updated_at"])
-	def list_threads(self, raw) -> ThreadList:
-		with self.engine.begin() as conn:
-			account, _ = self._account(conn, raw)
-			rows = conn.execute(sa.select(t.threads).where(
-				t.threads.c.account_id == account["id"]).order_by(
-				t.threads.c.updated_at.desc(), t.threads.c.id.desc()).limit(
-				THREAD_PAGE_LIMIT)).mappings().all()
-		return ThreadList(threads=[self._thread_view(row) for row in rows])
+		return thread_view(row)
+	def list_threads(self, raw, cursor: str | None = None) -> ThreadList:
+		return list_threads(self, raw, cursor)
 	@classmethod
 	def _message_view(cls, row, attachment_rows=()) -> MessageView:
 		return MessageView(
