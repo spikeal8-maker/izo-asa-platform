@@ -140,7 +140,8 @@ def _source_waiver_body(body: str, pr_number: int, head: str, runs: dict,
 
 
 def _closeout_owner_waiver(pr_number: int, head: str, workflows: dict,
-                           merged_at: str, slug: str, *, root: Path = ROOT) -> tuple[str, int] | None:
+                           merged_at: str, slug: str, *, root: Path = ROOT,
+                           source_checkpoint: bool = False) -> tuple[str, int] | None:
     from project_state_evidence import gh_json, _flatten_pages
 
     cutoff = _time(merged_at, "closeout merge")
@@ -152,7 +153,8 @@ def _closeout_owner_waiver(pr_number: int, head: str, workflows: dict,
                 or row.get("author_association") != "OWNER"):
             continue
         reason = _structured_waiver_body(str(row.get("body") or ""),
-                                          pr_number, head, workflows)
+                                          pr_number, head, workflows,
+                                          source_checkpoint=source_checkpoint)
         if (reason is None or type(row.get("id")) is not int
                 or not row.get("created_at") or not row.get("updated_at")):
             continue
