@@ -6,7 +6,7 @@ from . import tables as t
 from .attachments import AttachmentMixin
 from .credentials import ChatError
 from .history_pages import older_messages, thread_detail
-from .thread_pages import list_threads
+from .thread_pages import list_threads, thread_view
 from .request_state import RequestStateMixin, UNKNOWN_PAID_OUTCOME
 from .schemas import MessageView, RequestView, ThreadDetail, ThreadList, ThreadView
 from .schemas import MODEL_REVISION, REQUEST_WINDOW_LIMIT
@@ -22,6 +22,9 @@ class ConversationMixin(AttachmentMixin, RequestStateMixin):
 				next_sequence=1, created_at=now, updated_at=now))
 		return ThreadView(
 			id=thread_id, title=safe, created_at=now, updated_at=now)
+	@staticmethod
+	def _thread_view(row) -> ThreadView:
+		return thread_view(row)
 	def list_threads(self, raw, cursor: str | None = None) -> ThreadList:
 		return list_threads(self, raw, cursor)
 	@classmethod

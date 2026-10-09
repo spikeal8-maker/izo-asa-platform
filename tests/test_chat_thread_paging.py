@@ -29,6 +29,7 @@ def test_thread_pages_have_stable_tie_order_and_owner_isolation(chat_env):
     assert set(seen) == set(ids)
     assert foreign not in seen
     assert newer not in seen  # a new row above the cursor cannot duplicate a later page
+    assert service.thread_detail(alice.bearer, ids[0]).thread.id == ids[0]
     assert seen == sorted(ids, reverse=True)  # all rows share the same clock tick
     assert [item.id for item in service.list_threads(bob.bearer).threads] == [foreign]
     with pytest.raises(ChatError, match='invalid_thread_cursor'):

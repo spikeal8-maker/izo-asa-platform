@@ -29,6 +29,12 @@ def _boundary(cursor: str | None) -> tuple[int, UUID] | None:
         raise ChatError(400, 'invalid_thread_cursor') from None
 
 
+def thread_view(row) -> ThreadView:
+    return ThreadView(
+        id=row['id'], title=row['title'], created_at=row['created_at'],
+        updated_at=row['updated_at'])
+
+
 def list_threads(service, raw, cursor: str | None = None) -> ThreadList:
     boundary = _boundary(cursor)
     with service.engine.begin() as conn:
@@ -46,6 +52,4 @@ def list_threads(service, raw, cursor: str | None = None) -> ThreadList:
         payload = {'v': 1, 'updated_at': last['updated_at'], 'id': str(last['id'])}
         next_cursor = base64.urlsafe_b64encode(
             json.dumps(payload, separators=(',', ':')).encode()).decode().rstrip('=')
-    return ThreadList(threads=[ThreadView(
-        id=row['id'], title=row['title'], created_at=row['created_at'],
-        updated_at=row['updated_at']) for row in page], next_cursor=next_cursor)
+    return ThreadList(threads=[thread_view(row) for row in page], next_cursor=next_cursor)

@@ -1,11 +1,11 @@
 {
   "package_id": "P1-CHAT-THREAD-PAGING-001",
-  "base": "73ce21adfe8167165bd60af0192f85d6a31df2f5",
+  "base": "f87b487adf41589ded9cae0090e8d53859df4696",
   "scope_class": "cross_domain",
   "risk": "medium",
   "independent_review_required": true,
-  "max_files": 16,
-  "large_scope_reason": "One bounded account-owned thread list feature crosses the public Chat API contract, existing web sidebar, and focused API/browser regression tests. Near-limit Chat owners delegate the new behavior to dedicated small modules.",
+  "max_files": 20,
+  "large_scope_reason": "Canonical state transition checkpoints the preceding renderer package on this branch; one bounded account-owned thread list feature then crosses the public Chat API contract, existing web sidebar, and focused API/browser regression tests. Near-limit Chat owners delegate new behavior to dedicated small modules.",
   "domains": ["chat-api", "web-chat", "contracts", "tests", "governance"],
   "non_goals": [
     "No global history search, rename/delete, branch/attempt, Context Engine, provider or Admin semantics",
@@ -26,6 +26,10 @@
     "apps/web/src/shell/chat/useThreadHistory.ts",
     "apps/web/src/shell/chat/useThreadSelection.ts",
     "apps/web/e2e/chat-thread-paging.spec.ts",
+    "docs/CHECKPOINTS.json",
+    "docs/CURRENT.md",
+    "docs/PACKAGES.json",
+    "docs/PLAN.json",
     "packages/contracts/openapi.json",
     "tests/test_chat_thread_paging.py",
     "tools/scopes/p1-chat-thread-paging-001.json"
