@@ -21,7 +21,7 @@ const [busy, setBusy] = useState(false)
 const [activeRequestId, setActiveRequestId] = useState<string | null>(null)
 const [error, setError] = useState('')
 const { history, setHistory, historyCursor, setHistoryCursor, loadingHistory,
-  cancelHistoryLoad, resetHistory, loadMoreHistory } = useThreadHistory(auth?.account.id, setError)
+  resetHistory, loadMoreHistory, refreshHistory } = useThreadHistory(auth?.account.id, setError)
 const idle = () => {setBusy(false);setActiveRequestId(null)}
 const refreshPolicy = () => apiRequest<ChatPolicyView>('/api/v1/chat/policy').then(setBasePolicy)
 const publishCredentialChange = useCredentialSync(auth, setCredentials)
@@ -29,14 +29,8 @@ const { policy, catalogError } = useChatCatalog(auth, basePolicy)
 const streamController = useRef<AbortController | null>(null)
 const pendingRequest = useRef<PendingChatRequest | null>(null)
 const { selection, selectThread, selected, loadThread, loadOlder, olderCursor, loadingOlder,
-  refreshHistory: refreshHistoryPage,
 openingThread, resetSelection, openThread, canSendTo, claimResume, clearResumeClaims, stopResume } = useThreadSelection(
-auth?.account.id, { chatId: setCurrentChatId, messages: setMessages, history: setHistory,
-  historyCursor: setHistoryCursor, error: setError })
-const refreshHistory = useCallback(async (signal?: AbortSignal) => {
-  cancelHistoryLoad()
-  await refreshHistoryPage(signal)
-}, [cancelHistoryLoad, refreshHistoryPage])
+auth?.account.id, { chatId: setCurrentChatId, messages: setMessages, error: setError })
 useEffect(() => {
 resetHistory()
 streamController.current?.abort()

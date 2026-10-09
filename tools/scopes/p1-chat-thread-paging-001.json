@@ -4,7 +4,7 @@
   "scope_class": "cross_domain",
   "risk": "medium",
   "independent_review_required": true,
-  "max_files": 20,
+  "max_files": 22,
   "large_scope_reason": "Canonical state transition checkpoints the preceding renderer package on this branch; one bounded account-owned thread list feature then crosses the public Chat API contract, existing web sidebar, and focused API/browser regression tests. Near-limit Chat owners delegate new behavior to dedicated small modules.",
   "domains": ["chat-api", "web-chat", "contracts", "tests", "governance"],
   "non_goals": [
@@ -14,6 +14,8 @@
   "allowed": [
     "apps/api/izo/chat/conversations.py",
     "apps/api/izo/chat/thread_pages.py",
+    "apps/api/izo/chat/tables.py",
+    "apps/api/migrations/versions/0016_chat_thread_created_index.py",
     "apps/api/izo/chat/routes.py",
     "apps/api/izo/chat/schemas.py",
     "apps/api/izo/chat/README.md",
@@ -34,5 +36,8 @@
     "tests/test_chat_thread_paging.py",
     "tools/scopes/p1-chat-thread-paging-001.json"
   ],
-  "sensitive_approved": ["tools/scopes/p1-chat-thread-paging-001.json"]
+  "sensitive_approved": [
+    "apps/api/migrations/versions/0016_chat_thread_created_index.py",
+    "tools/scopes/p1-chat-thread-paging-001.json"
+  ]
 }
