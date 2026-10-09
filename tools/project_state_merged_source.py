@@ -41,4 +41,3 @@ def validate_merged_source_pr(pr_number: int, expected_head: str, pr: dict,
             "base_head": base, "tested_merge_tree": tested,
             "merged_source_commit": merge, "merged_at": pr["mergedAt"],
             "workflows": {name: int(latest[name]["databaseId"]) for name in REQUIRED_WORKFLOWS}}
-

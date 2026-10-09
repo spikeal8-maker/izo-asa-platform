@@ -26,4 +26,3 @@ def merged_transition_evidence(plan: dict, pr: int, source_head: str, review: di
         decision = fetch_review_evidence(scope, pr, source_head, root=root, **review)
     evidence.update(decision)
     return evidence
-

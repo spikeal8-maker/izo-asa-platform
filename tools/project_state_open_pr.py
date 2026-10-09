@@ -22,4 +22,3 @@ def validate_pr_evidence(*, pr: dict, runs: list[dict], merge_sha: str,
         raise ValueError(f"Foundation CI tested merge tree {foundation_tree}, current PR merge tree is {merge_sha}")
     return {"type": "pr_merge_tree", "source_head": expected_head, "verified_pr": pr_number,
             "base_head": base_head, "tested_merge_tree": merge_sha, "workflows": successful}
-

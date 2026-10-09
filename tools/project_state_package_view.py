@@ -14,4 +14,3 @@ def show_package(plan: dict, package_id: str) -> dict:
         for dep in item.get("depends_on", [])
     }
     return {"package_id": package_id, "package": item, "dependencies": dependencies}
-
