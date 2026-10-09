@@ -54,3 +54,8 @@ prepended content before paint and holds the visible message anchor through
 later private-image layout changes. User scroll input releases that anchor.
 Late pages from a prior selection are ignored.
 `chat-history-paging.spec.ts` covers desktop/phone, reload and stale responses.
+
+The sidebar loads thread history beyond the first 50 through a server cursor.
+It keeps already loaded rows unique by thread ID, resets to the first page on
+reload/account change, and offers an explicit older-chats control in desktop
+sidebar and phone drawer. `chat-thread-paging.spec.ts` covers both viewports.

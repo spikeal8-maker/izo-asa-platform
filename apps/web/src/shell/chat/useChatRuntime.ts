@@ -15,6 +15,9 @@ export function useChatRuntime(auth: AuthView | null | undefined) {
 const [basePolicy, setBasePolicy] = useState<ChatPolicyView | null>(null)
 const [credentials, setCredentials] = useState<CredentialView[]>([])
 const [history, setHistory] = useState<ThreadView[]>([])
+const [historyCursor, setHistoryCursor] = useState<string | null>(null)
+const [loadingHistory, setLoadingHistory] = useState(false)
+const historyPending = useRef<AbortController | null>(null)
 const [messages, setMessages] = useState<MessageView[]>([])
 const [currentChatId, setCurrentChatId] = useState<string | null>(null)
 const [busy, setBusy] = useState(false)
@@ -26,13 +29,22 @@ const publishCredentialChange = useCredentialSync(auth, setCredentials)
 const { policy, catalogError } = useChatCatalog(auth, basePolicy)
 const streamController = useRef<AbortController | null>(null)
 const pendingRequest = useRef<PendingChatRequest | null>(null)
-const { selection, selectThread, selected, loadThread, loadOlder, olderCursor, loadingOlder, refreshHistory,
+const { selection, selectThread, selected, loadThread, loadOlder, olderCursor, loadingOlder,
+  refreshHistory: refreshHistoryPage,
 openingThread, resetSelection, openThread, canSendTo, claimResume, clearResumeClaims, stopResume } = useThreadSelection(
-auth?.account.id, { chatId: setCurrentChatId, messages: setMessages, history: setHistory, error: setError })
+auth?.account.id, { chatId: setCurrentChatId, messages: setMessages, history: setHistory,
+  historyCursor: setHistoryCursor, error: setError })
+const refreshHistory = useCallback(async (signal?: AbortSignal) => {
+  historyPending.current?.abort()
+  historyPending.current = null
+  setLoadingHistory(false)
+  await refreshHistoryPage(signal)
+}, [refreshHistoryPage])
 useEffect(() => {
+historyPending.current?.abort(); historyPending.current = null
 streamController.current?.abort()
 resetSelection()
-setBasePolicy(null); setCredentials([]); setHistory([]); setMessages([])
+setBasePolicy(null); setCredentials([]); setHistory([]); setHistoryCursor(null); setLoadingHistory(false); setMessages([])
 setCurrentChatId(null); idle(); setError('')
 clearResumeClaims()
 pendingRequest.current = null
@@ -45,12 +57,32 @@ apiRequest<ThreadList>('/api/v1/chat/threads', { signal: controller.signal }),
 ]).then(([p, c, h]) => {
 if (controller.signal.aborted) return
 setBasePolicy(p)
-setCredentials(c.credentials); setHistory(h.threads)
+setCredentials(c.credentials); setHistory(h.threads); setHistoryCursor(h.next_cursor ?? null)
 }).catch(reason => {
 if (!controller.signal.aborted) setError(chatProblem(reason))
 })
 return () => controller.abort()
 }, [auth?.account.id])
+async function loadMoreHistory() {
+if (!auth || !historyCursor || historyPending.current) return
+const accountId = auth.account.id
+const controller = new AbortController()
+historyPending.current = controller; setLoadingHistory(true)
+try {
+const page = await apiRequest<ThreadList>(`/api/v1/chat/threads?cursor=${encodeURIComponent(historyCursor)}`,
+  { signal: controller.signal })
+if (controller.signal.aborted || auth.account.id !== accountId) return
+setHistory(current => {
+  const known = new Set(current.map(thread => thread.id))
+  return [...current, ...page.threads.filter(thread => !known.has(thread.id))]
+})
+setHistoryCursor(page.next_cursor ?? null)
+} catch (reason) {
+if (!controller.signal.aborted) setError(`Не удалось загрузить ранние чаты. ${chatProblem(reason)}`)
+} finally {
+if (historyPending.current === controller) { historyPending.current = null; setLoadingHistory(false) }
+}
+}
 useEffect(() => () => streamController.current?.abort(), [])
 const streamRequest = useCallback(async (requestId: string, threadId: string) => {
 await streamChatRequest(requestId, threadId, { selection, selected, streamController,
@@ -166,7 +198,8 @@ streamController.current?.abort()
 setCredential(value); idle()
 }
 return {
-policy, catalogError, credentials, history, messages, currentChatId, openingThread, busy, activeRequestId,
+policy, catalogError, credentials, history, historyCursor, loadingHistory, loadMoreHistory,
+messages, currentChatId, openingThread, busy, activeRequestId,
 loadOlder: (beforePrepend: () => void) => currentChatId && loadOlder(currentChatId, beforePrepend),
 olderCursor, loadingOlder,
 pendingAdmission: !!pendingRequest.current,

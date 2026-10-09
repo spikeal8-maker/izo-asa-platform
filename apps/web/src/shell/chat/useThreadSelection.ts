@@ -8,6 +8,7 @@ export function useThreadSelection(accountId: string | undefined, update: {
   chatId: (value: string | null) => void
   messages: Dispatch<SetStateAction<MessageView[]>>
   history: (value: ThreadView[]) => void
+  historyCursor: (value: string | null) => void
   error: (value: string) => void
 }) {
   const currentAccount = useRef(accountId)
@@ -41,7 +42,8 @@ export function useThreadSelection(accountId: string | undefined, update: {
     if (!accountId) return
     const list = await apiRequest<ThreadList>('/api/v1/chat/threads', { signal })
     if (currentAccount.current === accountId) update.history(list.threads)
-  }, [accountId, update.history])
+    if (currentAccount.current === accountId) update.historyCursor(list.next_cursor ?? null)
+  }, [accountId, update.history, update.historyCursor])
 
   const loadThread = useCallback(async (threadId: string, signal?: AbortSignal) => {
     const at = selection.current

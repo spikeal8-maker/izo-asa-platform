@@ -1,5 +1,9 @@
 """Durable Thread/Message/Request ownership and idempotency."""
 from uuid import UUID, uuid4
+import base64
+import binascii
+import json
+import re
 import sqlalchemy as sa
 from sqlalchemy.exc import IntegrityError
 from . import tables as t
@@ -26,14 +30,35 @@ class ConversationMixin(AttachmentMixin, RequestStateMixin):
 		return ThreadView(
 			id=row["id"], title=row["title"],
 			created_at=row["created_at"], updated_at=row["updated_at"])
-	def list_threads(self, raw) -> ThreadList:
+	def list_threads(self, raw, cursor: str | None = None) -> ThreadList:
+		boundary = None
+		if cursor is not None:
+			try:
+				if len(cursor) > 128 or not re.fullmatch(r'[A-Za-z0-9_-]+', cursor):
+					raise ValueError()
+				payload = json.loads(base64.urlsafe_b64decode(cursor + '=' * (-len(cursor) % 4)))
+				if (set(payload) != {'v', 'updated_at', 'id'} or payload['v'] != 1
+						or type(payload['updated_at']) is not int
+						or not 0 <= payload['updated_at'] <= 2**63 - 1):
+					raise ValueError()
+				boundary = (payload['updated_at'], UUID(payload['id']))
+			except (ValueError, TypeError, KeyError, UnicodeDecodeError, binascii.Error):
+				raise ChatError(400, 'invalid_thread_cursor') from None
 		with self.engine.begin() as conn:
 			account, _ = self._account(conn, raw)
-			rows = conn.execute(sa.select(t.threads).where(
-				t.threads.c.account_id == account["id"]).order_by(
+			query = sa.select(t.threads).where(t.threads.c.account_id == account["id"])
+			if boundary:
+				query = query.where(sa.tuple_(t.threads.c.updated_at, t.threads.c.id) < boundary)
+			rows = conn.execute(query.order_by(
 				t.threads.c.updated_at.desc(), t.threads.c.id.desc()).limit(
-				THREAD_PAGE_LIMIT)).mappings().all()
-		return ThreadList(threads=[self._thread_view(row) for row in rows])
+				THREAD_PAGE_LIMIT + 1)).mappings().all()
+		page = rows[:THREAD_PAGE_LIMIT]
+		next_cursor = None
+		if len(rows) > THREAD_PAGE_LIMIT:
+			last = page[-1]
+			payload = {'v': 1, 'updated_at': last['updated_at'], 'id': str(last['id'])}
+			next_cursor = base64.urlsafe_b64encode(json.dumps(payload, separators=(',', ':')).encode()).decode().rstrip('=')
+		return ThreadList(threads=[self._thread_view(row) for row in page], next_cursor=next_cursor)
 	@classmethod
 	def _message_view(cls, row, attachment_rows=()) -> MessageView:
 		return MessageView(

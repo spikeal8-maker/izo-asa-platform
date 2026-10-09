@@ -1,0 +1,32 @@
+{
+  "package_id": "P1-CHAT-THREAD-PAGING-001",
+  "base": "73ce21adfe8167165bd60af0192f85d6a31df2f5",
+  "scope_class": "cross_domain",
+  "risk": "medium",
+  "independent_review_required": true,
+  "max_files": 16,
+  "large_scope_reason": "One bounded account-owned thread list feature crosses the public Chat API contract, existing web sidebar, and focused API/browser regression tests.",
+  "domains": ["chat-api", "web-chat", "contracts", "tests", "governance"],
+  "non_goals": [
+    "No global history search, rename/delete, branch/attempt, Context Engine, provider or Admin semantics",
+    "No live provider call, spend or deploy"
+  ],
+  "allowed": [
+    "apps/api/izo/chat/conversations.py",
+    "apps/api/izo/chat/routes.py",
+    "apps/api/izo/chat/schemas.py",
+    "apps/api/izo/chat/README.md",
+    "apps/web/src/shared/api.generated.ts",
+    "apps/web/src/shell/ChatPage.tsx",
+    "apps/web/src/shell/chat/ChatSidebar.css",
+    "apps/web/src/shell/chat/ChatSidebar.tsx",
+    "apps/web/src/shell/chat/README.md",
+    "apps/web/src/shell/chat/useChatRuntime.ts",
+    "apps/web/src/shell/chat/useThreadSelection.ts",
+    "apps/web/e2e/chat-thread-paging.spec.ts",
+    "packages/contracts/openapi.json",
+    "tests/test_chat_thread_paging.py",
+    "tools/scopes/p1-chat-thread-paging-001.json"
+  ],
+  "sensitive_approved": ["tools/scopes/p1-chat-thread-paging-001.json"]
+}
