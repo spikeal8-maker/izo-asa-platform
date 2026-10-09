@@ -9,17 +9,17 @@
       "pr": 22,
       "state": "technical_ci_pass_draft"
     },
-    "working_branch": "codex/p1-chat-thread-paging-001",
+    "working_branch": "codex/p1-chat-message-copy-001",
     "provider_direction": "fal.ai / fal-ai/flux-2/klein/4b",
     "merge_deployed": false,
     "current_package_base": {
-      "branch": "codex/p1-chat-renderer-gfm-001",
-      "sha": "f87b487adf41589ded9cae0090e8d53859df4696",
+      "branch": "codex/p1-chat-thread-paging-001",
+      "sha": "085f3d892cb09b9c36df43fcc74bccd2ba461791",
       "state": "verified_pr_merge_tree_checkpoint"
     },
     "next_branch_source": "verified_working_head"
   },
-  "active_package": "P1-CHAT-THREAD-PAGING-001",
+  "active_package": "P1-CHAT-MESSAGE-COPY-001",
   "next_package": null,
   "rules": {
     "one_active_package": true,

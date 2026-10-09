@@ -1,9 +1,9 @@
 # IZO ASA · текущая точка разработки
 
 <!-- runtime_base=api/fal-klein-001@faec39d6ae0b4f035ef0f86114494789acde3b46 -->
-<!-- current_package_base=codex/p1-chat-renderer-gfm-001@f87b487adf41589ded9cae0090e8d53859df4696 -->
-<!-- working_branch=codex/p1-chat-thread-paging-001 -->
-<!-- active_package=P1-CHAT-THREAD-PAGING-001 -->
+<!-- current_package_base=codex/p1-chat-thread-paging-001@085f3d892cb09b9c36df43fcc74bccd2ba461791 -->
+<!-- working_branch=codex/p1-chat-message-copy-001 -->
+<!-- active_package=P1-CHAT-MESSAGE-COPY-001 -->
 <!-- next_package=NONE -->
 
 Это короткая точка входа после `AGENTS.md`. Live machine state — `PLAN.json`; package registry читается точечно через `project_state.py show-package <ID>`.
@@ -16,5 +16,5 @@
 `begin-decided-next`: exact HEAD/CI/review или explicit owner waiver проверяются до новой ветки, state пишется только
 на ней. Для непринятого active package используется только `reconcile-continuation`.
 
-Активный пакет: **P1-CHAT-THREAD-PAGING-001**. Следующий: **NONE**.
+Активный пакет: **P1-CHAT-MESSAGE-COPY-001**. Следующий: **NONE**.
 Параллельные lineages из PLAN нельзя использовать как base без reconciliation.
