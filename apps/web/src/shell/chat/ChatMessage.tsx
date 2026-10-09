@@ -1,5 +1,7 @@
 import { isValidElement, useState, type ReactNode } from 'react'
 import ReactMarkdown from 'react-markdown'
+import remarkGfm from 'remark-gfm'
+import './ChatRenderer.css'
 import type { AuthView, MessageView as Message } from '../../shared/api'
 import { usePrivateImageUrl } from '../../shared/usePrivateImageUrl'
 
@@ -69,7 +71,7 @@ export function ChatMessage({ message, auth }: { message: Message; auth: AuthVie
 
   return <div className="chat-turn chat-turn-assistant" data-message-id={message.id}>
     <div className="chat-assistant-message">
-      <ReactMarkdown skipHtml components={{
+      <ReactMarkdown skipHtml remarkPlugins={[remarkGfm]} components={{
         a: ({ href, children }) => {
           const link = safeLink(href)
           return link
@@ -78,6 +80,9 @@ export function ChatMessage({ message, auth }: { message: Message; auth: AuthVie
             : <span>{children}</span>
         },
         pre: ({ children }) => <CodeBlock>{children}</CodeBlock>,
+        table: ({ children }) => <div className="chat-table-scroll" role="region" aria-label="Таблица ответа" tabIndex={0}>
+          <table>{children}</table>
+        </div>,
         img: ({ alt }) => <span>{alt || 'Изображение в ответе недоступно'}</span>,
       }}>{message.content || (message.state === 'partial' ? '…' : '')}</ReactMarkdown>
       {message.state !== 'complete' && message.state !== 'partial'
