@@ -29,9 +29,14 @@ test('renders GFM table and task lists inside the message bounds without unsafe 
     const child = node.querySelector(':scope > ul > li')
     const parentBox = node.getBoundingClientRect()
     const childBox = child?.getBoundingClientRect()
-    return { nested: Boolean(child), below: Boolean(childBox && childBox.top > parentBox.top) }
+    const parentCheckbox = node.querySelector(':scope > input')?.getBoundingClientRect()
+    const childCheckbox = child?.querySelector(':scope > input')?.getBoundingClientRect()
+    return { nested: Boolean(child), below: Boolean(childBox && childBox.top > parentBox.top),
+      inset: (childCheckbox?.x ?? 0) - (parentCheckbox?.x ?? 0) }
   })
-  expect(nesting).toEqual({ nested: true, below: true })
+  expect(nesting.nested).toBe(true)
+  expect(nesting.below).toBe(true)
+  expect(nesting.inset).toBeGreaterThan(16)
   await expect(page.locator('.chat-assistant-message script')).toHaveCount(0)
   await expect(page.locator('.chat-assistant-message a[href^="javascript:"]')).toHaveCount(0)
   await expect(page.locator('.chat-assistant-message img')).toHaveCount(0)
