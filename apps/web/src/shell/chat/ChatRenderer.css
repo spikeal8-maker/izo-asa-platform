@@ -1,6 +1,5 @@
 .chat-assistant-message .contains-task-list { list-style: none; padding-left: 0; }
-.chat-assistant-message .task-list-item { display: flex; align-items: baseline; gap: .5em; }
-.chat-assistant-message .task-list-item > input { flex: 0 0 auto; margin: 0; accent-color: var(--color-brand); }
+.chat-assistant-message .task-list-item > input { margin: 0 .5em 0 0; vertical-align: middle; accent-color: var(--color-brand); }
 .chat-table-scroll { max-width: 100%; margin: 0 0 1em; overflow-x: auto; border: 1px solid var(--color-border); border-radius: 10px; }
 .chat-table-scroll table { border-collapse: collapse; min-width: max-content; width: 100%; }
 .chat-table-scroll th, .chat-table-scroll td { padding: .5em .75em; border: 1px solid var(--color-border); text-align: left; }

@@ -13,7 +13,7 @@ test('renders GFM table and task lists inside the message bounds without unsafe 
   await workspace(page)
   await page.route('**/api/v1/chat/threads', route => route.fulfill({ json: { threads: [thread] } }))
   await page.route(`**/api/v1/chat/threads/${thread.id}`, route => route.fulfill({ json: {
-    thread, messages: [message(`| Name | ${'Wide '.repeat(35)} |\n| --- | --- |\n| Alpha | Value |\n\n- [x] Done\n- [ ] Next\n\n<script>alert(1)</script>\n\n[Unsafe](javascript:alert(1))\n\n![Remote](https://example.invalid/image.png)`) ],
+    thread, messages: [message(`| Name | ${'Wide '.repeat(35)} |\n| --- | --- |\n| Alpha | Value |\n\n- [x] Done\n  - [ ] Nested next\n- [ ] Next\n\n<script>alert(1)</script>\n\n[Unsafe](javascript:alert(1))\n\n![Remote](https://example.invalid/image.png)`) ],
     next_before_sequence: null,
   } }))
   await page.goto('/')
@@ -22,9 +22,16 @@ test('renders GFM table and task lists inside the message bounds without unsafe 
   }
   await page.getByRole('button', { name: thread.title }).click()
   await expect(page.locator('.chat-table-scroll table tbody tr')).toHaveCount(1)
-  await expect(page.locator('.chat-assistant-message input[type="checkbox"]')).toHaveCount(2)
+  await expect(page.locator('.chat-assistant-message input[type="checkbox"]')).toHaveCount(3)
   await expect(page.locator('.chat-assistant-message input[type="checkbox"]').first()).toBeChecked()
   await expect(page.locator('.chat-assistant-message input[type="checkbox"]').last()).toBeDisabled()
+  const nesting = await page.locator('.chat-assistant-message .task-list-item').first().evaluate(node => {
+    const child = node.querySelector(':scope > ul > li')
+    const parentBox = node.getBoundingClientRect()
+    const childBox = child?.getBoundingClientRect()
+    return { nested: Boolean(child), below: Boolean(childBox && childBox.top > parentBox.top) }
+  })
+  expect(nesting).toEqual({ nested: true, below: true })
   await expect(page.locator('.chat-assistant-message script')).toHaveCount(0)
   await expect(page.locator('.chat-assistant-message a[href^="javascript:"]')).toHaveCount(0)
   await expect(page.locator('.chat-assistant-message img')).toHaveCount(0)
