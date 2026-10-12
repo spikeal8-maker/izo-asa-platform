@@ -101,7 +101,9 @@ Identity подтверждается только backend. JS platform hint и�
 
 Проверены заявленные сценарии и состояния; нет ошибок в console; клавиатурный focus корректен; нет page overflow; пользователь понимает цену/приватность; на телефоне действия достижимы; приложены снимки и описание реального поведения. Изменение общих компонентов проверяется на зависимых страницах, а не только на красивом главном экране.
 
-Скриншотные эталоны обновляются с объяснением, а не чтобы скрыть regression. Реальный API smoke не заменяется fake-тестом. Изменение текста цены без изменения расчёта не требует переписывания credits; изменение значения цены — уже cross-domain задача с отдельными проверками.
+До owner preview user-visible package проходит отдельный browser/visual review **другим агентом**, не implementer того же diff. Он проверяет фактический exact build: desktop+phone, light+dark, длинный текст, loading/error по применимости, видимые labels, console, overflow/geometry и критичные computed styles/contrast. Owner preview не используется как первая стадия visual QA.
+
+Скриншотные эталоны обновляются с объяснением, а не чтобы скрыть regression. Скриншот без exact source/build provenance не является доказательством текущего candidate. Реальный API smoke не заменяется fake-тестом. Изменение текста цены без изменения расчёта не требует переписывания credits; изменение значения цены — уже cross-domain задача с отдельными проверками.
 
 Источники для реализации, проверены 2026-09-07:
 - W3C WCAG 2.2: https://www.w3.org/TR/WCAG22/
@@ -133,12 +135,16 @@ Renderer принадлежит IZO ASA и принимает normalized message
 
 P1 renderer поддерживает paragraphs, headings, emphasis, ordered/unordered/nested/task lists, blockquote, inline code, fenced code with language/highlight, GFM tables, inline/display math и safe links. Raw HTML/JS выключен; external Markdown images не загружаются автоматически.
 
+Основной prose ответа ассистента использует **primary text color** темы: в light — основной почти чёрный текст, в dark — основной почти белый. Secondary/muted text предназначен только для metadata, status, hints и других вспомогательных элементов. Глобальный стиль `p` не должен превращать обычные paragraphs ответа в secondary text; это проверяется computed-style regression в обеих темах.
+
+Перед каждым assistant message нет постоянного видимого role-heading вроде «Ответ бота», «Ответ ассистента», «Assistant» или «AI response»: содержание начинается сразу с ответа. Доступное screen-reader имя допустимо, если оно не создаёт лишний видимый текст.
+
 Streaming split UTF-8 и незакрытые Markdown/code/table/math не должны ломать UI или final content. Code/table scroll остаётся внутри блока. Автопрокрутка следует за ответом только пока пользователь у конца; чтение старого текста не перехватывается.
 
 Assistant message: Copy, Copy Markdown, Regenerate и branch/attempt selector при наличии альтернатив. User message: Copy и Edit-as-new-branch. Code block: Copy exact source. Whole-answer copy сериализует normalized model, не DOM/toolbars; Copy Markdown возвращает canonical Markdown.
 ### Accessibility, responsive и performance acceptance
 
-Все действия доступны mouse/touch/keyboard; hover не является единственным access path. Focus states, accessible names, long text, two themes, reduced-motion policy и keyboard navigation проверяются browser evidence.
+Все действия доступны mouse/touch/keyboard; hover не является единственным access path. Focus states, accessible names, long text, two themes, reduced-motion policy и keyboard navigation проверяются browser evidence. Для Chat visual evidence отдельно подтверждает читаемость assistant prose и отсутствие лишних видимых role-labels.
 
 Responsive acceptance включает phone/tablet/desktop/QHD/4K geometry, no page overflow, stable composer/header/sidebar и сохранение viewport при history loading.
 

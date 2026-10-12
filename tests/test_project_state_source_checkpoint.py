@@ -126,3 +126,28 @@ def test_initial_checkpoint_requires_original_pr_ci_and_owner_action(monkeypatch
     else:
         assert call() == {"checkpoint_pr": checkpoint["verified_pr"], "checkpoint_waiver_comment_id":
                           None if mode.startswith("review-") else 42}
+
+
+def test_medium_risk_initial_checkpoint_does_not_invent_high_risk_review(monkeypatch):
+    checkpoint, pr, rollup, runs, _, tested = _historical_case()
+    checkpoint.update(independent_review="not_required", owner_waiver=False)
+    for key in ("owner_actor", "owner_waiver_source", "owner_waiver_reason"):
+        checkpoint.pop(key, None)
+    monkeypatch.setattr(common, "fetch_pr_rollup", lambda *a, **k: rollup)
+    monkeypatch.setattr(common, "foundation_tested_sha", lambda *a, **k: tested)
+    def fake_gh(args, root):
+        path = " ".join(args)
+        if args[:2] == ["pr", "view"]: return pr
+        if "event=pull_request" in path: return [runs]
+        if f"commits/{tested}" in path:
+            return {"parents": [{"sha": checkpoint["base_head"]},
+                                {"sha": checkpoint["source_head"]}]}
+        if "/reviews?" in path: return [[]]
+        raise AssertionError(args)
+    monkeypatch.setattr(common, "gh_json", fake_gh)
+    result = authenticate_initial_checkpoint(
+        checkpoint, {"mergedAt": "2026-09-29T16:00:00Z",
+                     "createdAt": "2026-09-29T15:43:07Z"},
+        "owner/repo", introduced_at="2026-09-29T15:41:57Z",
+        scope={"risk": "medium", "independent_review_required": False})
+    assert result == {"checkpoint_pr": 250, "checkpoint_waiver_comment_id": None}
