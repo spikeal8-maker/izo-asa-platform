@@ -14,6 +14,7 @@ from project_state_model import (CHECKPOINTS_PATH, NEXT_PACKAGE_SOURCE_STATUSES,
     validate_ref, write_state)
 from project_state_decision import decided_transition, validate_decided_candidate
 from project_state_evidence import fetch_pr_evidence, fetch_review_evidence, validate_pr_evidence
+from project_state_connector import add_transport_arguments, before_write, transport
 from project_state_workflow import (
     active_scope, assert_checkout_unchanged, completed_source_evidence, state_paths,
     write_transition,
@@ -69,6 +70,7 @@ def begin_next(plan: dict, *, branch: str, activate: str, next_id: str | None,
     evidence = _transition_evidence(plan, verified_pr, source_head, review, root)
     updated = transition(plan, activate=activate, next_id=next_id, new_branch=branch,
                          source_head=source_head, evidence=evidence)
+    before_write(source_head, current_branch, evidence, root, git_fn=git)
     write_transition(
         plan, updated, evidence, branch=branch, current_branch=current_branch,
         source_head=source_head, root=root, git_fn=git, write_state_fn=write_state,
@@ -108,6 +110,7 @@ def begin_decided_next(plan: dict, *, branch: str, candidate: dict, verified_pr:
         record_checkpoint = True
     updated = decided_transition(plan, candidate=candidate, new_branch=branch,
                                  source_head=source_head, evidence=evidence)
+    before_write(source_head, current_branch, evidence, root, git_fn=git)
     write_transition(
         plan, updated, evidence, branch=branch, current_branch=current_branch,
         source_head=source_head, root=root, git_fn=git, write_state_fn=write_state,
@@ -146,6 +149,7 @@ def reconcile_continuation(plan: dict, *, branch: str, activate: str,
     return updated
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
+    add_transport_arguments(parser, ROOT)
     sub = parser.add_subparsers(dest="command", required=True)
     sub.add_parser("show")
     show_one = sub.add_parser("show-package")
@@ -175,45 +179,49 @@ def main() -> int:
     rec.add_argument("--gap", dest="gaps", action="append", choices=sorted(RECONCILIATION_GAPS), required=True)
     args = parser.parse_args()
     try:
-        plan = load_plan()
-        if args.command == "show":
-            validate_plan(plan); print(render_current(plan)); return 0
-        if args.command == "show-package":
-            validate_plan(plan)
-            print(json.dumps(show_package(plan, args.package_id), ensure_ascii=False, indent=2))
-            return 0
-        if args.command == "verify":
-            problems = verify_checkout(plan)
-            if problems:
-                raise ValueError("; ".join(problems))
-            print("PROJECT STATE OK"); return 0
-        if args.command == "begin-next":
-            updated, evidence = begin_next(
-                plan, branch=args.branch, activate=args.activate, next_id=args.next_id,
-                verified_pr=args.verified_pr, owner_waiver=args.owner_waiver,
-                independent_review_unavailable=args.independent_review_unavailable,
-                owner_waiver_source=args.owner_waiver_source, owner_waiver_reason=args.owner_waiver_reason)
-            print(f"STATE STARTED: active={updated['active_package']} branch={args.branch}")
-            print(f"EVIDENCE: {evidence['type']} source={evidence['source_head']} merge={evidence['tested_merge_tree']}")
-            return 0
-        if args.command == "begin-decided-next":
-            candidate = {"id": args.activate, "goal": args.goal, "depends_on": args.depends_on,
-                         "decides_next": args.decides_next}
-            updated, evidence = begin_decided_next(
-                plan, branch=args.branch, candidate=candidate, verified_pr=args.verified_pr,
-                owner_waiver=args.owner_waiver,
-                independent_review_unavailable=args.independent_review_unavailable,
-                owner_waiver_source=args.owner_waiver_source, owner_waiver_reason=args.owner_waiver_reason)
-            print(f"STATE STARTED: active={updated['active_package']} branch={args.branch}")
-            return 0
-        updated = reconcile_continuation(plan, branch=args.branch, activate=args.activate,
-            reference_head=args.reference_head, gaps=args.gaps)
-        print(f"STATE RECONCILED: active={updated['active_package']} branch={args.branch}")
-        return 0
+        with transport(args.github_transport, args.repo_root):
+            return _execute(args)
     except (OSError, ValueError, json.JSONDecodeError, subprocess.TimeoutExpired) as exc:
         print(f"PROJECT STATE ERROR: {exc}", file=sys.stderr)
         return 2
 
+def _execute(args) -> int:
+    root = args.repo_root.resolve()
+    plan = load_plan(root=root)
+    if args.command == "show":
+        validate_plan(plan); print(render_current(plan)); return 0
+    if args.command == "show-package":
+        validate_plan(plan)
+        print(json.dumps(show_package(plan, args.package_id), ensure_ascii=False, indent=2))
+        return 0
+    if args.command == "verify":
+        problems = verify_checkout(plan, root=root)
+        if problems:
+            raise ValueError("; ".join(problems))
+        print("PROJECT STATE OK"); return 0
+    if args.command == "begin-next":
+        updated, evidence = begin_next(
+            plan, branch=args.branch, activate=args.activate, next_id=args.next_id,
+            verified_pr=args.verified_pr, owner_waiver=args.owner_waiver,
+            independent_review_unavailable=args.independent_review_unavailable,
+            owner_waiver_source=args.owner_waiver_source, owner_waiver_reason=args.owner_waiver_reason, root=root)
+        print(f"STATE STARTED: active={updated['active_package']} branch={args.branch}")
+        print(f"EVIDENCE: {evidence['type']} source={evidence['source_head']} merge={evidence['tested_merge_tree']}")
+        return 0
+    if args.command == "begin-decided-next":
+        candidate = {"id": args.activate, "goal": args.goal, "depends_on": args.depends_on,
+                     "decides_next": args.decides_next}
+        updated, evidence = begin_decided_next(
+            plan, branch=args.branch, candidate=candidate, verified_pr=args.verified_pr,
+            owner_waiver=args.owner_waiver,
+            independent_review_unavailable=args.independent_review_unavailable,
+            owner_waiver_source=args.owner_waiver_source, owner_waiver_reason=args.owner_waiver_reason, root=root)
+        print(f"STATE STARTED: active={updated['active_package']} branch={args.branch}")
+        return 0
+    updated = reconcile_continuation(plan, branch=args.branch, activate=args.activate,
+        reference_head=args.reference_head, gaps=args.gaps, root=root)
+    print(f"STATE RECONCILED: active={updated['active_package']} branch={args.branch}")
+    return 0
 if __name__ == "__main__":
     raise SystemExit(main())
 

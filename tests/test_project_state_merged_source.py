@@ -37,7 +37,7 @@ def fixture(monkeypatch):
               "contexts": {"pageInfo": {"hasNextPage": False}, "nodes": nodes}}}
     main = [MERGE, "refs/heads/main"]
     monkeypatch.setattr(merged, "git", lambda *a, **k: "\t".join(main))
-    monkeypatch.setattr(merged, "gh_json", lambda args, **k: commits[args[-1].split("/")[-1]])
+    monkeypatch.setattr(merged, "github_api", lambda endpoint, **k: commits[endpoint.split("/")[-1]])
     monkeypatch.setattr(merged, "foundation_tested_sha", lambda *a, **k: TESTED)
     monkeypatch.setattr(merged, "fetch_pr_rollup", lambda *a, **k: rollup)
     return pr, runs, commits, rollup, main

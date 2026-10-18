@@ -83,6 +83,12 @@ Checkpoint при таком переходе записывает исходн�
 `next_package=NONE` — через `begin-decided-next`. State workflow создаёт новую ветку и атомарно меняет
 PLAN/PACKAGES/CURRENT/CHECKPOINTS. Для terminal `complete` запуск successor не понижает завершённый package.
 
+Штатный transport по умолчанию — `gh`; явный `--github-transport connector-stdio` получает свежие
+GitHub Connector ответы через доверенного controller. `--repo-root` направляет все state/Git операции
+в точный целевой checkout. Эти параметры поддерживают оба entrypoint: `project_state.py` и
+`project_state_closeout.py`; перед записью каждый повторно проверяет live evidence и неизменность Git checkout.
+Протокол, границы доверия и REST evidence — [PROJECT_STATE_TRANSPORT.md](PROJECT_STATE_TRANSPORT.md).
+
 Для `complete` source HEAD принимается либо ровно по source SHA immutable accepted checkpoint, либо по отдельному
 accepted merged closeout PR, указанному через `verified_pr`. Во втором случае head PR должен происходить от
 checkpoint source; после введения checkpoint его `complete` status и запись остаются неизменными, а current HEAD

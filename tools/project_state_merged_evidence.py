@@ -40,7 +40,7 @@ def _checkpoint_introduction(source: str, head: str, package: str, checkpoint: d
 
 def authenticate_initial_checkpoint(checkpoint: dict, closeout_pr: dict, slug: str,
                                     *, introduced_at: str, root: Path = ROOT) -> dict:
-    from project_state_evidence import (gh_json, _workflow_pages, _flatten_pages,
+    from project_state_evidence import (github_api, github_pr, _workflow_pages, _flatten_pages,
         latest_required_runs, foundation_tested_sha, fetch_pr_rollup,
         validate_pr_rollup, REQUIRED_WORKFLOWS)
     from review_evidence import review_decision
@@ -48,14 +48,12 @@ def authenticate_initial_checkpoint(checkpoint: dict, closeout_pr: dict, slug: s
     source, number = checkpoint.get("source_head"), checkpoint.get("verified_pr")
     if type(number) is not int or number < 1:
         raise ValueError("initial checkpoint source PR identity missing")
-    pr = gh_json(["pr", "view", str(number), "--repo", slug,
-                  "--json", "headRefOid,headRefName,baseRefOid"], root=root)
+    pr = github_pr(number, slug, root=root)
     if (not isinstance(pr, dict) or pr.get("headRefOid") != source
             or pr.get("baseRefOid") != checkpoint.get("base_head")
             or not pr.get("headRefName")):
         raise ValueError("initial checkpoint source PR head/base mismatch")
-    runs = _workflow_pages(gh_json(["api", "--paginate", "--slurp",
-        f"repos/{slug}/actions/runs?event=pull_request&head_sha={source}&per_page=100"], root=root))
+    runs = _workflow_pages(github_api(f"repos/{slug}/actions/runs?event=pull_request&head_sha={source}&per_page=100", paginate=True, root=root))
     latest = latest_required_runs(runs, source, number, allow_detached=True,
                                   expected_branch=pr["headRefName"])
     if not isinstance(checkpoint.get("workflows"), dict) or any(
@@ -67,7 +65,7 @@ def authenticate_initial_checkpoint(checkpoint: dict, closeout_pr: dict, slug: s
     tested = foundation_tested_sha(int(latest["Foundation CI"]["databaseId"]), slug, root=root)
     if tested != checkpoint.get("tested_merge_tree"):
         raise ValueError("initial checkpoint tested merge tree mismatch")
-    commit = gh_json(["api", f"repos/{slug}/commits/{tested}"], root=root)
+    commit = github_api(f"repos/{slug}/commits/{tested}", root=root)
     parents = [row.get("sha") for row in commit.get("parents", [])] if isinstance(commit, dict) else []
     if parents != [pr["baseRefOid"], source]:
         raise ValueError("initial checkpoint tested merge tree parents mismatch")
@@ -80,15 +78,13 @@ def authenticate_initial_checkpoint(checkpoint: dict, closeout_pr: dict, slug: s
     # PR creation is server-attested; the author-controlled commit date only narrows this cutoff.
     cutoff = min(introduced, opened)
     require_pr_runs_before(latest, cutoff.isoformat(), "checkpoint introduction")
-    reviews = _flatten_pages(gh_json(["api", "--paginate", "--slurp",
-        f"repos/{slug}/pulls/{number}/reviews?per_page=100"], root=root))
+    reviews = _flatten_pages(github_api(f"repos/{slug}/pulls/{number}/reviews?per_page=100", paginate=True, root=root))
     reviews = [row for row in reviews if row.get("submitted_at")
                and _time(row["submitted_at"], "original PR review") < cutoff]
     owner = slug.split("/", 1)[0]
     comment_id = None
     if checkpoint.get("owner_waiver") is True:
-        comments = _flatten_pages(gh_json(["api", "--paginate", "--slurp",
-            f"repos/{slug}/issues/{number}/comments?per_page=100"], root=root))
+        comments = _flatten_pages(github_api(f"repos/{slug}/issues/{number}/comments?per_page=100", paginate=True, root=root))
         for row in comments:
             body = str(row.get("body") or "")
             if ((row.get("user") or {}).get("login") == owner
@@ -123,12 +119,11 @@ def authenticate_initial_checkpoint(checkpoint: dict, closeout_pr: dict, slug: s
 
 def fetch_merged_closeout_evidence(pr_number: int, source_head: str, package: str,
                                    checkpoint: dict, scope: dict, *, root: Path = ROOT) -> dict:
-    from project_state_evidence import (repo_slug, gh_json, git, _workflow_pages,
+    from project_state_evidence import (repo_slug, github_api, github_pr, git, _workflow_pages,
         latest_required_runs, foundation_tested_sha, fetch_pr_rollup,
         fetch_review_evidence)
     slug = repo_slug(root)
-    pr = gh_json(["pr", "view", str(pr_number), "--repo", slug,
-                  "--json", "headRefOid,headRefName,baseRefOid,isDraft,state,createdAt,mergedAt,mergeCommit"], root=root)
+    pr = github_pr(pr_number, slug, root=root)
     if not isinstance(pr, dict):
         raise ValueError("closeout PR evidence missing")
     head = pr.get("headRefOid")
@@ -159,15 +154,13 @@ def fetch_merged_closeout_evidence(pr_number: int, source_head: str, package: st
             or item.get("checkpoint") != package
             or not closeout_exists or closeout_record != checkpoint):
         raise ValueError("closeout PR head does not preserve the complete accepted checkpoint")
-    pr_runs = _workflow_pages(gh_json(["api", "--paginate", "--slurp",
-        f"repos/{slug}/actions/runs?event=pull_request&head_sha={head}&per_page=100"], root=root))
+    pr_runs = _workflow_pages(github_api(f"repos/{slug}/actions/runs?event=pull_request&head_sha={head}&per_page=100", paginate=True, root=root))
     foundation = latest_required_runs(pr_runs, head, pr_number, allow_detached=True,
                                       expected_branch=pr.get("headRefName"))["Foundation CI"]
     tested = foundation_tested_sha(int(foundation["databaseId"]), slug, root=root)
-    push_runs = _workflow_pages(gh_json(["api", "--paginate", "--slurp",
-        f"repos/{slug}/actions/runs?event=push&head_sha={source_head}&per_page=100"], root=root))
-    merge_commit = gh_json(["api", f"repos/{slug}/commits/{source_head}"], root=root)
-    tested_commit = gh_json(["api", f"repos/{slug}/commits/{tested}"], root=root)
+    push_runs = _workflow_pages(github_api(f"repos/{slug}/actions/runs?event=push&head_sha={source_head}&per_page=100", paginate=True, root=root))
+    merge_commit = github_api(f"repos/{slug}/commits/{source_head}", root=root)
+    tested_commit = github_api(f"repos/{slug}/commits/{tested}", root=root)
     rollup = fetch_pr_rollup(pr_number, slug, root=root)
     evidence = validate_merged_closeout_evidence(
         pr=pr, pr_runs=pr_runs, push_runs=push_runs, merge_commit=merge_commit,

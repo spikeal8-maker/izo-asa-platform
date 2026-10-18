@@ -9,8 +9,10 @@ import subprocess
 import sys
 
 from project_state import active_scope
+from project_state_connector import add_transport_arguments, before_write, transport
 from project_state_evidence import fetch_pr_evidence, fetch_review_evidence
 from project_state_model import load_checkpoints, load_plan, validate_plan, write_state
+from project_state_transition_evidence import merged_transition_evidence
 
 ROOT = Path(__file__).resolve().parents[1]
 
@@ -64,15 +66,16 @@ def complete_current(plan: dict, *, branch: str, verified_pr: int,
     if branch == current_branch:
         raise ValueError("closeout requires a new state-transition branch")
 
-    scope = active_scope(plan, root=root)
-    evidence = fetch_pr_evidence(verified_pr, source_head, root=root)
-    evidence.update(fetch_review_evidence(
-        scope, verified_pr, source_head, root=root,
+    review = dict(
         owner_waiver=owner_waiver,
         independent_review_unavailable=independent_review_unavailable,
         owner_waiver_source=owner_waiver_source,
         owner_waiver_reason=owner_waiver_reason,
-    ))
+    )
+    evidence = merged_transition_evidence(
+        plan, verified_pr, source_head, review, root, active_scope=active_scope,
+        fetch_pr_evidence=fetch_pr_evidence, fetch_review_evidence=fetch_review_evidence,
+    )
     updated = complete_transition(plan, evidence)
     checkpoints = json.loads(json.dumps(load_checkpoints(root)))
     checkpoints.setdefault("checkpoints", {})[plan["active_package"]] = evidence
@@ -81,6 +84,7 @@ def complete_current(plan: dict, *, branch: str, verified_pr: int,
         "PLAN.json", "PACKAGES.json", "CURRENT.md", "CHECKPOINTS.json",
     )]
     originals = {path: path.read_bytes() if path.exists() else None for path in paths}
+    before_write(source_head, current_branch, evidence, root, git_fn=git)
     git("switch", "-c", branch, source_head, root=root)
     try:
         write_state(updated, checkpoints, root=root)
@@ -98,6 +102,7 @@ def complete_current(plan: dict, *, branch: str, verified_pr: int,
 
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
+    add_transport_arguments(parser, ROOT)
     parser.add_argument("--branch", required=True)
     parser.add_argument("--verified-pr", required=True, type=int)
     parser.add_argument("--owner-waiver", action="store_true")
@@ -106,13 +111,15 @@ def main() -> int:
     parser.add_argument("--owner-waiver-reason")
     args = parser.parse_args()
     try:
-        updated, evidence = complete_current(
-            load_plan(), branch=args.branch, verified_pr=args.verified_pr,
-            owner_waiver=args.owner_waiver,
-            independent_review_unavailable=args.independent_review_unavailable,
-            owner_waiver_source=args.owner_waiver_source,
-            owner_waiver_reason=args.owner_waiver_reason,
-        )
+        with transport(args.github_transport, args.repo_root):
+            updated, evidence = complete_current(
+                load_plan(args.repo_root), branch=args.branch, verified_pr=args.verified_pr,
+                owner_waiver=args.owner_waiver,
+                independent_review_unavailable=args.independent_review_unavailable,
+                owner_waiver_source=args.owner_waiver_source,
+                owner_waiver_reason=args.owner_waiver_reason,
+                root=args.repo_root,
+            )
         active = updated["active_package"]
         print(f"STATE COMPLETE: package={active} status={updated['packages'][active]['status']}")
         print(f"EVIDENCE: source={evidence['source_head']} merge={evidence['tested_merge_tree']}")

@@ -7,6 +7,7 @@ import subprocess
 from urllib.parse import urlparse
 
 from project_state_model import ROOT
+from project_state_connector import current, workflow_pages as _workflow_pages
 from review_evidence import review_decision, review_required
 
 REQUIRED_WORKFLOWS = ("Foundation CI", "Dependency Security", "Review Source")
@@ -44,34 +45,29 @@ def gh_json(args: list[str], *, root: Path = ROOT):
     return json.loads(run(["gh", *args], root=root))
 
 
+def github_api(endpoint: str, *, paginate: bool = False, root: Path = ROOT):
+    client = current(root)
+    if client is not None:
+        return client.get(endpoint, paginate=paginate)
+    return gh_json(["api", *(["--paginate", "--slurp"] if paginate else []), endpoint], root=root)
+
+
+def github_pr(number: int, slug: str, *, root: Path = ROOT) -> dict:
+    client = current(root)
+    if client is not None:
+        if client.repo != slug:
+            raise ValueError("GitHub transport repository mismatch")
+        return client.pr(number)
+    return gh_json(["pr", "view", str(number), "--repo", slug, "--json",
+        "headRefOid,headRefName,baseRefOid,isDraft,state,url,createdAt,mergedAt,mergeCommit"], root=root)
+
+
 def _flatten_pages(value) -> list[dict]:
     if not isinstance(value, list):
         raise ValueError("paginated GitHub response must be a list")
     if value and all(isinstance(page, list) for page in value):
         return [item for page in value for item in page if isinstance(item, dict)]
     return [item for item in value if isinstance(item, dict)]
-
-
-def _workflow_pages(value) -> list[dict]:
-    if not isinstance(value, list):
-        raise ValueError("workflow run response must be paginated")
-    pages = value if value and all(isinstance(page, dict) for page in value) else [value]
-    result = []
-    for page in pages:
-        if not isinstance(page, dict):
-            continue
-        for item in page.get("workflow_runs", []):
-            if isinstance(item, dict):
-                result.append({
-                    "databaseId": item.get("id"), "name": item.get("name"),
-                    "status": item.get("status"), "conclusion": item.get("conclusion"),
-                    "headSha": item.get("head_sha"), "event": item.get("event"),
-                    "headBranch": item.get("head_branch"),
-                    "updatedAt": item.get("updated_at"),
-                    "runAttempt": item.get("run_attempt"), "runNumber": item.get("run_number"),
-                    "prNumbers": [p.get("number") for p in item.get("pull_requests", [])
-                                  if isinstance(p, dict) and p.get("number") is not None]})
-    return result
 
 
 def _pr_matches(item: dict, pr_number: int) -> bool:
@@ -129,6 +125,12 @@ def latest_required_runs(runs: list[dict], expected_head: str, pr_number: int,
 
 
 def fetch_pr_rollup(pr_number: int, slug: str, *, root: Path = ROOT) -> dict:
+    client = current(root)
+    if client is not None:
+        from project_state_rest_checks import collect
+        if slug != client.repo:
+            raise ValueError("GitHub rollup repository mismatch")
+        return collect(client, pr_number)
     owner, repo = slug.split("/", 1)
     query = ('query($owner:String!,$repo:String!,$number:Int!){repository(owner:$owner,name:$repo){'
              'pullRequest(number:$number){number headRefOid headRefName baseRefOid '
@@ -148,6 +150,9 @@ def fetch_pr_rollup(pr_number: int, slug: str, *, root: Path = ROOT) -> dict:
 
 def validate_pr_rollup(pr_number: int, pr: dict, selected: dict[str, dict],
                        rollup: dict, required_jobs: dict[str, set[str]]) -> None:
+    if rollup.get("kind") == "github_rest_required_checks_v1":
+        from project_state_rest_checks import validate
+        return validate(pr_number, pr, selected, rollup, required_jobs)
     if (rollup.get("number") != pr_number
             or any(rollup.get(key) != pr.get(key)
                    for key in ("headRefOid", "headRefName", "baseRefOid"))):
@@ -170,7 +175,11 @@ def validate_pr_rollup(pr_number: int, pr: dict, selected: dict[str, dict],
 
 
 def foundation_tested_sha(run_id: int, slug: str, *, root: Path = ROOT) -> str:
-    log = run(["gh", "run", "view", str(run_id), "--repo", slug, "--log"], root=root)
+    client = current(root)
+    if client is not None and client.repo != slug:
+        raise ValueError("GitHub log repository mismatch")
+    log = (client.workflow_log(run_id) if client is not None else
+           run(["gh", "run", "view", str(run_id), "--repo", slug, "--log"], root=root))
     values = set(re.findall(r"IZO_BUILD_SHA:\s*([0-9a-f]{40})", log))
     if len(values) != 1:
         raise ValueError(f"Foundation CI {run_id} does not expose one tested IZO_BUILD_SHA: {sorted(values)}")
@@ -189,17 +198,19 @@ from project_state_open_pr import validate_pr_evidence
 
 def fetch_pr_evidence(pr_number: int, expected_head: str, *, root: Path = ROOT) -> dict:
     slug = repo_slug(root)
-    pr = gh_json(["pr", "view", str(pr_number), "--repo", slug,
-                  "--json", "headRefOid,headRefName,baseRefOid,isDraft,state,url,mergedAt,mergeCommit"], root=root)
-    pages = gh_json(["api", "--paginate", "--slurp",
-                     f"repos/{slug}/actions/runs?event=pull_request&head_sha={expected_head}&per_page=100"], root=root)
+    pr = github_pr(pr_number, slug, root=root)
+    pages = github_api(f"repos/{slug}/actions/runs?event=pull_request&head_sha={expected_head}&per_page=100",
+                       paginate=True, root=root)
     runs = _workflow_pages(pages)
     if str(pr.get("state", "")).upper() == "MERGED":
         from project_state_merged_source import validate_merged_source_pr
         return validate_merged_source_pr(pr_number, expected_head, pr, runs, slug, root=root)
     latest = latest_required_runs(runs, expected_head, pr_number)
+    if current(root) is not None:
+        from project_state_workflow import REQUIRED_PR_JOBS
+        validate_pr_rollup(pr_number, pr, latest, fetch_pr_rollup(pr_number, slug, root=root), REQUIRED_PR_JOBS)
     merge_sha = merge_ref_sha(pr_number, root=root)
-    merge_commit = gh_json(["api", f"repos/{slug}/commits/{merge_sha}"], root=root)
+    merge_commit = github_api(f"repos/{slug}/commits/{merge_sha}", root=root)
     tree = foundation_tested_sha(int(latest["Foundation CI"]["databaseId"]), slug, root=root)
     return validate_pr_evidence(pr=pr, runs=runs, merge_sha=merge_sha, merge_commit=merge_commit,
         expected_head=expected_head, pr_number=pr_number, foundation_tree=tree)
@@ -215,10 +226,11 @@ def fetch_review_evidence(scope: dict, pr_number: int, source_sha: str, *,
     if not review_required(scope):
         return {"independent_review": "not_required", "owner_waiver": False}
     slug = repo_slug(root)
-    pages = gh_json(["api", "--paginate", "--slurp",
-                     f"repos/{slug}/pulls/{pr_number}/reviews?per_page=100"], root=root)
+    pages = github_api(f"repos/{slug}/pulls/{pr_number}/reviews?per_page=100", paginate=True, root=root)
     reviews = _flatten_pages(pages)
-    actor = gh_json(["api", "user"], root=root).get("login") if owner_waiver else None
+    client = current(root)
+    actor = ((client.actor() if client is not None else gh_json(["api", "user"], root=root)).get("login")
+             if owner_waiver else None)
     decision = review_decision(
         scope, reviews, source_sha, owner_login=slug.split("/", 1)[0], actor_login=actor,
         owner_waiver=owner_waiver, independent_review_unavailable=independent_review_unavailable,
