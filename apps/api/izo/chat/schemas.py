@@ -119,6 +119,25 @@ class CredentialCommand(StrictInput):
 class ThreadCreate(StrictInput):
     title: str | None = Field(default=None, max_length=120)
 
+class ThreadRename(StrictInput):
+    title: str = Field(min_length=1, max_length=120, strict=True)
+
+    @field_validator("title", mode="before")
+    @classmethod
+    def clean_title(cls, value):
+        if not isinstance(value, str):
+            raise ValueError("Invalid title")
+        if "\x00" in value or any(0xD800 <= ord(c) <= 0xDFFF for c in value):
+            raise ValueError("Invalid title")
+        # Match the browser's String.trim() set, including BOM but excluding NEL.
+        whitespace = "\u0009\u000a\u000b\u000c\u000d\u0020\u00a0\u1680"
+        whitespace += "\u2000\u2001\u2002\u2003\u2004\u2005\u2006\u2007\u2008\u2009\u200a"
+        whitespace += "\u2028\u2029\u202f\u205f\u3000\ufeff"
+        value = value.strip(whitespace)
+        if all(c.isspace() or c == "\ufeff" for c in value):
+            raise ValueError("Invalid title")
+        return value
+
 class ThreadView(BaseModel):
     id: UUID
     title: str

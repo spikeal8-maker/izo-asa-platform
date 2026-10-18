@@ -1,0 +1,54 @@
+{
+  "package_id": "P1-CHAT-THREAD-RENAME-001",
+  "base": "5b198dc5d20cc0ce703272a7a2f4b2a0bbf587dc",
+  "scope_class": "cross_domain",
+  "risk": "high",
+  "independent_review_required": true,
+  "max_files": 32,
+  "large_scope_reason": "Owner-authorized isolated candidate joins the existing Chat API and sidebar, an additive manual-title migration, generated API contract, focused service/HTTP/browser/restart checks and the package review. Canonical state and checkpoint are not changed by this candidate.",
+  "domains": [
+    "api-chat",
+    "web-chat",
+    "database-migration",
+    "tests",
+    "package-evidence"
+  ],
+  "non_goals": [
+    "No new chat backend or shared auth/credits/jobs/media owner",
+    "No provider requests or changes, search, delete, branching or broad UI redesign",
+    "No manual PLAN/PACKAGES/CURRENT/CHECKPOINTS changes, fabricated checkpoint, merge or deployment"
+  ],
+  "allowed": [
+    "apps/api/izo/chat/routes.py",
+    "apps/api/izo/chat/schemas.py",
+    "apps/api/izo/chat/conversations.py",
+    "apps/api/izo/chat/tables.py",
+    "apps/api/izo/chat/thread_titles.py",
+    "apps/api/izo/chat/README.md",
+    "apps/api/migrations/versions/0017_chat_manual_title.py",
+    "tests/test_chat_thread_rename.py",
+    "tests/test_chat_thread_rename_http.py",
+    "tests/test_migration_workflow.py",
+    "packages/contracts/openapi.json",
+    "apps/web/src/shared/api.generated.ts",
+    "apps/web/src/shell/chat/ChatSidebar.tsx",
+    "apps/web/src/shell/chat/ChatSidebar.css",
+    "apps/web/src/shell/chat/ChatHistoryItem.tsx",
+    "apps/web/src/shell/chat/ThreadRenameForm.tsx",
+    "apps/web/src/shell/chat/ThreadRenameForm.css",
+    "apps/web/src/shell/chat/useThreadHistory.ts",
+    "apps/web/src/shell/chat/useChatRuntime.ts",
+    "apps/web/src/shell/ChatPage.tsx",
+    "apps/web/src/shell/chat/README.md",
+    "apps/web/e2e/chat-thread-rename.spec.ts",
+    "apps/web/e2e/chat-thread-rename-races.spec.ts",
+    "apps/web/e2e/chat-thread-rename-fixture.ts",
+    "apps/web/acceptance/chat-live.mjs",
+    "docs/reviews/P1-CHAT-THREAD-RENAME-001.md",
+    "tools/scopes/p1-chat-thread-rename-001.json"
+  ],
+  "sensitive_approved": [
+    "apps/api/migrations/versions/0017_chat_manual_title.py",
+    "tools/scopes/p1-chat-thread-rename-001.json"
+  ]
+}

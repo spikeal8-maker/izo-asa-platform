@@ -18,7 +18,7 @@ from .execution import FakeDeepSeekProvider
 from .schemas import (
     ChatPolicyView, OpenRouterCatalogView,
     RequestCreate, RequestView, ThreadCreate, ThreadDetail, MessagePage,
-    ThreadList, ThreadView,
+    ThreadList, ThreadView, ThreadRename,
 )
 from .service import ChatError, ChatService
 from .schemas import ChatSettings
@@ -157,6 +157,12 @@ def attach_chat(app, database_config, accounts_provider) -> None:
         raw, csrf = mutation(request, service)
         return service.create_thread(
             raw, csrf, data.title)
+
+    @router.patch("/threads/{thread_id}", response_model=ThreadView)
+    def rename_thread(thread_id: UUID, data: ThreadRename, request: Request):
+        service = runtime_service(request)
+        raw, csrf = mutation(request, service)
+        return service.rename_thread(raw, csrf, thread_id, data.title)
 
     @router.get(
         "/threads/{thread_id}",
