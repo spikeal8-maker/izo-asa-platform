@@ -20,7 +20,7 @@ The integration merge has the same 27 rename changes relative to accepted main a
 
 The task initially fixed 32 exact allowed paths: the 27 existing rename paths, two integration metadata files, and three paths for the reproduced REST validator correction. Those original correction paths are `tools/project_state_rest_checks.py`, `tests/test_project_state_rest_checks.py` and `docs/PROJECT_STATE_TRANSPORT.md`. Metadata alone exposes 29 changed paths relative to the task base.
 
-Before creating any additional path, the fix implementer requested a natural ownership split: its first working REST correction measured 14,837 bytes / 237 lines, while the complete negative matrix still needed room. The independent reviewer confirmed that event/run/job/suite identity belongs in a separate bounded helper. The controller therefore approved exactly `tools/project_state_check_events.py` and `tests/test_project_state_check_events.py` before writing them, and fixed this task's finite cap at 34. Expected helper sizes are 140–190 lines / 9–11 KB and 200–270 lines / 10–12 KB respectively; actual sizes and scope must be measured at freeze. The implementer plans to restore the original REST test file byte-for-byte, which would leave 33 actual changed paths within the 34 allowed paths. Neither that result nor the final negative-matrix PASS is assumed in advance. The unchanged cross-domain class limit remains 40, risk remains high, and independent review remains mandatory. Any further path requires a new controller decision before writing.
+Before creating any additional path, the fix implementer requested a natural ownership split: its first working REST correction measured 14,837 bytes / 237 lines, while the complete negative matrix still needed room. The independent reviewer confirmed that event/run/job/suite identity belongs in a separate bounded helper. The controller therefore approved exactly `tools/project_state_check_events.py` and `tests/test_project_state_check_events.py` before writing them, and fixed this task's finite cap at 34. Expected helper sizes are 140–190 lines / 9–11 KB and 200–270 lines / 10–12 KB respectively; actual sizes and scope must be measured at freeze. At that intermediate stage the implementer considered restoring the original REST test file, which would have left 33 changed paths. The final correction instead retains meaningful multi-page regression coverage in that file: the measured final scope is 34/34. This supersedes the earlier conditional estimate. The unchanged cross-domain class limit remains 40, risk remains high, and independent review remains mandatory. Any further path requires a new controller decision before writing.
 
 The original rename manifest and report remain byte-identical to source `68c204b...`, including their original scope and tooling non-goal. The separately assigned integration task owns the necessary transport correction introduced by accepted main. It does not retrofit that correction into the original product package contract.
 
@@ -71,3 +71,38 @@ Executed on Python 3.13.16 before this metadata commit:
 - The supported read-only `project_state.py --repo-root` verification of the controller's canonical checkout: **PROJECT STATE OK**. Final integrated-source verification remains the controller's responsibility.
 
 The preservation check confirmed all 27 stock rename blobs match `68c204b...`, including the four state files and original manifest/report. It also confirmed the three fix-owner files still match accepted base `0182c541...`. The metadata check does not execute the pending REST correction tests or new GitHub CI. Result: metadata is ready for independent integration review; the product's final acceptance remains pending.
+
+
+## Final integrated correction and local verification
+
+The independent correction implementer froze `8d1310d71cb558bd054f7e8255dddfda1482fa18` (tree `ec10e22103fe75127c73cc83d4fb8a0981a634cf`, parent accepted main `0182c541...`). Its five files were integrated byte-for-byte at `2d3d2e5b538c640770e5df9d282b4d8a3cbe196f`. The correction keeps all raw checks and proves historical supersession through repository/source/branch/PR, workflow identity and run number, exact jobs/checks/suites/apps/attempts, and successful current replacements. Current/newer/unknown failed or pending evidence still refuses acceptance. Required contexts, pagination completeness and final live revalidation remain mandatory.
+
+Executed correction evidence: the original regression failed before the correction; the implementer's related state/transport/review suite passed **391 tests in 5.28 seconds**, and the independent reviewer's focused REST/event suite passed **98 tests in 0.66 seconds**. The matrix includes 309 raw checks across four pages, historical jobs across two pages, and rejection of a newer failure appearing on a later page. The reviewer returned technical APPROVE for the exact correction commit.
+
+A subsequent read-only live probe used those exact clean tools and actual GitHub Connector responses. It passed with **51 real requests**, including **25 mutable revalidations**. It retained **12 checks (11 success and one cancelled), nine runs and six historical bundles**; the independently proven current selections were Foundation `39169381867`, Dependency `39169381884` and Review Source `39169381892`. The reviewer independently checked every request correlation/digest, full raw payload forwarding, all repeated endpoint equality, and all 12 job/check identities. Both source and tools checkout HEAD/branch/status and all state hashes remained unchanged. This probe proves REST history handling, not a state transition or acceptance of the later PR source.
+
+The live proof JSON has SHA256 `919453fd7f8cbe5306af7b7bfec455e7f0be484d3e0dbdbc8f72e2bd9026126e` (630508 bytes); its full 51-record transcript has SHA256 `8cc837a3af6483caa9f8fa6a605f262247c90ed23ef1ba6e3bd8e1faab24682b` (3902795 bytes). The controller retains these external execution artifacts without adding them to Git or using them as a substitute for fresh state-workflow reads.
+
+On the integrated source `2d3d2e5...`, an independent canonical-named QA clone passed `project_state.py verify`, `check_docs.py`, contract regeneration check, integration scope **34/34**, and repository hygiene. The complete combined command, on Python 3.13.16 with test environment and a scratch basetemp, was:
+
+```text
+python -B -m pytest -ra -o faulthandler_timeout=30 tests/test_project_state*.py tests/test_github_connector_bridge.py tests/test_review_evidence.py tests/test_change_scope.py tests/test_chat_thread_rename.py tests/test_chat_thread_rename_http.py
+```
+
+The actual result was **476 passed, two dependency deprecation warnings, 38.50 seconds, exit 0**. It includes state/transport/review/scope contracts plus all rename domain and HTTP boundary cases. An earlier sandbox attempt hung on the first HTTP/TestClient case after 444 completed cases; it was terminated with exit 143 and is not counted as PASS. The identical first HTTP case passed outside that sandbox in 1.08 seconds, followed by the complete successful 476-case command above.
+
+Independent integration review confirmed ordinary merge ancestry, all correction blobs and unchanged workflow-generated state. It also found one inherited whitespace issue in the full accepted-base diff: an extra final LF in `apps/web/e2e/chat-thread-rename-fixture.ts`. The controller assigned an isolated one-file correction before final publication. That correction removes exactly one LF (4303 to 4302 bytes), retaining the ordinary final newline and all other bytes. It is the sole exception to byte identity with the original 27 rename files: the other 26 original blobs, all four state blobs and all five reviewed correction blobs remain unchanged. The initial clean-worktree `git diff --check` did not prove the full base-to-head check; the final latter check must pass after this correction.
+
+### Measured maintenance delta
+
+| Correction path | Base bytes | Final bytes | Final lines |
+|---|---:|---:|---:|
+| `docs/PROJECT_STATE_TRANSPORT.md` | 8668 | 10785 | 164 |
+| `tests/test_project_state_check_events.py` | 0 | 12073 | 205 |
+| `tests/test_project_state_rest_checks.py` | 7842 | 10182 | 180 |
+| `tools/project_state_check_events.py` | 0 | 7707 | 122 |
+| `tools/project_state_rest_checks.py` | 9358 | 8150 | 135 |
+
+Both new auxiliary owners are below the unchanged 80-percent warning threshold (12800 bytes) and line budgets. Hard owner limits remain 16000 bytes / 350 lines; repository hygiene found no changed handwritten owner at the warning limit. No dependency, default-context owner, Chat runtime semantics or state-file contents changed during this integration correction. The final scope remains 34 exact paths under its separately assigned task base, with no outside-scope or unapproved-sensitive path.
+
+Publication still requires the new remote exact source SHA, fresh complete PR workflows on its actual merge tree, independent source/evidence review, and a fresh exact-head owner waiver under the owner's limited PR #271 authorization. The accepted source checkpoint, actual merge and post-merge CI will be recorded by the normal workflow and PR evidence after those events occur. This report does not predeclare them or carry the source-68 waiver forward.
