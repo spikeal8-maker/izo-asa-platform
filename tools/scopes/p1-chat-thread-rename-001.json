@@ -1,6 +1,6 @@
 {
   "package_id": "P1-CHAT-THREAD-RENAME-001",
-  "base": "5b198dc5d20cc0ce703272a7a2f4b2a0bbf587dc",
+  "base": "27e506d27be72fa1a3054909aa82e7084f72818b",
   "scope_class": "cross_domain",
   "risk": "high",
   "independent_review_required": true,
