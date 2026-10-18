@@ -5,18 +5,20 @@
   "risk": "high",
   "independent_review_required": true,
   "max_files": 32,
-  "large_scope_reason": "Owner-authorized isolated candidate joins the existing Chat API and sidebar, an additive manual-title migration, generated API contract, focused service/HTTP/browser/restart checks and the package review. Canonical state and checkpoint are not changed by this candidate.",
+  "large_scope_reason": "Canonical integration of the independently reviewed rename candidate follows the genuine repository state transition from merged source PR #265. The exact candidate history is merged without product changes; four PLAN/PACKAGES/CURRENT/CHECKPOINTS outputs are preserved byte-for-byte from that workflow. Existing Chat API/sidebar, additive manual-title migration, generated contract and focused acceptance remain the bounded product scope.",
   "domains": [
     "api-chat",
     "web-chat",
     "database-migration",
     "tests",
-    "package-evidence"
+    "package-evidence",
+    "canonical-state"
   ],
   "non_goals": [
     "No new chat backend or shared auth/credits/jobs/media owner",
     "No provider requests or changes, search, delete, branching or broad UI redesign",
-    "No manual PLAN/PACKAGES/CURRENT/CHECKPOINTS changes, fabricated checkpoint, merge or deployment"
+    "No manual PLAN/PACKAGES/CURRENT/CHECKPOINTS changes, fabricated checkpoint, main merge or deployment",
+    "No tooling transport changes; those remain in the separate tooling PR"
   ],
   "allowed": [
     "apps/api/izo/chat/routes.py",
@@ -45,10 +47,18 @@
     "apps/web/e2e/chat-thread-rename-fixture.ts",
     "apps/web/acceptance/chat-live.mjs",
     "docs/reviews/P1-CHAT-THREAD-RENAME-001.md",
-    "tools/scopes/p1-chat-thread-rename-001.json"
+    "tools/scopes/p1-chat-thread-rename-001.json",
+    "docs/PLAN.json",
+    "docs/PACKAGES.json",
+    "docs/CURRENT.md",
+    "docs/CHECKPOINTS.json"
   ],
   "sensitive_approved": [
     "apps/api/migrations/versions/0017_chat_manual_title.py",
-    "tools/scopes/p1-chat-thread-rename-001.json"
+    "tools/scopes/p1-chat-thread-rename-001.json",
+    "docs/PLAN.json",
+    "docs/PACKAGES.json",
+    "docs/CURRENT.md",
+    "docs/CHECKPOINTS.json"
   ]
 }

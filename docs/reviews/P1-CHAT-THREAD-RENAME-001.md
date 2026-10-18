@@ -1,3 +1,28 @@
+# P1-CHAT-THREAD-RENAME-001 — canonical integration
+
+## Canonical integration authority and provenance
+
+The owner's follow-up directive authorized the genuine repository state transition and integration of the existing reviewed implementation. No new product implementation or repeated source audit was needed.
+
+- The live `connector-stdio` transition used independently reviewed tooling `208d26efc50942b67b4af7e1dfc6296fd6da83b9`, kept in separate tooling PR #270. No tooling changes are included in this package.
+- The controller executed 40 actual Connector requests, including fresh revalidation, and the normal `begin-decided-next` command exited successfully on clean source `27e506d27be72fa1a3054909aa82e7084f72818b`.
+- The accepted source evidence belongs to merged PR #265: source `27e506d27be72fa1a3054909aa82e7084f72818b`, actual main merge `5b198dc5d20cc0ce703272a7a2f4b2a0bbf587dc`, tested merge `9d522aa45f17927070421ed61c914b4eeb6d8b0d`, equal tested/actual tree `810af9e41b09dfad07281829ad3104fe0a960039`, and genuine pre-merge owner-waiver comment `6088760637`.
+- State-only commit `197058bd4cd6e5174485f672cb0611cec3120802` contains exactly the four workflow-generated PLAN/PACKAGES/CURRENT/CHECKPOINTS files. Their worktree bytes and committed blobs match the captured workflow outputs; no state file was edited during integration. The independent reviewer approved that exact state-only commit after inspecting the raw live execution transcript.
+- Ordinary merge `4a7c75f299aeea76aa8eb1b8ba59f1d59507b721` preserves candidate source `986fe4b79d9246784975011ea71ee2393f2e463c` and its verified-main ancestry. All 23 candidate paths are byte-identical at that merge. Subsequent integration changes are limited to this report and the preauthorized scope metadata; the other 21 implementation/contract/test paths remain byte-identical.
+- The reviewed diff base stays `5b198dc5d20cc0ce703272a7a2f4b2a0bbf587dc`, now an ancestor of the canonical branch. The frozen package base in workflow-generated state remains the verified source `27e506d27be72fa1a3054909aa82e7084f72818b`; those two commits have identical trees. The scope remains high-risk/cross-domain with the original 32-file cap and explicitly includes only the four workflow-generated state paths in addition to the candidate scope.
+
+Canonical branch: `codex/p1-chat-thread-rename-001`. Active package: `P1-CHAT-THREAD-RENAME-001`. The transition does not accept rename itself; canonical source review, required CI and final owner authority remain separate requirements.
+
+## Candidate and canonical verification are separate
+
+Candidate PR [#269](https://github.com/spikeal8-maker/izo-asa-platform/pull/269) remains unchanged at `986fe4b79d9246784975011ea71ee2393f2e463c`. Its final successful workflows are [Foundation CI 39146719209](https://github.com/spikeal8-maker/izo-asa-platform/actions/runs/39146719209), [Dependency Security 39146719191](https://github.com/spikeal8-maker/izo-asa-platform/actions/runs/39146719191), and [Review Source 39146719183](https://github.com/spikeal8-maker/izo-asa-platform/actions/runs/39146719183). These are candidate evidence. Fresh canonical checks, independent review and CI must identify the new published canonical source SHA and its tested merge tree.
+
+The canonical integration checks executed locally on Python 3.13.16 passed: `project_state.py verify`, `check_docs.py`, `repository_hygiene.py --base 5b198dc5d20cc0ce703272a7a2f4b2a0bbf587dc`, `check_change.py` with this package's scope (27 changed files out of the unchanged 32-file cap), and `export_contracts.py --check`. The existing state/provenance/review suite also passed: 173 tests in 0.29 seconds. These checks validate integration and generated state; full product QA and required CI for the published canonical source are recorded separately in its PR.
+
+Candidate-status statements in the retained record apply to PR #269. The state activation described above is the later verified transition. The original candidate record below is retained verbatim.
+
+---
+
 # P1-CHAT-THREAD-RENAME-001 — isolated implementation candidate
 
 ## Authority and status
