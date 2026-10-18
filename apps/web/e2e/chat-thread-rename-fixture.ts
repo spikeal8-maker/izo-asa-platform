@@ -84,4 +84,3 @@ export async function send(page: Page) {
   await page.getByRole('textbox', { name: 'Сообщение', exact: true }).fill('Проверка')
   await page.getByRole('button', { name: 'Отправить', exact: true }).click()
 }
-
