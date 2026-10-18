@@ -54,6 +54,53 @@ async function serverThreads(page) {
   })
 }
 
+async function rename(page, oldTitle, title) {
+  const row = page.locator('.chat-history-row').filter({
+    has: page.getByRole('button', { name: oldTitle, exact: true }),
+  })
+  await row.getByRole('button', { name: 'Переименовать', exact: true }).click()
+  await page.getByRole('textbox', { name: 'Название чата', exact: true }).fill(title)
+  await page.getByRole('button', { name: 'Сохранить', exact: true }).click()
+  await expect(page.getByRole('button', { name: title, exact: true })).toBeVisible()
+}
+
+async function concurrentRename(page) {
+  return page.evaluate(async () => {
+    const auth = await (await fetch('/api/v1/auth/me')).json()
+    const policy = await (await fetch('/api/v1/chat/policy')).json()
+    async function command(path, method, data) {
+      const response = await fetch(`/api/v1/chat/${path}`, { method,
+        credentials: 'same-origin', headers: { 'Content-Type': 'application/json',
+          'X-CSRF-Token': auth.csrf_token, 'X-IZO-Request': 'web' }, body: JSON.stringify(data) })
+      if (!response.ok) throw new Error(`Concurrent rename command failed: ${response.status}`)
+      return response.json()
+    }
+    const thread = await command('threads', 'POST', { title: null })
+    const requestId = crypto.randomUUID()
+    await Promise.all([
+      command(`threads/${thread.id}`, 'PATCH', { title: 'Новый чат' }),
+      command(`threads/${thread.id}/requests`, 'POST', {
+        request_id: requestId, text: 'Проверка первого сообщения и ручного имени',
+        model: policy.default_model, attachment_ids: [],
+      }),
+    ])
+    let detail = await (await fetch(`/api/v1/chat/threads/${thread.id}`)).json()
+    if (detail.thread.title !== 'Новый чат') throw new Error('First message overwrote manual title')
+    const title = 'Название после одновременных запросов'
+    await Promise.all([
+      command(`threads/${thread.id}`, 'PATCH', { title }),
+      fetch(`/api/v1/chat/requests/${requestId}/events`).then(async response => {
+        if (!response.ok) throw new Error('Isolated provider stream failed')
+        await response.text()
+      }),
+    ])
+    detail = await (await fetch(`/api/v1/chat/threads/${thread.id}`)).json()
+    if (detail.thread.title !== title || detail.messages.length !== 2)
+      throw new Error('Concurrent rename lost title or messages')
+    return { id: thread.id, title }
+  })
+}
+
 const email = 'preview@local.izo'
 const passphrase = 'fixture-passphrase-2026'
 try {
@@ -87,9 +134,15 @@ try {
 
     const list = await serverThreads(page)
     expect(list.threads).toHaveLength(1)
+    const title = 'Урок робототехники — сохранено'
+    await rename(page, list.threads[0].title, title)
+    expect((await serverThreads(page)).threads[0].title).toBe(title)
+    await expect(page.locator('.chat-turn-user')).toHaveCount(2)
+    await expect(page.locator('.chat-assistant-message')).toHaveCount(2)
+    const race = await concurrentRename(page)
     const state = {
       email, passphrase, thread_id: list.threads[0].id,
-      title: list.threads[0].title,
+      title, race,
       first: 'Ответ DeepSeek test: Первый вопрос D1',
       follow: 'Контекст: Первый вопрос D1',
     }
@@ -99,7 +152,7 @@ try {
     })
     await ctx.close()
     console.log(
-      'CHAT_BROWSER_BEFORE_OK: register -> encrypted BYOK verify -> SSE -> contextual follow-up',
+      'CHAT_BROWSER_BEFORE_OK: register -> BYOK -> SSE -> follow-up -> rename -> concurrent first-message rename',
     )
   } else {
     const raw = await readFile(file, 'utf8')
@@ -110,6 +163,9 @@ try {
     await login(page, state.email, state.passphrase)
 
     await expect(page.getByRole('button', { name: 'DeepSeek подключён' })).toBeVisible()
+    const durable = await serverThreads(page)
+    expect(durable.threads.find(thread => thread.id === state.thread_id)?.title).toBe(state.title)
+    expect(durable.threads.find(thread => thread.id === state.race.id)?.title).toBe(state.race.title)
     const item = page.getByRole('button', { name: state.title, exact: true })
     await item.click()
     await expect(page.locator('.chat-turn-user')).toHaveCount(2)
@@ -126,15 +182,26 @@ try {
       path: evidence + '/chat-after-restart.png', fullPage: true,
     })
     await page.setViewportSize({ width: 390, height: 844 })
+    await page.getByRole('button', { name: 'Открыть панель' }).click()
+    await rename(page, state.title, 'Мобильное переименование после перезапуска')
+    await page.reload()
+    await page.getByRole('button', { name: 'Открыть панель' }).click()
+    await expect(page.getByRole('button', {
+      name: 'Мобильное переименование после перезапуска', exact: true,
+    })).toBeVisible()
+    const drawer = page.locator('.chat-sidebar')
+    await expect(drawer).toHaveAttribute('role', 'dialog')
+    await expect(drawer).toHaveCSS('transform', 'matrix(1, 0, 0, 1, 0, 0)')
+    await expect.poll(async () => (await drawer.boundingBox())?.height ?? 0).toBeGreaterThan(600)
     await expect.poll(() => page.evaluate(
       () => document.documentElement.scrollWidth <= innerWidth,
     )).toBe(true)
     await page.screenshot({
-      path: evidence + '/chat-after-restart-phone.png', fullPage: true,
+      path: evidence + '/chat-after-restart-phone.png', fullPage: true, animations: 'disabled',
     })
     await ctx.close()
     console.log(
-      'CHAT_BROWSER_AFTER_OK: login -> credential -> durable thread -> reload after Compose restart',
+      'CHAT_BROWSER_AFTER_OK: login -> durable manual titles/messages -> reload -> mobile rename persistence after Compose restart',
     )
   }
 } finally {

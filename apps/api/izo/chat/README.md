@@ -60,3 +60,16 @@ Thread-list reads in `thread_pages.py` return at most 50 account-owned rows in c
 `GET /threads?cursor=...`; malformed cursors fail closed. The cursor grants no
 ownership and every page applies the account filter. Nearest tests:
 `tests/test_chat_thread_paging.py`.
+
+`PATCH /threads/{id}` renames an existing owned thread through the same session,
+origin and CSRF boundary. `ThreadRename` accepts only a title, trims the browser's
+Unicode whitespace set, and requires 1–120 Unicode code points; NUL, lone
+surrogates and whitespace-only titles are rejected without echoing input.
+`thread_titles.py` locks the owned thread row used by first-message admission
+and atomically persists title, a private `title_is_manual` flag and update time.
+Manual `Новый чат` is protected like any other chosen title. Existing create
+semantics are preserved; only the explicit rename command marks a title manual.
+Repeated identical renames are no-ops. Rename never changes creation order,
+message sequence, requests or pagination cursors. The forward migration retains
+existing titles with a false marker. Nearest tests:
+`tests/test_chat_thread_rename.py`, `tests/test_chat_thread_rename_http.py`.

@@ -1,11 +1,12 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useLayoutEffect, useRef, useState } from 'react'
 import type { AuthView, ThreadView } from '../../shared/api'
 import { Icon } from '../../shared/ui/Icon'
 import { AccountMenu } from '../TopBar'
+import { ThreadRenameForm, useThreadRenameEditor } from './ThreadRenameForm'
 import './ChatSidebar.css'
 
 export function ChatSidebar({ auth, history, historyCursor, loadingHistory, onLoadMoreHistory,
-  currentChatId, busy, theme, onThemeChange, onLogout,
+  currentChatId, busy, renamingThreadId, onRenameChat, theme, onThemeChange, onLogout,
   compact, drawerOpen, hiddenFromKeyboard, onNewChat, onOpenChat, onClose, onExpand }: {
   auth: AuthView | null | undefined
   history: ThreadView[]
@@ -14,6 +15,8 @@ export function ChatSidebar({ auth, history, historyCursor, loadingHistory, onLo
   onLoadMoreHistory: () => void
   currentChatId: string | null
   busy: boolean
+  renamingThreadId: string | null
+  onRenameChat: (id: string, title: string) => Promise<boolean>
   theme: 'light' | 'dark'
   onThemeChange: (value: 'light' | 'dark') => void
   onLogout: () => void
@@ -32,18 +35,18 @@ export function ChatSidebar({ auth, history, historyCursor, loadingHistory, onLo
   const profileButtonRef = useRef<HTMLButtonElement>(null)
   const sidebarRef = useRef<HTMLElement>(null)
   const closeButtonRef = useRef<HTMLButtonElement>(null)
+  const { editingId, historyList, openRename, closeRename } = useThreadRenameEditor(
+    hiddenFromKeyboard || compact, renamingThreadId, closeButtonRef)
 
   useEffect(() => {
-    if (!hiddenFromKeyboard) return
+    if (!hiddenFromKeyboard && !compact) return
     setSearchOpen(false)
     setSearchQuery('')
     setProfileOpen(false)
-  }, [hiddenFromKeyboard])
+  }, [hiddenFromKeyboard, compact])
 
-  useEffect(() => {
-    if (!drawerOpen) return
-    const frame = requestAnimationFrame(() => closeButtonRef.current?.focus())
-    return () => cancelAnimationFrame(frame)
+  useLayoutEffect(() => {
+    if (drawerOpen) closeButtonRef.current?.focus({ preventScroll: true })
   }, [drawerOpen])
 
   useEffect(() => {
@@ -95,7 +98,7 @@ export function ChatSidebar({ auth, history, historyCursor, loadingHistory, onLo
     <div className="chat-sidebar-head">
       {searchOpen
         ? <label className="chat-search-box chat-search-head"><Icon name="search" />
-            <input autoFocus value={searchQuery} onChange={event => setSearchQuery(event.target.value)}
+            <input autoFocus value={searchQuery} onChange={event => { setSearchQuery(event.target.value); closeRename(false) }}
               aria-label="Поиск по чатам" placeholder="Поиск по чатам"
               onKeyDown={event => {
                 if (event.key === 'Escape') {
@@ -120,10 +123,19 @@ export function ChatSidebar({ auth, history, historyCursor, loadingHistory, onLo
     </div>
 
     {!compact && <><div className="chat-side-section">Чаты</div>
-    <div className="chat-history-list" aria-label="Список чатов">
-      {visibleHistory.map(chat => <button className={chat.id === currentChatId ? 'chat-history-item active' : 'chat-history-item'}
-        key={chat.id} onClick={() => onOpenChat(chat)} disabled={busy}
-        title={chat.title}>{chat.title}</button>)}
+    <div ref={historyList} className="chat-history-list" aria-label="Список чатов">
+      {visibleHistory.map(chat => <div className="chat-history-row" key={chat.id}>
+        <button className={chat.id === currentChatId ? 'chat-history-item active' : 'chat-history-item'}
+          id={`chat-history-${chat.id}`} onClick={() => onOpenChat(chat)} disabled={busy}
+          title={chat.title}>{chat.title}</button>
+        <button className="chat-icon-button chat-history-rename" aria-label="Переименовать"
+          aria-describedby={`chat-history-${chat.id}`} title="Переименовать"
+          aria-expanded={editingId === chat.id} disabled={!auth || !!editingId || !!renamingThreadId}
+          onClick={event => openRename(chat.id, event.currentTarget)}>
+          <Icon name="edit" /></button>
+        {editingId === chat.id && <ThreadRenameForm title={chat.title}
+          onSave={title => onRenameChat(chat.id, title)} onClose={closeRename} />}
+      </div>)}
       {historyCursor && <button className="chat-history-more" onClick={onLoadMoreHistory}
         disabled={loadingHistory} aria-label="Загрузить ранние чаты">
         {loadingHistory ? 'Загружаем…' : 'Загрузить ранние чаты'}</button>}

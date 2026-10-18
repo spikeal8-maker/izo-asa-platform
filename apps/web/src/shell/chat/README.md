@@ -59,3 +59,18 @@ Late pages from a prior selection are ignored.
 It keeps already loaded rows unique by thread ID, resets to the first page on
 reload/account change, and offers an explicit older-chats control in desktop
 sidebar and phone drawer. `chat-thread-paging.spec.ts` covers both viewports.
+
+`ThreadRenameForm` and its `useThreadRenameEditor` hook own the inline draft,
+Unicode validation, save/cancel/error states and focus return after editor
+removal and PATCH unlock commit; moving focus elsewhere cancels that return.
+Its sibling action stays visible on
+touch screens. Escape cancels the editor before the mobile drawer. The existing
+`useThreadHistory` sends the authenticated PATCH, changes only the confirmed
+row title and keeps loaded pages, cursor and selection. A shared request
+revision fences initial/refresh/older reads begun before or during a rename;
+later fresh reads remain authoritative and preserve the loaded history tail
+and its cursor. Rename state is account-scoped and
+cleared on teardown. `chat-thread-rename.spec.ts` covers recovery and
+desktop/tablet/phone; `chat-thread-rename-races.spec.ts` checks frame/commit
+ordering and deliberate focus changes. `acceptance/chat-live.mjs` proves actual PostgreSQL title
+durability across restart plus concurrent first-message admission.
