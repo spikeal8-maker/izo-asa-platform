@@ -136,3 +136,45 @@ def test_open_pr_path_requires_the_same_real_protection(tmp_path, monkeypatch):
             evidence.fetch_pr_evidence(NUMBER, HEAD, root=tmp_path)
     finally:
         connector._ACTIVE.reset(token)
+
+
+@pytest.mark.parametrize("page_two", ["complete", "missing", "duplicate"])
+def test_historical_jobs_need_complete_unambiguous_second_page(tmp_path, page_two):
+    from test_project_state_check_events import multiple_event_data
+    data = multiple_event_data()
+    prefix = f"repos/{REPO}"
+    checks = data[f"{prefix}/commits/{HEAD}/check-runs"]
+    for run_id in (1011, 2011, 3011):
+        page = data[f"{prefix}/actions/runs/{run_id}/jobs"]
+        template = deepcopy(page["jobs"][0])
+        check = next(row for row in checks["check_runs"] if row["id"] == template["id"])
+        for index in range(99):
+            job_id, name = run_id * 1000 + index, f"matrix {index}"
+            page["jobs"].append(dict(template, id=job_id, name=name,
+                check_run_url=f"https://api.github.com/{prefix}/check-runs/{job_id}"))
+            checks["check_runs"].append(dict(deepcopy(check), id=job_id, name=name,
+                details_url=f"https://github.com/{REPO}/actions/runs/{run_id}/job/{job_id}"))
+        page["total_count"] = len(page["jobs"])
+    checks["total_count"] = len(checks["check_runs"])
+
+    def mutate(response, request):
+        endpoint = request["params"].get("endpoint", "")
+        if f"{prefix}/actions/runs/2011/jobs?" in endpoint and "page=2" in endpoint:
+            if page_two == "missing": response["payload"]["jobs"] = []
+            if page_two == "duplicate":
+                response["payload"]["jobs"] = [data[f"{prefix}/actions/runs/2011/jobs"]["jobs"][0]]
+        return response
+
+    client, broker = make_client(tmp_path, data=data, mutate=mutate)
+    if page_two != "complete":
+        with pytest.raises(ValueError, match="pagination"):
+            collect(client, NUMBER)
+    else:
+        proof = collect(client, NUMBER)
+        selected = latest_required_runs(_workflow_pages(proof["run_pages"]), HEAD, NUMBER)
+        validate_pr_rollup(NUMBER, proof["pr"], selected, proof, JOBS)
+        assert len(proof["check_pages"]) == 4 and checks["total_count"] == 309
+        assert all(len(row["job_pages"]) == 2 for row in proof["historical_workflows"]
+                   if row["run"]["name"] == "Foundation CI")
+    assert any("actions/runs/2011/jobs?" in request["params"].get("endpoint", "")
+               and "page=2" in request["params"]["endpoint"] for request in broker.requests)

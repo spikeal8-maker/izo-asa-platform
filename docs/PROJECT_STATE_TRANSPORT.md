@@ -4,6 +4,7 @@ Owners: `tools/project_state.py` and `tools/project_state_closeout.py` select th
 `project_state_evidence.py` keeps the existing evidence contract;
 `project_state_connector.py` owns REST collection and the final write barrier;
 `project_state_rest_checks.py` validates REST protection/check identity;
+`project_state_check_events.py` proves current and superseded workflow-event identity;
 `github_connector_bridge.py` owns the bounded controller channel.
 
 ## Selection and trusted boundary
@@ -101,7 +102,7 @@ Connector is selected. The current bounded contract requires:
   extension; a missing/forbidden/incomplete protection response cannot imply success.
 - Complete check-run **and separate check-suite** enumeration, each below 1,000. This
   explicitly excludes the API's 1,000-suite truncation boundary; run count alone is
-  insufficient. Every actual check/status context must succeed. An empty legacy
+  insufficient. Every current or unproven check/status context must succeed. An empty legacy
   status list with `total_count=0` may report aggregate `pending`; no legacy context
   exists in that case. A foreign queued suite with no actual check-run is likewise
   only a container, not an invented pending check context.
@@ -110,6 +111,31 @@ Connector is selected. The current bounded contract requires:
   Jobs are fully paginated with `filter=latest`, then checked against run ID, attempt,
   source SHA and `check_run_url`. A newer failed/pending run cannot be hidden behind
   an earlier success or omitted second page.
+- The commit's `check-runs?filter=latest` response can retain checks from several
+  `pull_request` events for the same source. The proof keeps the complete raw run,
+  check and suite pages, and repeats `latest_required_runs` over that complete run
+  history. Its established order is run number, attempt and run ID. The selected
+  current workflows must still succeed; a failed newest event never falls back to
+  an older passing event. Ambiguous duplicate event numbers are rejected.
+- An older check is classified as superseded only with a strictly smaller run
+  number in the same workflow ID/path, repository, source SHA, branch and PR event.
+  Its fresh run detail and complete paginated jobs must match the listed run and
+  latest attempt, exact job/check-run IDs and URLs, suite and app. The same job
+  context and app must have a successful replacement in the selected workflow.
+  Historical jobs, checks and suites must all be terminal and mutually consistent;
+  their original success/failure/cancellation results stay in the raw proof. There
+  is no response filtering or history deletion by the controller.
+- An old cancellation may finish after the newer event starts, including when the
+  newer run cancels it through concurrency policy. Supersession follows the proved
+  run number and identity, not non-overlapping wall-clock intervals. This bounded
+  contract does not infer older attempts from a latest-attempt jobs endpoint.
+  Unknown checks, unmatched jobs, foreign workflow/app/PR identities, same-number
+  events, pending history and incomplete history metadata fail closed. Additional
+  checks retain the previous strict success and unique name/app requirements.
+- Empty `pull_requests` on a run or historical check is allowed only for a MERGED
+  PR under the existing exact source/head-branch and verified merge provenance.
+  OPEN PRs require explicit matching PR numbers. This does not broaden detached
+  evidence to another branch, source or PR number.
 - Foundation's unique tested `IZO_BUILD_SHA` read from complete logs of all jobs in
   the selected run/attempt. Existing merge parent/tree equality and pre-merge time
   checks remain authoritative. The tested merge commit can differ from both source
@@ -128,7 +154,8 @@ write, merge or deployment is part of this transport.
 ## Verification
 
 Focused tests are `test_github_connector_bridge.py`, `test_project_state_connector.py`,
-`test_project_state_rest_checks.py`, `test_project_state_transport_root.py`, and the
+`test_project_state_rest_checks.py`, `test_project_state_check_events.py`,
+`test_project_state_transport_root.py`, and the
 existing project-state/review suites. Fixtures are explicitly synthetic. Git checkout
 tests cover both begin commands and terminal closeout, default `gh` routing, valid external
 tooling root, pre-merge structured review/owner waiver, stale/ref/checkout drift, and
