@@ -4,8 +4,8 @@
   "scope_class": "cross_domain",
   "risk": "high",
   "independent_review_required": true,
-  "max_files": 32,
-  "large_scope_reason": "This separately authorized integration task preserves the 27-path rename source and its workflow-generated state while integrating already accepted main PR #270. Its approved baseline is the actual main merge, so the 18 accepted tooling paths are not relabelled as new rename work. The finite task owns those 27 remaining paths, its own scope/report, and a three-path correction for the reproduced REST check-history validator defect. Fresh exact-head CI, independent review or a new owner waiver, and normal state workflow remain required.",
+  "max_files": 34,
+  "large_scope_reason": "This separately authorized integration task preserves the 27-path rename source and its workflow-generated state while integrating already accepted main PR #270. Its approved baseline is the actual main merge, so the 18 accepted tooling paths are not relabelled as new rename work. The finite task owns those 27 remaining paths, its own scope/report, and five explicitly assigned paths for the reproduced REST check-history correction. Before the two companion files were created, the controller approved separating event identity from protection/pagination and its regression matrix from the existing REST tests, following the implementer's measured 14837-byte working module and independent reviewer confirmation. The 34-file task cap stays within the unchanged 40-file class limit. Fresh exact-head CI, independent review or a new owner waiver, and normal state workflow remain required.",
   "domains": [
     "api-chat",
     "web-chat",
@@ -51,7 +51,9 @@
     "packages/contracts/openapi.json",
     "tests/test_chat_thread_rename.py",
     "tests/test_chat_thread_rename_http.py",
+    "tests/test_project_state_check_events.py",
     "tests/test_project_state_rest_checks.py",
+    "tools/project_state_check_events.py",
     "tools/project_state_rest_checks.py",
     "tools/scopes/p1-chat-thread-rename-001.json",
     "tools/scopes/p1-chat-thread-rename-integration-001.json"
@@ -62,6 +64,7 @@
     "docs/PACKAGES.json",
     "docs/CURRENT.md",
     "docs/CHECKPOINTS.json",
+    "tools/project_state_check_events.py",
     "tools/project_state_rest_checks.py",
     "tools/scopes/p1-chat-thread-rename-001.json",
     "tools/scopes/p1-chat-thread-rename-integration-001.json"
