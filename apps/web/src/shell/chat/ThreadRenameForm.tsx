@@ -1,6 +1,48 @@
-import { useEffect, useId, useRef, useState } from 'react'
+import { useId, useLayoutEffect, useRef, useState, type RefObject } from 'react'
 import { ApiError } from '../../shared/api'
 import './ThreadRenameForm.css'
+
+export function useThreadRenameEditor(hidden: boolean, pendingId: string | null,
+  fallback: RefObject<HTMLButtonElement | null>) {
+  const [editingId, setEditingId] = useState<string | null>(null)
+  const historyList = useRef<HTMLDivElement>(null)
+  const origin = useRef<{ button: HTMLButtonElement; scroll: number } | null>(null)
+  const returnFocus = useRef(false)
+
+  useLayoutEffect(() => {
+    if (hidden) {
+      origin.current = null
+      returnFocus.current = false
+      setEditingId(null)
+      return
+    }
+    if (editingId) return
+    const source = origin.current
+    const target = source?.button.isConnected ? source.button : fallback.current
+    const active = document.activeElement
+    const restore = returnFocus.current && source && target?.isConnected
+      && (active === document.body || active === target)
+    // Both the editor removal and PATCH unlock must be committed before focusing.
+    if (restore && pendingId && target === source.button) return
+    origin.current = null
+    returnFocus.current = false
+    if (!restore || !target || target.disabled) return
+    if (historyList.current) historyList.current.scrollTop = source.scroll
+    target.focus({ preventScroll: true })
+  }, [editingId, hidden, pendingId, fallback])
+
+  function openRename(id: string, button: HTMLButtonElement) {
+    returnFocus.current = false
+    origin.current = { button, scroll: historyList.current?.scrollTop ?? 0 }
+    setEditingId(id)
+  }
+  function closeRename(restoreFocus: boolean) {
+    returnFocus.current = restoreFocus
+    if (!restoreFocus) origin.current = null
+    setEditingId(null)
+  }
+  return { editingId, historyList, openRename, closeRename }
+}
 
 function renameProblem(reason: unknown) {
   if (reason instanceof ApiError) {
@@ -29,7 +71,7 @@ export function ThreadRenameForm({ title, onSave, onClose }: {
   const length = Array.from(normalized).length
   const valid = length <= 120 && !/^[\s\u001c-\u001f\u0085]*$/u.test(normalized)
     && !/[\u0000\uD800-\uDFFF]/u.test(normalized)
-  useEffect(() => {
+  useLayoutEffect(() => {
     mounted.current = true
     input.current?.focus({ preventScroll: true })
     input.current?.select()

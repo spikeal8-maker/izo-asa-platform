@@ -84,9 +84,9 @@ Targeted service/HTTP, web build, responsive browser and real PostgreSQL/restart
 
 ### Reviewed source and executed checks
 
-- Final implementation SHA: `d89eeb4c90b5d444ed121150dbc95c43311437c4`.
+- Final implementation SHA after CI focus follow-up: `7100db48fdffd62555fa9d474148d6467abb86bc`.
 - Backend author commits: `0b3435339056d4d0fd0905be46d07cd423c6fd28`, `1b43ac6ea125b125e714c21d59d2fc9e6e2914de`.
-- Frontend author commits: `0ab353643dbe751d7cb72dae797ae09fa042a834`, `a5138e15af46732f0e3ea4b7cd21a1d688f4a196`, `6d3a686ad1eb8f4ad5bdd30e09557bbe66075981`.
+- Frontend author commits: `0ab353643dbe751d7cb72dae797ae09fa042a834`, `a5138e15af46732f0e3ea4b7cd21a1d688f4a196`, `6d3a686ad1eb8f4ad5bdd30e09557bbe66075981`, `7c93d241d0b33d73b407642bf946c7e0e4321288`.
 - Python 3.13.16: final targeted set **70 passed** in 46.98s: 30 rename domain, 32 rename HTTP and 8 existing thread/history paging and migration tests. The reviewer independently repeated the earlier 64-case version before the final six Unicode regressions were added.
 - Full Python suite at backend integration `e5f06bccca218dd70670d2bc25047f9864140ff2`: **1154 passed, 1 skipped** in 225.02s. This predates the final Unicode fix and is not represented as a final-head full-suite run. The skip requires opt-in `IZO_CATALOG_TEST_PG_URL`.
 - The TestClient suite required approved execution outside the local sandbox because existing anyio startup stalled there. The repository's no-network fixture was retained.
@@ -94,13 +94,13 @@ Targeted service/HTTP, web build, responsive browser and real PostgreSQL/restart
 - Playwright 1.61.0 / Chromium 149: **45/45 passed** for rename, sidebar and paging across laptop, phone and tablet on frontend `a5138e1`. The final screenshot-only change retained all assertions and its affected scenario passed **3/3** across those projects.
 - The reviewer ran **6/6 existing message-copy regressions** on laptop and small phone. An independent stream/load-more/mouse-save browser probe preserved all 52 rows, terminal cursor, focus and scroll (1425 to 1425).
 - Independent Unicode parity probe: 900 whitespace-only combinations rejected and 900 combinations around visible text accepted; 120/121-code-point emoji boundary preserved.
-- Scope check (21 changed files), repository hygiene, documentation, generated contract and whitespace checks passed. Canonical state files, workflows and dependency locks have no candidate diff.
+- Scope check (23 changed files after the two preauthorized test companions), repository hygiene, documentation, generated contract and whitespace checks passed. Canonical state files, workflows and dependency locks have no candidate diff.
 
 ### Independent PostgreSQL evidence
 
 The reviewer authored an independent scheduling/observation probe outside the repository; the controller executed its unchanged source in the disposable `izo-rename-qa-3ea18864` API container on D2-R2. No production credentials, provider calls or existing application volumes were used. A local Compose override assigns subnets only to this new project's networks because the host's default Docker address pools were exhausted; no daemon, VPN, DNS or existing network configuration was changed.
 
-The final run passed on PostgreSQL 17.11, READ COMMITTED, migration `0017_chat_manual_title`, on exact implementation SHA `d89eeb4c90b5d444ed121150dbc95c43311437c4`. The three cases observed real PostgreSQL lock waits rather than inferring locking from SQLite:
+The run passed on PostgreSQL 17.11, READ COMMITTED, migration `0017_chat_manual_title`, on exact implementation SHA `d89eeb4c90b5d444ed121150dbc95c43311437c4`. Backend code is unchanged by the later focus follow-up. The three cases observed real PostgreSQL lock waits rather than inferring locking from SQLite:
 
 | Case | Observed result |
 |---|---|
@@ -126,7 +126,17 @@ Independent reviewer `/root/source_audit` issued **APPROVE** for `e195cf9c563a08
 | Fresh stream refresh dropped loaded history tail | Merge confirmed first-page data while retaining loaded tail and cursor |
 | Mobile evidence captured a drawer transition | Wait for settled geometry and disable screenshot animations; assertions retained |
 
-All findings are closed. The initial responsive run's 42 passes and 3 scroll failures are retained here as the actual pre-fix result. Two bounded companion test paths were preauthorized; the 32-file cap and all file budgets remain unchanged.
+The initial responsive run's 42 passes and 3 scroll failures are retained here as the actual pre-fix result. Two bounded companion test paths were preauthorized; the 32-file cap and all file budgets remain unchanged.
+
+### CI focus follow-up and closure
+
+First published source `90d59ce87e7848d1ab387f5c6630cc94bc2a2d1a`, Foundation CI run `39144072602`, completed SUCCESS: Python **1160 passed, 1 skipped**; Playwright **857 passed, 391 skipped, 3 flaky**. Container and clean offline-preview browser/restart scenarios passed. The controller read the full log and reopened review because all three flaky cases concerned new rename focus behavior; success after the existing retry was not treated as closure.
+
+Two saved-title cases lost focus on tablet/HiDPI; the drawer case sampled focus before its deferred open callback. A one-shot animation-frame callback could run before React committed editor removal and re-enabled the opener. Author fix `7c93d24` replaces that return with a layout effect and consumable intent, respects another connected focused control, clears intent on hide/compact/new edit, and fences late form completion at unmount. Drawer focus also follows the DOM commit. No CI, retries or assertions were weakened; extracted fixture bodies are unchanged.
+
+Natural baseline **48/48 passed**, so it did not reproduce the CI failures locally. A controlled early asynchronous-frame regression failed on the old build in both target projects and passed on the new build; it checks visible saved state and actual focus, not hook calls. Final repeated checks: **80/80 passed without retries** (48 original scenarios, 16 ordering probes, 16 deliberate-focus cases). The affected rename/races/sidebar/paging suite passed **51/51** across laptop/phone/tablet. Build passed.
+
+The reviewer independently verified **15 natural Chromium outcomes** across tablet/laptop/HiDPI: mouse/Enter save, focused search during PATCH, dismiss/reopen/new editor and logout with a late response. Source/bundle hashes matched before and after; the disposable harness's ambiguous login locator was corrected without changing product code. Reviewer verdict: **APPROVE** exact author fix `7c93d241d0b33d73b407642bf946c7e0e4321288`; no open code findings. Final publication, matching trees and fresh exact-head CI results are recorded in PR #269.
 
 Required GitHub workflows must run on the published exact head. Internal subagent review is separate from the repository's required independent GitHub actor or explicit exact-head owner waiver.
 
