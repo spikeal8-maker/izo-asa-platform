@@ -11,6 +11,7 @@
   ],
   "allowed": [
     "tools/project_state.py",
+    "tools/project_state_closeout.py",
     "tools/project_state_evidence.py",
     "tools/project_state_provenance.py",
     "tools/project_state_merged_evidence.py",
@@ -30,6 +31,7 @@
   ],
   "sensitive_approved": [
     "tools/project_state.py",
+    "tools/project_state_closeout.py",
     "tools/project_state_evidence.py",
     "tools/project_state_provenance.py",
     "tools/project_state_merged_evidence.py",

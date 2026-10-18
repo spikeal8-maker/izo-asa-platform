@@ -1,14 +1,16 @@
-"""Synthetic transport data only; never usable as live state evidence input."""
+"""Synthetic GitHub peer and isolated Git fixtures; never live evidence input."""
 from __future__ import annotations
 
 from copy import deepcopy
 import json
+import subprocess
 from pathlib import Path
 import sys
 from urllib.parse import parse_qs, urlsplit
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "tools"))
 from github_connector_bridge import LiveBridge, PREFIX, TOOLS
+import project_state as state
 from project_state_connector import ConnectorClient
 from project_state_rest_checks import WORKFLOW_PATHS
 
@@ -105,3 +107,54 @@ def data_set() -> dict:
 def make_client(root=Path("."), *, data=None, mutate=None):
     broker = Broker(data if data is not None else data_set(), mutate)
     return ConnectorClient(root, LiveBridge(REPO, reader=broker, writer=broker)), broker
+
+
+def source_waiver_comment(source):
+    return {"id": 77, "user": {"login": "owner"}, "author_association": "OWNER",
+            "created_at": "2026-10-01T11:45:00Z", "updated_at": "2026-10-01T11:45:00Z",
+            "body": (f"Owner waiver for source checkpoint PR #{NUMBER}: APPROVE\n"
+                     f"Source HEAD: {source}\nIndependent review: unavailable\n"
+                     "Reason: Synthetic owner acceptance fixture\n"
+                     "Foundation CI: 11 SUCCESS\nDependency Security: 12 SUCCESS\n"
+                     "Review Source: 13 SUCCESS")}
+
+
+STATE_NAMES = ("PLAN.json", "PACKAGES.json", "CURRENT.md", "CHECKPOINTS.json")
+
+
+def git(root, *args):
+    return subprocess.check_output(["git", *args], cwd=root, text=True, stderr=subprocess.PIPE).strip()
+
+
+def checkout(root, *, decided=True):
+    root.mkdir()
+    git(root, "init", "--quiet", "--initial-branch", "source")
+    git(root, "config", "user.name", "Transport test")
+    git(root, "config", "user.email", "transport@example.invalid")
+    git(root, "commit", "--quiet", "--allow-empty", "-m", "Fixture base")
+    base = git(root, "rev-parse", "HEAD")
+    plan = state.load_plan(Path(__file__).resolve().parents[1])
+    active = plan["active_package"]
+    plan["packages"][active]["status"] = "active"
+    plan["packages"][active]["decides_next"] = True
+    plan["canonical_lineage"]["working_branch"] = "source"
+    plan["canonical_lineage"]["current_package_base"]["sha"] = base
+    if not decided:
+        plan["packages"]["TEST-TRANSPORT-NEXT"] = {"status": "planned_next", "depends_on": [active], "decides_next": True}
+        plan["next_package"] = "TEST-TRANSPORT-NEXT"
+    (root / "docs").mkdir()
+    state.write_state(plan, {"schema_version": 1, "checkpoints": {}}, root=root)
+    scopes = root / "tools/scopes"
+    scopes.mkdir(parents=True)
+    (scopes / f"{active.lower()}.json").write_text(json.dumps(
+        {"package_id": active, "risk": "high", "independent_review_required": True}))
+    (root / "marker.txt").write_text("original")
+    git(root, "add", ".")
+    git(root, "commit", "--quiet", "-m", "Fixture source")
+    git(root, "branch", "other")
+    git(root, "remote", "add", "origin", f"https://github.com/{REPO}.git")
+    return plan, git(root, "rev-parse", "HEAD")
+
+
+def state_bytes(root):
+    return {name: (root / "docs" / name).read_bytes() for name in STATE_NAMES}

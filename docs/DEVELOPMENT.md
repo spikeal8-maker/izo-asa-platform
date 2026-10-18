@@ -85,7 +85,9 @@ PLAN/PACKAGES/CURRENT/CHECKPOINTS. Для terminal `complete` запуск succe
 
 Штатный transport по умолчанию — `gh`; явный `--github-transport connector-stdio` получает свежие
 GitHub Connector ответы через доверенного controller. `--repo-root` направляет все state/Git операции
-в точный целевой checkout. Протокол, границы доверия и REST evidence — [PROJECT_STATE_TRANSPORT.md](PROJECT_STATE_TRANSPORT.md).
+в точный целевой checkout. Эти параметры поддерживают оба entrypoint: `project_state.py` и
+`project_state_closeout.py`; перед записью каждый повторно проверяет live evidence и неизменность Git checkout.
+Протокол, границы доверия и REST evidence — [PROJECT_STATE_TRANSPORT.md](PROJECT_STATE_TRANSPORT.md).
 
 Для `complete` source HEAD принимается либо ровно по source SHA immutable accepted checkpoint, либо по отдельному
 accepted merged closeout PR, указанному через `verified_pr`. Во втором случае head PR должен происходить от

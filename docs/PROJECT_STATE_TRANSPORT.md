@@ -1,6 +1,6 @@
 # Project state: live GitHub evidence transports
 
-Owner: `tools/project_state.py` selects the target checkout and transport;
+Owners: `tools/project_state.py` and `tools/project_state_closeout.py` select the target checkout and transport;
 `project_state_evidence.py` keeps the existing evidence contract;
 `project_state_connector.py` owns REST collection and the final write barrier;
 `project_state_rest_checks.py` validates REST protection/check identity;
@@ -18,12 +18,29 @@ python /reviewed/tooling/tools/project_state.py \
   --verified-pr <source-pr>
 ```
 
-Global options precede the subcommand. Without `--repo-root`, the script's repository
+The standalone terminal-closeout entrypoint uses the same options and live protocol:
+
+```sh
+python /reviewed/tooling/tools/project_state_closeout.py \
+  --repo-root /clean/source/checkout --github-transport connector-stdio \
+  --branch state/<package>-complete --verified-pr <source-pr>
+```
+
+Global options precede the `project_state.py` subcommand; the standalone closeout has
+no subcommand. Without `--repo-root`, the script's repository
 is the target. An explicit root must be the exact Git checkout root; state, scopes,
 registry, checkpoints, Git reads and writes all use it. This allows independently
 reviewed tooling to operate an earlier clean source checkout without injecting files,
 changing imports or modifying canonical state by hand. The usual branch/source,
 dependency, review, CI and transition requirements still apply.
+
+Closeout starts at the exact source PR head, including when that PR is already merged.
+It preserves canonical lineage and the active package identity, records the accepted
+source checkpoint, and sets the package to terminal `complete` without a successor.
+For a merged source, both entrypoints reuse authenticated pre-merge review/owner-waiver
+evidence; explicit post-merge waiver flags are rejected. A later successor from an
+accepted merged closeout still requires its separate PR, push-CI and immutable
+checkpoint provenance under the existing terminal lifecycle.
 
 `connector-stdio` trusts the local controller to call the authorized GitHub Connector
 and relay the complete fresh result of that exact call. Request nonces, digests and
@@ -102,7 +119,7 @@ Connector is selected. The current bounded contract requires:
   A historical source checkpoint may have a later current main; exact current-main
   equality stays at the merged-source bootstrap/closeout owner, not the generic proof.
 
-Before writing, the CLI re-reads every mutable observation and rejects any changed
+Before writing, both CLI entrypoints re-read every mutable observation and reject any changed
 payload. It then checks origin, exact canonical-main/tested-merge Git ref where
 applicable, and target HEAD/branch/cleanliness immediately before the existing atomic
 transition. Its rollback behavior and checkpoint format are preserved. No GitHub
@@ -113,7 +130,8 @@ write, merge or deployment is part of this transport.
 Focused tests are `test_github_connector_bridge.py`, `test_project_state_connector.py`,
 `test_project_state_rest_checks.py`, `test_project_state_transport_root.py`, and the
 existing project-state/review suites. Fixtures are explicitly synthetic. Git checkout
-tests cover both begin commands, valid external tooling root, stale/ref/checkout drift,
-and byte-for-byte preservation of state and absence of a new branch on failure.
+tests cover both begin commands and terminal closeout, default `gh` routing, valid external
+tooling root, pre-merge structured review/owner waiver, stale/ref/checkout drift, and
+byte-for-byte preservation of state and absence of a new branch on failure.
 Local tests establish implementation behavior; an actual live Connector transition,
 required CI and independent review remain separate evidence.
