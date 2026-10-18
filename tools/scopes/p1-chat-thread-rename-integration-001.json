@@ -19,7 +19,7 @@
     "No new rename behavior, product runtime refactor, provider calls or shared owner changes",
     "No manual PLAN/PACKAGES/CURRENT/CHECKPOINTS edits or change to the frozen package base",
     "No edits to the original rename scope or report; their evidence remains bound to the original source",
-    "No synthetic check success, ignored pending or failed checks, reduced review policy, or weakened CI gates",
+    "No synthetic check success, unproven supersession, ignored current/newer/unknown failed or pending checks, reduced review policy, or weakened CI gates",
     "No force-push, history rewrite, GitHub publication, waiver, merge, deployment or successor activation by the metadata writer"
   ],
   "allowed": [
