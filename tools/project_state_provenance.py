@@ -60,7 +60,7 @@ def _historical_waiver_body(body: str, source: str, runs: dict) -> bool:
 def legacy_pr252_review(pr_number: int, head: str, merge: str, pr: dict,
                         workflows: dict, slug: str, *, root: Path = ROOT) -> dict:
     """One historical owner-authenticated closeout record, never a future waiver."""
-    from project_state_evidence import gh_json, git
+    from project_state_evidence import github_api, git
 
     expected_head = "afb7ce498f2aecdbbfaf10a652e5591f2c7d9ccd"
     expected_merge = "95f153acc3a7a3ce4163d2e59b6f3e44ba963906"
@@ -79,13 +79,12 @@ def legacy_pr252_review(pr_number: int, head: str, merge: str, pr: dict,
             or main[1] != "refs/heads/main"):
         raise ValueError("PR #252 legacy closeout canonical main lineage mismatch")
     if main[0] != expected_merge:
-        lineage = gh_json(["api", f"repos/{slug}/compare/{expected_merge}...{main[0]}"],
-                          root=root)
+        lineage = github_api(f"repos/{slug}/compare/{expected_merge}...{main[0]}", root=root)
         if (not isinstance(lineage, dict) or lineage.get("status") != "ahead"
                 or (lineage.get("base_commit") or {}).get("sha") != expected_merge
                 or (lineage.get("head_commit") or {}).get("sha") != main[0]):
             raise ValueError("PR #252 legacy closeout canonical main lineage mismatch")
-    row = gh_json(["api", f"repos/{slug}/issues/comments/5893861963"], root=root)
+    row = github_api(f"repos/{slug}/issues/comments/5893861963", root=root)
     if (not isinstance(row, dict) or row.get("id") != 5893861963
             or row.get("issue_url") != f"https://api.github.com/repos/{slug}/issues/252"
             or (row.get("user") or {}).get("login") != "spikeal8-maker"
@@ -142,11 +141,10 @@ def _source_waiver_body(body: str, pr_number: int, head: str, runs: dict,
 def _closeout_owner_waiver(pr_number: int, head: str, workflows: dict,
                            merged_at: str, slug: str, *, root: Path = ROOT,
                            source_checkpoint: bool = False) -> tuple[str, int] | None:
-    from project_state_evidence import gh_json, _flatten_pages
+    from project_state_evidence import github_api, _flatten_pages
 
     cutoff = _time(merged_at, "closeout merge")
-    comments = _flatten_pages(gh_json(["api", "--paginate", "--slurp",
-        f"repos/{slug}/issues/{pr_number}/comments?per_page=100"], root=root))
+    comments = _flatten_pages(github_api(f"repos/{slug}/issues/{pr_number}/comments?per_page=100", paginate=True, root=root))
     owner = slug.split("/", 1)[0]
     for row in comments:
         if ((row.get("user") or {}).get("login") != owner
