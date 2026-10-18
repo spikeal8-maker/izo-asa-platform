@@ -3,7 +3,7 @@ from __future__ import annotations
 import re
 from pathlib import Path
 from project_state_model import ROOT
-from project_state_evidence import (git, gh_json, latest_required_runs, validate_pr_rollup, fetch_pr_rollup, foundation_tested_sha, REQUIRED_WORKFLOWS)
+from project_state_evidence import (git, github_api, latest_required_runs, validate_pr_rollup, fetch_pr_rollup, foundation_tested_sha, REQUIRED_WORKFLOWS)
 
 def validate_merged_source_pr(pr_number: int, expected_head: str, pr: dict,
                               runs: list[dict], slug: str, *, root: Path = ROOT) -> dict:
@@ -20,7 +20,7 @@ def validate_merged_source_pr(pr_number: int, expected_head: str, pr: dict,
     main = git("ls-remote", "origin", "refs/heads/main", root=root).split()
     if main != [merge, "refs/heads/main"]:
         raise ValueError(f"canonical main must equal merged source PR #{pr_number} merge commit {merge}")
-    commit = gh_json(["api", f"repos/{slug}/commits/{merge}"], root=root)
+    commit = github_api(f"repos/{slug}/commits/{merge}", root=root)
     if [row.get("sha") for row in commit.get("parents", [])] != [base, head]:
         raise ValueError(f"merged source PR #{pr_number} merge parents do not match base/head")
     latest = latest_required_runs(runs, head, pr_number, allow_detached=True,
@@ -29,7 +29,7 @@ def validate_merged_source_pr(pr_number: int, expected_head: str, pr: dict,
     validate_pr_rollup(pr_number, pr, latest, fetch_pr_rollup(pr_number, slug, root=root),
                        REQUIRED_PR_JOBS)
     tested = foundation_tested_sha(int(latest["Foundation CI"]["databaseId"]), slug, root=root)
-    tested_commit = gh_json(["api", f"repos/{slug}/commits/{tested}"], root=root)
+    tested_commit = github_api(f"repos/{slug}/commits/{tested}", root=root)
     if [row.get("sha") for row in tested_commit.get("parents", [])] != [base, head]:
         raise ValueError("Foundation CI tested merge tree parents do not match merged source PR")
     trees = [row.get("commit", {}).get("tree", {}).get("sha")

@@ -1,0 +1,42 @@
+{
+  "package_id": "STATE-GITHUB-TRANSPORT-001",
+  "base": "5b198dc5d20cc0ce703272a7a2f4b2a0bbf587dc",
+  "scope_class": "normal",
+  "risk": "high",
+  "independent_review_required": true,
+  "max_files": 18,
+  "non_goals": [
+    "No product changes, canonical state edits, checkpoint imports, merge or deployment",
+    "No authentication workaround, synthetic required checks or weaker review and CI gates"
+  ],
+  "allowed": [
+    "tools/project_state.py",
+    "tools/project_state_evidence.py",
+    "tools/project_state_provenance.py",
+    "tools/project_state_merged_evidence.py",
+    "tools/github_connector_bridge.py",
+    "tools/project_state_connector.py",
+    "tools/project_state_rest_checks.py",
+    "tests/test_github_connector_bridge.py",
+    "tests/test_project_state_connector.py",
+    "tests/test_project_state_rest_checks.py",
+    "tests/test_project_state_transport_root.py",
+    "tests/state_transport_fixtures.py",
+    "docs/DEVELOPMENT.md",
+    "docs/PROJECT_STATE_TRANSPORT.md",
+    "tools/scopes/state-github-transport-001.json",
+    "tools/project_state_merged_source.py",
+    "tests/test_project_state_merged_source.py"
+  ],
+  "sensitive_approved": [
+    "tools/project_state.py",
+    "tools/project_state_evidence.py",
+    "tools/project_state_provenance.py",
+    "tools/project_state_merged_evidence.py",
+    "tools/github_connector_bridge.py",
+    "tools/project_state_connector.py",
+    "tools/project_state_rest_checks.py",
+    "tools/scopes/state-github-transport-001.json",
+    "tools/project_state_merged_source.py"
+  ]
+}
