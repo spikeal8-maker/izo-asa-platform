@@ -55,6 +55,8 @@ python -B tools/project_state.py --github-transport connector-stdio begin-decide
 ```
 
 The live bridge forwarded 83 fresh Connector requests, including the workflow's final mutable-evidence revalidation.
+The saved unmodified request/tool/response transcript is 7,266,152 bytes,
+SHA-256 `f5179fab0a64f1e7571aa9cd987e6d0adad4365c5b8f170184bea35a28a510a7`.
 Actual output: `STATE STARTED: active=P1-CONVERSATION-GRAPH-001 branch=codex/p1-conversation-graph-001`.
 The workflow wrote `PLAN.json`, `PACKAGES.json` and `CURRENT.md`; all 28 checkpoint records and the complete
 `CHECKPOINTS.json` bytes remained unchanged, as did all previous package records. State verification and whitespace checks passed.
@@ -64,11 +66,11 @@ and `ee69c95a5dc5f550e7637011ecee468f91e0e6cd8ddcb6ff14788c402299f0ae` respectiv
 ## Ownership and task graph
 
 The [finite scope](../../tools/scopes/p1-conversation-graph-001.json) is cross-domain, high risk,
-38 allowed paths under the unchanged hard class limit of 40. Independent review is mandatory.
+39 allowed paths under the unchanged hard class limit of 40. Independent review is mandatory.
 
 - Controller: actual state workflow, scope, this report, task contracts, integration and acceptance evidence.
 - Backend implementer: 20 assigned Chat/migration/contract/test/architecture paths.
-- Frontend implementer: 13 disjoint Chat UI/browser/acceptance/UX paths.
+- Frontend implementer: 14 disjoint Chat UI/browser/acceptance/UX paths.
 - QA: independent actual PostgreSQL, HTTP, browser and restart verification on the integrated source.
 - Independent reviewer: read-only code, race, ownership, data, documentation, test and responsive review; findings return to the assigned writer.
 
@@ -76,6 +78,11 @@ Backend and frontend receive separate worktrees and the complete thirteen-field 
 Implementation precedes integration; integrated targeted gates precede source freeze, exact-head review and full required CI.
 An internal technical review does not replace the separate structured GitHub approval or an authorized waiver needed for acceptance.
 The owner's PR #272 waiver does not authorize merging this future feature PR.
+
+Before creating the additional `useConversationGraph.ts` path, the frontend requested a scope amendment.
+The controller reviewed the unchanged `web.chat` boundary, the existing 6017-byte / 133-line selection owner and
+the otherwise combined DTO/cache/revision/command responsibilities. The amended assignment separates Graph projection
+and loaded-page fences from attempt commands/replay, adds one exclusively frontend-owned path and keeps the hard limit unchanged.
 
 ## Agreed implementation boundary
 

@@ -4,8 +4,8 @@
   "scope_class": "cross_domain",
   "risk": "high",
   "independent_review_required": true,
-  "max_files": 38,
-  "large_scope_reason": "The owner selected persisted response variants and regeneration after accepted rename closeout PR #272. One bounded change must connect the existing Chat database, admission and execution, an additive Graph projection, the existing Chat UI and actual browser/restart acceptance. The controller owns three outputs of the genuine successor workflow and two scope/review files; backend owns twenty finite paths and frontend thirteen disjoint paths. The unchanged cross-domain hard limit is forty. Existing physical history endpoints and IDs remain compatible; edit-as-new-branch and a general Context Engine are separate successors.",
+  "max_files": 39,
+  "large_scope_reason": "The owner selected persisted response variants and regeneration after accepted rename closeout PR #272. One bounded change must connect the existing Chat database, admission and execution, an additive Graph projection, the existing Chat UI and actual browser/restart acceptance. The controller owns three outputs of the genuine successor workflow and two scope/review files; backend owns twenty finite paths and frontend fourteen disjoint paths. Before the extra Graph projection hook was created, the controller approved separating DTOs, immutable turn pages and revision fences from command/replay ownership; the existing 6017-byte selection hook retains selection and legacy loading. The unchanged cross-domain hard limit is forty. Existing physical history endpoints and IDs remain compatible; edit-as-new-branch and a general Context Engine are separate successors.",
   "domains": [
     "api-chat",
     "web-chat",
@@ -43,6 +43,7 @@
     "tests/test_chat_graph_migration.py",
     "docs/ARCHITECTURE.md",
     "apps/web/src/shell/chat/useThreadSelection.ts",
+    "apps/web/src/shell/chat/useConversationGraph.ts",
     "apps/web/src/shell/chat/streamChatRequest.ts",
     "apps/web/src/shell/chat/useAssistantAttempts.ts",
     "apps/web/src/shell/chat/ChatMessage.tsx",
