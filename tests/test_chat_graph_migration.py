@@ -236,6 +236,8 @@ def run_postgres():
             check(environment)
         print("POSTGRES_PASS " + name, flush=True)
     print(f"POSTGRES_GRAPH_PASS cases={len(cases)}", flush=True)
+    from test_chat_branches_migration import run_postgres as run_branches
+    run_branches()
 
 
 if __name__ == "__main__":
