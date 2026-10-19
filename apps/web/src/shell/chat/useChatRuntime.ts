@@ -2,7 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import {
 apiRequest, ApiError, chatProviderProblem,
 type AuthView, type ChatPolicyView, type ChatRequestView, type CredentialListView, type CredentialView,
-type MessageView, type ThreadList, type ThreadView,
+type MessageView, type ThreadView,
 } from '../../shared/api'
 import { useChatCatalog, useCredentialSync } from './useChatCatalog'
 import { providerFor } from './modelCatalog'
@@ -20,7 +20,7 @@ const [currentChatId, setCurrentChatId] = useState<string | null>(null)
 const [busy, setBusy] = useState(false)
 const [activeRequestId, setActiveRequestId] = useState<string | null>(null)
 const [error, setError] = useState('')
-const { history, setHistory, historyCursor, setHistoryCursor, loadingHistory,
+const { history, historyCursor, loadingHistory, renamingThreadId, renameThread,
   resetHistory, loadMoreHistory, refreshHistory } = useThreadHistory(auth?.account.id, setError)
 const idle = () => {setBusy(false);setActiveRequestId(null)}
 const refreshPolicy = () => apiRequest<ChatPolicyView>('/api/v1/chat/policy').then(setBasePolicy)
@@ -44,11 +44,11 @@ const controller = new AbortController()
 Promise.all([
 apiRequest<ChatPolicyView>('/api/v1/chat/policy', { signal: controller.signal }),
 apiRequest<CredentialListView>('/api/v1/chat/credentials', { signal: controller.signal }),
-apiRequest<ThreadList>('/api/v1/chat/threads', { signal: controller.signal }),
-]).then(([p, c, h]) => {
+refreshHistory(controller.signal),
+]).then(([p, c]) => {
 if (controller.signal.aborted) return
 setBasePolicy(p)
-setCredentials(c.credentials); setHistory(h.threads); setHistoryCursor(h.next_cursor ?? null)
+setCredentials(c.credentials)
 }).catch(reason => {
 if (!controller.signal.aborted) setError(chatProblem(reason))
 })
@@ -170,6 +170,8 @@ setCredential(value); idle()
 }
 return {
 policy, catalogError, credentials, history, historyCursor, loadingHistory, loadMoreHistory,
+renamingThreadId,
+renameChat: (id: string, title: string) => auth ? renameThread(id, title, auth.csrf_token) : Promise.resolve(false),
 messages, currentChatId, openingThread, busy, activeRequestId,
 loadOlder: (beforePrepend: () => void) => currentChatId && loadOlder(currentChatId, beforePrepend),
 olderCursor, loadingOlder,

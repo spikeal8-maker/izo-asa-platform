@@ -22,14 +22,26 @@ def collect(client, number: int) -> dict:
     for name, item in selected.items():
         run, jobs = client.workflow_jobs(item["databaseId"])
         workflows[name] = {"run": run, "jobs": jobs}
+    check_pages = client.get(f"repos/{repo}/commits/{head}/check-runs?filter=latest", paginate=True)
+    observed_suites = {(row.get("check_suite") or {}).get("id")
+                       for row in _rows(check_pages, "check_runs")}
+    selected_ids = {item["databaseId"] for item in selected.values()}
+    historical = []
+    for item in _rows(run_pages, "workflow_runs"):
+        if (item["id"] not in selected_ids and item.get("name") in WORKFLOW_PATHS
+                and item.get("check_suite_id") in observed_suites):
+            # History may legitimately have failed; collect it raw and prove supersession below.
+            run = client.get(f"repos/{repo}/actions/runs/{item['id']}")
+            pages = client.get(f"repos/{repo}/actions/runs/{item['id']}/jobs?filter=latest", paginate=True)
+            historical.append({"run": run, "job_pages": pages})
     return {"kind": KIND, "repository": repo, "pr": pr,
             "branch": client.get(f"repos/{repo}/branches/main"),
             "rulesets": [row for page in client.get(
                 f"repos/{repo}/rulesets?includes_parents=true", paginate=True) for row in page],
-            "check_pages": client.get(f"repos/{repo}/commits/{head}/check-runs?filter=latest", paginate=True),
+            "check_pages": check_pages, "run_pages": run_pages,
             "suite_pages": client.get(f"repos/{repo}/commits/{head}/check-suites", paginate=True),
             "status_pages": client.get(f"repos/{repo}/commits/{head}/status", paginate=True),
-            "workflows": workflows}
+            "workflows": workflows, "historical_workflows": historical}
 
 
 def _rows(pages, key: str) -> list[dict]:
@@ -73,28 +85,14 @@ def _protection(proof: dict) -> dict[str, int]:
     return result
 
 
-def _workflow_matches(name: str, raw: dict, selected: dict, pr: dict, repo: str) -> bool:
-    return (raw.get("id") == selected.get("databaseId")
-            and type(raw.get("id")) is int and raw["id"] > 0
-            and raw.get("name") == name and raw.get("path") == WORKFLOW_PATHS.get(name)
-            and type(raw.get("workflow_id")) is int and raw["workflow_id"] > 0
-            and type(raw.get("check_suite_id")) is int and raw["check_suite_id"] > 0
-            and (raw.get("repository") or {}).get("full_name") == repo
-            and raw.get("head_sha") == pr["headRefOid"] and raw.get("head_branch") == pr["headRefName"]
-            and raw.get("event") == "pull_request" and raw.get("status") == "completed"
-            and raw.get("conclusion") == "success"
-            and type(raw.get("run_attempt")) is int and raw["run_attempt"] > 0
-            and raw["run_attempt"] == selected.get("runAttempt")
-            and raw.get("run_number") == selected.get("runNumber")
-            and raw.get("updated_at") == selected.get("updatedAt"))
-
-
 def validate(number: int, pr: dict, selected: dict[str, dict], proof: dict,
              required_jobs: dict[str, set[str]]) -> None:
+    from project_state_check_events import validate_events
     identity = proof.get("pr") or {}
     repo = proof.get("repository")
     if (proof.get("kind") != KIND or not isinstance(repo, str) or identity.get("number") != number
-            or any(identity.get(key) != pr.get(key) for key in ("headRefOid", "headRefName", "baseRefOid"))
+            or pr.get("number") != number or pr.get("state") not in {"OPEN", "MERGED"}
+            or any(identity.get(key) != pr.get(key) for key in ("headRefOid", "headRefName", "baseRefOid", "state"))
             or identity.get("baseRefName") != "main"):
         raise ValueError("REST required-check PR identity mismatch")
     required = _protection(proof)
@@ -112,41 +110,26 @@ def validate(number: int, pr: dict, selected: dict[str, dict], proof: dict,
     if any(row.get("state") != "success" or not row.get("context") for row in statuses):
         raise ValueError("REST legacy status contains pending or failed context")
     for row in checks:
-        suite = suite_ids.get((row.get("check_suite") or {}).get("id")) or {}
+        suite_id = (row.get("check_suite") or {}).get("id")
+        suite = (suite_ids.get(suite_id) or {}) if type(suite_id) is int else {}
+        app = (row.get("app") or {}).get("id")
         if (row.get("head_sha") != pr["headRefOid"] or row.get("status") != "completed"
-                or row.get("conclusion") != "success" or not row.get("name")
-                or not suite or (suite.get("app") or {}).get("id") != (row.get("app") or {}).get("id")):
-            raise ValueError("REST check rollup contains foreign, pending or failed check")
+                or not isinstance(row.get("conclusion"), str)
+                or not isinstance(row.get("name"), str) or not row["name"]
+                or type(app) is not int or app < 1 or not suite
+                or type((suite.get("app") or {}).get("id")) is not int
+                or (suite.get("app") or {}).get("id") != app):
+            raise ValueError("REST check rollup contains foreign, pending or invalid check")
+    historical_ids = validate_events(number, pr, selected, proof, required_jobs,
+                                     checks, suite_ids, required)
+    # Classify only positively proven history; the raw pages remain intact in the proof.
     keyed = {}
     for check in checks:
-        key = (check["name"], (check.get("app") or {}).get("id"))
-        if key in keyed:
-            raise ValueError("REST latest checks contain ambiguous name/app identity")
+        if check["id"] in historical_ids:
+            continue
+        key = (check["name"], check["app"]["id"])
+        if check["conclusion"] != "success" or key in keyed:
+            raise ValueError("REST current/unproven check failed or has ambiguous name/app identity")
         keyed[key] = check
     if any((name, app) not in keyed for name, app in required.items()):
         raise ValueError("REST required app-bound check missing")
-    for name, jobs in required_jobs.items():
-        bundle = (proof.get("workflows") or {}).get(name) or {}
-        run, rows = bundle.get("run") or {}, bundle.get("jobs")
-        if not _workflow_matches(name, run, selected[name], pr, repo) or not isinstance(rows, list):
-            raise ValueError("REST selected workflow identity/attempt differs from required run")
-        matched = set()
-        for job in rows:
-            if not isinstance(job, dict):
-                raise ValueError("REST workflow job invalid")
-            job_name, job_id = job.get("name"), job.get("id")
-            if (type(job_id) is not int or job.get("run_id") != run["id"]
-                    or job.get("run_attempt") != run["run_attempt"] or job.get("head_sha") != pr["headRefOid"]
-                    or job.get("status") != "completed" or job.get("conclusion") != "success"
-                    or job.get("check_run_url") != f"https://api.github.com/repos/{repo}/check-runs/{job_id}"):
-                raise ValueError("REST job belongs to another workflow run/attempt")
-            if job_name in jobs:
-                check = keyed.get((job_name, required.get(job_name))) or {}
-                if (job_name in matched or check.get("id") != job_id
-                        or (check.get("check_suite") or {}).get("id") != run["check_suite_id"]
-                        or suite_ids[run["check_suite_id"]].get("status") != "completed"
-                        or suite_ids[run["check_suite_id"]].get("conclusion") != "success"):
-                    raise ValueError("REST required job/check-run/suite identity mismatch")
-                matched.add(job_name)
-        if not jobs <= matched:
-            raise ValueError("REST selected workflow has missing required jobs")

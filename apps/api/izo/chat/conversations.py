@@ -7,6 +7,7 @@ from .attachments import AttachmentMixin
 from .credentials import ChatError
 from .history_pages import older_messages, thread_detail
 from .thread_pages import list_threads, thread_view
+from .thread_titles import rename_thread
 from .request_state import RequestStateMixin, UNKNOWN_PAID_OUTCOME
 from .schemas import MessageView, RequestView, ThreadDetail, ThreadList, ThreadView
 from .schemas import MODEL_REVISION, REQUEST_WINDOW_LIMIT
@@ -22,6 +23,8 @@ class ConversationMixin(AttachmentMixin, RequestStateMixin):
 				next_sequence=1, created_at=now, updated_at=now))
 		return ThreadView(
 			id=thread_id, title=safe, created_at=now, updated_at=now)
+	def rename_thread(self, raw, csrf, thread_id: UUID, title: str) -> ThreadView:
+		return rename_thread(self, raw, csrf, thread_id, title)
 	@staticmethod
 	def _thread_view(row) -> ThreadView:
 		return thread_view(row)
@@ -170,7 +173,7 @@ class ConversationMixin(AttachmentMixin, RequestStateMixin):
 				self._insert_attachments(conn, account["id"], request_id,
 				                         user_message_id, assets, now)
 				title = thread["title"]
-				if sequence == 1 and title == "Новый чат":
+				if sequence == 1 and title == "Новый чат" and not thread["title_is_manual"]:
 					title = command.text.replace("\n", " ").strip()[:72] or "Изображение"
 				conn.execute(sa.update(t.threads).where(
 					t.threads.c.id == thread_id).values(

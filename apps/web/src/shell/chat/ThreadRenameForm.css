@@ -1,0 +1,27 @@
+.chat-history-row { display: grid; grid-template-columns: minmax(0, 1fr) 36px; align-items: center; }
+.chat-history-row .chat-history-item { min-width: 0; }
+.chat-history-rename { width: 36px; height: 36px; color: var(--color-text-secondary); }
+.chat-history-rename .icon { width: 16px; height: 16px; }
+.chat-thread-rename {
+  grid-column: 1 / -1; min-width: 0; display: grid; gap: 6px;
+  margin: 4px 0 8px; padding: 8px; border: 1px solid var(--color-border);
+  border-radius: 10px; background: var(--color-surface); font-size: var(--chat-history-size);
+}
+.chat-thread-rename label { margin: 0; font-size: inherit; color: var(--color-text); }
+.chat-thread-rename input {
+  width: 100%; min-width: 0; min-height: 36px; padding: 6px 8px;
+  border: 1px solid var(--color-border); border-radius: 6px;
+  background: var(--color-bg); color: var(--color-text); font-size: 16px;
+}
+.chat-thread-rename input:focus-visible { outline: 2px solid var(--color-accent); outline-offset: 1px; }
+.chat-thread-rename-hint { font-size: var(--chat-meta-size); color: var(--color-text-secondary); }
+.chat-thread-rename-error { color: var(--color-error); overflow-wrap: anywhere; }
+.chat-thread-rename-actions { display: flex; flex-wrap: wrap; gap: 6px; }
+.chat-thread-rename-actions button { min-height: 36px; padding: 6px 10px; font-size: inherit; }
+.chat-thread-rename-actions button[type="submit"] { background: var(--color-text); color: var(--color-bg); }
+.chat-thread-rename-actions button[aria-disabled="true"] { opacity: .65; cursor: progress; }
+@media (pointer: coarse) {
+  .chat-history-row { grid-template-columns: minmax(0, 1fr) 44px; }
+  .chat-history-rename { width: 44px; height: 44px; }
+  .chat-thread-rename-actions button { min-height: 44px; }
+}
