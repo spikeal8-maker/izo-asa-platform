@@ -1,0 +1,31 @@
+{
+  "package_id": "P1-CONVERSATION-GRAPH-CLOSEOUT-001",
+  "base": "4936d21d34912c3334f49c77c6874b730c95dff6",
+  "scope_class": "tiny",
+  "risk": "high",
+  "independent_review_required": true,
+  "max_files": 6,
+  "allowed": [
+    "tools/scopes/p1-conversation-graph-closeout-001.json",
+    "docs/reviews/P1-CONVERSATION-GRAPH-CLOSEOUT-001.md",
+    "docs/PLAN.json",
+    "docs/PACKAGES.json",
+    "docs/CURRENT.md",
+    "docs/CHECKPOINTS.json"
+  ],
+  "sensitive_approved": [
+    "tools/scopes/p1-conversation-graph-closeout-001.json",
+    "docs/PLAN.json",
+    "docs/PACKAGES.json",
+    "docs/CURRENT.md",
+    "docs/CHECKPOINTS.json"
+  ],
+  "non_goals": [
+    "No product, migration, API contract, test, CI or tooling implementation changes",
+    "No manual state edits or changes to existing checkpoints or source acceptance evidence",
+    "No transfer of PR #273 waiver or merge authorization to the separate closeout PR",
+    "No closeout PR merge without separate required authority, review and CI",
+    "No Message Edit activation or implementation before accepted closeout and the normal successor workflow",
+    "No production deployment or real paid model calls"
+  ]
+}
