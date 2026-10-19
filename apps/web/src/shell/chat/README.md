@@ -1,50 +1,22 @@
 # Chat UI ownership
 
-`../ChatPage.tsx` owns the Chat layout and sidebar presentation state. `../chat.css` owns its grid, empty-state alignment and drawer geometry. `ChatSidebar.tsx` and `ChatSidebar.css` own history, search, compact rail and profile controls; `ChatComposer.tsx`/`ChatComposer.css` own input geometry. Keep the global header in `TopBar`, outside this feature.
+`../ChatPage.tsx` owns layout/sidebar state; `../chat.css` owns grid, empty state and drawer geometry. `ChatSidebar.tsx`/CSS own history/search/rail/profile; `ChatComposer.tsx`/CSS own input geometry. `TopBar` keeps the global header outside Chat.
 
-Expanded/compact desktop state is a browser UI preference only. Hidden mobile history must leave the keyboard order and restore focus on dismissal or desktop-to-mobile resize. Open mobile history is a modal dialog with inert background and contained focus; dismissal clears transient search/profile state. New chat and selection close the drawer. The empty heading and composer form one layout block; narrow composer controls may use a second row.
+Expanded/compact desktop state is a UI preference only. Hidden mobile history leaves the keyboard order; dismissal or desktop-to-mobile resize restores focus. Open history is a modal with inert background and contained focus. Dismissal clears search/profile state; New/Open Chat close the drawer. Empty heading and composer form one block; narrow controls may wrap.
 
-The model picker uses the server Chat policy, OpenRouter text catalog and
-informational RUB prices. An unknown RUB price is shown as unknown, including
-when OpenRouter supplies separate USD metadata. UI state cannot grant
-permissions, publish a model, change price, select a provider key or debit
-Credits. Keep the policy/catalog freshness check before submit and preserve
-accepted-request replay behavior. Provider credentials are configured through
-the same server-owned Chat API; no key or raw provider endpoint is stored as a
-browser preference. `AttachmentControl` owns PNG/JPEG/WebP selection,
-paste/drop, ordered previews and the five-image limit. `chatAttachments`
-validates bytes and dimensions, then uses shared Media uploads with stable
-operation IDs; an uncertain upload is checked before any repeat. An account
-Web Locks lease prevents two tabs from reusing one operation; browsers without
-Web Locks show an explicit unsupported message and block image upload. The
-composer checks current vision capability and price before submission, and
-runtime checks again after Media upload before Chat admission. Exact Chat
-request replay first reads the existing request; if absent, it repeats the
-freshness check before POST.
-Only operation UUID, file hash/type/size/dimensions and started status persist
-per account for reload reconciliation; image bytes and names stay in memory.
-On return, the user must select the same file. An unavailable file cannot be
-resumed from browser storage. Add/remove controls freeze through preflight/send.
-`useChatRuntime` keeps a Chat request ID stable after uncertain admission, and
-`ChatMessage` renders saved images through the shared private-image hook.
-Other unsupported tool actions remain disabled.
+The picker uses server Chat policy, OpenRouter text catalog and informational RUB prices. Unknown RUB stays unknown even when USD metadata exists. UI cannot grant access, publish models, set prices, choose provider keys or debit Credits. Policy/catalog freshness is checked before submit; accepted-request replay remains authoritative. Keys and raw provider endpoints are never browser preferences.
 
-The Chat admission ID remains in memory: closing or reloading the tab after an
-uncertain Chat POST loses that ID. Within the open chat, New/Open Chat keep the
-draft and exact ID until reconciliation. Cross-tab recovery of an uncertain
-Chat admission needs a separate privacy-aware design; Media upload recovery
-alone does not prove whether a paid Chat request was accepted.
+`AttachmentControl` owns PNG/JPEG/WebP selection, paste/drop, ordered previews and the five-image limit. `chatAttachments` validates bytes/dimensions and uses shared Media uploads with stable operation IDs. Uncertain uploads are checked before repeating. An account Web Locks lease prevents cross-tab reuse; without Web Locks image upload is explicitly unsupported. Composer checks vision capability/price before submission; runtime checks again after upload. Replaying a Chat request first reads its ID; if absent, freshness is rechecked before POST.
 
-Nearest tests: `apps/web/e2e/chat-attachments.spec.ts` for Media upload,
-reconciliation, plan rejection and persisted preview; `chat-sidebar.spec.ts`
-for rail/drawer/focus; `chat-responsive.spec.ts` for viewport geometry;
-`catalog.spec.ts` for model prices; `shell.spec.ts` for the shared header.
+Only per-account operation UUID, file hash/type/size/dimensions and started status persist for upload reconciliation. Image bytes/names remain in memory; the same file must be reselected after reload. Unavailable files cannot resume from storage. Add/remove freezes during preflight/send. Saved images use the shared private-image hook; unsupported tools stay disabled.
+
+Chat admission IDs live only in memory. Closing/reloading after an uncertain POST loses its identity; New/Open Chat retain the draft and exact ID within that tab. Media recovery does not prove paid Chat admission. Cross-tab recovery needs a separate privacy-aware design.
+
+Nearest tests: `chat-attachments.spec.ts`, `chat-sidebar.spec.ts`, `chat-responsive.spec.ts`, `catalog.spec.ts`, `shell.spec.ts`.
 
 ## Canonical routing
 
-This existing Chat shell remains the frontend owner. Product behavior: `docs/PRODUCT.md`; interaction/renderer acceptance: `docs/UX.md`; branch/context/domain boundaries: `docs/ARCHITECTURE.md`; source/process rules: `docs/MAINTAINABILITY.md` and `docs/DEVELOPMENT.md`. Proposal snapshots are provenance only.
-
-Nearest browser evidence remains `apps/web/e2e/chat-responsive.spec.ts` and `apps/web/e2e/chat-attachments.spec.ts` plus the current Chat acceptance suites. P1 converges this implementation; it does not create a parallel Chat page.
+This shell owns Chat. Canonical contracts: `PRODUCT.md` (behavior), `UX.md` (interaction), `ARCHITECTURE.md` (branches/context), `MAINTAINABILITY.md` and `DEVELOPMENT.md` (process), all in `docs/`. Proposals are provenance only.
 
 Long-thread history loads older server pages through `useThreadSelection`; the
 exclusive sequence cursor and loaded messages live only in current account/thread
@@ -60,17 +32,12 @@ It keeps already loaded rows unique by thread ID, resets to the first page on
 reload/account change, and offers an explicit older-chats control in desktop
 sidebar and phone drawer. `chat-thread-paging.spec.ts` covers both viewports.
 
-`ThreadRenameForm` and its `useThreadRenameEditor` hook own the inline draft,
-Unicode validation, save/cancel/error states and focus return after editor
-removal and PATCH unlock commit; moving focus elsewhere cancels that return.
-Its sibling action stays visible on
-touch screens. Escape cancels the editor before the mobile drawer. The existing
-`useThreadHistory` sends the authenticated PATCH, changes only the confirmed
-row title and keeps loaded pages, cursor and selection. A shared request
-revision fences initial/refresh/older reads begun before or during a rename;
-later fresh reads remain authoritative and preserve the loaded history tail
-and its cursor. Rename state is account-scoped and
-cleared on teardown. `chat-thread-rename.spec.ts` covers recovery and
-desktop/tablet/phone; `chat-thread-rename-races.spec.ts` checks frame/commit
-ordering and deliberate focus changes. `acceptance/chat-live.mjs` proves actual PostgreSQL title
-durability across restart plus concurrent first-message admission.
+`ThreadRenameForm`/`useThreadRenameEditor` own inline draft, Unicode validation, save/cancel/errors and focus return after editor removal and PATCH unlock; deliberate focus changes cancel that return. The sibling action stays visible on touch. Escape cancels editing before the drawer. `useThreadHistory` changes only the confirmed title while retaining pages/cursor/selection. Its request revision fences reads begun before/during rename; later fresh reads preserve the loaded tail. Account teardown clears rename state. Rename and rename-races specs cover recovery, viewports, frame ordering and focus; `acceptance/chat-live.mjs` proves PostgreSQL restart and concurrent first-message naming.
+
+## Response variants
+
+`ThreadDetail.graph_version=1` selects the additive Graph API; its failures are explicit. Legacy physical message endpoints/cursors keep their contract. `useConversationGraph` projects immutable ordered turns into the existing renderer, merges bounded pages without dropping loaded history, fences account/thread/branch/revision reads and preserves observed terminal lifecycle. Assistant DOM keys use turn identity; persisted selection and display sequence choose content/order. `useChatScroll` preserves the reading anchor before confirmed replacement.
+
+`useAssistantAttempts` owns regeneration, completed-only previous/next selection and reconciliation. Fresh commands use server revision CAS. Regeneration retains its UUID after uncertain admission and first checks that request; no new paid operation is silently substituted. The old completed response stays visible while a new attempt runs/fails. Only server-confirmed selection changes it. UNKNOWN blocks new execution. The existing SSE runtime resumes pending attempts, then refreshes authoritative Graph state, including an older loaded turn outside the newest page. Controls remain keyboard/touch accessible and preserve deliberate focus changes.
+
+`conversation-graph.spec.ts` covers variants, replay, races, paging, focus and mobile. `acceptance/chat-graph-live.mjs` extends the existing isolated browser/PostgreSQL before/after restart proof; it uses only fake providers and ordinary authenticated endpoints.
