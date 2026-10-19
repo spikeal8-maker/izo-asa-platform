@@ -1,127 +1,88 @@
 # Chat owner
 
-Chat owns account-scoped DeepSeek and OpenRouter credentials, durable text
-Thread/Message/Request, provider-neutral streaming lifecycle and the
-`/api/v1/chat/*` HTTP boundary. OpenRouter uses a fixed API origin and a
-bounded, cached text-model catalog. Dynamic OpenRouter pricing is external USD
-metadata; the Admin catalog owns informational RUB display prices. Missing
-RUB prices remain unknown, never free or an implied platform debit.
+Chat owns account-scoped DeepSeek/OpenRouter credentials, durable conversation
+state and `/api/v1/chat/*`. The API is the sole executor. The browser receives no
+provider key, endpoint, ciphertext, database owner selector or paid retry authority.
+PostgreSQL stores encrypted credentials; the AES-GCM root key comes only from API
+runtime configuration and is absent from database backups and preview archives.
+`IZO_ENVIRONMENT=test` may inject fake providers; development never silently does.
 
-The API service is the sole executor. The browser never receives a provider key, provider URL,
-ciphertext, database owner selector or paid retry authority. PostgreSQL stores encrypted
-credential material and chat state; the AES-GCM root key is supplied only through the API
-runtime environment and is intentionally absent from database backups and preview archives.
+OpenRouter uses a fixed API origin and bounded cached text-model catalog. External
+USD metadata is separate from Admin-owned informational RUB prices. Missing prices
+remain unknown, without implying free use or a platform debit. Chat policy bounds
+live in `schemas.py`; published DeepSeek policy lives in `../catalog/`.
 
-`IZO_ENVIRONMENT=test` may inject `FakeDeepSeekProvider`; development never silently falls
-back to it. A failed/unknown real execution is persisted as a non-success terminal state and
-is not automatically submitted again.
+Before provider POST, a request commits its unknown-outcome marker. Uncertain
+response, disconnect or restart preserves it and blocks another execution in that
+thread; exact request-ID replay remains safe. There is no in-app reconciliation
+in this preview. The user must verify provider result/charge before retrying
+elsewhere. The Compose preview uses one API worker; scaling needs a lease/fence.
 
-Before any provider POST, the request receives a durable unknown-outcome marker.
-An uncertain response, disconnect or executor restart preserves it; another
-request in that thread is rejected while exact request-ID replay remains safe.
-The preview has no in-app reconciliation yet. The user must check the provider
-result/charge before manually trying anything elsewhere. The current Compose
-preview uses one API worker; a multiworker runtime needs a lease/fence before
-scaling this execution path.
-
-Chat bounds live in `schemas.py`; published DeepSeek policy and informational
-RUB display prices live in `../catalog/`. UI consumes server policy and catalog
-endpoints. The provider key is never sent to the browser after submission.
-The server adds a Russian reply preference while respecting an explicit user
-language request.
-
-Chat image references point only to account-owned ready assets from shared Media.
-`attachments.py` admits ordered normalized PNG snapshots; `vision.py` loads
-private bytes with an aggregate context bound before provider submission.
-The request stores vision capability at admission so execution and replay do
-not depend on a later remote catalog refresh. Media owns upload policy, S3
-reconciliation and downloads. Chat has no image generation path yet.
+Images reference owned ready shared Media assets. `attachments.py` admits ordered
+normalized PNG snapshots; `vision.py` loads private bytes with an aggregate bound
+before provider submission. Admission persists vision capability so execution and
+replay do not depend on later catalog availability. Media owns upload policy,
+S3 reconciliation and downloads; Chat adds no image generation path here.
 DeepSeek Flash vision is an explicit Chat adapter capability in `catalog.py`,
-based on the [DeepSeek vision API](https://api-docs.deepseek.com/guides/vision/):
-Chat Completions accepts `image_url` parts with private base64 PNG data.
-The Admin catalog's `text` modality controls publication and RUB text prices;
-it does not grant image capability. OpenRouter vision comes from its fresh
-model catalog's `input_modalities` and is captured on request admission.
+following the [DeepSeek vision API](https://api-docs.deepseek.com/guides/vision/).
+The Admin `text` modality controls publication/prices, not image capability.
+OpenRouter vision comes from current catalog `input_modalities`.
 
-## Canonical contracts and nearest tests
+## Conversation graph
 
-Current Chat implementation remains the owner described above. Future convergence reads product behavior from `docs/PRODUCT.md`, conversation/data boundaries from `docs/ARCHITECTURE.md`, provider/runtime rules from `docs/AI_RUNTIME.md`, and process/source rules from `docs/MAINTAINABILITY.md` + `docs/DEVELOPMENT.md`. Proposal snapshots are provenance, not default live authority.
+`graph_tables.py` registers root Branch, immutable Turn, one Attempt per ChatRequest,
+selected attempts and private context evidence. `chat_thread_graphs` owns active
+branch and monotonic revision; Attempt lifecycle derives from ChatRequest, including
+credential disable and restart. Forward `0018` retains original IDs, messages,
+physical sequences, attachments and manual titles. Historical contexts remain
+`legacy_unrecorded`; actual pending claim captures honest `legacy_claim` evidence.
 
-Nearest current tests: `tests/test_chat.py`, `tests/test_chat_vision.py`, `tests/test_chat_vision_http.py` plus provider-specific Chat tests. P1 must converge these owners rather than invent a second Chat backend.
+`ThreadDetail.graph_version = 1` advertises the additive Graph API. `history_pages.py`
+returns at most 50 turns through `GET /threads/{id}/graph?before_turn_sequence=N`.
+`GET /threads/{id}/turns/{turn}/attempts?before_ordinal=N` returns at most 20 attempts
+and fresh selected-turn metadata, including selected versions outside that page.
+Both cursors are exclusive. Completed count, position and neighbor IDs allow bounded
+version navigation. Display anchors stay stable when new physical messages append.
 
-History reads use `history_pages.py`: thread detail returns the latest 100 messages and
-`next_before_sequence`; `GET /threads/{id}/messages?before_sequence=N` returns
-the next older bounded page. The cursor is exclusive over the thread's unique
-monotonic sequence. Both reads verify account ownership before loading messages
-or attachments. Nearest paging tests are `tests/test_chat_history_paging.py`.
+`graph_requests.py` owns send and `POST .../turns/{turn}/regenerate` admission.
+Regeneration reuses the original immutable user and selected source's public model
+identity, with fresh authorization, capability, rate and credential-generation checks.
+Exact request-ID replay preserves its attempt without readmission; changed intent
+conflicts. `PATCH .../turns/{turn}/selection` requires a fresh branch/revision and a
+completed attempt. Only durable completed content atomically promotes a new attempt;
+failure keeps selection. Manual selection and completion follow commit order.
 
-Thread-list reads in `thread_pages.py` return at most 50 account-owned rows in creation order.
-`next_cursor` is an exclusive immutable `(created_at, id)` keyset boundary for
-`GET /threads?cursor=...`; malformed cursors fail closed. The cursor grants no
-ownership and every page applies the account filter. Nearest tests:
-`tests/test_chat_thread_paging.py`.
+`graph_selection.py` centralizes Thread → Request locks for admission, claim, paid
+marker, partial, stop and completion. Owned-thread projection reads keep revision
+and selection coherent under PostgreSQL READ COMMITTED. Late partial/final calls
+cannot rewrite completed content or promote it again. `graph_context.py` freezes
+selected complete prefix groups and the original current user at admission, with
+policy, message/attachment identities and digests. Earlier-turn regeneration excludes
+alternatives and later suffix. Integrity and owned bytes are checked before the paid
+marker. Russian reply preference is versioned in that snapshot. Branch editing and
+the general Context Engine remain future work; details are in `docs/ARCHITECTURE.md` §10.
 
-`PATCH /threads/{id}` renames an existing owned thread through the same session,
-origin and CSRF boundary. `ThreadRename` accepts only a title, trims the browser's
-Unicode whitespace set, and requires 1–120 Unicode code points; NUL, lone
-surrogates and whitespace-only titles are rejected without echoing input.
-`thread_titles.py` locks the owned thread row used by first-message admission
-and atomically persists title, a private `title_is_manual` flag and update time.
-Manual `Новый чат` is protected like any other chosen title. Existing create
-semantics are preserved; only the explicit rename command marks a title manual.
-Repeated identical renames are no-ops. Rename never changes creation order,
-message sequence, requests or pagination cursors. The forward migration retains
-existing titles with a false marker. Nearest tests:
-`tests/test_chat_thread_rename.py`, `tests/test_chat_thread_rename_http.py`.
+## History and titles
 
-## Conversation graph and regenerated answers
+Existing detail returns the latest 100 physical messages and `next_before_sequence`;
+`GET /threads/{id}/messages?before_sequence=N` pages older physical messages with an
+exclusive monotonic sequence cursor. Graph does not reinterpret this contract.
+Thread-list `thread_pages.py` returns at most 50 owned rows in creation order using
+exclusive immutable `(created_at, id)` cursor. Every read verifies ownership before
+messages/attachments; cursors confer no permission.
 
-`graph_tables.py` registers a root Branch, immutable Turn identities, one Attempt
-per existing ChatRequest, persisted selected attempts and private context evidence.
-`chat_thread_graphs` owns the active branch and a monotonic selection/layout revision.
-Attempt lifecycle is derived from ChatRequest, including credential disable and
-restart recovery; there is no second mutable execution state. Migration `0018`
-preserves original message/request IDs, physical sequences, attachments and manual
-titles. Existing executions retain honest `legacy_unrecorded` context provenance;
-only a real future claim of a legacy pending request records `legacy_claim`.
+`PATCH /threads/{id}` uses existing session, origin and CSRF checks. `ThreadRename`
+trims browser Unicode whitespace and accepts 1–120 code points; NUL, lone surrogates
+and whitespace-only input fail safely. `thread_titles.py` locks the same owned thread
+as first admission and persists private `title_is_manual`. Manual `Новый чат` is
+protected; create semantics stay compatible. Repeated rename is a no-op and never
+changes creation order, message sequence, requests or cursors.
 
-`ThreadDetail.graph_version = 1` advertises the additive projection. Existing
-physical history and its `before_sequence` cursor retain their original meaning.
-`GET /threads/{id}/graph?before_turn_sequence=N` returns at most 50 immutable turns.
-A regenerated assistant may have a later physical sequence while occupying the
-same `assistant_display_sequence`. `GET /threads/{id}/turns/{turn}/attempts`
-uses exclusive `before_ordinal` pagination with at most 20 attempts, plus fresh
-selected-turn metadata even when the selected attempt lies outside that page.
-Completed count, selected position and previous/next completed IDs support bounded
-version navigation. The graph page also exposes the thread's active attempt and
-terminal unknown-outcome request without treating a live paid marker as terminal.
+## Sources and nearest tests
 
-`graph_requests.py` admits original sends and `POST .../turns/{turn}/regenerate`.
-Regeneration uses the selected source attempt's public model identity, rechecks
-current publication, capability, rate and credential generation, and appends one
-request/attempt/assistant message for the original immutable user message. An exact
-request-ID replay returns the existing attempt without re-admission; another
-intent conflicts. Existing UNKNOWN barriers remain authoritative for new work.
-
-`PATCH .../turns/{turn}/selection` accepts only completed attempts with the current
-branch and revision. Admission leaves the old selection visible. Durable completed
-content and automatic selection commit atomically; other terminal states never
-promote an attempt. Manual selection and completion follow transaction commit
-order, and a stale manual command conflicts. `graph_selection.py` centralizes the
-Thread → Request lock order used by admission, claim, paid marker, partial write,
-stop and completion. Graph reads lock the owned thread so revision and selected
-mapping remain coherent under PostgreSQL READ COMMITTED. Late partial/final calls
-cannot rewrite a terminal completed message or promote it again.
-
-`graph_context.py` freezes the selected completed prefix at admission using whole
-turn groups and existing bounded context policy. Earlier-turn regeneration excludes
-its own older attempts and the later conversation suffix. Saved message/attachment
-identities and content digests prevent a later selection or catalog refresh from
-changing admitted execution. Owned attachment bytes and integrity are checked
-before the durable paid marker. Context evidence, credential binding and provider
-details remain private. Editing, branch switching and a general Context Engine
-remain separate packages.
-
-Nearest graph tests: `tests/test_chat_graph_requests.py`,
-`tests/test_chat_graph_context.py`, `tests/test_chat_graph_http.py`,
-`tests/test_chat_graph_migration.py`; all provider fixtures are synthetic.
+Behavior owners: `docs/PRODUCT.md`, `docs/ARCHITECTURE.md`, `docs/AI_RUNTIME.md`.
+Process/source owners: `docs/MAINTAINABILITY.md`, `docs/DEVELOPMENT.md`.
+Tests: `tests/test_chat.py`, `test_chat_multi_provider.py`, `test_chat_vision.py`,
+`test_chat_vision_http.py`, `test_chat_history_paging.py`, `test_chat_thread_paging.py`,
+`test_chat_thread_rename.py`, `test_chat_thread_rename_http.py`, and the four
+`tests/test_chat_graph_{requests,context,http,migration}.py` files. Providers are synthetic.
