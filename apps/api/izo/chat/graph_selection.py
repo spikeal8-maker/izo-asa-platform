@@ -152,8 +152,6 @@ def select_completed(conn, request_id, branch_id=None):
 
 
 def change_selection(service, raw, csrf, thread_id, turn_id, command):
-    from .history_pages import graph_turn_state
-
     with service.engine.begin() as conn:
         account, _ = owned_thread(service, conn, raw, thread_id, csrf, mutation=True)
         graph = graph_state(conn, thread_id)
@@ -164,6 +162,13 @@ def change_selection(service, raw, csrf, thread_id, turn_id, command):
         select_completed(conn, target["id"], command.branch_id)
         return graph_turn_state(service, conn, account["id"], thread_id, turn)
 
+
+def graph_turn_state(service, conn, account_id, thread_id, turn):
+    from .graph_schemas import GraphTurnState
+    from .history_pages import _turn_views
+    graph = graph_state(conn, thread_id)
+    return GraphTurnState(thread_id=thread_id, active_branch_id=graph["active_branch_id"],
+        revision=graph["revision"], turn=_turn_views(service, conn, account_id, thread_id, [turn], graph["active_branch_id"])[0])
 
 def attempt_views(service, conn, thread_id, ids):
     from .graph_schemas import GraphAttemptView

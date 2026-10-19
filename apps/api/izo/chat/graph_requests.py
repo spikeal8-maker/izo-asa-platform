@@ -31,13 +31,25 @@ def _expire_rows(service, conn, thread_id):
 
 
 def _accepted(service, conn, account_id, row, turn_id, *, edit=False):
-    from .graph_projection import graph_request_accepted
     if edit:
         return edit_receipt(service, conn, row)
     if turn_id is None:
         return service._request_view(row)
     return graph_request_accepted(service, conn, account_id, row)
 
+
+def graph_request_accepted(service, conn, account_id, request):
+    from .graph_schemas import GraphRequestAccepted
+    from .history_pages import _turn_views
+    attempt = conn.execute(sa.select(t.attempts).where(
+        t.attempts.c.id == request["id"])).mappings().one()
+    thread_id, execution_branch = request["thread_id"], attempt["branch_id"]
+    turn = member_turn(conn, thread_id, attempt["turn_id"], execution_branch)
+    graph = graph_state(conn, thread_id)
+    return GraphRequestAccepted(thread_id=thread_id, active_branch_id=graph["active_branch_id"],
+        revision=graph["revision"], execution_branch_id=execution_branch,
+        turn=_turn_views(service, conn, account_id, thread_id, [turn], execution_branch)[0],
+        request=service._request_view(request))
 
 def _replay(service, conn, account_id, thread_id, command, turn_id, *, owned_only=False, edit=False):
     query = sa.select(t.requests).where(t.requests.c.id == command.request_id)

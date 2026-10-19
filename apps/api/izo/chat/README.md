@@ -34,7 +34,7 @@ and revision. Forward migrations `0018`/`0019` retain original IDs, messages,
 attachments, manual titles and recorded context bytes. Unrecorded legacy context
 stays explicit; only an actual pending claim captures `legacy_claim` evidence.
 
-`ThreadDetail.graph_version = 1` advertises Graph. `graph_projection.py` returns
+`ThreadDetail.graph_version = 1` advertises Graph. `history_pages.py` returns
 50 turns (`GET .../graph?before_turn_sequence=N`) or 20 visible attempts
 (`GET .../turns/{turn}/attempts?before_ordinal=N`). Optional `branch_id` fences
 both reads. Cursors are exclusive; count, position and neighbors use membership.

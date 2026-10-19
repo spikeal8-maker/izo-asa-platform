@@ -41,7 +41,7 @@ def ensure_idle(conn, thread_id):
 
 
 def change_branch(service, raw, csrf, thread_id, command):
-    from .graph_projection import project_page
+    from .history_pages import project_page
     with service.engine.begin() as conn:
         account, thread = owned_thread(service, conn, raw, thread_id, csrf, mutation=True)
         owned_branch(conn, thread_id, command.branch_id)
