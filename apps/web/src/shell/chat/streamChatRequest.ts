@@ -48,13 +48,12 @@ export async function streamChatRequest(requestId: string, threadId: string, con
   } catch (reason) {
     if (!controller.signal.aborted && selected(threadId, at)) setError(chatProblem(reason))
   } finally {
-    if (streamController.current === controller) {
-      streamController.current = null
-      if (selected(threadId, at)) idle()
-    }
+    const owned = streamController.current === controller
+    if (owned) streamController.current = null
     if (selected(threadId, at)) {
       try { await loadThread(threadId); await refreshHistory() }
       catch (reason) { if (selected(threadId, at)) setError(current => current || chatProblem(reason)) }
     }
+    if (owned && !streamController.current && selected(threadId, at)) idle()
   }
 }
