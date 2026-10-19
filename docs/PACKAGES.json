@@ -447,12 +447,13 @@
       "status": "technical_pass"
     },
     "P1-CHAT-THREAD-RENAME-001": {
+      "checkpoint": "P1-CHAT-THREAD-RENAME-001",
       "decides_next": true,
       "depends_on": [
         "P1-CHAT-MESSAGE-COPY-001"
       ],
       "goal": "Persist owner-controlled Chat Thread renaming across reload and restart with manual-title protection and desktop/mobile sidebar editing.",
-      "status": "active"
+      "status": "complete"
     },
     "PLATFORM-001": {
       "depends_on": [
