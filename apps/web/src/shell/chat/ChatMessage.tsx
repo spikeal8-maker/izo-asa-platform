@@ -63,8 +63,8 @@ function AttemptActions({ controls }: { controls: AttemptControls }) {
   const { turn, blocked, saving, uncertain, feedback, regenerate, select } = controls
   if (!turn.selected_attempt) return null
   const latest = turn.latest_attempt?.id !== turn.selected_attempt_id ? turn.latest_attempt : null
-  const status = latest?.error_code === 'provider_outcome_unknown' ? 'Результат нового запроса уточняется. Предыдущий ответ сохранён.'
-    : latest?.state === 'pending' || latest?.state === 'streaming' ? 'Готовим новый вариант…'
+  const status = latest?.state === 'pending' || latest?.state === 'streaming' ? 'Готовим новый вариант…'
+    : latest?.error_code === 'provider_outcome_unknown' ? 'Результат нового запроса уточняется. Предыдущий ответ сохранён.'
     : latest?.state === 'stopped' ? 'Новый вариант остановлен. Предыдущий ответ сохранён.'
     : latest && ['error', 'interrupted'].includes(latest.state) ? 'Новый вариант не получен. Предыдущий ответ сохранён.' : ''
   const canRegenerate = !blocked && turn.selected_attempt?.state === 'completed'

@@ -1,6 +1,40 @@
 import { expect, test } from '@playwright/test'
 import { answer, gate, graphFixture, openGraphThread, regenerateButton, previousButton, nextButton } from './conversation-graph-fixture'
 
+for (const recovery of ['reload', 'admission replay']) test(`${recovery}: a streaming paid marker resumes the same request`, async ({ page }) => {
+  const fixture = await graphFixture(page)
+  fixture.state.eventGate = gate(); fixture.state.abortAdmission = recovery === 'admission replay'
+  await page.goto('/'); await openGraphThread(page)
+  await regenerateButton(page).click()
+  const record = fixture.records[0]
+  if (recovery === 'reload') {
+    await expect.poll(() => fixture.state.events).toBe(1)
+  } else {
+    await expect(answer(page).getByRole('button', { name: 'Проверить запрос', exact: true })).toBeVisible()
+    // Another consumer started the accepted request before this tab recovered admission.
+    record.attempts[1].state = 'streaming'; record.attempts[1].error_code = 'provider_outcome_unknown'
+  }
+  const accepted = record.attempts[1]
+  expect(fixture.graph().active_attempt).toMatchObject({ request_id: accepted.request_id,
+    state: 'streaming', error_code: 'provider_outcome_unknown' })
+  expect(fixture.graph().unknown_request_id).toBeNull()
+  if (recovery === 'reload') { await page.reload(); await openGraphThread(page) }
+  else await answer(page).getByRole('button', { name: 'Проверить запрос', exact: true }).click()
+  await expect.poll(() => fixture.state.events).toBe(recovery === 'reload' ? 2 : 1)
+  await expect(answer(page)).toContainText('Готовим новый вариант')
+  await expect(answer(page)).toContainText('Ответ 1, вариант 1')
+  await expect(page.getByRole('alert')).toHaveCount(0)
+  expect(fixture.state.requestReads).toBe(1)
+  expect(fixture.state.commands).toHaveLength(1)
+  expect(accepted.request_id).toBe(fixture.state.commands[0].body.request_id)
+  fixture.state.eventGate.release()
+  await expect(answer(page)).toContainText('Ответ 1, вариант 2')
+  await expect(answer(page)).toContainText('2 из 2')
+  await expect(regenerateButton(page)).toHaveAttribute('aria-disabled', 'false')
+  expect(record.attempts).toHaveLength(2)
+  expect(accepted.error_code).toBeNull()
+})
+
 test('fresh revision conflict refreshes selection without repeating a command', async ({ page }) => {
   const fixture = await graphFixture(page)
   fixture.addVariant()
@@ -104,8 +138,8 @@ for (const outcome of ['interrupted', 'error', 'stopped']) test(`${outcome}: an 
   }).observe(node, { childList: true, subtree: true, characterData: true }))
   fixture.state.graphGate.release()
   await expect(page.locator('.chat-turn-user')).toHaveCount(53)
-  await expect(answer(page)).toContainText(outcome === 'interrupted' ? 'Результат нового запроса уточняется'
-    : outcome === 'stopped' ? 'Новый вариант остановлен' : 'Новый вариант не получен')
+  await expect(answer(page)).toContainText(outcome === 'error' ? 'Новый вариант не получен'
+    : 'Результат нового запроса уточняется')
   await expect(turns).not.toHaveAttribute('data-regressed', 'true')
   expect(fixture.state.requestReads).toBe(1)
   expect(fixture.state.events).toBe(1)
@@ -119,7 +153,7 @@ test('late SSE bytes and errors cannot overwrite a Graph-confirmed completed ans
   await regenerateButton(page).click()
   await expect.poll(() => fixture.state.events).toBe(1)
   const completed = fixture.records[0].attempts.at(-1)!
-  completed.state = 'completed'; completed.message.state = 'complete'
+  completed.state = 'completed'; completed.error_code = null; completed.message.state = 'complete'
   completed.message.content = 'Полный сохранённый ответ B'
   fixture.records[0].selected_attempt_id = completed.id; fixture.state.revision++
   await previousButton(page).click()
