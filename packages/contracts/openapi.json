@@ -1469,6 +1469,419 @@
         "title": "GrantAccessInput",
         "type": "object"
       },
+      "GraphAttemptPage": {
+        "properties": {
+          "active_branch_id": {
+            "format": "uuid",
+            "title": "Active Branch Id",
+            "type": "string"
+          },
+          "attempts": {
+            "items": {
+              "$ref": "#/components/schemas/GraphAttemptView"
+            },
+            "title": "Attempts",
+            "type": "array"
+          },
+          "next_before_ordinal": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Next Before Ordinal"
+          },
+          "revision": {
+            "title": "Revision",
+            "type": "integer"
+          },
+          "thread_id": {
+            "format": "uuid",
+            "title": "Thread Id",
+            "type": "string"
+          },
+          "turn": {
+            "$ref": "#/components/schemas/GraphTurnView"
+          }
+        },
+        "required": [
+          "thread_id",
+          "active_branch_id",
+          "revision",
+          "turn",
+          "attempts",
+          "next_before_ordinal"
+        ],
+        "title": "GraphAttemptPage",
+        "type": "object"
+      },
+      "GraphAttemptView": {
+        "properties": {
+          "created_at": {
+            "title": "Created At",
+            "type": "integer"
+          },
+          "error_code": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Error Code"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "message": {
+            "$ref": "#/components/schemas/MessageView"
+          },
+          "model": {
+            "title": "Model",
+            "type": "string"
+          },
+          "ordinal": {
+            "title": "Ordinal",
+            "type": "integer"
+          },
+          "request_id": {
+            "format": "uuid",
+            "title": "Request Id",
+            "type": "string"
+          },
+          "state": {
+            "title": "State",
+            "type": "string"
+          },
+          "turn_id": {
+            "format": "uuid",
+            "title": "Turn Id",
+            "type": "string"
+          },
+          "updated_at": {
+            "title": "Updated At",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "id",
+          "turn_id",
+          "request_id",
+          "ordinal",
+          "model",
+          "state",
+          "error_code",
+          "message",
+          "created_at",
+          "updated_at"
+        ],
+        "title": "GraphAttemptView",
+        "type": "object"
+      },
+      "GraphPage": {
+        "properties": {
+          "active_attempt": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/GraphAttemptView"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "active_branch_id": {
+            "format": "uuid",
+            "title": "Active Branch Id",
+            "type": "string"
+          },
+          "next_before_turn_sequence": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Next Before Turn Sequence"
+          },
+          "revision": {
+            "title": "Revision",
+            "type": "integer"
+          },
+          "thread": {
+            "$ref": "#/components/schemas/ThreadView"
+          },
+          "turns": {
+            "items": {
+              "$ref": "#/components/schemas/GraphTurnView"
+            },
+            "title": "Turns",
+            "type": "array"
+          },
+          "unknown_request_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Unknown Request Id"
+          }
+        },
+        "required": [
+          "thread",
+          "active_branch_id",
+          "revision",
+          "turns",
+          "next_before_turn_sequence",
+          "active_attempt",
+          "unknown_request_id"
+        ],
+        "title": "GraphPage",
+        "type": "object"
+      },
+      "GraphRegenerate": {
+        "additionalProperties": false,
+        "properties": {
+          "branch_id": {
+            "format": "uuid",
+            "title": "Branch Id",
+            "type": "string"
+          },
+          "expected_revision": {
+            "maximum": 9.223372036854776e+18,
+            "minimum": 0.0,
+            "title": "Expected Revision",
+            "type": "integer"
+          },
+          "request_id": {
+            "format": "uuid",
+            "title": "Request Id",
+            "type": "string"
+          },
+          "source_attempt_id": {
+            "format": "uuid",
+            "title": "Source Attempt Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "request_id",
+          "branch_id",
+          "source_attempt_id",
+          "expected_revision"
+        ],
+        "title": "GraphRegenerate",
+        "type": "object"
+      },
+      "GraphRequestAccepted": {
+        "properties": {
+          "active_branch_id": {
+            "format": "uuid",
+            "title": "Active Branch Id",
+            "type": "string"
+          },
+          "request": {
+            "$ref": "#/components/schemas/RequestView"
+          },
+          "revision": {
+            "title": "Revision",
+            "type": "integer"
+          },
+          "thread_id": {
+            "format": "uuid",
+            "title": "Thread Id",
+            "type": "string"
+          },
+          "turn": {
+            "$ref": "#/components/schemas/GraphTurnView"
+          }
+        },
+        "required": [
+          "thread_id",
+          "active_branch_id",
+          "revision",
+          "turn",
+          "request"
+        ],
+        "title": "GraphRequestAccepted",
+        "type": "object"
+      },
+      "GraphSelection": {
+        "additionalProperties": false,
+        "properties": {
+          "attempt_id": {
+            "format": "uuid",
+            "title": "Attempt Id",
+            "type": "string"
+          },
+          "branch_id": {
+            "format": "uuid",
+            "title": "Branch Id",
+            "type": "string"
+          },
+          "expected_revision": {
+            "maximum": 9.223372036854776e+18,
+            "minimum": 0.0,
+            "title": "Expected Revision",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "branch_id",
+          "attempt_id",
+          "expected_revision"
+        ],
+        "title": "GraphSelection",
+        "type": "object"
+      },
+      "GraphTurnState": {
+        "properties": {
+          "active_branch_id": {
+            "format": "uuid",
+            "title": "Active Branch Id",
+            "type": "string"
+          },
+          "revision": {
+            "title": "Revision",
+            "type": "integer"
+          },
+          "thread_id": {
+            "format": "uuid",
+            "title": "Thread Id",
+            "type": "string"
+          },
+          "turn": {
+            "$ref": "#/components/schemas/GraphTurnView"
+          }
+        },
+        "required": [
+          "thread_id",
+          "active_branch_id",
+          "revision",
+          "turn"
+        ],
+        "title": "GraphTurnState",
+        "type": "object"
+      },
+      "GraphTurnView": {
+        "properties": {
+          "assistant_display_sequence": {
+            "title": "Assistant Display Sequence",
+            "type": "integer"
+          },
+          "completed_count": {
+            "title": "Completed Count",
+            "type": "integer"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "latest_attempt": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/GraphAttemptView"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "next_completed_attempt_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Next Completed Attempt Id"
+          },
+          "previous_completed_attempt_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Previous Completed Attempt Id"
+          },
+          "selected_attempt": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/GraphAttemptView"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "selected_attempt_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Selected Attempt Id"
+          },
+          "selected_completed_position": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Selected Completed Position"
+          },
+          "turn_sequence": {
+            "title": "Turn Sequence",
+            "type": "integer"
+          },
+          "user_message": {
+            "$ref": "#/components/schemas/MessageView"
+          }
+        },
+        "required": [
+          "id",
+          "turn_sequence",
+          "assistant_display_sequence",
+          "user_message",
+          "selected_attempt_id",
+          "selected_attempt",
+          "latest_attempt",
+          "completed_count",
+          "selected_completed_position",
+          "previous_completed_attempt_id",
+          "next_completed_attempt_id"
+        ],
+        "title": "GraphTurnView",
+        "type": "object"
+      },
       "GuestStart": {
         "additionalProperties": false,
         "properties": {},
@@ -2801,6 +3214,12 @@
       },
       "ThreadDetail": {
         "properties": {
+          "graph_version": {
+            "const": 1,
+            "default": 1,
+            "title": "Graph Version",
+            "type": "integer"
+          },
           "messages": {
             "items": {
               "$ref": "#/components/schemas/MessageView"
@@ -5589,6 +6008,67 @@
         ]
       }
     },
+    "/api/v1/chat/threads/{thread_id}/graph": {
+      "get": {
+        "operationId": "graph_api_v1_chat_threads__thread_id__graph_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "thread_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Thread Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "before_turn_sequence",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maximum": 9223372036854775807,
+                  "minimum": 1,
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Before Turn Sequence"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GraphPage"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Graph",
+        "tags": [
+          "chat"
+        ]
+      }
+    },
     "/api/v1/chat/threads/{thread_id}/messages": {
       "get": {
         "operationId": "older_messages_api_v1_chat_threads__thread_id__messages_get",
@@ -5691,6 +6171,203 @@
           }
         },
         "summary": "Create Request",
+        "tags": [
+          "chat"
+        ]
+      }
+    },
+    "/api/v1/chat/threads/{thread_id}/turns/{turn_id}/attempts": {
+      "get": {
+        "operationId": "attempts_api_v1_chat_threads__thread_id__turns__turn_id__attempts_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "thread_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Thread Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "turn_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Turn Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "before_ordinal",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maximum": 9223372036854775807,
+                  "minimum": 1,
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Before Ordinal"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GraphAttemptPage"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Attempts",
+        "tags": [
+          "chat"
+        ]
+      }
+    },
+    "/api/v1/chat/threads/{thread_id}/turns/{turn_id}/regenerate": {
+      "post": {
+        "operationId": "regenerate_api_v1_chat_threads__thread_id__turns__turn_id__regenerate_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "thread_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Thread Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "turn_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Turn Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/GraphRegenerate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "202": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GraphRequestAccepted"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Regenerate",
+        "tags": [
+          "chat"
+        ]
+      }
+    },
+    "/api/v1/chat/threads/{thread_id}/turns/{turn_id}/selection": {
+      "patch": {
+        "operationId": "selection_api_v1_chat_threads__thread_id__turns__turn_id__selection_patch",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "thread_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Thread Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "turn_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Turn Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/GraphSelection"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GraphTurnState"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Selection",
         "tags": [
           "chat"
         ]

@@ -12,12 +12,14 @@ from fastapi.responses import JSONResponse, StreamingResponse
 from ..accounts.http_security import same_origin
 from ..media.objects import MediaStore
 from .credential_routes import attach_credential_routes
+from .graph_routes import attach_graph_routes
+from .graph_schemas import ThreadDetail
 from .provider import DeepSeekProvider
 from .provider_openrouter import FakeOpenRouterProvider, OpenRouterProvider
 from .execution import FakeDeepSeekProvider
 from .schemas import (
     ChatPolicyView, OpenRouterCatalogView,
-    RequestCreate, RequestView, ThreadCreate, ThreadDetail, MessagePage,
+    RequestCreate, RequestView, ThreadCreate, MessagePage,
     ThreadList, ThreadView, ThreadRename,
 )
 from .service import ChatError, ChatService
@@ -134,6 +136,7 @@ def attach_chat(app, database_config, accounts_provider) -> None:
             bearer(request, service))
 
     attach_credential_routes(router, runtime_service, bearer, mutation)
+    attach_graph_routes(router, runtime_service, bearer, mutation)
 
     @router.get("/catalog/openrouter", response_model=OpenRouterCatalogView)
     def openrouter_catalog(request: Request):
