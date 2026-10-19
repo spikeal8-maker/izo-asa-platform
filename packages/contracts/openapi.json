@@ -676,6 +676,214 @@
         "title": "BasicSettingsView",
         "type": "object"
       },
+      "BranchEdit": {
+        "additionalProperties": false,
+        "properties": {
+          "branch_id": {
+            "format": "uuid",
+            "title": "Branch Id",
+            "type": "string"
+          },
+          "expected_revision": {
+            "maximum": 9.223372036854776e+18,
+            "minimum": 0.0,
+            "title": "Expected Revision",
+            "type": "integer"
+          },
+          "request_id": {
+            "format": "uuid",
+            "title": "Request Id",
+            "type": "string"
+          },
+          "source_attempt_id": {
+            "format": "uuid",
+            "title": "Source Attempt Id",
+            "type": "string"
+          },
+          "text": {
+            "maxLength": 6000,
+            "title": "Text",
+            "type": "string"
+          }
+        },
+        "required": [
+          "request_id",
+          "branch_id",
+          "source_attempt_id",
+          "expected_revision",
+          "text"
+        ],
+        "title": "BranchEdit",
+        "type": "object"
+      },
+      "BranchEditView": {
+        "properties": {
+          "active_branch_id": {
+            "format": "uuid",
+            "title": "Active Branch Id",
+            "type": "string"
+          },
+          "created_branch": {
+            "$ref": "#/components/schemas/BranchView"
+          },
+          "request": {
+            "$ref": "#/components/schemas/RequestView"
+          },
+          "revision": {
+            "title": "Revision",
+            "type": "integer"
+          },
+          "thread_id": {
+            "format": "uuid",
+            "title": "Thread Id",
+            "type": "string"
+          },
+          "turn_id": {
+            "format": "uuid",
+            "title": "Turn Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "thread_id",
+          "created_branch",
+          "turn_id",
+          "request",
+          "active_branch_id",
+          "revision"
+        ],
+        "title": "BranchEditView",
+        "type": "object"
+      },
+      "BranchPage": {
+        "properties": {
+          "active_branch": {
+            "$ref": "#/components/schemas/BranchView"
+          },
+          "active_branch_id": {
+            "format": "uuid",
+            "title": "Active Branch Id",
+            "type": "string"
+          },
+          "branches": {
+            "items": {
+              "$ref": "#/components/schemas/BranchView"
+            },
+            "title": "Branches",
+            "type": "array"
+          },
+          "next_before_branch_ordinal": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Next Before Branch Ordinal"
+          },
+          "revision": {
+            "title": "Revision",
+            "type": "integer"
+          },
+          "thread_id": {
+            "format": "uuid",
+            "title": "Thread Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "thread_id",
+          "active_branch_id",
+          "active_branch",
+          "revision",
+          "branches",
+          "next_before_branch_ordinal"
+        ],
+        "title": "BranchPage",
+        "type": "object"
+      },
+      "BranchSelection": {
+        "additionalProperties": false,
+        "properties": {
+          "branch_id": {
+            "format": "uuid",
+            "title": "Branch Id",
+            "type": "string"
+          },
+          "expected_revision": {
+            "maximum": 9.223372036854776e+18,
+            "minimum": 0.0,
+            "title": "Expected Revision",
+            "type": "integer"
+          },
+          "target_branch_id": {
+            "format": "uuid",
+            "title": "Target Branch Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "branch_id",
+          "target_branch_id",
+          "expected_revision"
+        ],
+        "title": "BranchSelection",
+        "type": "object"
+      },
+      "BranchView": {
+        "properties": {
+          "branch_ordinal": {
+            "maximum": 9.223372036854776e+18,
+            "minimum": 1.0,
+            "title": "Branch Ordinal",
+            "type": "integer"
+          },
+          "created_at": {
+            "title": "Created At",
+            "type": "integer"
+          },
+          "fork_from_turn_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Fork From Turn Id"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "parent_branch_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Parent Branch Id"
+          }
+        },
+        "required": [
+          "id",
+          "parent_branch_id",
+          "fork_from_turn_id",
+          "branch_ordinal",
+          "created_at"
+        ],
+        "title": "BranchView",
+        "type": "object"
+      },
       "CancelJob": {
         "additionalProperties": false,
         "properties": {},
@@ -1693,6 +1901,11 @@
             "title": "Active Branch Id",
             "type": "string"
           },
+          "execution_branch_id": {
+            "format": "uuid",
+            "title": "Execution Branch Id",
+            "type": "string"
+          },
           "request": {
             "$ref": "#/components/schemas/RequestView"
           },
@@ -1714,6 +1927,7 @@
           "active_branch_id",
           "revision",
           "turn",
+          "execution_branch_id",
           "request"
         ],
         "title": "GraphRequestAccepted",
@@ -2899,6 +3113,31 @@
             "maxItems": 5,
             "title": "Attachment Ids",
             "type": "array"
+          },
+          "branch_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Branch Id"
+          },
+          "expected_revision": {
+            "anyOf": [
+              {
+                "maximum": 9.223372036854776e+18,
+                "minimum": 0.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Expected Revision"
           },
           "model": {
             "maxLength": 64,
@@ -6008,6 +6247,120 @@
         ]
       }
     },
+    "/api/v1/chat/threads/{thread_id}/branch-selection": {
+      "patch": {
+        "operationId": "branch_selection_api_v1_chat_threads__thread_id__branch_selection_patch",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "thread_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Thread Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/BranchSelection"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GraphPage"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Branch Selection",
+        "tags": [
+          "chat"
+        ]
+      }
+    },
+    "/api/v1/chat/threads/{thread_id}/branches": {
+      "get": {
+        "operationId": "branches_api_v1_chat_threads__thread_id__branches_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "thread_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Thread Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "before_branch_ordinal",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maximum": 9223372036854775807,
+                  "minimum": 1,
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Before Branch Ordinal"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BranchPage"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Branches",
+        "tags": [
+          "chat"
+        ]
+      }
+    },
     "/api/v1/chat/threads/{thread_id}/graph": {
       "get": {
         "operationId": "graph_api_v1_chat_threads__thread_id__graph_get",
@@ -6038,6 +6391,23 @@
                 }
               ],
               "title": "Before Turn Sequence"
+            }
+          },
+          {
+            "in": "query",
+            "name": "branch_id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "uuid",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Branch Id"
             }
           }
         ],
@@ -6176,6 +6546,69 @@
         ]
       }
     },
+    "/api/v1/chat/threads/{thread_id}/turns/{source_turn_id}/edit": {
+      "post": {
+        "operationId": "edit_api_v1_chat_threads__thread_id__turns__source_turn_id__edit_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "thread_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Thread Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "source_turn_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Source Turn Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/BranchEdit"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "202": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BranchEditView"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Edit",
+        "tags": [
+          "chat"
+        ]
+      }
+    },
     "/api/v1/chat/threads/{thread_id}/turns/{turn_id}/attempts": {
       "get": {
         "operationId": "attempts_api_v1_chat_threads__thread_id__turns__turn_id__attempts_get",
@@ -6216,6 +6649,23 @@
                 }
               ],
               "title": "Before Ordinal"
+            }
+          },
+          {
+            "in": "query",
+            "name": "branch_id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "uuid",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Branch Id"
             }
           }
         ],

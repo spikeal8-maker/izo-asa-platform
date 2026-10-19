@@ -5,8 +5,9 @@ import sqlalchemy as sa
 
 from . import tables as t
 from .attachments import AttachmentMixin
-from .graph_context import digest, freeze_context
-from .graph_selection import add_turn, advance_revision, create_graph
+from .branches import fork_branch, intent_fingerprint
+from .graph_context import freeze_context
+from .graph_selection import add_turn, advance_revision, create_graph, graph_state
 from .history_pages import older_messages, thread_detail
 from .request_state import RequestStateMixin
 from .schemas import MessageView, RequestView, ThreadDetail, ThreadList, ThreadView
@@ -54,23 +55,22 @@ class ConversationMixin(AttachmentMixin, RequestStateMixin):
         return admit_request(self, raw, csrf, thread_id, command)
 
 
-def persist_request(service, conn, account_id, thread, command, material, turn, admission):
+def persist_request(service, conn, account_id, thread, command, material, turn, admission, *, edit=False):
     connection, revision, vision, assets = admission
     fingerprint = service._request_fingerprint(thread["id"], material.text, material.model,
         connection["id"], connection["generation"], revision, material.attachment_ids)
-    if turn is not None:
-        fingerprint = digest({"kind": "regenerate", "material": fingerprint,
-            "turn": str(turn["id"]), "branch": str(command.branch_id),
-            "source_attempt": str(command.source_attempt_id)})
+    fingerprint = intent_fingerprint(fingerprint, command, turn["id"] if turn else None, edit=edit)
     now, request_id, assistant_id = service.now(), material.request_id, uuid4()
     sequence = thread["next_sequence"]
+    if edit:
+        fork_branch(conn, thread["id"], turn, command, now)
     conn.execute(sa.insert(t.requests).values(
         id=request_id, thread_id=thread["id"], account_id=account_id,
         fingerprint=fingerprint, model=material.model, model_revision=revision,
         connection_id=connection["id"], credential_generation=connection["generation"],
         vision_admitted=vision, state="pending", created_at=now, updated_at=now,
         deadline_at=now + service.policy.request_deadline_seconds))
-    regenerate = turn is not None
+    regenerate = turn is not None and not edit
     if not regenerate:
         user_id = uuid4()
         conn.execute(sa.insert(t.messages).values(id=user_id, thread_id=thread["id"],
@@ -83,9 +83,12 @@ def persist_request(service, conn, account_id, thread, command, material, turn, 
     if regenerate:
         ordinal = conn.execute(sa.select(sa.func.max(t.attempts.c.ordinal)).where(
             t.attempts.c.turn_id == turn["id"])).scalar_one() + 1
+        branch_id = graph_state(conn, thread["id"])["active_branch_id"]
         conn.execute(sa.insert(t.attempts).values(id=request_id, turn_id=turn["id"],
-            thread_id=thread["id"], branch_id=turn["branch_id"], ordinal=ordinal,
+            thread_id=thread["id"], branch_id=branch_id, ordinal=ordinal,
             assistant_message_id=assistant_id, source_attempt_id=command.source_attempt_id))
+        conn.execute(sa.insert(t.branch_attempts).values(branch_id=branch_id,
+            attempt_id=request_id, turn_id=turn["id"], thread_id=thread["id"]))
     else:
         turn = add_turn(conn, thread, request_id, user_id, assistant_id)
     title = thread["title"]
@@ -95,5 +98,5 @@ def persist_request(service, conn, account_id, thread, command, material, turn, 
         next_sequence=sequence + (1 if regenerate else 2), title=title, updated_at=now))
     advance_revision(conn, thread["id"])
     row = conn.execute(sa.select(t.requests).where(t.requests.c.id == request_id)).mappings().one()
-    freeze_context(service, conn, row, turn, "regenerate" if regenerate else "send")
+    freeze_context(service, conn, row, turn, "edit" if edit else "regenerate" if regenerate else "send")
     return row, turn["id"] if regenerate else None
