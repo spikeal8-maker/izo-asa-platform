@@ -87,14 +87,18 @@ for (const outcome of ['error', 'interrupted', 'stopped']) test(`${outcome} keep
   if (outcome === 'stopped') await page.getByRole('button', { name: 'Остановить ответ', exact: true }).click()
   else fixture.state.eventGate.release()
   await expect(answer(page)).toContainText('Ответ 1, вариант 1')
-  await expect(answer(page)).toContainText(outcome === 'interrupted' ? 'Результат нового запроса уточняется'
-    : outcome === 'stopped' ? 'Новый вариант остановлен' : 'Новый вариант не получен')
+  await expect(answer(page)).toContainText(outcome === 'error' ? 'Новый вариант не получен'
+    : 'Результат нового запроса уточняется')
   await expect(answer(page)).not.toContainText('2 из 2')
-  if (outcome === 'interrupted') {
+  if (outcome !== 'error') {
+    await page.reload(); await openGraphThread(page)
+    await expect(answer(page)).toContainText('Ответ 1, вариант 1')
+    await expect(answer(page)).toContainText('Результат нового запроса уточняется')
     await expect(regenerateButton(page)).toHaveAttribute('aria-disabled', 'true')
     await regenerateButton(page).focus()
     await regenerateButton(page).press('Enter')
     expect(fixture.state.commands).toHaveLength(1)
+    expect(fixture.state.events).toBe(1)
   }
 })
 

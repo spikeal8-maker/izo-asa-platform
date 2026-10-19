@@ -75,7 +75,8 @@ export function useConversationGraph(selection: RefObject<Selection>,
     const active = witnessed(page.active_attempt, same
       ? observed.current.get(page.active_attempt?.turn_id ?? '') : undefined)
     publish({ ...page, turns, active_attempt: running(active) ? active : null,
-      unknown_request_id: active?.error_code === 'provider_outcome_unknown'
+      // The paid-submission marker also exists during a resumable live stream.
+      unknown_request_id: !running(active) && active?.error_code === 'provider_outcome_unknown'
         ? active.request_id : page.unknown_request_id, next_before_turn_sequence: same && !older
       ? old.next_before_turn_sequence : page.next_before_turn_sequence })
     return true
@@ -92,7 +93,7 @@ export function useConversationGraph(selection: RefObject<Selection>,
     const previousUnknown = previous?.latest_attempt?.request_id
     publish({ ...old, revision: state.revision,
       turns: old.turns.map(item => item.id === turn.id ? turn : item), active_attempt: active,
-      unknown_request_id: latest?.error_code === 'provider_outcome_unknown' ? latest.request_id
+      unknown_request_id: !running(latest) && latest?.error_code === 'provider_outcome_unknown' ? latest.request_id
         : old.unknown_request_id === previousUnknown || old.unknown_request_id === latest?.request_id
           ? null : old.unknown_request_id })
     return true

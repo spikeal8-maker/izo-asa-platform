@@ -76,7 +76,8 @@ export async function graphFixture(page: Page, count = 2) {
     return { thread, active_branch_id: branch, revision: state.revision, turns,
       next_before_turn_sequence: eligible.length > 50 ? turns[0].turn_sequence : null,
       active_attempt: attempts.find(item => ['pending', 'streaming'].includes(item.state)) ?? null,
-      unknown_request_id: attempts.find(item => item.error_code === 'provider_outcome_unknown')?.request_id ?? null }
+      unknown_request_id: attempts.find(item => !['pending', 'streaming'].includes(item.state)
+        && item.error_code === 'provider_outcome_unknown')?.request_id ?? null }
   }
   await page.route('**/api/v1/chat/**', async route => {
     const request = route.request(), url = new URL(request.url()), path = url.pathname
@@ -134,21 +135,25 @@ export async function graphFixture(page: Page, count = 2) {
     }
     const current = records.flatMap(item => item.attempts).find(item => path.includes(`/requests/${item.request_id}`))
     if (current && path.endsWith('/events')) {
-      state.events++; current.state = 'streaming'
+      state.events++
+      if (current.state === 'pending') current.state = 'streaming'
+      if (current.state === 'streaming') current.error_code = 'provider_outcome_unknown'
       await state.eventGate?.wait
       if (state.delayedEvents !== null) return route.fulfill({
         headers: { 'content-type': 'text/event-stream' }, body: state.delayedEvents,
       }).catch(() => {})
-      if (current.state !== 'stopped') {
+      if (['pending', 'streaming'].includes(current.state)) {
         current.state = state.outcome
-        current.error_code = state.outcome === 'interrupted' ? 'provider_outcome_unknown' : null
+        current.error_code = state.outcome === 'completed' ? null
+          : state.outcome === 'error' ? 'provider_rejected' : current.error_code
         current.message.state = state.outcome === 'completed' ? 'complete' : state.outcome
         current.message.content = `**Ответ ${records.find(item => item.id === current.turn_id)!.turn_sequence}, вариант ${current.ordinal}**\n\nНовый сохранённый текст.`
         if (state.outcome === 'completed') records.find(item => item.id === current.turn_id)!.selected_attempt_id = current.id
         if (current.state === 'completed' || state.terminalRevision) state.revision++
       }
       return route.fulfill({ headers: { 'content-type': 'text/event-stream' },
-        body: `event: ${current.state === 'completed' ? 'message.done' : 'message.interrupted'}\ndata: ${JSON.stringify({ code: current.error_code })}\n\n` }).catch(() => {})
+        body: `event: ${current.state === 'completed' ? 'message.done' : current.state === 'error'
+          ? 'message.error' : 'message.interrupted'}\ndata: ${JSON.stringify({ code: current.error_code })}\n\n` }).catch(() => {})
     }
     if (current && path.endsWith('/stop')) {
       current.state = 'stopped'; current.message.state = 'stopped'; state.revision++
