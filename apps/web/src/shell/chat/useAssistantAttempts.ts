@@ -3,13 +3,12 @@ import { ApiError, apiRequest, type ChatRequestView } from '../../shared/api'
 import type { components } from '../../shared/api.generated'
 import { chatProblem } from './chatAttachments'
 import type { GraphTurnState } from './useConversationGraph'
+import { conflict, knownRejection } from './useChatPreflight'
 import { useConversationBranches, type BranchContext } from './useConversationBranches'
 
 type Regeneration = { threadId: string; turnId: string; body: components['schemas']['GraphRegenerate'] }
 type Accepted = components['schemas']['GraphRequestAccepted']
 export type AttemptControls = NonNullable<ReturnType<ReturnType<typeof useAssistantAttempts>['forTurn']>>
-const conflict = (reason: unknown) => reason instanceof ApiError && reason.code === 'graph_revision_conflict'
-const knownRejection = (reason: unknown) => reason instanceof ApiError && reason.status < 500 && reason.status !== 408
 
 export function useAssistantAttempts(context: BranchContext) {
   const { auth, threadId, busy, graph, selection, selected, start, idle, stream } = context
