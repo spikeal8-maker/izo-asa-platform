@@ -195,3 +195,37 @@ def test_attempt_page_is_bounded_and_preserves_selected_outside_page(chat_env):
     oldest = attempt_page(service, alice.bearer, thread.id, turn_id, latest.next_before_ordinal)
     assert [item.ordinal for item in oldest.attempts] == [1, 2, 3, 4]
     assert oldest.next_before_ordinal is None
+
+
+def pg_command_races(environment):
+    from test_chat_graph_http import pg_parallel
+    service, alice, _, _ = environment
+    thread, _, _ = prepare(service, alice)
+    turn, command = command_for(service, alice, thread.id)
+
+    def invoke(value):
+        return lambda: admit_request(service, alice.bearer, alice.view.csrf_token,
+            thread.id, value, turn.id)
+
+    different = command.model_copy(update={"request_id": uuid4()})
+    results = pg_parallel(service, thread.id, [invoke(command), invoke(different)])
+    assert sum(item == "graph_revision_conflict" for item in results) == 1
+    accepted = next(item for item in results if not isinstance(item, str))
+    with service.engine.begin() as conn:
+        assert conn.execute(sa.select(sa.func.count()).select_from(t.attempts)
+            .where(t.attempts.c.turn_id == turn.id)).scalar_one() == 2
+    service.stop(alice.bearer, alice.view.csrf_token, accepted.request.id)
+    turn, command = command_for(service, alice, thread.id)
+    results = pg_parallel(service, thread.id, [invoke(command), invoke(command)])
+    assert [item.request.id for item in results] == [command.request_id] * 2
+    with service.engine.begin() as conn:
+        attempt = conn.execute(sa.select(t.attempts).where(
+            t.attempts.c.id == command.request_id)).mappings().one()
+        before = conn.execute(sa.select(t.contexts).where(
+            t.contexts.c.request_id == command.request_id)).mappings().one()
+        assert attempt["ordinal"] == 3
+    replay = invoke(command)()
+    assert replay.request.id == command.request_id
+    with service.engine.begin() as conn:
+        assert conn.execute(sa.select(t.contexts).where(
+            t.contexts.c.request_id == command.request_id)).mappings().one() == before

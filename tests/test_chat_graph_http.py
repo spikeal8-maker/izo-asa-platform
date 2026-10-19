@@ -163,3 +163,55 @@ def test_commands_reject_extra_authority_fields_bad_ids_and_conflicting_intent(h
     body_limit = client.post(f"{endpoint}/regenerate", content=b"x" * 32769,
         headers={"Content-Type": "application/json", "Origin": ORIGIN})
     assert body_limit.status_code == 413
+
+
+class PGGateProvider(RecordingProvider):
+    """Opt-in PostgreSQL runner synchronization, never installed by production."""
+    def __init__(self):
+        from threading import Event
+        super().__init__()
+        self.entered, self.release = Event(), Event()
+
+    def stream(self, key, model, messages, max_tokens, timeout, stop):
+        self.verify(key)
+        self.calls.append(messages)
+        self.entered.set()
+        yield "Durable PostgreSQL answer"
+        assert self.release.wait(20), "PG provider gate timed out"
+
+
+def pg_wait_blocked(service, count):
+    import time
+    from threading import Event
+    import sqlalchemy as sa
+    deadline = time.monotonic() + 10
+    while time.monotonic() < deadline:
+        with service.engine.connect() as conn:
+            rows = conn.execute(sa.text("SELECT query FROM pg_stat_activity "
+                "WHERE application_name=:label AND cardinality(pg_blocking_pids(pid)) > 0"),
+                {"label": service._graph_pg_label}).scalars().all()
+        if len(rows) >= count and any("chat_threads" in query for query in rows):
+            return
+        Event().wait(0.01)
+    raise AssertionError("PostgreSQL did not observe the expected real Thread lock contenders")
+
+
+def pg_parallel(service, thread_id, operations):
+    from concurrent.futures import ThreadPoolExecutor
+    import sqlalchemy as sa
+    from izo.chat import tables as t
+    from izo.chat.service import ChatError
+
+    def run(operation):
+        try:
+            return operation()
+        except ChatError as exc:
+            return exc.code
+
+    with ThreadPoolExecutor(max_workers=len(operations)) as pool:
+        with service.engine.begin() as holder:
+            holder.execute(sa.select(t.threads.c.id).where(
+                t.threads.c.id == thread_id).with_for_update())
+            futures = [pool.submit(run, operation) for operation in operations]
+            pg_wait_blocked(service, len(operations))
+        return [future.result(timeout=15) for future in futures]

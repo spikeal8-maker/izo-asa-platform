@@ -1,5 +1,6 @@
 """Forward Graph retention and relational boundaries on the unit database."""
 import importlib.util
+from contextlib import contextmanager
 from pathlib import Path
 
 import pytest
@@ -147,3 +148,94 @@ def test_captured_context_requires_nonnull_nonnegative_revision(chat_env, invali
             conn.execute(sa.update(t.contexts).where(t.contexts.c.request_id == first.id).values(
                 provenance="admission", snapshot={"version": "test"}, digest="0" * 64,
                 revision=invalid_revision))
+
+
+@contextmanager
+def pg_environment():
+    """Standalone isolated runner: default pytest never changes its no-network fixture."""
+    import os
+    from uuid import uuid4
+    from izo.config import Settings
+    from izo.accounts import tables as accounts
+    from izo.accounts.schemas import RegisterInput
+    from izo.accounts.service import AuthService
+    from izo.accounts.settings import AuthSettings
+    from izo.chat.schemas import ChatSettings
+    from izo.chat.service import ChatService
+    from test_chat import PASSWORD, root_key
+    from test_chat_graph_requests import RecordingProvider
+    from test_chat_vision import Objects
+    cfg = Settings()
+    if cfg.environment != "test" or os.environ.get("IZO_CHAT_GRAPH_ACCEPTANCE") != "isolated":
+        raise RuntimeError("PostgreSQL graph checks require explicit isolated/test opt-in")
+    url = sa.URL.create("postgresql+psycopg", username=cfg.pg_user,
+        password=cfg.pg_password.get_secret_value(), host=cfg.pg_host,
+        port=cfg.pg_port, database=cfg.pg_database)
+    schema = "izo_graph_" + uuid4().hex
+    control = sa.create_engine(url)
+    engine = None
+    try:
+        with control.begin() as conn:
+            conn.execute(sa.schema.CreateSchema(schema))
+        engine = sa.create_engine(url, pool_size=8, max_overflow=0, connect_args={"options":
+            f"-c search_path={schema} -c application_name={schema} -c statement_timeout=15000 -c lock_timeout=12000"})
+        with engine.begin() as conn:
+            assert conn.exec_driver_sql("SHOW transaction_isolation").scalar_one() == "read committed"
+            assert conn.exec_driver_sql("SELECT current_schema()").scalar_one() == schema
+        accounts.metadata.create_all(engine)
+        t.media_assets.create(engine)
+        t.metadata.create_all(engine, tables=list(t.TABLES))
+        clock = [20_000]
+        auth = AuthService(engine, AuthSettings(registration="open",
+            rate_secret="pg-graph-synthetic-rate-" * 4, login_limit=100, network_limit=1000),
+            clock=lambda: clock[0])
+        owners = [auth.register(RegisterInput(email=email, display_name=email.split("@")[0],
+            password=PASSWORD), "isolated", "test") for email in (
+                "alice@example.invalid", "bob@example.invalid")]
+        service = ChatService(auth, ChatSettings(root_key=root_key(),
+            preview_account_emails="alice@example.invalid,bob@example.invalid"),
+            RecordingProvider(), clock=lambda: clock[0], media_store=Objects())
+        service._graph_pg_label = schema
+        yield service, *owners, clock
+    finally:
+        if engine is not None:
+            engine.dispose()
+        with control.begin() as conn:
+            conn.execute(sa.schema.DropSchema(schema, cascade=True, if_exists=True))
+        control.dispose()
+
+
+def run_postgres():
+    from test_chat_graph_context import pg_completion_and_projection_locks
+    from test_chat_graph_context import test_next_send_freezes_chosen_answer_at_admission_not_later_selection
+    from test_chat_graph_context import test_regenerating_earlier_turn_excludes_own_alternatives_and_later_suffix
+    from test_chat_graph_requests import pg_command_races
+    from test_chat_graph_requests import test_failed_regenerate_keeps_selection_and_unknown_blocks_new_execution
+    from test_chat_graph_requests import test_pending_stop_and_late_partial_do_not_replace_completed_content
+    cases = [
+        ("migration_retention", lambda e: (connect_key(e[0], e[1]),
+            test_forward_backfill_retains_messages_titles_images_and_paid_evidence((*e, e[0].media_store)))),
+        ("same_thread_context_fk", test_context_must_belong_to_requests_own_turn_inside_same_thread),
+        ("cross_thread_fk", test_database_rejects_foreign_branch_turn_and_selection),
+        ("message_role_fk", test_database_rejects_user_assistant_role_swap),
+        ("null_revision", lambda e: test_captured_context_requires_nonnull_nonnegative_revision(e, None)),
+        ("negative_revision", lambda e: test_captured_context_requires_nonnull_nonnegative_revision(e, -1)),
+        ("concurrent_request_identity", pg_command_races),
+        ("thread_request_order_and_projection", pg_completion_and_projection_locks),
+        ("frozen_selection_context", test_next_send_freezes_chosen_answer_at_admission_not_later_selection),
+        ("earlier_turn_context", test_regenerating_earlier_turn_excludes_own_alternatives_and_later_suffix),
+        ("stopped_and_late_partial", test_pending_stop_and_late_partial_do_not_replace_completed_content),
+        ("known_rejection", lambda e: test_failed_regenerate_keeps_selection_and_unknown_blocks_new_execution(
+            e, "provider_rejected")),
+        ("unknown_paid_barrier", lambda e: test_failed_regenerate_keeps_selection_and_unknown_blocks_new_execution(
+            e, "provider_connection_failed")),
+    ]
+    for name, check in cases:
+        with pg_environment() as environment:
+            check(environment)
+        print("POSTGRES_PASS " + name, flush=True)
+    print(f"POSTGRES_GRAPH_PASS cases={len(cases)}", flush=True)
+
+
+if __name__ == "__main__":
+    run_postgres()
