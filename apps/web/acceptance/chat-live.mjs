@@ -1,6 +1,7 @@
 // Real browser -> built web/Caddy -> FastAPI -> PostgreSQL -> test-only streaming provider.
 import { readFile, writeFile, mkdir } from 'node:fs/promises'
 import { chromium, expect } from '@playwright/test'
+import { graphBefore, graphAfter } from './chat-graph-live.mjs'
 
 if (process.env.IZO_ENVIRONMENT !== 'test' || process.env.IZO_CHAT_ACCEPTANCE !== 'isolated')
   throw new Error('Explicit isolated Chat stack required')
@@ -146,10 +147,11 @@ try {
       first: 'Ответ DeepSeek test: Первый вопрос D1',
       follow: 'Контекст: Первый вопрос D1',
     }
-    await writeFile(file, JSON.stringify(state), { mode: 0o600 })
     await page.screenshot({
       path: evidence + '/chat-before-restart.png', fullPage: true,
     })
+    state.graph = await graphBefore(page, evidence)
+    await writeFile(file, JSON.stringify(state), { mode: 0o600 })
     await ctx.close()
     console.log(
       'CHAT_BROWSER_BEFORE_OK: register -> BYOK -> SSE -> follow-up -> rename -> concurrent first-message rename',
@@ -199,6 +201,7 @@ try {
     await page.screenshot({
       path: evidence + '/chat-after-restart-phone.png', fullPage: true, animations: 'disabled',
     })
+    await graphAfter(page, state.graph, evidence)
     await ctx.close()
     console.log(
       'CHAT_BROWSER_AFTER_OK: login -> durable manual titles/messages -> reload -> mobile rename persistence after Compose restart',

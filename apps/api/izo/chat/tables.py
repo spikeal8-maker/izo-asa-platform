@@ -116,4 +116,13 @@ limits = sa.Table("chat_rate_limits", metadata,
     sa.Column("count", sa.Integer, nullable=False),
     sa.CheckConstraint("kind IN ('request','credential') AND count > 0", name="chat_rate_shape"))
 
-TABLES = (connections, threads, requests, messages, attachments, limits)
+sa.Index("ux_chat_request_graph_identity", requests.c.id, requests.c.thread_id, unique=True)
+sa.Index("ux_chat_message_graph_role", messages.c.id, messages.c.thread_id, messages.c.role, unique=True)
+sa.Index("ux_chat_message_graph_request", messages.c.id, messages.c.thread_id,
+         messages.c.request_id, messages.c.role, unique=True)
+
+from .graph_tables import register_graph
+
+graphs, branches, turns, attempts, selections, contexts = register_graph(metadata)
+TABLES = (connections, threads, requests, messages, attachments, limits,
+          branches, graphs, turns, attempts, selections, contexts)

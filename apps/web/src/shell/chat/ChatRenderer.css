@@ -14,3 +14,13 @@
 .chat-message-actions button:focus-visible { outline: 2px solid var(--color-brand); outline-offset: 2px; }
 .chat-message-actions button:disabled { opacity: .5; cursor: not-allowed; }
 .chat-message-actions [role="status"] { color: var(--color-text-secondary); font-size: .8em; }
+.chat-attempt-actions { display: flex; align-items: center; flex-wrap: wrap; gap: .25em .75em; max-width: 100%; }
+.chat-attempt-selector { display: inline-flex; align-items: center; gap: .4em; white-space: nowrap; }
+.chat-attempt-selector > span { font-size: .8em; color: var(--color-text-secondary); font-variant-numeric: tabular-nums; }
+.chat-message-actions .chat-attempt-selector button { min-width: 2rem; min-height: 2rem; font-size: 1rem; }
+.chat-message-actions button[aria-disabled="true"] { opacity: .5; cursor: not-allowed; text-decoration: none; }
+.chat-attempt-feedback { flex-basis: 100%; }
+@media (pointer: coarse) {
+  .chat-attempt-actions > button, .chat-message-actions .chat-attempt-selector button { min-height: 2.75rem; }
+  .chat-message-actions .chat-attempt-selector button { min-width: 2.75rem; }
+}

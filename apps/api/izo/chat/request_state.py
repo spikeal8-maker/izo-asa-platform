@@ -6,6 +6,7 @@ import sqlalchemy as sa
 
 from . import tables as t
 from .credentials import ChatError
+from .graph_selection import locked_request, select_completed
 from .provider import ProviderFailure
 from .schemas import RequestView
 
@@ -21,6 +22,7 @@ class RequestStateMixin:
         # Commit before POST so process loss cannot make a charged call retryable.
         now = self.now()
         with self.engine.begin() as conn:
+            locked_request(conn, request_id)
             marked = conn.execute(sa.update(t.requests).where(
                 t.requests.c.id == request_id,
                 t.requests.c.state == "streaming",
@@ -46,14 +48,15 @@ class RequestStateMixin:
             t.requests.c.id == request_id)).scalar_one()
         conn.execute(sa.update(t.threads).where(
             t.threads.c.id == thread_id).values(updated_at=now))
+        if state == "completed":
+            select_completed(conn, request_id)
 
     def _finish(self, request_id, state, error_code, content):
         now = self.now()
         with self.engine.begin() as conn:
-            current, stopped_at, deadline, prior_code = conn.execute(sa.select(
-                t.requests.c.state, t.requests.c.stop_requested_at,
-                t.requests.c.deadline_at, t.requests.c.error_code
-            ).where(t.requests.c.id == request_id).with_for_update()).one()
+            row = locked_request(conn, request_id)
+            current, stopped_at = row["state"], row["stop_requested_at"]
+            deadline, prior_code = row["deadline_at"], row["error_code"]
             if current in {"completed", "interrupted", "error", "stopped"}:
                 return current
             if stopped_at is not None:
@@ -90,12 +93,7 @@ class RequestStateMixin:
         now = self.now()
         with self.engine.begin() as conn:
             account, _ = self._account(conn, raw, csrf, mutation=True)
-            row = conn.execute(sa.select(t.requests).where(
-                t.requests.c.id == request_id,
-                t.requests.c.account_id == account["id"]
-            ).with_for_update()).mappings().first()
-            if not row:
-                raise ChatError(404, "request_not_found")
+            row = locked_request(conn, request_id, account["id"])
             if row["state"] in {
                     "completed", "interrupted", "error", "stopped"}:
                 return self._request_view(row)

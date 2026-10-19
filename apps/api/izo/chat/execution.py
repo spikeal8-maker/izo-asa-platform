@@ -9,15 +9,13 @@ import sqlalchemy as sa
 from cryptography.exceptions import InvalidTag
 from . import tables as t
 from .credentials import ChatError, decrypt
+from .graph_context import freeze_legacy_claim, load_context, read_snapshot
+from .graph_selection import locked_request
 from .provider import ProviderFailure
 from .request_state import KNOWN_PROVIDER_REJECTIONS, UNKNOWN_PAID_OUTCOME
-from .schemas import MAX_CONTEXT_CHARS, MAX_CONTEXT_MESSAGES, MAX_OUTPUT_TOKENS, OPENROUTER_AUTO_MODEL
+from .schemas import OPENROUTER_AUTO_MODEL
 from .vision import VisionContextMixin
 
-RUSSIAN_REPLY_PREFERENCE = (
-    "Отвечай на русском языке, если пользователь явно не попросил другой язык. "
-    "Сохраняй исходный язык кода, цитат и имён собственных."
-)
 class ExecutionMixin(VisionContextMixin):
 	def _context_and_key(self, account_id, request_row):
 		root = self._root()
@@ -36,19 +34,7 @@ class ExecutionMixin(VisionContextMixin):
 					connection["ciphertext"], connection["provider"])
 			except (InvalidTag, UnicodeError, ValueError):
 				raise ChatError(503, "credential_unavailable") from None
-			user = conn.execute(sa.select(t.messages).where(
-				t.messages.c.request_id == request_row["id"],
-				t.messages.c.role == "user")).mappings().one()
-			prior = conn.execute(sa.select(t.messages).where(
-				t.messages.c.thread_id == request_row["thread_id"],
-				t.messages.c.sequence < user["sequence"],
-				t.messages.c.state == "complete").order_by(
-				t.messages.c.sequence.desc()).limit(
-				MAX_CONTEXT_MESSAGES)).mappings().all()
-			grouped = (self._vision_rows(conn, account_id,
-				[item["id"] for item in [*prior, user]])
-				if request_row["vision_admitted"] else {})
-		chosen = self._bounded_context(prior, user, grouped, MAX_CONTEXT_CHARS)
+			snapshot, chosen, grouped = load_context(self, conn, account_id, request_row)
 		provider = connection["provider"]
 		if request_row["model"] == OPENROUTER_AUTO_MODEL:
 			resolved_provider, provider_model = "openrouter", "openrouter/auto"
@@ -58,15 +44,14 @@ class ExecutionMixin(VisionContextMixin):
 			resolved_provider, provider_model = "deepseek", request_row["model"]
 		if provider != resolved_provider:
 			raise ChatError(503, "model_provider_mismatch")
-		messages = [{"role": "system", "content": RUSSIAN_REPLY_PREFERENCE}]
+		messages = [{"role": "system", "content": snapshot["system"]}]
 		messages.extend(self._provider_message(item, grouped) for item in chosen)
 		return key, provider, provider_model, messages
 	def _save_partial(self, request_id, content: str) -> None:
 		now = self.now()
 		with self.engine.begin() as conn:
-			state = conn.execute(sa.select(t.requests.c.state).where(
-				t.requests.c.id == request_id)).scalar_one_or_none()
-			if state != "streaming":
+			row = locked_request(conn, request_id)
+			if row["state"] != "streaming":
 				return
 			conn.execute(sa.update(t.messages).where(
 				t.messages.c.request_id == request_id,
@@ -91,12 +76,14 @@ class ExecutionMixin(VisionContextMixin):
 			if remaining <= 0:
 				raise ProviderFailure("request_expired")
 			adapter = self.provider_for(provider)
+			with self.engine.begin() as conn:
+				output_limit = read_snapshot(conn, request_id)["max_output_tokens"]
 			# Commit the durable paid-outcome marker before either provider POST.
 			self._mark_paid_submission(request_id)
 			submitted = True
 			expired = False
 			with closing(adapter.stream(
-					key, provider_model, messages, MAX_OUTPUT_TOKENS, remaining, event)) as source:
+					key, provider_model, messages, output_limit, remaining, event)) as source:
 				for chunk in source:
 					if self.now() >= request_row["deadline_at"]:
 						expired = True
@@ -167,11 +154,7 @@ class ExecutionMixin(VisionContextMixin):
 		execute = False
 		with self.engine.begin() as conn:
 			account, _ = self._account(conn, raw)
-			row = conn.execute(sa.select(t.requests).where(
-				t.requests.c.id == request_id,
-				t.requests.c.account_id == account["id"]).with_for_update()).mappings().first()
-			if not row:
-				raise ChatError(404, "request_not_found")
+			row = locked_request(conn, request_id, account["id"])
 			now = self.now()
 			if row["state"] == "pending":
 				if row["deadline_at"] <= now:
@@ -181,6 +164,7 @@ class ExecutionMixin(VisionContextMixin):
 					row = conn.execute(sa.select(t.requests).where(
 						t.requests.c.id == request_id)).mappings().one()
 				else:
+					freeze_legacy_claim(self, conn, row)
 					conn.execute(sa.update(t.requests).where(
 						t.requests.c.id == request_id,
 						t.requests.c.state == "pending").values(
