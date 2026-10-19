@@ -183,6 +183,8 @@ class RequestCreate(StrictInput):
     text: str = Field(max_length=MAX_INPUT_CHARS)
     model: str = Field(min_length=1, max_length=64)
     attachment_ids: list[UUID] = Field(default_factory=list, max_length=MAX_CHAT_ATTACHMENTS)
+    branch_id: UUID | None = None
+    expected_revision: int | None = Field(default=None, ge=0, le=9223372036854775807)
 
     @field_validator("text")
     @classmethod
@@ -201,6 +203,8 @@ class RequestCreate(StrictInput):
 
     @model_validator(mode="after")
     def has_content(self):
+        if (self.branch_id is None) != (self.expected_revision is None):
+            raise ValueError("Branch and revision must be supplied together")
         if not self.text and not self.attachment_ids:
             raise ValueError("Message is empty")
         return self
