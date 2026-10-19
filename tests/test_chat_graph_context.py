@@ -180,3 +180,39 @@ def test_graph_keyset_uses_immutable_turns_while_legacy_cursor_remains_physical(
     assert [message.sequence for message in legacy.messages] == [1, 2, 3, 4]
     assert all(message.sequence < physical.next_before_sequence for message in legacy.messages)
     assert not set(turn.id for turn in newest.turns) & set(turn.id for turn in older.turns)
+
+
+def pg_completion_and_projection_locks(environment):
+    from concurrent.futures import ThreadPoolExecutor
+    from test_chat_graph_http import PGGateProvider, pg_wait_blocked
+    service, alice, _, _ = environment
+    thread, first, _ = prepare(service, alice)
+    second, _ = regenerate(service, alice, thread.id)
+    finish(service, alice, second.request)
+    select(service, alice, thread.id, second.turn.id, first.id)
+    third, _ = regenerate(service, alice, thread.id)
+    gate = PGGateProvider()
+    service.provider = gate
+    with ThreadPoolExecutor(max_workers=3) as pool:
+        execution = pool.submit(lambda: list(service.stream_events(alice.bearer, third.request.id)))
+        assert gate.entered.wait(10)
+        manual = select(service, alice, thread.id, third.turn.id, second.request.id)
+        with service.engine.begin() as holder:
+            holder.execute(sa.select(t.threads.c.id).where(t.threads.c.id == thread.id).with_for_update())
+            gate.release.set()
+            pg_wait_blocked(service, 1)
+            # Completion must still be waiting for Thread, without holding Request.
+            with service.engine.begin() as probe:
+                probe.execute(sa.select(t.requests.c.id).where(
+                    t.requests.c.id == third.request.id).with_for_update(nowait=True))
+            partial = pool.submit(service._save_partial, third.request.id, "late stale partial")
+            projection = pool.submit(graph_page, service, alice.bearer, thread.id)
+            pg_wait_blocked(service, 3)
+        assert "message.done" in "".join(execution.result(timeout=15))
+        partial.result(timeout=15)
+        observed = projection.result(timeout=15)
+    assert observed.revision == manual.revision + 1
+    assert observed.turns[0].selected_attempt_id == third.request.id
+    assert observed.turns[0].selected_attempt.message.content == "Durable PostgreSQL answer"
+    latest = select(service, alice, thread.id, third.turn.id, first.id)
+    assert latest.revision == observed.revision + 1 and latest.turn.selected_attempt_id == first.id
