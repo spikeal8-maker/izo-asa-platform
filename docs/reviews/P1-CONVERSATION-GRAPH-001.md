@@ -260,14 +260,15 @@ checks the actual Git objects and final branch. The published source therefore r
 full required CI on the actual PR merge tree. Final run IDs and immutable artifact verification belong in that PR's
 evidence, without changing an already tested source solely to add its own CI IDs.
 
-### Final maintainability delta
+### Local maintainability before the CI correction
 
 The package changes 40 approved paths, including 30 handwritten code/test files. No changed near-limit owner
 grew, no hard or creation limit was raised, and no new dependency or workflow/protection change was introduced.
 Root initial context is 4165 bytes; live plan is 1811 bytes. Initial `api.chat` context is 7819 bytes and
 `web.chat` is 8748 bytes. The backend owner README is 5801 bytes (base 5110); frontend README is 5704 (base 5743).
 
-The table reports final dimensions and remaining hard-limit room. New owners additionally remain below the
+The table records dimensions at the reviewed local source `74b06e2157792e8b4942de9add821d42e233c4a5`
+and remaining hard-limit room. New owners additionally remain below the
 unchanged 80% creation threshold. Existing near-limit modules were not expanded; Graph storage, context, projection
 and attempt commands have separate owners, while the existing Chat entrypoints continue to delegate to them.
 The complete measured maintenance record has SHA-256
@@ -305,3 +306,106 @@ The complete measured maintenance record has SHA-256
 | `tests/test_chat_graph_http.py` | 11637 | 232 | 4363 / 118 |
 | `tests/test_chat_graph_migration.py` | 12679 | 241 | 3321 / 109 |
 | `tests/test_chat_graph_requests.py` | 12497 | 231 | 3503 / 119 |
+
+## First publication and bounded live acceptance correction
+
+PR #273 initially published source `bfc614a82d762a5dc99401d97b60b457a755d5ae`, tree
+`d9f9c841679362ae72cf5c6e5ec1ba6ec2e5c6f0`, against accepted main
+`e637017111fcea0ec4ad6291ac700f8baa90a270`. The actual PR merge checkout was
+`c7b4a8e44ad988479646b855b3765134b7bcb218`, with those ordered base/head parents and the same tree.
+Independent review verified all 23 published commit trees and ordered parent edges, the genuine state bytes,
+and the complete Review Source archive: 575 tracked blobs/modes and a byte-identical uncompressed Git archive.
+The published-source review receipt has SHA-256
+`9aca83659a2e5a7d28ffd91fb72f573ea89418dc79fc34277030bff09516d7dd`.
+
+The first required CI attempt is retained as unsuccessful evidence:
+
+| Workflow / check | Run or job | Actual result |
+| --- | --- | --- |
+| Foundation CI | `39249629126` | CANCELLED |
+| Foundation `verify` | `118049946983` | CANCELLED during the normal Compose acceptance |
+| Foundation `bootstrap-windows` | `118049946534` | SUCCESS |
+| Dependency Security | `39249628977` | SUCCESS |
+| Review Source | `39249628954` | SUCCESS |
+
+Before cancellation, the actual unit stage passed 1414 tests with one skip; the browser stage passed 1078
+with 423 source-declared skips, 1501 unique results, retry zero and no flaky or unexpected results.
+The Graph subset passed 198 with 32 declared skips across ten viewports. These subset counts are not additive.
+The container stage produced the normal Chat/rename before screenshot, then stopped within `graphBefore`.
+No Graph completion marker or Graph restart PNG was produced; clean-preview was skipped. The final QA receipt
+therefore says BLOCKED, not full CI success. Its SHA-256 is
+`249909edb5d1922f10affb831798fe5e941ea2226c657a49ce43dec40b81f79a`;
+the independent cancelled-run review has SHA-256
+`11a6da4851d99cf87f6960bf9d3d1caff0648fa064bb4b6a8defb958363c8deb`.
+
+### Reproduced cause and narrow correction
+
+The initial CI log alone does not identify the exact internal await. The backend implementer separately
+reproduced the unchanged source against the built frontend, real HTTP/FastAPI and PostgreSQL 17.11 with
+FakeDeepSeek. The original UI regeneration received 202 and SSE 200 for the same UUID, persisted completion,
+and displayed the new selected variant, while Playwright `Response.finished()` remained pending after
+`net::ERR_ABORTED`. The unchanged helper was stopped by a 45-second diagnostic watchdog with exit 1.
+
+The independent reviewer then actually ran four minimal Chromium/Playwright controls. Both `response.text()`
+controls completed. Both `getReader()`-to-EOF controls received the entire `message.done` body with no explicit
+abort, while Playwright's observer remained unresolved during a bounded two-second observation. This is evidence
+about the observer contract; it does not claim the product intentionally aborts, or prove an infinite wait.
+The independent reproduction receipt has SHA-256
+`72aec10286e2bd38a6b1c50a7b6be838916e6c56aef1eb339c85ccf15514e0a8`.
+
+The implementer committed `9e5c8666c82427dae3eeec3641d45dca740d3027`, tree
+`c95bfd42aeddaec5f4504613db27e7563e26ac1b`, changing only
+`apps/web/acceptance/chat-graph-live.mjs` (+12/-5). The helper retains the original UI SSE UUID, status and MIME
+checks and the selected UI result, then requires an exact-UUID GET to report `completed` before reading the
+terminal SSE again with a bounded native fetch. `message.done` is checked on that terminal readback, not on
+the original reader-owned Playwright body. Existing completed-request execution goes to `_follow`, so this
+readback does not admit a new request or invoke the provider again. HTTP and SSE fetches now have 15-second
+deadlines, and two progress markers locate the live scenario in CI logs.
+
+All subsequent assertions and the entire `graphAfter` function are byte-identical. They still cover concurrent
+admission, UUID replay, both selection/completion orders, stale CAS, selected context, physical message IDs,
+saved variant contents, focus/draft preservation and phone layout. Runtime code, backend, migration, tests,
+workflow time limits, skip guards, dependencies, scope and canonical state were not changed by this fix.
+
+### Actual local verification and independent challenge
+
+The implementer ran the entire existing `chat-live` before and after phases through real HTTP and the built UI;
+both exited 0 with their Graph and Chat completion markers. The owned API child was stopped and restarted
+(`260177` to `262045`) in the same UUID database schema. All five SQL arrays matched before and after:
+9 requests, 9 attempts, 15 messages, 3 graphs and 6 selections, with no blockers. All requests were completed
+without an error code. The implementer also executed the 50 nearest server tests and the two-viewport browser
+subset (42 passed, 4 existing skips, retries zero), plus build/typecheck and the required local fast checks.
+These are separate executions, not counts added to the original full suite.
+
+The QA agent independently read the complete logs and performed an actual READ ONLY PostgreSQL transaction.
+Its five arrays matched both implementer snapshots; it verified six snapshot/content digests and all four
+variant contents. The follow-up frozen context contains the exact five expected message IDs, including the
+selected first assistant answer, and excludes three alternatives. The SQL receipt has SHA-256
+`96ed020afdb3907b9139f2f0345ea99075b8e839925501b082a69a3b2a8d4e4a`.
+
+The controller, independent reviewer and QA agent each personally viewed the three new local Graph PNGs:
+desktop before and after the API restart, and phone at 390 by 844. Selection 1 of 4 persists, later turns and
+follow-up remain present, and controls/composer fit without horizontal overflow. This local harness restarts
+only the API process. It does not restart PostgreSQL, Compose or Caddy, and does not replace either required
+real CI container/clean-preview cycle.
+
+The implementer's 20-file receipt has SHA-256
+`18e848c89b33788ad890797f26be602e6adf214b8a8850068fff215f8a16ccfb`.
+The independent QA 25-file receipt is PASS_FOR_BOUNDED_LOCAL_FIX, SHA-256
+`5929d5893e7fa683099257f0e76b9136484d37b0f50a6392fe11fc3223f396ef`.
+The read-only technical reviewer approved the exact `9e5c8666c82427dae3eeec3641d45dca740d3027`, independently
+checking the reproduction, all implementer hashes, terminal-readback ordering, SQL and PNGs. There are no
+blocking findings in this correction. The 17089-byte review receipt has SHA-256
+`2d4855d3ff0c8f9946f6d9376bb0bbad267cead8da173d61fe8592183f726506`.
+
+The controller integrated it with an ordinary local merge, `821e92bbbb7991ad24a8ac93f3926520bcefd918`,
+whose ordered parents are the original published source and the reviewed fix. Its tree equals the reviewed
+fix tree. The historical failed source and all implementation commits remain ancestors; no force update is used.
+The corrected helper is 12568 bytes and 189 lines, leaving 3432 bytes / 161 lines below its hard limits and
+232 bytes below the unchanged 12800-byte creation threshold. The other handwritten dimensions above are
+unchanged, and the whole package still fits exactly 40 approved paths.
+
+The correction requires a fresh exact published-source review and all required CI on the new actual merge
+tree, including both real Compose/retained-PostgreSQL restart cycles and new Graph desktop/mobile artifacts.
+The old cancelled run cannot satisfy that gate. The package remains active and PR #273 requires its own
+repository-compliant GitHub approval; the owner's PR #272 waiver/merge authorization does not cover this PR.
