@@ -1,15 +1,14 @@
-import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react'
 import type { AuthView } from '../shared/api'
 import { Icon } from '../shared/ui/Icon'
 import { Link } from './router'
 import { ChatComposer } from './chat/ChatComposer'
 import { ChatCredentialPanel } from './chat/ChatCredentialPanel'
 import { ChatMessage } from './chat/ChatMessage'
-import { ChatMessageEdit } from './chat/ChatMessageEdit'
+import { ChatMessageEdit, useConversationLayout } from './chat/ChatMessageEdit'
 import { ChatSidebar } from './chat/ChatSidebar'
 import { leaveChatMedia } from './chat/AttachmentControl'
 import { useChatRuntime } from './chat/useChatRuntime'
-import { useChatScroll } from './chat/useChatScroll'
 import { useVisualViewport } from './chat/useVisualViewport'
 import './chat.css'
 import './chat/ChatRuntime.css'
@@ -28,10 +27,12 @@ onLogout: () => void
 const runtime = useChatRuntime(auth)
 const { branches, sidebar, openingThread, error } = runtime
 const { currentChatId, busy } = sidebar
-const [editLayout, setEditLayout] = useState(0)
-const scrollContent = useMemo(() => [...runtime.messages], [runtime.messages, editLayout])
-const chatScroll = useChatScroll(auth?.account.id, currentChatId, scrollContent)
-const beforeEditLayout = () => { chatScroll.preparePrepend(); setEditLayout(value => value + 1) }
+const focused = useRef<HTMLElement | null>(null)
+const redirectFocus = useCallback((event: PointerEvent) => {
+if (!focused.current?.contains(event.target as Node)) focused.current = null
+}, [])
+const chatScroll = useConversationLayout(auth?.account.id, currentChatId, runtime.messages,
+runtime.executionBlocked, branches.saving || openingThread, focused, redirectFocus)
 useLayoutEffect(() => {
 runtime.beforeGraphChange.current = chatScroll.preparePrepend
 return () => { runtime.beforeGraphChange.current = () => {} }
@@ -84,7 +85,6 @@ function closeDrawer() {
 setDrawerOpen(false)
 requestAnimationFrame(() => drawerOpener.current?.focus())
 }
-function closeSidebar() { if (desktop) setDesktopExpanded(false); else closeDrawer() }
 function newChat() {
 if (busy || runtime.pendingAdmission) return
 chatScroll.remember()
@@ -107,6 +107,9 @@ if (busy || runtime.pendingAdmission) return
 }
 const empty = runtime.messages.length === 0
 const disabled = !auth || !runtime.policy || openingThread || runtime.executionBlocked
+const runtimeNote = error && <div className="chat-runtime-note" role="alert">
+<Icon name="info" /><span>{error}</span>
+</div>
 const composer = <ChatComposer key={`${auth?.account.id ?? 'guest'}:${composerVersion}`}
 auth={auth} policy={runtime.policy} credentials={runtime.credentials}
 catalogError={runtime.catalogError}
@@ -115,12 +118,13 @@ onSend={runtime.send} onStop={() => void runtime.stop()}
 onRefreshPolicy={runtime.refreshPolicy} />
 return <section
 className={`chat-page ${empty ? 'is-empty' : ''} ${sidebarOpen ? 'sidebar-open' : ''} ${compact ? 'sidebar-compact' : ''}`}
+onFocusCapture={event => { focused.current = event.target }}
 aria-label="Чат ИЗО АСА">
 <ChatSidebar
 auth={auth} {...sidebar} theme={theme} onThemeChange={onThemeChange} onLogout={onLogout}
 compact={compact} drawerOpen={!desktop && drawerOpen} hiddenFromKeyboard={!desktop && !drawerOpen}
 onNewChat={newChat} onOpenChat={chat => void openChat(chat)}
-onClose={closeSidebar} onExpand={() => setDesktopExpanded(true)}
+onClose={() => desktop ? setDesktopExpanded(false) : closeDrawer()} onExpand={() => setDesktopExpanded(true)}
 />
 {!desktop && drawerOpen && <button className="chat-drawer-backdrop" aria-hidden="true" tabIndex={-1}
 onClick={closeDrawer} />}
@@ -161,9 +165,7 @@ onClick={() => void branches.retry()}>Обновить ветку</button>}
 : !runtime.credentials.some(item => item.verified)
 ? <p className="chat-start-note">Подключите и проверьте API key провайдера.</p>
 : null}
-{error && <div className="chat-runtime-note" role="alert">
-<Icon name="info" /><span>{error}</span>
-</div>}
+{runtimeNote}
 {composer}
 </div>
 : <>
@@ -176,13 +178,11 @@ onClick={() => void runtime.loadOlder(chatScroll.preparePrepend)}>
 </button>}
 {runtime.messages.map(message =>
 message.role === 'user'
-? <ChatMessageEdit key={message.id} message={message} auth={auth} beforeLayout={beforeEditLayout}
+? <ChatMessageEdit key={message.id} message={message} auth={auth} beforeLayout={chatScroll.beforeLayout}
 control={branches.forMessage(message.id)} />
 : <ChatMessage key={message.graph_turn_id ? `${message.graph_turn_id}:${message.role}` : message.id}
 message={message} auth={auth} attempts={runtime.attempts.forTurn(message.graph_turn_id)} />)}
-{error && <div className="chat-runtime-note" role="alert">
-<Icon name="info" /><span>{error}</span>
-</div>}
+{runtimeNote}
 </div>
 </div></div>
 <div className="chat-composer-dock">{composer}</div>

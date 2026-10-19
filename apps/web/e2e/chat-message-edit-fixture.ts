@@ -19,7 +19,7 @@ export const editRow = (page: Page, id: string) => page.locator(`[data-edit-mess
 export const openEditThread = (page: Page) => openGraphThread(page, threadTitle)
 
 export async function editFixture(page: Page, count = 3) {
-  await workspace(page)
+  const app = await workspace(page)
   let serial = 1000
   const id = () => uid(serial++)
   const thread = { id: uid(1), title: threadTitle, created_at: 1, updated_at: 1 }
@@ -180,5 +180,5 @@ export async function editFixture(page: Page, count = 3) {
     if (path.includes('/requests/')) return denied('request_not_found', 404)
     return route.fallback()
   })
-  return { state, thread, root, all, active, graph, view, record, requests, fork, finish, switchTo }
+  return { app, state, thread, root, all, active, graph, view, record, requests, fork, finish, switchTo }
 }

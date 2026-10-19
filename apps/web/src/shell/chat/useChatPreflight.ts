@@ -4,6 +4,9 @@ import { fetchOpenRouterCatalog } from './useChatCatalog'
 import { isId } from '../../shared/workspace-api'
 import type { ChatAttachmentDraft, ImageType, Prepared } from './chatAttachments'
 
+export const conflict = (reason: unknown) => reason instanceof ApiError && reason.code === 'graph_revision_conflict'
+export const knownRejection = (reason: unknown) => reason instanceof ApiError && reason.status < 500 && reason.status !== 408
+
 export class ImageProblem extends Error {
   constructor(public code: 'type' | 'size' | 'decode' | 'uncertain' | 'storage' | 'terminal' | 'other_tab' | 'locks') { super(code) }
 }
