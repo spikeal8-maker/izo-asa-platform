@@ -100,6 +100,82 @@ The frontend reuses the existing theme, message-action and form styles, with bou
 
 The unchanged fifteen-path frontend allocation replaces `ChatRenderer.css` with the existing `conversation-graph.spec.ts`. Its historical `olderReads === 1` assumption conflicts with D6's required coherent reread. The revised regression must retain all 53 rows, stable DOM order and the less-than-4-pixel reading anchor, and explicitly verify a fresh older-range response containing the current revision and selected answer. Changing only a request counter or relaxing the data/scroll assertions is insufficient. All new Edit UI and race cases remain, including the independently reproduced concurrent older-load/head-reload loss. This changes the obsolete network expectation while strengthening the approved data-coherence contract; no test skip or limit increase is authorized.
 
-## Implementation status at contract integration
+## Integrated implementation and bounded verification
 
-Product implementation: NOT YET IN THIS COMMIT. Edit targeted tests, integration tests, independent code review, browser QA and own full PR CI: NOT RUN. Predecessor CI is not credited as Edit execution. Record actual results as implementation is integrated; no future PR merge, production deployment or paid provider call is authorized by this package dispatch.
+Backend `474fe48d6e72a2f13debf7470d23b1e0a1dc603a`, frontend `39b7ea44b635798c64a31e6fb8137b64f9039f36`, live acceptance `d3cdf8d7152f272a889c67f8237d56f943b11915` and reviewed UI correction `d8345daf6ff166ae0fddd3162807ca72747fbd59` are integrated by ordinary commits/merges. Integration `f238fca6a6b28f1bd2f81444b36e12a78e74fd1e` has ordered parents `d3cdf8d7152f272a889c67f8237d56f943b11915`, `d8345daf6ff166ae0fddd3162807ca72747fbd59`. All earlier implementation and correction commits are retained.
+
+The existing Chat domain now persists immutable edited-message child branches, branch memberships and local selections in migration 0019. Existing physical messages, selected prefix answers and ordered image asset references are retained. Branch selection is persisted; fresh commands are fenced by branch/revision, and accepted UUID replay returns its original result without reactivating an old branch or starting another provider execution. Server context is captured from the selected branch, including child-local answer choices. Session/CSRF/ownership, request lifecycle, UNKNOWN and PostgreSQL Thread→Request locking remain shared with the existing implementation.
+
+The existing message renderer exposes edit/save/cancel with pending, validation and recoverable error states. The branch selector uses the current toolbar. Loaded pages are reconciled across the complete retained range before execution is allowed. Delayed HTTP/SSE/cleanup cannot replace a newer account, Thread or branch selection. Same-Thread edits retain message identity, composer draft, decoded images and Copy behavior. A bounded bridge preserves the absolute reading position when pending/error UI moves the viewport; guarded focus restoration honors later trusted pointer intent and Thread changes.
+
+Actual component results, with immutable controller evidence retained:
+
+| Source / check | Actual result and boundary |
+| --- | --- |
+| Backend 474fe48, server and HTTP | 84 PASS; authentication, CSRF, foreign ownership, normalization, UUID identity, selected context and migration coverage. |
+| Backend 474fe48, real PostgreSQL 17.11 | 24 PASS: 13 existing Graph and 11 Branch cases; includes Edit versus manual selection and branch selection versus genuinely gated completion. |
+| Earlier integrated eb14749, full Python | 1438 PASS, 1 declared optional-catalog PostgreSQL SKIP; this run predates the final added PostgreSQL cases and is retained as historical evidence. |
+| Fix d8345da, Edit/Graph phone-small and laptop | 104 PASS, no skip/retry/flaky, all six final changed files match the frozen run. |
+| Fix d8345da, geometry/error/theme/image cases | 6 PASS, no retry; original/pre-open and pending/error/cancel bounds remain below 4 CSS px. This subset overlaps the 104-case run. |
+| Fix d8345da, original tablet-landscape uncertain-selection regression | 1 PASS, no retry; original test source is unchanged. |
+| Fix d8345da, causal focus and pointer/Thread guards | 4 PASS, no retry: native disabled recovery, HEADER→BODY later intent, repeated pointer in already-focused input without another focusin, actual Thread switch with late old response. |
+| Original independent anchor probe against identical final product/fixture bytes | 2 PASS; phone Y 383.1875 px and laptop Y 427.1875 px remain exactly constant through settled/pending/error/cancel. The later repository-spec-only setup edit was not used by this probe. |
+| Fix d8345da local gates | Docs, hygiene, scope, OpenAPI check, generated diff and whitespace: six exit-0 results. Build passed on identical final product bytes before the last repository-spec-only setup correction. |
+| Live d3cdf8d source checks | Eight exit-0 static gates, including JS syntax/import and embedded Python compile. Real Docker acceptance has not yet executed for this Edit source locally. |
+
+Independent reviewer `/root/acceptance_reviewer` approved backend 474fe48 and exact fix d8345da. Fix review SHA256 `ced757b3b4d62045849903023d70d6a6b2357a20f4680eea92cf0250c3448c42` verifies 82 evidence references, actual reports, event journals and three personally inspected PNGs. Implementer fix handoff SHA256 `7a600aa8f148c7bafc976ee825b885ab6655b93bc3c88943a461f16999fdd62d` records all commands and source bindings. The live d3cdf8d source review is approved with actual runtime evidence explicitly outstanding. These are independent technical component reviews, not formal GitHub owner approval or final package acceptance.
+
+The earlier full 39b7ea4 web run remains FAILED: 1315 PASS, 615 declared SKIP and one tablet focus FAIL. Independent QA also reproduced the absolute reading-anchor defect. Both led to d8345da; they are not relabelled as passes. New-probe setup failures are separately retained: a P click focused MAIN instead of satisfying BODY, and Playwright scrolled a Cancel button hidden under the composer. Trusted neutral-header hit-testing and primary click trace evidence justified corrections before the measured baseline; no threshold or product assertion was weakened.
+
+Backend work was delegated to `/root/edit_backend_preparer`; frontend and live acceptance to `/root/edit_frontend_preparer`; the correction to `/root/edit_ui_fix_implementer`. `/root/edit_browser_qa` owns independent browser acceptance, and `/root/edit_ui_budget_preparer` supplied bounded read-only placement/equivalence analysis. Writing contracts remain disjoint; the controller wrote only scope/contracts/integration evidence and used the real state workflow.
+
+### Live context and restart acceptance
+
+The two existing isolated fake-provider stacks now call `chat-message-edit-live.mjs` before and after their retained-volume restart. Scenarios create root, edited child and sibling, preserve original history, switch selected answers, replay an accepted Edit UUID, continue the chosen child through the ordinary composer, and verify both desktop/mobile reloads. The test-only read-only PostgreSQL observer compares complete ordered context snapshots, IDs, role/content digests, attachments and request provenance against real HTTP message views; it requires the fixed isolated container and loopback configuration. No production or paid model call is used. Ordinary Compose and the clean offline preview are separate mandatory runtime proofs.
+
+### Maintainability delta
+
+The final package touches exactly 40 allowed paths: 19 backend, 15 frontend and six controller/workflow; scope class is `cross_domain`, risk `high`. Existing near-limit files do not grow above the unchanged warning-zone rule; no limits, CI steps or declared skips are relaxed. The table measures every changed handwritten code owner after component integration. Headroom is remaining bytes / lines to the 80% growth boundary: production 9600 B / 240 lines, auxiliary code 12800 B / 280 lines; the underlying hard limits remain unchanged.
+
+| Handwritten owner | Bytes / lines | Growth headroom B / lines |
+| --- | ---: | ---: |
+| `apps/api/izo/chat/branches.py` | 8649 / 151 | 951 / 89 |
+| `apps/api/izo/chat/conversations.py` | 5797 / 102 | 3803 / 138 |
+| `apps/api/izo/chat/graph_context.py` | 7044 / 139 | 2556 / 101 |
+| `apps/api/izo/chat/graph_requests.py` | 9010 / 167 | 590 / 73 |
+| `apps/api/izo/chat/graph_routes.py` | 3378 / 59 | 6222 / 181 |
+| `apps/api/izo/chat/graph_schemas.py` | 2997 / 124 | 6603 / 116 |
+| `apps/api/izo/chat/graph_selection.py` | 8808 / 189 | 792 / 51 |
+| `apps/api/izo/chat/graph_tables.py` | 9256 / 129 | 344 / 111 |
+| `apps/api/izo/chat/history_pages.py` | 9553 / 158 | 47 / 82 |
+| `apps/api/izo/chat/schemas.py` | 6855 / 220 | 2745 / 20 |
+| `apps/api/izo/chat/tables.py` | 8015 / 128 | 1585 / 112 |
+| `apps/api/migrations/versions/0019_chat_message_branches.py` | 7488 / 117 | 5312 / 163 |
+| `apps/web/acceptance/chat-live.mjs` | 12794 / 248 | 6 / 32 |
+| `apps/web/acceptance/chat-message-edit-live.mjs` | 12658 / 191 | 142 / 89 |
+| `apps/web/e2e/chat-message-edit-fixture.ts` | 12784 / 184 | 16 / 96 |
+| `apps/web/e2e/chat-message-edit-races.spec.ts` | 12262 / 208 | 538 / 72 |
+| `apps/web/e2e/chat-message-edit.spec.ts` | 12795 / 216 | 5 / 64 |
+| `apps/web/e2e/conversation-graph.spec.ts` | 12787 / 213 | 13 / 67 |
+| `apps/web/src/shell/ChatPage.tsx` | 9576 / 192 | 24 / 48 |
+| `apps/web/src/shell/chat/ChatMessageEdit.tsx` | 9570 / 170 | 30 / 70 |
+| `apps/web/src/shell/chat/useAssistantAttempts.ts` | 9371 / 155 | 229 / 85 |
+| `apps/web/src/shell/chat/useChatPreflight.ts` | 9563 / 169 | 37 / 71 |
+| `apps/web/src/shell/chat/useChatRuntime.ts` | 9564 / 200 | 36 / 40 |
+| `apps/web/src/shell/chat/useConversationBranches.ts` | 9598 / 164 | 2 / 76 |
+| `apps/web/src/shell/chat/useConversationGraph.ts` | 9476 / 160 | 124 / 80 |
+| `tests/test_chat_branches.py` | 12722 / 216 | 78 / 64 |
+| `tests/test_chat_branches_http.py` | 12792 / 237 | 8 / 43 |
+| `tests/test_chat_branches_migration.py` | 9685 / 188 | 3115 / 92 |
+| `tests/test_chat_branches_postgres.py` | 8379 / 150 | 4421 / 130 |
+| `tests/test_chat_graph_migration.py` | 12760 / 244 | 40 / 36 |
+
+Initial default context is 4162 B (`AGENTS.md` plus `CURRENT.md`), and live PLAN is 1809 B. The affected API Chat route starts with 7813 B (previously 7819); Web Chat starts with 8222 B (previously 8748). Their local live READMEs are 5795 B and 5178 B respectively, both below 6000 B. Large ARCH/UX/review evidence remains expanded context, outside these initial routes. Generated OpenAPI remains generated and is not split to meet handwritten budgets.
+
+The next comparable extension has a real placement cost: `useConversationBranches.ts` has only 2 B growth room, the Edit spec 5 B, the live driver 6 B and `history_pages.py` 47 B. A future expansion of those owners needs a responsibility split before growth; it cannot append more behavior or raise thresholds. This package used existing owners and exact equivalent helper reuse, preserving tests and local routing instead of adding duplicate backend or shared-auth behavior.
+
+### Freeze and remaining acceptance gates
+
+At this evidence commit, component implementation and bounded fixes are real and integrated. Fresh clean integrated build/static gates, independent browser QA, the complete viewport matrix and the new PR's full required Foundation/Dependency/Review Source workflows still have to run on the actual published merge tree. Docker restart/context acceptance remains a required CI proof, not a claimed local pass. Exact source, merge-tree, workflow IDs, counts, artifact digests and final independent review belong in the PR evidence after execution; successful CI must not be followed by an unreviewed status-only source commit.
+
+The package remains active with all checkpoints unchanged. Publishing this functional PR is authorized; its owner waiver, protected-main merge, production deployment and paid provider calls are not authorized by the present package dispatch. Closeout must use the standard verified workflow after a separately authorized acceptance.
