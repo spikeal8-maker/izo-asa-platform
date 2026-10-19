@@ -114,3 +114,28 @@ old-turn pagination, stale browser responses, focus, mobile controls and durable
 New graph owners separate storage, commands, projection, context and UI attempt control from existing near-limit runtime files.
 Local owner maps are updated when boundaries change. Hard size, line and scope limits remain unchanged.
 Detailed actual commands, results, review findings and final source evidence are recorded at integration.
+
+### Incremental implementation and independent findings
+
+The backend writer created isolated commits `087fa48421c54fec27772eb37499fe432b7b70b7`
+(schema/backfill/context), `e83c4f523b6a941066e166b4ec157263de573f9a` (independent findings),
+and `09adff889ff1979d45f7c46f375e8bd534b219fa` (commands, projection, execution, HTTP, tests and contracts).
+The independent reviewer inspected frozen worktrees and did not edit the reviewed source.
+
+| Finding on the first schema commit | Writer correction and independent result |
+| --- | --- |
+| A request context could name a different turn in the same thread | Composite foreign key now binds request, turn, branch and thread to the exact assistant attempt; the original SQL counterexample is rejected |
+| Captured snapshot revision accepted SQL NULL through a nullable CHECK expression | Explicit non-null check; NULL and negative revisions fail for both admission and legacy-claim provenance, while revision zero succeeds |
+
+Independent bounded verdict on exact `e83c4f523b6a941066e166b4ec157263de573f9a`: APPROVE.
+The reviewer reran all six migration tests (exit 0, two existing deprecation warnings), reproduced the rejected
+counterexamples, compared runtime DDL with the frozen migration and verified that honest legacy-unrecorded rows
+were unchanged. This is SQLite with foreign keys enabled; it does not establish PostgreSQL concurrency or accept
+the full feature. The review receipt has SHA-256 `0753f421b31fa2c03b16d77cc9c89d49a0bcdfd4db5f07af0d0e4f83d6b7ff86`.
+
+The backend writer's wider Chat/catalog run initially returned 142 passed, one skipped and one failed.
+The failure exposed an existing indistinguishability contract: a preliminary lookup of a foreign request ID must
+not precede current catalog resolution. The writer restricted that preliminary replay lookup to the owner;
+the ordinary conflict check remains after catalog resolution. The previously failing regression plus all four
+new Graph suites then returned 37 passed, exit 0. The original failing result is retained as evidence.
+Full integration, PostgreSQL, responsive browser, live restart and exact integrated-source review remain pending.
