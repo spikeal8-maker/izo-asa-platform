@@ -347,6 +347,25 @@
         "Review Source": 37980869378
       }
     },
+    "P1-CHAT-THREAD-RENAME-001": {
+      "base_head": "0182c5410ad9b536b07ff750a6fbf874694a0d74",
+      "independent_review": "unavailable",
+      "merged_source_commit": "13c8240ed7b49028b7e479b3870aaf97e68f9654",
+      "owner_actor": "spikeal8-maker",
+      "owner_waiver": true,
+      "owner_waiver_reason": "Independent read-only technical review approved this exact source and tested merge tree, and all required CI passed. A separate GitHub reviewer actor is unavailable; the existing bot review failed at its quota limit. The owner authorizes normal merge of PR #271.",
+      "owner_waiver_source": "e18ed64bbd69b3783cbf47b97dbe044b99ee9fbc",
+      "source_head": "e18ed64bbd69b3783cbf47b97dbe044b99ee9fbc",
+      "source_waiver_comment_id": 6256505187,
+      "tested_merge_tree": "2feb0dc16658a592d785f1e4e3874f8e3efdb42f",
+      "type": "pr_merge_tree",
+      "verified_pr": 271,
+      "workflows": {
+        "Dependency Security": 39174897317,
+        "Foundation CI": 39174897324,
+        "Review Source": 39174897322
+      }
+    },
     "PRE-P1-STABILIZATION-001": {
       "base_head": "e93aff74be4283268c57b6edbc34d35d92ffa414",
       "independent_review": "unavailable",
