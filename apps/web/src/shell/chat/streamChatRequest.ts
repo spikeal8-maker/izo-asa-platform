@@ -15,25 +15,27 @@ type StreamContext = {
   idle: () => void
   loadThread: (threadId: string) => Promise<unknown>
   refreshHistory: () => Promise<unknown>
+  isTerminal?: (requestId: string) => boolean
 }
 
 export async function streamChatRequest(requestId: string, threadId: string, context: StreamContext) {
   const { selection, selected, streamController, setBusy, setActiveRequestId,
-    setMessages, setError, idle, loadThread, refreshHistory } = context
+    setMessages, setError, idle, loadThread, refreshHistory, isTerminal } = context
   const controller = new AbortController()
   const at = selection.current
   streamController.current?.abort(); streamController.current = controller
   setBusy(true); setActiveRequestId(requestId)
   setMessages(current => current.map(message =>
-    message.request_id === requestId && message.role === 'assistant'
+    message.request_id === requestId && message.role === 'assistant' && message.state === 'partial'
       ? { ...message, content: '', state: 'partial' } : message))
   try {
+    if (isTerminal?.(requestId)) return
     const response = await apiStream(`/api/v1/chat/requests/${requestId}/events`, controller.signal)
     await consumeSse(response, (name, data) => {
-      if (!selected(threadId, at)) return
+      if (!selected(threadId, at) || isTerminal?.(requestId)) return
       if (name === 'text.delta' && typeof data.text === 'string') {
         setMessages(current => current.map(message =>
-          message.request_id === requestId && message.role === 'assistant'
+          message.request_id === requestId && message.role === 'assistant' && message.state === 'partial'
             ? { ...message, content: message.content + data.text, state: 'partial' } : message))
       } else if (name === 'message.error' && typeof data.code === 'string') {
         setError(chatProviderProblem(data.code,
@@ -46,7 +48,7 @@ export async function streamChatRequest(requestId: string, threadId: string, con
       }
     })
   } catch (reason) {
-    if (!controller.signal.aborted && selected(threadId, at)) setError(chatProblem(reason))
+    if (!controller.signal.aborted && selected(threadId, at) && !isTerminal?.(requestId)) setError(chatProblem(reason))
   } finally {
     const owned = streamController.current === controller
     if (owned) streamController.current = null

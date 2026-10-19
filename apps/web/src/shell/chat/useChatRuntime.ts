@@ -59,8 +59,8 @@ return () => controller.abort()
 useEffect(() => () => streamController.current?.abort(), [])
 const streamRequest = useCallback(async (requestId: string, threadId: string) => {
 await streamChatRequest(requestId, threadId, { selection, selected, streamController,
-setBusy, setActiveRequestId, setMessages, setError, idle, loadThread, refreshHistory })
-}, [loadThread, refreshHistory])
+setBusy, setActiveRequestId, setMessages, setError, idle, loadThread, refreshHistory, isTerminal: graph.isTerminal })
+}, [loadThread, refreshHistory, graph.isTerminal])
 const attempts = useAssistantAttempts({ auth, threadId: currentChatId, busy,
 pendingAdmission: Boolean(pendingRequest.current), graph, selection, selected, idle, stream: streamRequest,
 start: id => { setBusy(true); setActiveRequestId(id) } })
