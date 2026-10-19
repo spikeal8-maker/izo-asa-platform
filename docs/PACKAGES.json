@@ -456,12 +456,13 @@
       "status": "complete"
     },
     "P1-CONVERSATION-GRAPH-001": {
+      "checkpoint": "P1-CONVERSATION-GRAPH-001",
       "decides_next": true,
       "depends_on": [
         "P1-CHAT-THREAD-RENAME-001"
       ],
       "goal": "Regenerate answers in the existing Chat domain, persist immutable turns and response attempts, switch completed variants, and freeze request context from the selected answers while preserving ownership, history and mobile usability.",
-      "status": "active"
+      "status": "complete"
     },
     "PLATFORM-001": {
       "depends_on": [
