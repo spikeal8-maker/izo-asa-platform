@@ -157,7 +157,7 @@ Retry отличается от Regenerate. Known pre-submit failure повто�
 UI и Context Engine используют только persisted server-owned `active_branch_id` и selected AssistantAttempt mapping. Manual Branch selection атомарно меняет active branch; manual attempt selection допустим только среди `COMPLETED`. Timestamp, DOM order и last-streamed attempt не являются authority. Archive — состояние Thread, не hard delete audit/request/assets.
 
 Реализованный срез `P1-CONVERSATION-GRAPH-001` находится в существующем Chat owner:
-`chat_thread_graphs` хранит active root branch и revision; `chat_turns` связывает
+`chat_thread_graphs` хранит active branch и revision; `chat_turns` связывает
 immutable UserMessage и неизменяемые display anchors; `chat_assistant_attempts`
 связывает одну попытку с одной ChatRequest и исходным assistant Message. Lifecycle
 попытки выводится из ChatRequest. `chat_turn_selections` хранит completed selection,
@@ -179,8 +179,16 @@ Context snapshot фиксирует только выбранные completed п
 сохраняет policy, message/attachment identities и digests; чтение private owned
 attachments и проверка целостности предшествуют paid marker. Forward migration
 сохраняет старые данные и честный `legacy_unrecorded`, а pending legacy request
-получает `legacy_claim` snapshot только при фактическом claim. Edit/descendant
-branches, branch switching и общий Context Engine этим пакетом не реализованы.
+получает `legacy_claim` snapshot только при фактическом claim. Общий Context Engine остаётся отдельным target.
+
+Правила Edit-as-new-branch в существующем Chat:
+
+- **D1.** «Сохранить и отправить» атомарно принимает реальный ChatRequest, создаёт child Branch и новый immutable user/turn/attempt, активирует child. Исходная история сохраняется; новый turn начинает с selection `NONE` и следует существующему Graph lifecycle.
+- **D2.** Модель берётся из выбранной source attempt, при `NONE` — последней terminal attempt этой ветки. Сохраняются порядок и owned asset IDs исходных вложений; новые snapshot rows принадлежат новому request. Актуальные model/credential/vision/asset проверки обязательны.
+- **D3.** Child получает membership существующих turns/attempts только prefix до fork и снимок их selected mapping. IDs остаются immutable, selection принадлежит `(branch_id, turn_id)`; поздние варианты других веток не добавляются. Context фиксирует выбранный prefix child и новый user, исключая прежний fork turn и suffix.
+- **D4.** Pending/streaming блокирует Edit и смену ветки. `UNKNOWN` блокирует execution во всём Thread, но допускает metadata-only смену ветки с сохранением общего unknown marker; provider/admission при этом не вызывается.
+- **D5.** Сохраняется RequestCreate validation: raw ≤6000 Unicode code points, Python `strip()`, NUL rejection и правило вложений для пустого текста. Новый неизменённый после этой нормализации Edit возвращает `422 message_unchanged` до admission/rate slot; branch/request/context не создаются.
+- **D6.** Fresh send/edit/selection используют owned Thread lock и branch/revision CAS. Обычный `POST /requests` принимает совместную optional пару `branch_id + expected_revision`; отсутствие пары допускается только root-only Thread. Accepted exact UUID replay проверяется до fresh CAS/D5, возвращает исходный результат без reactivation; revision не входит в material identity.
 
 ### MessagePart registry
 
