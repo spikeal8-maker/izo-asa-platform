@@ -190,6 +190,8 @@ attachments и проверка целостности предшествуют 
 - **D5.** Сохраняется RequestCreate validation: raw ≤6000 Unicode code points, Python `strip()`, NUL rejection и правило вложений для пустого текста. Новый неизменённый после этой нормализации Edit возвращает `422 message_unchanged` до admission/rate slot; branch/request/context не создаются.
 - **D6.** Fresh send/edit/selection используют owned Thread lock и branch/revision CAS. Обычный `POST /requests` принимает совместную optional пару `branch_id + expected_revision`; отсутствие пары допускается только root-only Thread. Accepted exact UUID replay проверяется до fresh CAS/D5, возвращает исходный результат без reactivation; revision не входит в material identity.
 
+Regenerate receipt сохраняет `request/turn` и добавляет `execution_branch_id` принятой attempt. Turn проецируется в этой execution branch; `active_branch_id/revision` отражают фактическое состояние Thread. Receipt другой ветки не является её active Graph projection: клиент подтверждает request identity и согласует текущий Graph без reactivation или повторного terminal execution.
+
 ### MessagePart registry
 
 Versioned registry включает минимум `markdown`, `input_attachment_ref`, `image_result_ref`, `file_result_ref`, `artifact_ref`, `job_ref`, `confirmation`, `sources`, `error_recovery`. Future video/audio/3D parts добавляются versioned extension.

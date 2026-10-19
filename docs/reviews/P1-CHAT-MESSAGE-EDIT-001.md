@@ -36,6 +36,16 @@ Continue the prepared task graph against exact accepted Graph sources. The bound
 
 После обычной проверки body и ownership принятый точный UUID проверяется **до** fresh source/CAS/D5 и dynamic readmission. Material identity связывает kind, source branch/turn/attempt, нормализованный текст и сохранённый asset intent; `expected_revision` является precondition нового запроса. Replay возвращает прежние `created_branch/turn_id/request` вместе с **текущими** `active_branch_id/revision`, не переключает branch и не вызывает provider. Новый material/kind под принятым UUID — conflict. Клиент сохраняет pending UUID/material intent; отложенный receipt не заменяет более свежий выбор ветки.
 
+### Compatible regeneration receipt after a branch change
+
+WIP review identified an existing-regeneration edge introduced by branching: an accepted request may belong to a turn excluded from the currently active child, or to an inherited turn with a different branch-local selection. Returning an empty/current-branch projection of that old turn is incoherent. Rejecting an exact accepted UUID with a fresh CAS error would weaken D6; nullable turn or false active branch would change the existing contract.
+
+The bounded additive clarification keeps `GraphRequestAccepted.request/turn` and adds `execution_branch_id`, read from the accepted `chat_assistant_attempts.branch_id`, never from the turn's immutable origin. Under the same Thread lock, `turn` is projected through that execution branch membership/selection while `active_branch_id/revision` remain the actual current state. Exact accepted replay remains 202 without readmission, reactivation or a new execution. Same-branch behavior remains compatible.
+
+The client validates request ID, Thread, original turn and execution branch against the frozen intent. It merges the returned turn only when intent/execution/observed/current branches match and the whole loaded-range revision remains coherent. Otherwise it confirms the recorded identity and recovers a coherent current Graph; terminal requests never start SSE again. A missing additive field in old same-branch fixtures is accepted only with matching intent/current active branches. A one-turn receipt cannot validate stale cached ranges merely because it has a newer revision.
+
+Independent design review accepted this implementation clarification with mandatory regressions: excluded root turn after Edit; inherited root-origin turn regenerated inside a child and replayed after switching; same-branch replay; delayed receipt after branch or revision changes. It changes no user-facing D1-D6 semantics and remains inside the existing API/frontend scopes. Actual code/test approval is still required.
+
 ### Ошибки и precedence
 
 | HTTP | Контракт |
