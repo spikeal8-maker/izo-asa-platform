@@ -84,6 +84,16 @@ Each writer receives all 13 DEVELOPMENT contract fields and the exact integrated
 
 Required tests include ownership/auth/CSRF, original-history/attachment retention, branch-local context and selection, exact UUID replay/material conflicts, PostgreSQL contention/rollback/migration, 22-case D5 normalization, coherent cached pagination, stale HTTP/SSE and UNKNOWN A→B→reload. Desktop/mobile QA covers edit/save/cancel/loading/error, focus/scroll/composer preservation and both real fake-provider retained-volume restart phases.
 
+### Bounded backend owner redistribution before the final race tests
+
+Independent review required two additional real PostgreSQL overlaps: Edit against manual answer selection, and branch selection against actual gated completion. Four test owners on `452b437a4c925824e4bea258dbd85ca42bf528a6` had only 160 B combined growth room; moving tests among them would not provide the required coverage within the existing limits. The controller therefore reviewed a responsibility split before authorizing further writes.
+
+The accepted-request receipt belongs in `graph_requests.py`; the selected-turn projection belongs in `graph_selection.py`, alongside attempt projection. Physical and Graph page reads remain in `history_pages.py`. This retires the provisional, never-published `graph_projection.py` module while preserving every function and the existing public history-page imports. Reverse imports are local to prevent module-load cycles. The single freed final-diff path becomes `tests/test_chat_branches_postgres.py`, which owns the existing nine Branch PostgreSQL cases plus the two additional overlaps. The old Graph runner remains the required entry point. No runtime condition, assertion, workflow, size limit or scope-count limit is removed.
+
+The pre-write placement record has SHA256 `31e619bb24f86113f8ea2515330ea79e25556e0cc6472e08cfa33eed2b6af290`. Measured candidate sizes: history pages 9553 B / 158 lines, selection 8808 B / 189, requests 9010 B / 167, branch migration tests 9685 B / 188 and PostgreSQL branch tests 7955 B / 140. The 47 B remaining growth room in history pages is a constraint on its next expansion. These are candidate measurements; acceptance still requires the applied exact diff, fresh tests and independent review.
+
+The final manifest remains nineteen backend, fifteen frontend and six controller/workflow paths, maximum forty changed paths against the unchanged accepted base. Earlier implementation commits and the explicit relocation/deletion commit remain in the published ancestry. Publication validates each historical commit against the manifest recorded for its stage, with previously authorized deletion checked through its parent history; the final diff is checked independently by the unmodified scope guard. This records the module retirement without concealing a file or discarding implementation history.
+
 ## Implementation status at contract integration
 
 Product implementation: NOT YET IN THIS COMMIT. Edit targeted tests, integration tests, independent code review, browser QA and own full PR CI: NOT RUN. Predecessor CI is not credited as Edit execution. Record actual results as implementation is integrated; no future PR merge, production deployment or paid provider call is authorized by this package dispatch.
