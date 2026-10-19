@@ -49,7 +49,7 @@ export async function graphFixture(page: Page, count = 2) {
     graphDelayAt: 0, eventGate: null as ReturnType<typeof gate> | null,
     selectionGate: null as ReturnType<typeof gate> | null,
     abortAdmission: false, abortSelection: false, rejectRegenerate: '', outcome: 'completed',
-    terminalRevision: true, requestReads: 0,
+    terminalRevision: true, requestReads: 0, delayedEvents: null as string | null,
   }
   const turn = (record: typeof records[number]) => {
     const completed = record.attempts.filter(item => item.state === 'completed')
@@ -136,6 +136,9 @@ export async function graphFixture(page: Page, count = 2) {
     if (current && path.endsWith('/events')) {
       state.events++; current.state = 'streaming'
       await state.eventGate?.wait
+      if (state.delayedEvents !== null) return route.fulfill({
+        headers: { 'content-type': 'text/event-stream' }, body: state.delayedEvents,
+      }).catch(() => {})
       if (current.state !== 'stopped') {
         current.state = state.outcome
         current.error_code = state.outcome === 'interrupted' ? 'provider_outcome_unknown' : null
