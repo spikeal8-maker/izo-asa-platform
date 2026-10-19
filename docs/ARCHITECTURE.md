@@ -22,8 +22,8 @@ API-core не зависит от наличия GPU дома. Локальны�
 | Media | Private S3-backed asset/upload ownership boundary | Новые media types и lifecycle по отдельным пакетам |
 | Jobs / Providers | Durable jobs, provider-call/recovery boundaries и fal provider implementation | Новые providers/models без обхода Jobs/Credits/Media |
 | Guest | Server-owned guest trial boundary | Дополнительные guest policies только с abuse/ownership gates |
-| Chat | Durable text/multi-provider/vision runtime текущего поколения | Chat v4 P1–P5 architecture остаётся target до отдельной реализации |
-| `apps/api/migrations` | Alembic lineage `0001_foundation` … `0015_chat_vision` | Новые migrations только вместе с реализуемым сценарием |
+| Chat | Durable text/multi-provider/vision runtime, ручные названия, сохраняемые варианты ответов и выбранный контекст | Остальные Chat v4 P1–P5 contracts остаются target до отдельных пакетов |
+| `apps/api/migrations` | Alembic lineage `0001_foundation` … `0018_chat_conversation_graph` | Новые migrations только вместе с реализуемым сценарием |
 | `apps/web` | React/TypeScript product shell, Chat/Admin/Image-related UI и browser acceptance | Новые surfaces и parity work по отдельным пакетам |
 | `packages/contracts` | Генерируемый OpenAPI artifact | Расширяется вместе с фактическим public API |
 | `tests`, `apps/web/e2e` | Unit, boundary, migration, integration и browser checks | Новые behavior-specific checks вместе с новыми contracts |
@@ -155,6 +155,33 @@ Regenerate остаётся в active Branch и создаёт новый Assist
 Retry отличается от Regenerate. Known pre-submit failure повторяет тот же request identity/fingerprint и тот же attempt. Доказанный safe post-submit no-execution/rejection создаёт новый retry request/attempt с `retry_of_request_id`. `UNKNOWN` не меняет selection и блокирует новое execution до reconciliation.
 
 UI и Context Engine используют только persisted server-owned `active_branch_id` и selected AssistantAttempt mapping. Manual Branch selection атомарно меняет active branch; manual attempt selection допустим только среди `COMPLETED`. Timestamp, DOM order и last-streamed attempt не являются authority. Archive — состояние Thread, не hard delete audit/request/assets.
+
+Реализованный срез `P1-CONVERSATION-GRAPH-001` находится в существующем Chat owner:
+`chat_thread_graphs` хранит active root branch и revision; `chat_turns` связывает
+immutable UserMessage и неизменяемые display anchors; `chat_assistant_attempts`
+связывает одну попытку с одной ChatRequest и исходным assistant Message. Lifecycle
+попытки выводится из ChatRequest. `chat_turn_selections` хранит completed selection,
+а `chat_request_contexts` — отдельный private admission snapshot. Composite foreign
+keys связывают context с той же attempt/turn/branch/thread и проверяют роли message.
+
+Graph projection использует собственный exclusive `before_turn_sequence` cursor
+(50 turns), список попыток — `before_ordinal` (20 attempts). Legacy message IDs,
+physical sequences и `before_sequence` contract сохраняются без переинтерпретации.
+Server revision и mapping читаются под owned Thread lock; команды и execution
+следуют Thread → Request. Fresh revision требуется для regenerate и manual
+selection; completed content и новая selection фиксируются одной транзакцией.
+Последняя завершившаяся транзакция selection/completion определяет выбранную версию.
+
+Новая regeneration сохраняет публичную model identity исходной выбранной попытки,
+но проходит актуальную authorization/capability/credential-generation admission.
+Context snapshot фиксирует только выбранные completed пары до текущего turn и его
+исходный user message; alternatives и later suffix не попадают в запрос. Admission
+сохраняет policy, message/attachment identities и digests; чтение private owned
+attachments и проверка целостности предшествуют paid marker. Forward migration
+сохраняет старые данные и честный `legacy_unrecorded`, а pending legacy request
+получает `legacy_claim` snapshot только при фактическом claim. Edit/descendant
+branches, branch switching и общий Context Engine этим пакетом не реализованы.
+
 ### MessagePart registry
 
 Versioned registry включает минимум `markdown`, `input_attachment_ref`, `image_result_ref`, `file_result_ref`, `artifact_ref`, `job_ref`, `confirmation`, `sources`, `error_recovery`. Future video/audio/3D parts добавляются versioned extension.

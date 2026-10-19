@@ -73,3 +73,55 @@ Repeated identical renames are no-ops. Rename never changes creation order,
 message sequence, requests or pagination cursors. The forward migration retains
 existing titles with a false marker. Nearest tests:
 `tests/test_chat_thread_rename.py`, `tests/test_chat_thread_rename_http.py`.
+
+## Conversation graph and regenerated answers
+
+`graph_tables.py` registers a root Branch, immutable Turn identities, one Attempt
+per existing ChatRequest, persisted selected attempts and private context evidence.
+`chat_thread_graphs` owns the active branch and a monotonic selection/layout revision.
+Attempt lifecycle is derived from ChatRequest, including credential disable and
+restart recovery; there is no second mutable execution state. Migration `0018`
+preserves original message/request IDs, physical sequences, attachments and manual
+titles. Existing executions retain honest `legacy_unrecorded` context provenance;
+only a real future claim of a legacy pending request records `legacy_claim`.
+
+`ThreadDetail.graph_version = 1` advertises the additive projection. Existing
+physical history and its `before_sequence` cursor retain their original meaning.
+`GET /threads/{id}/graph?before_turn_sequence=N` returns at most 50 immutable turns.
+A regenerated assistant may have a later physical sequence while occupying the
+same `assistant_display_sequence`. `GET /threads/{id}/turns/{turn}/attempts`
+uses exclusive `before_ordinal` pagination with at most 20 attempts, plus fresh
+selected-turn metadata even when the selected attempt lies outside that page.
+Completed count, selected position and previous/next completed IDs support bounded
+version navigation. The graph page also exposes the thread's active attempt and
+terminal unknown-outcome request without treating a live paid marker as terminal.
+
+`graph_requests.py` admits original sends and `POST .../turns/{turn}/regenerate`.
+Regeneration uses the selected source attempt's public model identity, rechecks
+current publication, capability, rate and credential generation, and appends one
+request/attempt/assistant message for the original immutable user message. An exact
+request-ID replay returns the existing attempt without re-admission; another
+intent conflicts. Existing UNKNOWN barriers remain authoritative for new work.
+
+`PATCH .../turns/{turn}/selection` accepts only completed attempts with the current
+branch and revision. Admission leaves the old selection visible. Durable completed
+content and automatic selection commit atomically; other terminal states never
+promote an attempt. Manual selection and completion follow transaction commit
+order, and a stale manual command conflicts. `graph_selection.py` centralizes the
+Thread → Request lock order used by admission, claim, paid marker, partial write,
+stop and completion. Graph reads lock the owned thread so revision and selected
+mapping remain coherent under PostgreSQL READ COMMITTED. Late partial/final calls
+cannot rewrite a terminal completed message or promote it again.
+
+`graph_context.py` freezes the selected completed prefix at admission using whole
+turn groups and existing bounded context policy. Earlier-turn regeneration excludes
+its own older attempts and the later conversation suffix. Saved message/attachment
+identities and content digests prevent a later selection or catalog refresh from
+changing admitted execution. Owned attachment bytes and integrity are checked
+before the durable paid marker. Context evidence, credential binding and provider
+details remain private. Editing, branch switching and a general Context Engine
+remain separate packages.
+
+Nearest graph tests: `tests/test_chat_graph_requests.py`,
+`tests/test_chat_graph_context.py`, `tests/test_chat_graph_http.py`,
+`tests/test_chat_graph_migration.py`; all provider fixtures are synthetic.
