@@ -1,6 +1,6 @@
 # P1-CONVERSATION-GRAPH-001
 
-Status: active after the genuine successor transition; implementation and package acceptance are pending.
+Status: active after the genuine successor transition; implementation is committed, with integrated validation and package acceptance pending.
 
 ## Goal and canonical source
 
@@ -66,11 +66,11 @@ and `ee69c95a5dc5f550e7637011ecee468f91e0e6cd8ddcb6ff14788c402299f0ae` respectiv
 ## Ownership and task graph
 
 The [finite scope](../../tools/scopes/p1-conversation-graph-001.json) is cross-domain, high risk,
-39 allowed paths under the unchanged hard class limit of 40. Independent review is mandatory.
+40 allowed paths under the unchanged hard class limit of 40. Independent review is mandatory.
 
 - Controller: actual state workflow, scope, this report, task contracts, integration and acceptance evidence.
 - Backend implementer: 20 assigned Chat/migration/contract/test/architecture paths.
-- Frontend implementer: 14 disjoint Chat UI/browser/acceptance/UX paths.
+- Frontend implementer: 15 disjoint Chat UI/browser/acceptance/UX paths.
 - QA: independent actual PostgreSQL, HTTP, browser and restart verification on the integrated source.
 - Independent reviewer: read-only code, race, ownership, data, documentation, test and responsive review; findings return to the assigned writer.
 
@@ -83,6 +83,15 @@ Before creating the additional `useConversationGraph.ts` path, the frontend requ
 The controller reviewed the unchanged `web.chat` boundary, the existing 6017-byte / 133-line selection owner and
 the otherwise combined DTO/cache/revision/command responsibilities. The amended assignment separates Graph projection
 and loaded-page fences from attempt commands/replay, adds one exclusively frontend-owned path and keeps the hard limit unchanged.
+
+A second amendment was requested before creating `conversation-graph-races.spec.ts`.
+The existing basic Graph specification was 12,614 bytes, close to its unchanged 12,800-byte creation budget.
+The newly identified unloaded-turn/late-page lifecycle scenario belongs with the existing revision and response-order
+races. The controller approved moving those cases to one separate race specification before adding the regression,
+leaving basic regenerate, replay and controls in the original test owner. This adds one frontend path (15 total)
+without raising any file-size or class limit. No CI workflow path was added; the existing Chat live acceptance hook
+already executes real Graph HTTP races and both restart cycles in required CI. The separate SQL-lock runner requires
+independent PostgreSQL execution and is not represented as a default CI test.
 
 ## Agreed implementation boundary
 
@@ -106,8 +115,8 @@ New controls remain available on keyboard, desktop and mobile using the existing
 
 ## Validation and maintenance delta
 
-Graph implementation, targeted tests, integrated PostgreSQL/browser/restart gates, independent code review and its PR CI are pending.
-No Graph test pass is claimed by this initial task record. Required targeted coverage includes ownership/CSRF, migration retention,
+The backend and frontend core are committed and their targeted suites have run. Integrated PostgreSQL/browser/restart
+gates, full independent code review and PR CI are pending. Required coverage includes ownership/CSRF, migration retention,
 completed-only selection, stale CAS, concurrent admission/completion/selection, exact replay, UNKNOWN, selected-context snapshots,
 old-turn pagination, stale browser responses, focus, mobile controls and durable selection after reload/restart.
 
@@ -139,3 +148,21 @@ not precede current catalog resolution. The writer restricted that preliminary r
 the ordinary conflict check remains after catalog resolution. The previously failing regression plus all four
 new Graph suites then returned 37 passed, exit 0. The original failing result is retained as evidence.
 Full integration, PostgreSQL, responsive browser, live restart and exact integrated-source review remain pending.
+
+The controller integrated the accepted backend history using ordinary merges. On exact local
+`b9ae27166c61ef7d55b09e95f9afc7fba151e02f`, the full Python suite actually returned **1414 passed, one skipped,
+three existing warnings**, exit 0, 291.26 seconds. State verification, docs, generated OpenAPI, hygiene, finite scope
+and whitespace gates also passed. The saved receipt has SHA-256
+`e69eae88134ff0b25c17f064c433f6f7b9507322a180aea7b77dbf2b302a9e2d`.
+The later backend commit `c7bebc8b74fa41b8cdcf5653dc29d0bc045fbb12` adds a thirteen-case standalone PostgreSQL
+runner inside the four assigned tests. Default Graph tests on that commit returned 36 passed; actual PostgreSQL
+execution remains a separate outstanding gate.
+
+Frontend core `105b086a0cdc63ca17fbf6e71ef48ef68674b572` includes generated wire-type aliases and the normal
+Graph controls/projection. Its ten-viewport Graph matrix returned 162 passed and eight expected skips, exit 0,
+with every retry zero. Before that pass, a deterministic browser test reproduced an old same-revision response
+restoring pending state after observed termination. The writer's lifecycle witness fixes that case; the original
+two failing cases were retained, and all eight targeted terminal-state cases then passed.
+Combined product core `d4689bc16ff889e65699b8cd6bdc32570efe913d` was frozen for the full browser run and an
+independent read-only review. Live acceptance, a further unloaded-turn race and the final integrated source are
+not accepted by these intermediate results.
