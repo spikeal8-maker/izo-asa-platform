@@ -38,7 +38,7 @@ async function complete(page, id) {
   }, id)
   expect(response.status).toBe(200)
   expect(response.type).toContain('text/event-stream')
-  expect(response.body).toContain('event: message.completed')
+  expect(response.body).toContain('event: message.done')
   expect((await command(page, `requests/${id}`)).state).toBe('completed')
 }
 async function send(page, threadId, text, model) {
@@ -84,7 +84,7 @@ export async function graphBefore(page, evidence) {
   const events = await streaming
   expect(events.url()).toContain(accepted.request.id)
   await events.finished()
-  expect(await events.text()).toContain('event: message.completed')
+  expect(await events.text()).toContain('event: message.done')
   await expect(answer).toContainText('2 из 2')
   await expect(draft).toHaveValue('Черновик остаётся при смене варианта')
   await expect(row(page, later)).toHaveAttribute('data-message-id', later.selected_attempt.message.id)

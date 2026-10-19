@@ -145,7 +145,7 @@ export async function graphFixture(page: Page, count = 2) {
         if (current.state === 'completed' || state.terminalRevision) state.revision++
       }
       return route.fulfill({ headers: { 'content-type': 'text/event-stream' },
-        body: `event: ${current.state === 'completed' ? 'message.completed' : 'message.interrupted'}\ndata: ${JSON.stringify({ code: current.error_code })}\n\n` }).catch(() => {})
+        body: `event: ${current.state === 'completed' ? 'message.done' : 'message.interrupted'}\ndata: ${JSON.stringify({ code: current.error_code })}\n\n` }).catch(() => {})
     }
     if (current && path.endsWith('/stop')) {
       current.state = 'stopped'; current.message.state = 'stopped'; state.revision++
