@@ -10,13 +10,14 @@ function isolated(page) {
 }
 async function http(page, path, method = 'GET', data) {
   return page.evaluate(async ({ path, method, data }) => {
+    const signal = AbortSignal.timeout(15000)
     const headers = { 'Content-Type': 'application/json', 'X-IZO-Request': 'web' }
     if (method !== 'GET') {
-      const response = await fetch('/api/v1/auth/me', { credentials: 'same-origin', cache: 'no-store' })
+      const response = await fetch('/api/v1/auth/me', { signal, credentials: 'same-origin', cache: 'no-store' })
       if (!response.ok) throw new Error('Graph acceptance authentication failed')
       headers['X-CSRF-Token'] = (await response.json()).csrf_token
     }
-    const response = await fetch(`/api/v1/chat/${path}`, { method, headers,
+    const response = await fetch(`/api/v1/chat/${path}`, { method, headers, signal,
       credentials: 'same-origin', cache: 'no-store', body: data === undefined ? undefined : JSON.stringify(data) })
     return { status: response.status, body: await response.json() }
   }, { path, method, data })
@@ -32,7 +33,7 @@ const row = (page, turn) => page.locator(`[data-turn-id="${turn.id}"]`)
 async function complete(page, id) {
   const response = await page.evaluate(async id => {
     const result = await fetch(`/api/v1/chat/requests/${id}/events`, {
-      credentials: 'same-origin', cache: 'no-store', headers: { Accept: 'text/event-stream' },
+      credentials: 'same-origin', cache: 'no-store', headers: { Accept: 'text/event-stream' }, signal: AbortSignal.timeout(15000),
     })
     return { status: result.status, type: result.headers.get('content-type'), body: await result.text() }
   }, id)
@@ -64,6 +65,7 @@ const savedAttempts = attempts => attempts.map(({ id, request_id, ordinal, model
 
 export async function graphBefore(page, evidence) {
   isolated(page)
+  console.log('CHAT_GRAPH_PROGRESS seed')
   const title = 'Сохранённые варианты Graph', policy = await command(page, 'policy')
   const thread = await command(page, 'threads', 'POST', { title }, 201)
   await send(page, thread.id, 'Первый вопрос Graph', policy.default_model)
@@ -83,9 +85,14 @@ export async function graphBefore(page, evidence) {
   expect(accepted.turn.selected_attempt_id).toBe(first.selected_attempt_id)
   const events = await streaming
   expect(events.url()).toContain(accepted.request.id)
-  await events.finished()
-  expect(await events.text()).toContain('event: message.done')
+  expect(events.status()).toBe(200)
+  expect(events.headers()['content-type']).toContain('text/event-stream')
   await expect(answer).toContainText('2 из 2')
+  // Reader EOF can report ERR_ABORTED to Playwright; confirm durable completion before replay.
+  expect(await command(page, `requests/${accepted.request.id}`))
+    .toMatchObject({ id: accepted.request.id, state: 'completed' })
+  await complete(page, accepted.request.id)
+  console.log('CHAT_GRAPH_PROGRESS regenerated')
   await expect(draft).toHaveValue('Черновик остаётся при смене варианта')
   await expect(row(page, later)).toHaveAttribute('data-message-id', later.selected_attempt.message.id)
   const previous = answer.getByRole('button', { name: 'Предыдущий вариант', exact: true })
