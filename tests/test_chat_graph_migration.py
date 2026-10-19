@@ -119,3 +119,31 @@ def test_database_rejects_user_assistant_role_swap(chat_env):
         with pytest.raises(IntegrityError):
             with service.engine.begin() as conn:
                 conn.execute(statement)
+
+
+def test_context_must_belong_to_requests_own_turn_inside_same_thread(chat_env):
+    service, alice, _, _ = chat_env
+    connect_key(service, alice)
+    thread = new_thread(service, alice)
+    first = request(service, alice, thread.id, "First turn")
+    list(service.stream_events(alice.bearer, first.id))
+    second = request(service, alice, thread.id, "Different turn in the same branch")
+    upgrade_legacy(service)
+    with service.engine.begin() as conn:
+        second_turn = conn.execute(sa.select(t.attempts.c.turn_id).where(
+            t.attempts.c.id == second.id)).scalar_one()
+    with pytest.raises(IntegrityError):
+        with service.engine.begin() as conn:
+            conn.execute(sa.update(t.contexts).where(t.contexts.c.request_id == first.id)
+                .values(turn_id=second_turn))
+
+
+@pytest.mark.parametrize("invalid_revision", [None, -1])
+def test_captured_context_requires_nonnull_nonnegative_revision(chat_env, invalid_revision):
+    service, alice, _, _ = chat_env
+    (thread, first), _ = _two_threads(service, alice)
+    with pytest.raises(IntegrityError):
+        with service.engine.begin() as conn:
+            conn.execute(sa.update(t.contexts).where(t.contexts.c.request_id == first.id).values(
+                provenance="admission", snapshot={"version": "test"}, digest="0" * 64,
+                revision=invalid_revision))

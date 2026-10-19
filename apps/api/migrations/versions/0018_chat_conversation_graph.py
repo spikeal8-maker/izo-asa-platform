@@ -78,12 +78,13 @@ def _frozen_tables(metadata):
         sa.Column("digest", sa.String(64)),
         sa.ForeignKeyConstraint(["request_id", "thread_id"],
             ["chat_requests.id", "chat_requests.thread_id"], ondelete="CASCADE"),
-        sa.ForeignKeyConstraint(["turn_id", "branch_id", "thread_id"],
-            ["chat_turns.id", "chat_turns.branch_id", "chat_turns.thread_id"]),
+        sa.ForeignKeyConstraint(["request_id", "turn_id", "branch_id", "thread_id"],
+            ["chat_assistant_attempts.id", "chat_assistant_attempts.turn_id",
+             "chat_assistant_attempts.branch_id", "chat_assistant_attempts.thread_id"], ondelete="CASCADE"),
         sa.CheckConstraint("kind IN ('send','regenerate') AND provenance IN ('admission','legacy_claim','legacy_unrecorded')",
             name="chat_context_provenance"),
         sa.CheckConstraint("(provenance = 'legacy_unrecorded' AND snapshot IS NULL AND digest IS NULL AND revision IS NULL) OR "
-            "(provenance != 'legacy_unrecorded' AND snapshot IS NOT NULL AND digest IS NOT NULL AND revision >= 0)",
+            "(provenance != 'legacy_unrecorded' AND snapshot IS NOT NULL AND digest IS NOT NULL AND revision IS NOT NULL AND revision >= 0)",
             name="chat_context_snapshot"))
     return graphs, branches, turns, attempts, selections, contexts
 
