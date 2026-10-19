@@ -1,9 +1,9 @@
 # IZO ASA · текущая точка разработки
 
 <!-- runtime_base=api/fal-klein-001@faec39d6ae0b4f035ef0f86114494789acde3b46 -->
-<!-- current_package_base=codex/p1-chat-message-copy-001@27e506d27be72fa1a3054909aa82e7084f72818b -->
-<!-- working_branch=codex/p1-chat-thread-rename-001 -->
-<!-- active_package=P1-CHAT-THREAD-RENAME-001 -->
+<!-- current_package_base=codex/p1-chat-thread-rename-001@e637017111fcea0ec4ad6291ac700f8baa90a270 -->
+<!-- working_branch=codex/p1-conversation-graph-001 -->
+<!-- active_package=P1-CONVERSATION-GRAPH-001 -->
 <!-- next_package=NONE -->
 
 Это короткая точка входа после `AGENTS.md`. Live machine state — `PLAN.json`; package registry читается точечно через `project_state.py show-package <ID>`.
@@ -16,5 +16,5 @@
 `begin-decided-next`: exact HEAD/CI/review или explicit owner waiver проверяются до новой ветки, state пишется только
 на ней. Для непринятого active package используется только `reconcile-continuation`.
 
-Завершённый пакет: **P1-CHAT-THREAD-RENAME-001**. Следующий: **NONE**.
+Активный пакет: **P1-CONVERSATION-GRAPH-001**. Следующий: **NONE**.
 Параллельные lineages из PLAN нельзя использовать как base без reconciliation.
