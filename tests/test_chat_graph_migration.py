@@ -14,8 +14,8 @@ from test_chat import chat_env, connect_key, new_thread, request
 from test_chat_vision import vision_env, asset, submit
 
 
-def migration():
-    path = Path(__file__).resolve().parents[1] / "apps/api/migrations/versions/0018_chat_conversation_graph.py"
+def migration(name="0018_chat_conversation_graph"):
+    path = Path(__file__).resolve().parents[1] / f"apps/api/migrations/versions/{name}.py"
     spec = importlib.util.spec_from_file_location("graph_migration", path)
     module = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(module)
@@ -156,7 +156,6 @@ def pg_environment():
     import os
     from uuid import uuid4
     from izo.config import Settings
-    from izo.accounts import tables as accounts
     from izo.accounts.schemas import RegisterInput
     from izo.accounts.service import AuthService
     from izo.accounts.settings import AuthSettings
@@ -164,6 +163,7 @@ def pg_environment():
     from izo.chat.service import ChatService
     from test_chat import PASSWORD, root_key
     from test_chat_graph_requests import RecordingProvider
+    from test_chat_graph_http import pg_bootstrap_catalog
     from test_chat_vision import Objects
     cfg = Settings()
     if cfg.environment != "test" or os.environ.get("IZO_CHAT_GRAPH_ACCEPTANCE") != "isolated":
@@ -182,7 +182,7 @@ def pg_environment():
         with engine.begin() as conn:
             assert conn.exec_driver_sql("SHOW transaction_isolation").scalar_one() == "read committed"
             assert conn.exec_driver_sql("SELECT current_schema()").scalar_one() == schema
-        accounts.metadata.create_all(engine)
+        pg_bootstrap_catalog(engine)
         t.media_assets.create(engine)
         t.metadata.create_all(engine, tables=list(t.TABLES))
         clock = [20_000]

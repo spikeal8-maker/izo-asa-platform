@@ -215,3 +215,18 @@ def pg_parallel(service, thread_id, operations):
             futures = [pool.submit(run, operation) for operation in operations]
             pg_wait_blocked(service, len(operations))
         return [future.result(timeout=15) for future in futures]
+
+
+def pg_bootstrap_catalog(engine):
+    """PostgreSQL gets the real Alembic seed; runtime deliberately never seeds it."""
+    from alembic.migration import MigrationContext
+    from alembic.operations import Operations
+    from izo.accounts import tables as accounts
+    from test_chat_graph_migration import migration
+    catalog_tables = {"catalog_state", "catalog_models", "catalog_events"}
+    accounts.metadata.create_all(engine, tables=[table for table in accounts.metadata.sorted_tables
+        if table.name not in catalog_tables])
+    with engine.begin() as conn:
+        seeded = migration("0013_admin_catalog")
+        seeded.op = Operations(MigrationContext.configure(conn))
+        seeded.upgrade()
