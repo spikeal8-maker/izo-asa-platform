@@ -2,7 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import {
 apiRequest, ApiError, chatProviderProblem,
 type AuthView, type ChatPolicyView, type ChatRequestView, type CredentialListView, type CredentialView,
-type MessageView, type ThreadView,
+type ThreadView,
 } from '../../shared/api'
 import { useChatCatalog, useCredentialSync } from './useChatCatalog'
 import { providerFor } from './modelCatalog'
@@ -12,10 +12,12 @@ import { admitChatRequest, nextChatRequest, PreflightProblem, type PendingChatRe
 import { useThreadSelection } from './useThreadSelection'
 import { useThreadHistory } from './useThreadHistory'
 import { streamChatRequest } from './streamChatRequest'
+import { useAssistantAttempts } from './useAssistantAttempts'
+import type { DisplayMessage } from './useConversationGraph'
 export function useChatRuntime(auth: AuthView | null | undefined) {
 const [basePolicy, setBasePolicy] = useState<ChatPolicyView | null>(null)
 const [credentials, setCredentials] = useState<CredentialView[]>([])
-const [messages, setMessages] = useState<MessageView[]>([])
+const [messages, setMessages] = useState<DisplayMessage[]>([])
 const [currentChatId, setCurrentChatId] = useState<string | null>(null)
 const [busy, setBusy] = useState(false)
 const [activeRequestId, setActiveRequestId] = useState<string | null>(null)
@@ -28,7 +30,7 @@ const publishCredentialChange = useCredentialSync(auth, setCredentials)
 const { policy, catalogError } = useChatCatalog(auth, basePolicy)
 const streamController = useRef<AbortController | null>(null)
 const pendingRequest = useRef<PendingChatRequest | null>(null)
-const { selection, selectThread, selected, loadThread, loadOlder, olderCursor, loadingOlder,
+const { selection, selectThread, selected, loadThread, loadOlder, olderCursor, loadingOlder, graph,
 openingThread, resetSelection, openThread, canSendTo, claimResume, clearResumeClaims, stopResume } = useThreadSelection(
 auth?.account.id, { chatId: setCurrentChatId, messages: setMessages, error: setError })
 useEffect(() => {
@@ -59,9 +61,12 @@ const streamRequest = useCallback(async (requestId: string, threadId: string) =>
 await streamChatRequest(requestId, threadId, { selection, selected, streamController,
 setBusy, setActiveRequestId, setMessages, setError, idle, loadThread, refreshHistory })
 }, [loadThread, refreshHistory])
+const attempts = useAssistantAttempts({ auth, threadId: currentChatId, busy,
+pendingAdmission: Boolean(pendingRequest.current), graph, selection, selected, idle, stream: streamRequest,
+start: id => { setBusy(true); setActiveRequestId(id) } })
 useEffect(() => {
 if (!auth || busy || !currentChatId) return
-const id = [...messages].reverse().find(message =>
+const id = graph.value?.active_attempt?.request_id ?? [...messages].reverse().find(message =>
 message.role === 'assistant' && message.state === 'partial')?.request_id
 if (!id) return
 const claim = claimResume(currentChatId, id)
@@ -76,18 +81,20 @@ else void loadThread(currentChatId)
 }).catch(reason => { if (!stale()) setError(chatProblem(reason))
 }).finally(() => { if (stale()) claim.release() })
 return () => controller.abort()
-}, [auth?.account.id, busy, currentChatId, messages, openingThread, loadThread, streamRequest])
+}, [auth?.account.id, busy, currentChatId, messages, openingThread, loadThread, streamRequest,
+graph.value?.active_attempt?.request_id])
 function newChat() {
-if (busy) return
+if (busy || attempts.pendingAdmission) return
 resetSelection()
 setCurrentChatId(null); setMessages([]); setError('')
 }
-const openChat = (chat: ThreadView) => busy ? Promise.resolve(false) : openThread(chat.id, currentChatId)
+const openChat = (chat: ThreadView) => busy || attempts.pendingAdmission ? Promise.resolve(false) : openThread(chat.id, currentChatId)
 async function send(text: string, selectedModelId: string, attachments: ChatAttachmentDraft[] = []): Promise<boolean> {
 const selectedModel = policy?.models.find(item => item.id === selectedModelId)
 const selectedCredential = selectedModel
   ? credentials.find(item => item.provider === providerFor(selectedModel)) : null
-if (!auth || !selectedModel || busy || !selectedCredential?.verified
+if (!auth || !selectedModel || busy || attempts.pendingAdmission || attempts.saving
+  || graph.value?.unknown_request_id || !selectedCredential?.verified
   || !canSendTo(currentChatId, auth.account.id)) return false
 setError(''); setBusy(true)
 beginChatMedia(auth.account.id)
@@ -175,7 +182,8 @@ renameChat: (id: string, title: string) => auth ? renameThread(id, title, auth.c
 messages, currentChatId, openingThread, busy, activeRequestId,
 loadOlder: (beforePrepend: () => void) => currentChatId && loadOlder(currentChatId, beforePrepend),
 olderCursor, loadingOlder,
-pendingAdmission: !!pendingRequest.current,
+pendingAdmission: Boolean(pendingRequest.current) || attempts.pendingAdmission,
+attempts, beforeGraphChange: graph.beforeChange,
 error, setError, refreshPolicy, setCredential, credentialDisabled,
 newChat, openChat, send, stop,
 }

@@ -1,6 +1,7 @@
 import { useCallback, useRef, useState, type Dispatch, type SetStateAction } from 'react'
-import { apiRequest, type MessagePage, type MessageView, type ThreadDetail } from '../../shared/api'
+import { apiRequest, chatProviderProblem, type MessagePage, type MessageView, type ThreadDetail } from '../../shared/api'
 import { chatProblem, lastChatWarning } from './chatAttachments'
+import { useConversationGraph } from './useConversationGraph'
 
 export type Selection = { accountId: string | undefined; threadId: string | null; version: number }
 
@@ -26,6 +27,7 @@ export function useThreadSelection(accountId: string | undefined, update: {
   }, [])
   const selected = useCallback((threadId: string, at: Selection) =>
     selection.current === at && currentAccount.current === at.accountId && at.threadId === threadId, [])
+  const graph = useConversationGraph(selection, selected, update.messages)
   const claimResume = (threadId: string, requestId: string) => {
     const at = selection.current
     const key = `${requestId}:${at.version}`
@@ -41,6 +43,15 @@ export function useThreadSelection(accountId: string | undefined, update: {
     try {
       const detail = await apiRequest<ThreadDetail>(`/api/v1/chat/threads/${threadId}`, { signal })
       if (!selected(threadId, at)) return null
+      if (detail.graph_version === 1) {
+        const page = await graph.load(threadId, signal)
+        if (!page || !selected(threadId, at)) return null
+        update.chatId(detail.thread.id)
+        loadedThread.current = threadId
+        if (page.unknown_request_id) update.error(chatProviderProblem('provider_outcome_unknown'))
+        return detail
+      }
+      graph.reset()
       update.chatId(detail.thread.id)
       if (loadedThread.current === threadId) {
         update.messages(current => {
@@ -60,16 +71,21 @@ export function useThreadSelection(accountId: string | undefined, update: {
       if (!selected(threadId, at)) return null
       throw reason
     }
-  }, [selected, update.chatId, update.messages, update.error])
+  }, [selected, graph.load, graph.reset, update.chatId, update.messages, update.error])
 
   const loadOlder = useCallback(async (threadId: string, beforePrepend: () => void) => {
     const at = selection.current
-    const cursor = olderCursor
+    const cursor = graph.current.current?.thread.id === threadId
+      ? graph.current.current.next_before_turn_sequence : olderCursor
     if (!selected(threadId, at) || cursor === null || pendingOlder.current?.at === at) return
     const pending = { at, controller: new AbortController() }
     pendingOlder.current = pending
     setLoadingOlder(true)
     try {
+      if (graph.current.current?.thread.id === threadId) {
+        await graph.load(threadId, pending.controller.signal, cursor, beforePrepend)
+        return
+      }
       const page = await apiRequest<MessagePage>(
         `/api/v1/chat/threads/${threadId}/messages?before_sequence=${cursor}`,
         { signal: pending.controller.signal })
@@ -91,15 +107,16 @@ export function useThreadSelection(accountId: string | undefined, update: {
         if (selected(threadId, at)) setLoadingOlder(false)
       }
     }
-  }, [olderCursor, selected, update.messages, update.error])
+  }, [olderCursor, selected, graph.load, graph.current, update.messages, update.error])
 
   const resetSelection = useCallback(() => {
     selectThread(null)
+    graph.reset()
     loadedThread.current = null
     setOlderCursor(null)
     setLoadingOlder(false)
     setOpeningThread(false)
-  }, [selectThread])
+  }, [selectThread, graph.reset])
   const openThread = useCallback(async (threadId: string, previousId: string | null) => {
     const previousCursor = olderCursor
     selectThread(threadId)
@@ -128,6 +145,7 @@ export function useThreadSelection(accountId: string | undefined, update: {
   const canSendTo = (threadId: string | null, owner: string) =>
     !openingThread && selection.current.accountId === owner && selection.current.threadId === threadId
 
-  return { selection, selectThread, selected, loadThread, loadOlder, olderCursor, loadingOlder,
+  return { selection, selectThread, selected, loadThread, loadOlder,
+    olderCursor: graph.value?.next_before_turn_sequence ?? (graph.value ? null : olderCursor), loadingOlder, graph,
     openingThread, resetSelection, openThread, canSendTo, claimResume, clearResumeClaims, stopResume }
 }

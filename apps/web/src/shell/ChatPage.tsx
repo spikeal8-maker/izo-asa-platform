@@ -26,6 +26,10 @@ onLogout: () => void
 }) {
 const runtime = useChatRuntime(auth)
 const chatScroll = useChatScroll(auth?.account.id, runtime.currentChatId, runtime.messages)
+useLayoutEffect(() => {
+runtime.beforeGraphChange.current = chatScroll.preparePrepend
+return () => { runtime.beforeGraphChange.current = () => {} }
+}, [runtime.beforeGraphChange, chatScroll.preparePrepend])
 useEffect(() => () => leaveChatMedia(auth?.account.id), [auth?.account.id])
 const [desktop, setDesktop] = useState(() => window.matchMedia(desktopQuery).matches)
 const [expanded, setExpanded] = useState(initiallyExpanded)
@@ -153,7 +157,8 @@ onClick={() => void runtime.loadOlder(chatScroll.preparePrepend)}>
 {runtime.loadingOlder ? 'Загружаем…' : 'Загрузить ранние сообщения'}
 </button>}
 {runtime.messages.map(message =>
-<ChatMessage key={message.id} message={message} auth={auth} />)}
+<ChatMessage key={message.graph_turn_id ? `${message.graph_turn_id}:${message.role}` : message.id}
+message={message} auth={auth} attempts={runtime.attempts.forTurn(message.graph_turn_id)} />)}
 {runtime.error && <div className="chat-runtime-note" role="alert">
 <Icon name="info" /><span>{runtime.error}</span>
 </div>}
