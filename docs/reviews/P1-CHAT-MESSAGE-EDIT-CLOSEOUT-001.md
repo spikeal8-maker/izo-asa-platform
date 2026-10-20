@@ -11,9 +11,11 @@ report records that transition and its finite scope. The separate closeout is
 not accepted by this report: its frozen publication HEAD, required CI and
 independent review belong in the PR body or acceptance comment.
 
-`P1-CHAT-MESSAGE-EDIT-CLOSEOUT-001` identifies this metadata task, not a new
-product package. The source owner waiver and merge permission apply to PR #275
-only. They do not authorize merging this separate closeout PR.
+`P1-CHAT-MESSAGE-EDIT-CLOSEOUT-001` identifies this closeout task and its bounded
+CI correction, not a new product package. The source owner waiver and merge
+permission apply to PR #275 only. They do not authorize merging this separate
+closeout PR. The controller authorized the scope correction described below;
+that authorization is not owner approval to waive review or merge PR #276.
 
 ## Exact source identity
 
@@ -63,7 +65,7 @@ result is presented here as a new closeout result.
 | Native closeout CLI | Exit 0 after successful actual-main push CI; 40 fresh, correlated Connector requests |
 | Canonical generated diff and checkpoint preservation | PASS: three state paths, 22 insertions and 2 deletions; all 29 earlier checkpoints and all 65 other packages preserved |
 | Generated-state local gates | Documentation, contracts and git sanity PASS with Python 3.13.16 |
-| Integrated five-path local gates | Required after metadata integration; final execution results belong in the PR body, not the generated-state claim above |
+| Integrated closeout local gates | The original metadata diff had five paths; the amended final diff has six. Final execution results belong in the PR body, not the generated-state claim above |
 | Closeout exact HEAD, CI and independent review | To be attached to the frozen publication HEAD in the separate PR evidence; not asserted by this report |
 | Closeout owner authority and acceptance | Requires separate authority; source waiver and merge permission do not transfer |
 
@@ -80,6 +82,51 @@ states only. The downloaded `browser-evidence` artifact `12293221817` is
 `87b1f18a38cba04778d0f669fe955faaa4db0139508a62db2013bf1be72be5a9`.
 The larger preview archive was not downloaded locally; its required CI checks
 succeeded. These checks made no live paid provider call.
+
+## Closeout CI cancellation and bounded correction
+
+Both full PR runs below tested source
+`c6b1608782454c5e633b79ea9e3d04e2545c0e8b`, base
+`0786af09bda5603601d90cde6e4f5f49e5f3b24c` and synthetic merge
+`e53d0035ac3c1991703a3ff7891861fae92460f7`. Their source/tested tree was
+`9f6898cd7f76eac0a07ebb3756324d90a3aaa689`. The second event followed one
+close/reopen recovery at the same source HEAD. All times below are UTC on
+2026-10-20, from complete job logs and API job records retained by the controller.
+
+| Foundation run | Verify job start / completion | Last preview assertion / cancellation | Browser result | Required CI result |
+| --- | --- | --- | --- | --- |
+| [39486769760](https://github.com/spikeal8-maker/izo-asa-platform/actions/runs/39486769760) | 19:49:51 / 20:15:00; 25m 09s | 20:14:49.435 / 20:14:55.639 | 1,315 passed, 1 flaky, 615 skipped | `CANCELLED`; `CI_NOT_PASS` |
+| [39490874623](https://github.com/spikeal8-maker/izo-asa-platform/actions/runs/39490874623) | 20:18:43 / 20:43:57; 25m 14s | 20:43:49.307 / 20:43:52.556 | 1,314 passed, 2 flaky, 615 skipped | `CANCELLED`; `CI_NOT_PASS` |
+
+Each run passed 1,462 Python tests with 1 skip and 3 warnings. Browser retries
+exposed the same focus assertion in `conversation-graph-races.spec.ts:52`, at
+line 60 (`expect(input).toBeFocused()`): desktop in the first run, laptop and
+hidpi-200 in recovery. These are recorded as flaky results, not first-attempt
+passes. No test, assertion, retry setting or individual timeout is changed by
+this correction.
+
+Container integration succeeded, and all logged preview assertions, including
+retained contexts and desktop/phone reload after restart, finished in both runs.
+Cancellation occurred during final preview `docker compose down -v --remove-orphans`.
+`Save tested Chat preview` was skipped and neither run produced a tested-preview
+artifact. The surviving browser evidence does not replace that missing stage
+or make either run successful.
+
+The common boundary near the configured 25-minute job limit strongly supports
+overall time-budget pressure: unit, browser, container and preview steps alone
+occupied 1,479 seconds and 1,483 seconds, leaving only 21 and 17 seconds for the
+remaining job work. Accessible GitHub API responses and complete logs do not
+independently identify the cancellation actor or reason. Timeout is therefore
+a strong inference from repeated timings, not an explicit GitHub diagnosis.
+
+Before implementation, the controller amended the finite scope to allow only
+`jobs.verify.timeout-minutes: 25 -> 30` in `.github/workflows/ci.yml`. Thirty
+minutes gives the measured full suite finite headroom for setup, final teardown
+and artifact publication. All jobs, required checks, test/step deadlines,
+assertions and failure handling remain unchanged. No successful CI result is
+inferred from this change: the new exact HEAD still needs its own full required
+CI, independent review and separately authorized closeout acceptance. Their
+final SHA, runs and results belong in the PR body or acceptance comment.
 
 ## State workflow and bounded diff
 
@@ -107,16 +154,18 @@ Connector result transcript is 5,216,653 bytes, SHA-256
 No handwritten state, replacement transport or validator change was used.
 
 The [scope manifest](../../tools/scopes/p1-chat-message-edit-closeout-001.json)
-allows exactly six paths, with five changes expected:
+originally allowed six paths for five changes. The controller's bounded CI
+amendment allows seven exact paths, with six changes and unchanged `max_files=6`:
 
 | Path | Delta |
 | --- | --- |
 | `docs/CHECKPOINTS.json` | Native helper added the accepted source checkpoint, total 30; all 29 existing checkpoint values remain intact |
 | `docs/PACKAGES.json` | Native helper completed `P1-CHAT-MESSAGE-EDIT-001` and recorded its checkpoint; other 65 packages intact, total 66 |
-| `docs/CURRENT.md` | Native rendering reflects the completed source package |
+| `docs/CURRENT.md` | Native rendering reflects the completed source package; 1,442 -> 1,448 bytes, a generated +6-byte change |
 | `docs/PLAN.json` | Included for workflow boundary review; byte-identical |
-| `tools/scopes/p1-chat-message-edit-closeout-001.json` | New finite closeout scope |
-| `docs/reviews/P1-CHAT-MESSAGE-EDIT-CLOSEOUT-001.md` | This closeout evidence report |
+| `tools/scopes/p1-chat-message-edit-closeout-001.json` | Finite closeout scope with an explicit single-scalar CI exception; tiny/high risk and six-file budget retained |
+| `docs/reviews/P1-CHAT-MESSAGE-EDIT-CLOSEOUT-001.md` | This closeout evidence report and cancellation/correction record |
+| `.github/workflows/ci.yml` | Only the Foundation verify job timeout changes from 25 to 30 minutes |
 
 Listing canonical state in the manifest grants no permission for manual edits.
 The registry did not gain a closeout product package. Canonical lineage,
@@ -142,11 +191,20 @@ local trees. The introduction object's sole parent is source
 parents are `ca1b06a0b11df66c089ab736c5a6999d4263abf8` and accepted main
 `0786af09bda5603601d90cde6e4f5f49e5f3b24c`. The state branch had not been
 published when these objects were checked. The final branch HEAD is recorded
-separately in PR evidence after the bounded metadata commit.
+separately in PR evidence after the bounded metadata and CI correction commits.
 
 This chain preserves first-introduction provenance and makes accepted main an
 ancestor of closeout HEAD. The checkpoint introduction must not be squashed or
 rebased away.
+
+The original metadata commit published HEAD
+`c6b1608782454c5e633b79ea9e3d04e2545c0e8b`. The correction is prepared on that
+HEAD for an append commit, preserving the native introduction and ordinary
+integration commits above. It changes only the workflow scalar, scope manifest
+and this report. All four canonical state files remain byte-identical to that
+published HEAD; the original 40-request native transition proof and immutable
+source checkpoint are not recreated or replaced. The corrected publication
+SHA is deliberately not predicted here.
 
 On the isolated state branch, `project_state.py show` returned exit 0 and the
 completed package. `project_state.py verify` returned the expected exit 2:
@@ -166,7 +224,8 @@ scope or required CI gates.
 - `OBSERVABLE_SEMANTICS_CHANGED=NO`.
 - `OWNER_BOUNDARY_CHANGED=NO`.
 - `DONOR_RESEARCH=NOT_REQUIRED`; `DONOR_SHA=NOT_REQUIRED`.
-- `NEW_DECISIONS_REQUIRED=NONE` for this bounded metadata task.
+- `NEW_DECISIONS_REQUIRED=NONE` for product behavior; the controller approved
+  the explicit bounded CI scope correction before implementation.
 
 The accepted implementation and existing state lifecycle owners fully specify
 this closeout. It adds no product, persistence, API, UI, security or runtime
@@ -174,11 +233,14 @@ semantics and reuses no donor code. The context query `project state closeout`
 did not resolve; the narrow fallback used the documented owners in
 `docs/INDEX.md` and `docs/PROJECT_STATE_TRANSPORT.md`. No context route was added.
 
-Only the two listed metadata files are handwritten additions. They remain
-outside the default live context. No existing implementation, test, tool,
-dependency, root instruction or live context file grows. The canonical changes
-belong exclusively to the native workflow. High risk reflects state acceptance
-and provenance, so independent review and full required CI remain mandatory.
+The two listed metadata files are handwritten additions outside the default
+live context. The existing workflow changes one scalar without byte or line
+growth. No product implementation, test, tool, dependency or root instruction
+grows. Native `CURRENT.md` rendering adds six bytes to the live entrypoint;
+the other canonical changes also belong exclusively to the native workflow.
+The correction adds no further canonical or context-route changes. High risk
+reflects state acceptance, provenance and the sensitive workflow path, so
+independent review and full required CI remain mandatory.
 
 ## Verification scope
 
@@ -187,13 +249,14 @@ state transport contract, maintenance rules and accepted Graph closeout pattern.
 The unmodified source checkout returned `PROJECT STATE OK` before any native
 closeout execution. That result applies only to the source branch.
 
-Staged validation used the unmodified `tools/check_change.py` helpers:
+The original metadata-stage validation used unmodified `tools/check_change.py` helpers:
 `validate_scope` with modern scope required and `validate_base` passed;
 `inspect` reported `scope_ok=true` for the two staged metadata paths, with
-no invalid, outside-scope or unapproved-sensitive path. The six allowed paths
-are distinct and contain no wildcard. All three local Markdown links resolve
-against the intended repository layout; both files are valid UTF-8 with a final
-newline and no trailing whitespace.
+no invalid, outside-scope or unapproved-sensitive path. Its six allowed paths
+were distinct and contained no wildcard. The three local Markdown links
+resolved against the intended repository layout; both metadata files were valid
+UTF-8 with a final newline and no trailing whitespace. Those results describe
+the original staged tree, not the later CI scope amendment.
 
 Those helper checks inspect staged metadata only. Generated-state preservation
 and local gates were separately performed by the controller and are recorded
@@ -202,7 +265,7 @@ Python 3.13.16, consistent with CI; the pinned development dependencies passed
 `pip check`. No source or contract edit was made to accommodate a local Python
 version difference.
 
-Final integrated five-path local checks, published HEAD, required closeout CI
+Final integrated six-path local checks, published HEAD, required closeout CI
 and independent review will be recorded in the PR body or acceptance comment,
 avoiding circular report edits after the head is frozen. None of those later
 results is inferred from the generated-state gates. This report does not grant
