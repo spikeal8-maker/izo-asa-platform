@@ -1,0 +1,34 @@
+{
+  "package_id": "P1-CHAT-MESSAGE-EDIT-CLOSEOUT-001",
+  "base": "0786af09bda5603601d90cde6e4f5f49e5f3b24c",
+  "scope_class": "tiny",
+  "risk": "high",
+  "independent_review_required": true,
+  "max_files": 6,
+  "allowed": [
+    "tools/scopes/p1-chat-message-edit-closeout-001.json",
+    "docs/reviews/P1-CHAT-MESSAGE-EDIT-CLOSEOUT-001.md",
+    ".github/workflows/ci.yml",
+    "docs/PLAN.json",
+    "docs/PACKAGES.json",
+    "docs/CURRENT.md",
+    "docs/CHECKPOINTS.json"
+  ],
+  "sensitive_approved": [
+    ".github/workflows/ci.yml",
+    "tools/scopes/p1-chat-message-edit-closeout-001.json",
+    "docs/PLAN.json",
+    "docs/PACKAGES.json",
+    "docs/CURRENT.md",
+    "docs/CHECKPOINTS.json"
+  ],
+  "non_goals": [
+    "No product, migration, API contract, test or tooling implementation changes",
+    "CI change is limited to Foundation verify job timeout 25 -> 30 minutes after two full runs cancelled near the 25-minute boundary during teardown after completed preview assertions; all jobs, checks, assertions, individual test/step timeouts and failure handling stay unchanged",
+    "No manual canonical state edits or changes to any of the 29 existing checkpoints or source acceptance evidence",
+    "No transfer of PR #275 waiver or merge authorization to the separate closeout PR",
+    "No closeout PR merge without separate required authority, independent review and successful CI",
+    "No successor selection, activation or implementation in this closeout",
+    "No production deployment or real paid model calls"
+  ]
+}

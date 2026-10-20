@@ -292,6 +292,25 @@
         "Review Source": 37985020823
       }
     },
+    "P1-CHAT-MESSAGE-EDIT-001": {
+      "base_head": "a0e58dfd0d3daf3dbc027c94eb857fd9c8724c4e",
+      "independent_review": "unavailable",
+      "merged_source_commit": "0786af09bda5603601d90cde6e4f5f49e5f3b24c",
+      "owner_actor": "spikeal8-maker",
+      "owner_waiver": true,
+      "owner_waiver_reason": "Independent read-only technical review approved this exact source and tested merge tree, all required CI passed, and a separate GitHub reviewer actor is unavailable because the Codex review quota was reached. The owner authorizes an ordinary merge of PR #275.",
+      "owner_waiver_source": "57c95b6f993e9a3fb088d89210bff8cce2ab6636",
+      "source_head": "57c95b6f993e9a3fb088d89210bff8cce2ab6636",
+      "source_waiver_comment_id": 6299133595,
+      "tested_merge_tree": "0d9d965029cf6242d5a0011efd3d926fc0726f52",
+      "type": "pr_merge_tree",
+      "verified_pr": 275,
+      "workflows": {
+        "Dependency Security": 39325371383,
+        "Foundation CI": 39325371229,
+        "Review Source": 39325371312
+      }
+    },
     "P1-CHAT-RENDERER-GFM-001": {
       "base_head": "7762313b4e25fc0b57ac84f7223ec05105693861",
       "independent_review": "unavailable",

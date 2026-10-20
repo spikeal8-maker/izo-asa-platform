@@ -420,12 +420,13 @@
       "status": "technical_pass"
     },
     "P1-CHAT-MESSAGE-EDIT-001": {
+      "checkpoint": "P1-CHAT-MESSAGE-EDIT-001",
       "decides_next": true,
       "depends_on": [
         "P1-CONVERSATION-GRAPH-001"
       ],
       "goal": "Edit a sent user message into a preserved child conversation branch in the existing Chat domain; persist and switch branches, freeze selected-branch context, and handle UUID replay, concurrent commands, stale HTTP/SSE and desktop/mobile interactions safely.",
-      "status": "active"
+      "status": "complete"
     },
     "P1-CHAT-RENDERER-GFM-001": {
       "checkpoint": "P1-CHAT-RENDERER-GFM-001",
