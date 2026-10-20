@@ -71,8 +71,8 @@ def test_migration_is_static_and_live_acceptance_is_wired():
     assert workflow.index('tools/media_acceptance.py after') > workflow.index('docker compose up --wait')
     assert 'IZO_MEDIA_ACCEPTANCE=isolated' in workflow and 'umask 077' in workflow
     assert workflow.count('rm -f "$RUNNER_TEMP/izo-media-state.json"') == 2
-    assert 'Pillow==12.3.0' in (ROOT/'requirements.in').read_text(encoding="utf-8")
-    assert 'Pillow==12.3.0' in (ROOT/'requirements.lock').read_text(encoding="utf-8")
+    assert 'Pillow==13.0.0' in (ROOT/'requirements.in').read_text(encoding="utf-8")
+    assert 'Pillow==13.0.0' in (ROOT/'requirements.lock').read_text(encoding="utf-8")
     script = (ROOT/'tools/media_acceptance.py').read_text(encoding="utf-8")
     assert 'set_default(' not in script  # Fixtures cannot alter the existing baseline plan.
     assert 'DISABLE TRIGGER' not in script and 'TRUNCATE' not in script
