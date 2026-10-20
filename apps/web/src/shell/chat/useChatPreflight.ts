@@ -1,8 +1,11 @@
-import { apiRequest, ApiError, chatProviderProblem, type ChatPolicyView, type ChatRequestView } from '../../shared/api'
-import type { ChatDisplayPolicy, ChatModel } from './modelCatalog'
+import { apiRequest, ApiError, chatProviderProblem, type ChatPolicyView, type ChatRequestView, type CredentialView } from '../../shared/api'
+import { providerFor, type ChatDisplayPolicy, type ChatModel } from './modelCatalog'
 import { fetchOpenRouterCatalog } from './useChatCatalog'
 import { isId } from '../../shared/workspace-api'
 import type { ChatAttachmentDraft, ImageType, Prepared } from './chatAttachments'
+
+export const conflict = (reason: unknown) => reason instanceof ApiError && reason.code === 'graph_revision_conflict'
+export const knownRejection = (reason: unknown) => reason instanceof ApiError && reason.status < 500 && reason.status !== 408
 
 export class ImageProblem extends Error {
   constructor(public code: 'type' | 'size' | 'decode' | 'uncertain' | 'storage' | 'terminal' | 'other_tab' | 'locks') { super(code) }
@@ -103,12 +106,9 @@ export function forgetUnstartedOperations(accountId: string | undefined, drafts:
     save(accountId, items); releaseIfEmpty(accountId, items) })
 }
 
-export type PendingChatRequest = { id: string; threadId: string; payload: string }
-export function nextChatRequest(previous: PendingChatRequest | null, threadId: string,
-  text: string, model: string, attachmentIds: string[]): PendingChatRequest | null {
-  const payload = JSON.stringify([text, model, attachmentIds])
-  if (previous && (previous.threadId !== threadId || previous.payload !== payload)) return null
-  return previous ?? { id: crypto.randomUUID(), threadId, payload }
+export function availableChatModel(policy: ChatDisplayPolicy | null, credentials: CredentialView[], id: string) {
+  const model = policy?.models.find(item => item.id === id)
+  return model && credentials.some(item => item.provider === providerFor(model) && item.verified) ? model : undefined
 }
 
 /** Recheck server-owned price and model capabilities immediately before admission. */
@@ -140,7 +140,7 @@ export async function chatPreflight(policy: ChatDisplayPolicy | null, model: Cha
 /** Exact request-ID replay is the only safe path after uncertain Chat admission. */
 export async function admitChatRequest(threadId: string, requestId: string, text: string,
   model: ChatModel, attachmentIds: string[], csrf: string, policy: ChatDisplayPolicy | null,
-  replay: boolean): Promise<ChatRequestView | null> {
+  replay: boolean, fence?: { branch_id: string; expected_revision: number }): Promise<ChatRequestView | null> {
   if (replay) {
     try { return await apiRequest<ChatRequestView>(`/api/v1/chat/requests/${requestId}`, { timeoutMs: 10000 }) }
     catch (reason) { if (!(reason instanceof ApiError && reason.status === 404)) return null }
@@ -151,7 +151,7 @@ export async function admitChatRequest(threadId: string, requestId: string, text
   }
   try {
     return await apiRequest<ChatRequestView>(`/api/v1/chat/threads/${threadId}/requests`, {
-      method: 'POST', csrf, data: { request_id: requestId, text, model: model.id, attachment_ids: attachmentIds },
+      method: 'POST', csrf, data: { request_id: requestId, text, model: model.id, attachment_ids: attachmentIds, ...fence },
       timeoutMs: 20000,
     })
   } catch (reason) {

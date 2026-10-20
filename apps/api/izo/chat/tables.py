@@ -123,6 +123,6 @@ sa.Index("ux_chat_message_graph_request", messages.c.id, messages.c.thread_id,
 
 from .graph_tables import register_graph
 
-graphs, branches, turns, attempts, selections, contexts = register_graph(metadata)
+graphs, branches, turns, attempts, selections, contexts, branch_turns, branch_attempts = register_graph(metadata)
 TABLES = (connections, threads, requests, messages, attachments, limits,
-          branches, graphs, turns, attempts, selections, contexts)
+          branches, graphs, turns, branch_turns, attempts, branch_attempts, selections, contexts)

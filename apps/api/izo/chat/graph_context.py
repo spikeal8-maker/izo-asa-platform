@@ -31,14 +31,18 @@ def attachment_facts(rows):
 
 
 def freeze_context(service, conn, request_row, turn, kind, provenance="admission"):
+    branch_id = conn.execute(sa.select(t.attempts.c.branch_id).where(
+        t.attempts.c.id == request_row["id"])).scalar_one()
     # Only complete selected turn groups are eligible. The current turn's old
     # attempt and all later turns are deliberately outside this predicate.
     prior = conn.execute(sa.select(t.turns.c.user_message_id,
         t.attempts.c.assistant_message_id).select_from(t.turns.join(
-        t.selections, t.selections.c.turn_id == t.turns.c.id).join(
+        t.branch_turns, t.branch_turns.c.turn_id == t.turns.c.id).join(
+        t.selections, sa.and_(t.selections.c.turn_id == t.turns.c.id,
+                             t.selections.c.branch_id == t.branch_turns.c.branch_id)).join(
         t.attempts, t.attempts.c.id == t.selections.c.attempt_id).join(
         t.requests, t.requests.c.id == t.attempts.c.id)).where(
-        t.turns.c.branch_id == turn["branch_id"],
+        t.branch_turns.c.branch_id == branch_id,
         t.turns.c.thread_id == turn["thread_id"],
         t.turns.c.turn_sequence < turn["turn_sequence"],
         t.requests.c.state == "completed").order_by(
@@ -81,7 +85,7 @@ def freeze_context(service, conn, request_row, turn, kind, provenance="admission
                      for row in chosen],
     }
     values = dict(thread_id=turn["thread_id"], turn_id=turn["id"],
-                  branch_id=turn["branch_id"], kind=kind, provenance=provenance,
+                  branch_id=branch_id, kind=kind, provenance=provenance,
                   revision=graph_state(conn, turn["thread_id"])["revision"],
                   snapshot=snapshot, digest=digest(snapshot))
     if provenance == "admission":

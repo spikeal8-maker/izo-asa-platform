@@ -2,13 +2,14 @@
 from typing import Literal
 from uuid import UUID
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
 
-from .schemas import MessageView, RequestView, StrictInput, ThreadView
+from .schemas import MAX_INPUT_CHARS, MessageView, RequestCreate, RequestView, StrictInput, ThreadView
 from .schemas import ThreadDetail as PhysicalThreadDetail
 
 GRAPH_TURN_LIMIT = 50
 GRAPH_ATTEMPT_LIMIT = 20
+BRANCH_PAGE_LIMIT = 50
 
 
 class ThreadDetail(PhysicalThreadDetail):
@@ -65,6 +66,7 @@ class GraphAttemptPage(GraphTurnState):
 
 
 class GraphRequestAccepted(GraphTurnState):
+    execution_branch_id: UUID
     request: RequestView
 
 
@@ -79,3 +81,44 @@ class GraphSelection(StrictInput):
     branch_id: UUID
     attempt_id: UUID
     expected_revision: int = Field(ge=0, le=9223372036854775807)
+
+
+class BranchView(BaseModel):
+    id: UUID
+    parent_branch_id: UUID | None
+    fork_from_turn_id: UUID | None
+    branch_ordinal: int = Field(ge=1, le=9223372036854775807)
+    created_at: int
+
+
+class BranchPage(BaseModel):
+    thread_id: UUID
+    active_branch_id: UUID
+    active_branch: BranchView
+    revision: int
+    branches: list[BranchView]
+    next_before_branch_ordinal: int | None
+
+
+class BranchEdit(GraphRegenerate):
+    text: str = Field(max_length=MAX_INPUT_CHARS)
+
+    @field_validator("text")
+    @classmethod
+    def clean_text(cls, value: str) -> str:
+        return RequestCreate.clean_text(value)
+
+
+class BranchSelection(StrictInput):
+    branch_id: UUID
+    target_branch_id: UUID
+    expected_revision: int = Field(ge=0, le=9223372036854775807)
+
+
+class BranchEditView(BaseModel):
+    thread_id: UUID
+    created_branch: BranchView
+    turn_id: UUID
+    request: RequestView
+    active_branch_id: UUID
+    revision: int

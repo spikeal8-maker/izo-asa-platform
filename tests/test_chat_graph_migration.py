@@ -23,27 +23,28 @@ def migration(name="0018_chat_conversation_graph"):
 
 
 def old_rows(conn):
-    # Graph adds only indexes to these pre-existing tables. Values include
-    # original IDs, message bytes, manual-title flags and private attachments.
+    # Physical IDs, message bytes, manual titles and private attachments.
     tables = (t.connections, t.threads, t.requests, t.messages, t.attachments, t.limits)
     return {table.name: [dict(row) for row in conn.execute(sa.select(table)
             .order_by(*table.primary_key.columns)).mappings()] for table in tables}
 
 
 def upgrade_legacy(service):
+    from test_chat_branches_migration import drop_graph_tables, migration_connection
     module = migration()
     assert module.down_revision == "0017_chat_manual_title"
-    with service.engine.begin() as conn:
+    with migration_connection(service) as conn:
         before = old_rows(conn)
-        # Restore the precise pre-0018 relational shape while retaining the
-        # admitted legacy rows; no original table or data is dropped/recreated.
-        for table in (t.contexts, t.selections, t.attempts, t.turns, t.graphs, t.branches):
-            table.drop(conn)
+        # Recreate only Graph; all original physical rows must survive both upgrades.
+        drop_graph_tables(conn)
         for name in ("ux_chat_request_graph_identity", "ux_chat_message_graph_role",
                      "ux_chat_message_graph_request"):
             conn.exec_driver_sql(f"DROP INDEX {name}")
         module.op = Operations(MigrationContext.configure(conn))
         module.upgrade()
+        branch_upgrade = migration("0019_chat_message_branches")
+        branch_upgrade.op = module.op
+        branch_upgrade.upgrade()
         assert old_rows(conn) == before
     return module
 
@@ -235,6 +236,8 @@ def run_postgres():
             check(environment)
         print("POSTGRES_PASS " + name, flush=True)
     print(f"POSTGRES_GRAPH_PASS cases={len(cases)}", flush=True)
+    from test_chat_branches_postgres import run_postgres as run_branches
+    run_branches()
 
 
 if __name__ == "__main__":

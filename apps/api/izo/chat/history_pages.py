@@ -1,4 +1,4 @@
-"""Account-owned, sequence-keyed reads of durable Chat messages."""
+"""Account-owned physical messages and branch-scoped Graph history reads."""
 from uuid import UUID
 
 import sqlalchemy as sa
@@ -6,6 +6,9 @@ import sqlalchemy as sa
 from . import tables as t
 from .credentials import ChatError
 from .graph_selection import attempt_views as _attempt_views
+from .graph_selection import (
+    active_turn, fenced_graph, graph_turn_state, owned_thread, visible_attempts,
+)
 from .schemas import MESSAGE_PAGE_LIMIT, MessagePage, ThreadDetail
 
 
@@ -43,14 +46,15 @@ def older_messages(service, raw, thread_id: UUID, before_sequence: int) -> Messa
     return MessagePage(messages=messages, next_before_sequence=cursor)
 
 
-def _turn_views(service, conn, account_id, thread_id, turns):
+def _turn_views(service, conn, account_id, thread_id, turns, branch_id):
     from .graph_schemas import GraphTurnView
     if not turns:
         return []
     turn_ids = [turn["id"] for turn in turns]
     selected_attempt = t.attempts.alias("selected_attempt")
     selected = conn.execute(sa.select(t.selections.c.turn_id,
-        t.selections.c.attempt_id).where(t.selections.c.turn_id.in_(turn_ids))).all()
+        t.selections.c.attempt_id).where(t.selections.c.turn_id.in_(turn_ids),
+        t.selections.c.branch_id == branch_id)).all()
     selected_ids = dict(selected)
     complete = t.requests.c.state == "completed"
     selected_ordinal = selected_attempt.c.ordinal
@@ -65,15 +69,16 @@ def _turn_views(service, conn, account_id, thread_id, turns):
                             t.attempts.c.ordinal))).label("previous"),
         sa.func.min(sa.case((sa.and_(complete, t.attempts.c.ordinal > selected_ordinal),
                             t.attempts.c.ordinal))).label("next")
-    ).select_from(t.attempts.join(t.requests, t.requests.c.id == t.attempts.c.id)
-        .outerjoin(t.selections, t.selections.c.turn_id == t.attempts.c.turn_id)
+    ).select_from(visible_attempts(branch_id).join(t.requests, t.requests.c.id == t.attempts.c.id)
+        .outerjoin(t.selections, sa.and_(t.selections.c.turn_id == t.attempts.c.turn_id,
+                                       t.selections.c.branch_id == branch_id))
         .outerjoin(selected_attempt, selected_attempt.c.id == t.selections.c.attempt_id))
-        .where(t.attempts.c.turn_id.in_(turn_ids)).group_by(t.attempts.c.turn_id)).mappings().all()
+        .where(t.attempts.c.turn_id.in_(turn_ids), t.attempts.c.thread_id == thread_id).group_by(t.attempts.c.turn_id)).mappings().all()
     stats = {row["turn_id"]: row for row in rows}
     ordinals = [(row["turn_id"], row[key]) for row in rows
                 for key in ("latest", "previous", "next") if row[key] is not None]
     neighbors = conn.execute(sa.select(t.attempts.c.turn_id, t.attempts.c.ordinal,
-        t.attempts.c.id).where(sa.tuple_(t.attempts.c.turn_id, t.attempts.c.ordinal)
+        t.attempts.c.id).select_from(visible_attempts(branch_id)).where(sa.tuple_(t.attempts.c.turn_id, t.attempts.c.ordinal)
         .in_(ordinals))).all() if ordinals else []
     by_ordinal = {(row.turn_id, row.ordinal): row.id for row in neighbors}
     latest_ids = {turn_id: by_ordinal[(turn_id, row["latest"])] for turn_id, row in stats.items()}
@@ -99,54 +104,49 @@ def _turn_views(service, conn, account_id, thread_id, turns):
             next_completed_attempt_id=by_ordinal.get((identity, row.get("next")))))
     return output
 
-
-def graph_turn_state(service, conn, account_id, thread_id, turn):
-    from .graph_schemas import GraphTurnState
-    from .graph_selection import graph_state
-    graph = graph_state(conn, thread_id)
-    return GraphTurnState(thread_id=thread_id, active_branch_id=graph["active_branch_id"],
-        revision=graph["revision"], turn=_turn_views(service, conn, account_id, thread_id, [turn])[0])
-
-
-def graph_page(service, raw, thread_id, before_turn_sequence=None):
-    from .graph_schemas import GRAPH_TURN_LIMIT, GraphPage
-    from .graph_selection import graph_state, owned_thread
-    from .request_state import UNKNOWN_PAID_OUTCOME
-    # The owned Thread lock makes revision, layout and completed-selection
-    # projection one coherent snapshot under PostgreSQL READ COMMITTED.
+def graph_page(service, raw, thread_id, before_turn_sequence=None, branch_id=None):
     with service.engine.begin() as conn:
         account, thread = owned_thread(service, conn, raw, thread_id)
-        graph = graph_state(conn, thread_id)
-        query = sa.select(t.turns).where(t.turns.c.thread_id == thread_id,
-            t.turns.c.branch_id == graph["active_branch_id"])
-        if before_turn_sequence is not None:
-            query = query.where(t.turns.c.turn_sequence < before_turn_sequence)
-        rows = conn.execute(query.order_by(t.turns.c.turn_sequence.desc())
-            .limit(GRAPH_TURN_LIMIT + 1)).mappings().all()
-        chosen = list(reversed(rows[:GRAPH_TURN_LIMIT]))
-        active_id = conn.execute(sa.select(t.requests.c.id).where(
-            t.requests.c.thread_id == thread_id,
-            t.requests.c.state.in_(("pending", "streaming")))).scalar_one_or_none()
-        active = _attempt_views(service, conn, thread_id, [active_id]).get(active_id) if active_id else None
-        if active and active.state not in {"pending", "streaming"}:
-            active = None
-        unknown = conn.execute(sa.select(t.requests.c.id).where(
-            t.requests.c.thread_id == thread_id, t.requests.c.error_code == UNKNOWN_PAID_OUTCOME,
-            t.requests.c.state.not_in(("pending", "streaming"))).order_by(
-            t.requests.c.created_at, t.requests.c.id).limit(1)).scalar_one_or_none()
-        return GraphPage(thread=service._thread_view(thread), active_branch_id=graph["active_branch_id"],
-            revision=graph["revision"], turns=_turn_views(service, conn, account["id"], thread_id, chosen),
-            next_before_turn_sequence=chosen[0]["turn_sequence"] if len(rows) > GRAPH_TURN_LIMIT else None,
-            active_attempt=active, unknown_request_id=unknown)
+        graph = fenced_graph(conn, thread_id, branch_id)
+        return project_page(service, conn, account["id"], thread, graph, before_turn_sequence)
 
+def project_page(service, conn, account_id, thread, graph, before_turn_sequence=None):
+    from .graph_schemas import GRAPH_TURN_LIMIT, GraphPage
+    from .request_state import UNKNOWN_PAID_OUTCOME
+    thread_id, branch_id = thread["id"], graph["active_branch_id"]
+    query = sa.select(t.turns).join(t.branch_turns, t.branch_turns.c.turn_id == t.turns.c.id).where(
+        t.turns.c.thread_id == thread_id, t.branch_turns.c.branch_id == branch_id)
+    if before_turn_sequence is not None:
+        query = query.where(t.turns.c.turn_sequence < before_turn_sequence)
+    rows = conn.execute(query.order_by(t.turns.c.turn_sequence.desc())
+        .limit(GRAPH_TURN_LIMIT + 1)).mappings().all()
+    chosen = list(reversed(rows[:GRAPH_TURN_LIMIT]))
+    active_id = conn.execute(sa.select(t.requests.c.id).where(
+        t.requests.c.thread_id == thread_id,
+        t.requests.c.state.in_(("pending", "streaming")))).scalar_one_or_none()
+    active = _attempt_views(service, conn, thread_id, [active_id]).get(active_id) if active_id else None
+    if active and active.state not in {"pending", "streaming"}:
+        active = None
+    # UNKNOWN is a durable whole-thread execution barrier, including requests
+    # absent from this branch or any currently loaded turn page.
+    unknown = conn.execute(sa.select(t.requests.c.id).where(
+        t.requests.c.thread_id == thread_id, t.requests.c.error_code == UNKNOWN_PAID_OUTCOME,
+        t.requests.c.state.not_in(("pending", "streaming"))).order_by(
+        t.requests.c.created_at, t.requests.c.id).limit(1)).scalar_one_or_none()
+    return GraphPage(thread=service._thread_view(thread), active_branch_id=branch_id,
+        revision=graph["revision"], turns=_turn_views(service, conn, account_id, thread_id, chosen, branch_id),
+        next_before_turn_sequence=chosen[0]["turn_sequence"] if len(rows) > GRAPH_TURN_LIMIT else None,
+        active_attempt=active, unknown_request_id=unknown)
 
-def attempt_page(service, raw, thread_id, turn_id, before_ordinal=None):
+def attempt_page(service, raw, thread_id, turn_id, before_ordinal=None, branch_id=None):
     from .graph_schemas import GRAPH_ATTEMPT_LIMIT, GraphAttemptPage
-    from .graph_selection import active_turn, graph_state, owned_thread
     with service.engine.begin() as conn:
         account, _ = owned_thread(service, conn, raw, thread_id)
-        turn = active_turn(conn, thread_id, turn_id, graph_state(conn, thread_id))
-        query = sa.select(t.attempts.c.id, t.attempts.c.ordinal).where(t.attempts.c.turn_id == turn_id)
+        graph = fenced_graph(conn, thread_id, branch_id)
+        turn = active_turn(conn, thread_id, turn_id, graph)
+        query = sa.select(t.attempts.c.id, t.attempts.c.ordinal).select_from(
+            visible_attempts(graph["active_branch_id"])).where(t.attempts.c.turn_id == turn_id,
+                t.attempts.c.thread_id == thread_id)
         if before_ordinal is not None:
             query = query.where(t.attempts.c.ordinal < before_ordinal)
         rows = conn.execute(query.order_by(t.attempts.c.ordinal.desc())

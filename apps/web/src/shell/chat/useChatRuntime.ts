@@ -5,10 +5,10 @@ type AuthView, type ChatPolicyView, type ChatRequestView, type CredentialListVie
 type ThreadView,
 } from '../../shared/api'
 import { useChatCatalog, useCredentialSync } from './useChatCatalog'
-import { providerFor } from './modelCatalog'
 import { chatImageProblem, chatProblem, forgetChatOperations, resolveChatAttachments, type ChatAttachmentDraft } from './chatAttachments'
 import { beginChatMedia, endChatMedia } from './AttachmentControl'
-import { admitChatRequest, nextChatRequest, PreflightProblem, type PendingChatRequest } from './useChatPreflight'
+import { admitChatRequest, availableChatModel, PreflightProblem } from './useChatPreflight'
+import { nextChatRequest, type PendingChatRequest } from './useConversationBranches'
 import { useThreadSelection } from './useThreadSelection'
 import { useThreadHistory } from './useThreadHistory'
 import { streamChatRequest } from './streamChatRequest'
@@ -63,6 +63,7 @@ setBusy, setActiveRequestId, setMessages, setError, idle, loadThread, refreshHis
 }, [loadThread, refreshHistory, graph.isTerminal])
 const attempts = useAssistantAttempts({ auth, threadId: currentChatId, busy,
 pendingAdmission: Boolean(pendingRequest.current), graph, selection, selected, idle, stream: streamRequest,
+reopen: () => currentChatId ? openThread(currentChatId, currentChatId) : Promise.resolve(false),
 start: id => { setBusy(true); setActiveRequestId(id) } })
 useEffect(() => {
 if (!auth || busy || !currentChatId) return
@@ -84,24 +85,23 @@ return () => controller.abort()
 }, [auth?.account.id, busy, currentChatId, messages, openingThread, loadThread, streamRequest,
 graph.value?.active_attempt?.request_id])
 function newChat() {
-if (busy || attempts.pendingAdmission) return
+if (attempts.navigationBlocked) return
 resetSelection()
 setCurrentChatId(null); setMessages([]); setError('')
 }
-const openChat = (chat: ThreadView) => busy || attempts.pendingAdmission ? Promise.resolve(false) : openThread(chat.id, currentChatId)
+const openChat = (chat: ThreadView) => attempts.navigationBlocked
+  ? Promise.resolve(false) : openThread(chat.id, currentChatId)
 async function send(text: string, selectedModelId: string, attachments: ChatAttachmentDraft[] = []): Promise<boolean> {
-const selectedModel = policy?.models.find(item => item.id === selectedModelId)
-const selectedCredential = selectedModel
-  ? credentials.find(item => item.provider === providerFor(selectedModel)) : null
+const selectedModel = availableChatModel(policy, credentials, selectedModelId)
 if (!auth || !selectedModel || busy || attempts.pendingAdmission || attempts.saving
-  || graph.value?.unknown_request_id || !selectedCredential?.verified
+  || !pendingRequest.current && (graph.value && !graph.coherent.current || graph.value?.unknown_request_id)
   || !canSendTo(currentChatId, auth.account.id)) return false
 setError(''); setBusy(true)
 beginChatMedia(auth.account.id)
 try {
 let attachmentIds: string[]
 try { attachmentIds = await resolveChatAttachments(attachments, auth, policy?.max_image_bytes ?? 0) }
-catch (reason) { setBusy(false); setError(chatImageProblem(reason)); return false }
+catch (reason) { idle(); setError(chatImageProblem(reason)); return false }
 let threadId = currentChatId
 try {
 if (!threadId) {
@@ -110,13 +110,15 @@ method: 'POST', csrf: auth.csrf_token, data: { title: null },
 })
 threadId = thread.id; setCurrentChatId(threadId)
 selectThread(threadId)
+await loadThread(threadId)
 }
 } catch (reason) {
-setBusy(false); setError(chatProblem(reason)); return false
+idle(); setError(chatProblem(reason)); return false
 }
-const next = nextChatRequest(pendingRequest.current, threadId, text, selectedModel.id, attachmentIds)
+const next = nextChatRequest(pendingRequest.current, threadId, text, selectedModel.id, attachmentIds,
+  graph.current.current)
 if (!next) {
-setBusy(false); setError('Проверьте предыдущий запрос.'); return false
+idle(); setError('Проверьте предыдущий запрос.'); return false
 }
 const requestId = next.id
 const replay = next === pendingRequest.current
@@ -125,7 +127,7 @@ setActiveRequestId(requestId)
 let accepted: ChatRequestView
 try {
 const result = await admitChatRequest(threadId, requestId, text, selectedModel,
-  attachmentIds, auth.csrf_token, policy, replay)
+  attachmentIds, auth.csrf_token, policy, replay, next.fence)
 if (!result) {
 idle()
 setError('Приём неизвестен. Проверьте с тем же ID запроса.')
@@ -137,13 +139,18 @@ await forgetChatOperations(auth.account.id, attachments).catch(() => {})
 } catch (reason) {
 if (reason instanceof ApiError || reason instanceof PreflightProblem && !replay) pendingRequest.current = null
 if (reason instanceof PreflightProblem) await refreshPolicy().catch(() => {})
+if (reason instanceof ApiError && reason.code === 'graph_revision_conflict') {
+  graph.invalidate(); await attempts.branches.retry()
+}
 idle(); setError(chatProblem(reason)); return false
 }
 try { await loadThread(threadId); await refreshHistory() }
 catch (reason) {
 idle(); setError(chatProblem(reason)); return true
 }
-void streamRequest(accepted.id, threadId)
+if (!graph.current.current || graph.current.current.active_attempt?.request_id === accepted.id)
+  void streamRequest(accepted.id, threadId)
+else idle()
 return true
 } finally { endChatMedia(auth.account.id) }
 }
@@ -176,14 +183,16 @@ streamController.current?.abort()
 setCredential(value); idle()
 }
 return {
-policy, catalogError, credentials, history, historyCursor, loadingHistory, loadMoreHistory,
-renamingThreadId,
-renameChat: (id: string, title: string) => auth ? renameThread(id, title, auth.csrf_token) : Promise.resolve(false),
-messages, currentChatId, openingThread, busy, activeRequestId,
+policy, catalogError, credentials,
+sidebar: { history, historyCursor, loadingHistory, renamingThreadId, currentChatId, busy,
+onLoadMoreHistory: () => void loadMoreHistory(),
+onRenameChat: (id: string, title: string) => auth ? renameThread(id, title, auth.csrf_token) : Promise.resolve(false) },
+messages, openingThread, activeRequestId,
 loadOlder: (beforePrepend: () => void) => currentChatId && loadOlder(currentChatId, beforePrepend),
 olderCursor, loadingOlder,
 pendingAdmission: Boolean(pendingRequest.current) || attempts.pendingAdmission,
-attempts, beforeGraphChange: graph.beforeChange,
+attempts, branches: attempts.branches, executionBlocked: attempts.executionBlocked,
+beforeGraphChange: graph.beforeChange,
 error, setError, refreshPolicy, setCredential, credentialDisabled,
 newChat, openChat, send, stop,
 }
