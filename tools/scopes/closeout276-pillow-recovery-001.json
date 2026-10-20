@@ -4,24 +4,29 @@
   "scope_class": "tiny",
   "risk": "high",
   "independent_review_required": true,
-  "max_files": 5,
+  "max_files": 7,
+  "scope_expansion_reason": "PR #277 exact source 9b958ec0a485355474427e38bad288a1afb9c983 passed the Python dependency audit, then required npm audit run 39512951559 exposed HIGH GHSA-587h-7wmj-h5pm in Vite 8.2.2. Controller approves two additional package files before implementation to apply the official same-minor patched release 8.2.4; no CI policy or canonical state change.",
   "allowed": [
     "requirements.in",
     "requirements.lock",
     "tests/test_media_boundaries.py",
+    "apps/web/package.json",
+    "apps/web/package-lock.json",
     "tools/scopes/closeout276-pillow-recovery-001.json",
     "docs/reviews/CLOSEOUT276-PILLOW-RECOVERY-001.md"
   ],
   "sensitive_approved": [
     "requirements.in",
     "requirements.lock",
+    "apps/web/package.json",
+    "apps/web/package-lock.json",
     "tools/scopes/closeout276-pillow-recovery-001.json"
   ],
   "non_goals": [
     "No manual canonical state changes, no new package activation, and no change to any accepted checkpoint or completed status",
     "No changes to application image formats, runtime image limits, codec behavior, media ownership, or paid providers",
     "No vulnerability ignore, audit threshold change, CI assertion change, retry or timeout change",
-    "No unrelated dependency upgrades; replace only Pillow 12.3.0 with the official fixed 13.0.0 release and update the exact pinned-version assertion",
+    "No unrelated dependency upgrades; only Pillow 12.3.0 -> 13.0.0 with its exact pinned-version assertions and Vite 8.2.2 -> 8.2.4 with the minimum required lockfile dependency closure",
     "No merge or deployment without separate owner authorization for the repair PR exact head"
   ]
 }

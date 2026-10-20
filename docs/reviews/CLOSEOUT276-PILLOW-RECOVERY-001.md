@@ -2,15 +2,20 @@
 
 ## Purpose and boundary
 
-Repair the runtime dependency audit after accepted PR #276 without changing
+Repair the dependency audits after accepted PR #276 without changing
 the completed `P1-CHAT-MESSAGE-EDIT-001` package or activating its successor.
 This task identifier is not a new canonical package.
 
-Base: `a6a95ef66f8cf92b65588fa07c1f7b3557b314dc`.
-Branch: `fix/pillow-security-closeout-276`.
+Cumulative PR base: `a6a95ef66f8cf92b65588fa07c1f7b3557b314dc`.
+PR branch: `fix/pillow-security-closeout-276`.
+The bounded Vite recovery starts from published PR #277 source
+`9b958ec0a485355474427e38bad288a1afb9c983`, on isolated local branch
+`fix/vite-security-closeout-276`; it does not replace the cumulative base.
 The controller owns the finite
 [scope manifest](../../tools/scopes/closeout276-pillow-recovery-001.json):
-five allowed paths, `tiny`, `risk=high`, independent review required.
+seven allowed paths, `tiny`, `risk=high`, independent review required.
+The controller expanded the manifest before Vite implementation in response
+to the actual required security failure documented below.
 
 Actual-main [Dependency Security run 39510622309](https://github.com/spikeal8-maker/izo-asa-platform/actions/runs/39510622309)
 failed in the pinned Python runtime audit. Its JSON identified eight findings
@@ -34,7 +39,7 @@ and [upstream release list](https://github.com/python-pillow/Pillow/releases)
 confirm the released 2026-10-16 version. The repair uses that release, not an
 unreleased branch or an advisory ignore.
 
-## Source audit and implementation
+## Pillow source audit and implementation
 
 `SOURCE_AUDIT_MODE: FULL` for the dependency security repair, confined to the
 affected existing owners. `OBSERVABLE_SEMANTICS_CHANGED=NO` and
@@ -145,15 +150,101 @@ environment, installation and audit receipts in
 `/tmp/izo-asa-pillow-recovery-evidence`. Independent smoke evidence is in
 `/tmp/izo-asa-pillow-recovery-review`.
 
-Full required remote CI is **PENDING** until publication; this targeted local
-suite does not substitute for it.
+These Pillow results remain historical evidence for the unchanged Python files.
+The Vite delta does not repeat or relabel them as a new full-suite run.
+
+## Vite recovery after the first PR #277 CI
+
+For exact source `9b958ec0a485355474427e38bad288a1afb9c983`,
+[Dependency Security run 39512951559](https://github.com/spikeal8-maker/izo-asa-platform/actions/runs/39512951559)
+passed the Python audit with 33 dependencies and zero findings, then failed
+the npm audit with exit 1. Its 183-dependency report identified one aggregate
+HIGH Vite finding, comprising
+[GHSA-587h-7wmj-h5pm](https://github.com/advisories/GHSA-587h-7wmj-h5pm)
+and the two moderate advisories
+[GHSA-698v-4r3x-3vcv](https://github.com/advisories/GHSA-698v-4r3x-3vcv) and
+[GHSA-r825-w8mm-5pxw](https://github.com/advisories/GHSA-r825-w8mm-5pxw).
+Each advisory lists 8.2.4 as patched for the affected 8.2 line. The official
+[Vite 8.2.4 release](https://github.com/vitejs/vite/releases/tag/v8.2.4)
+is dated 2026-10-06. This same-minor patch preserves every other dependency
+version; the audit's broader 8.3.4 suggestion was not applied.
+
+`SOURCE_AUDIT_MODE: FULL` remains bounded to dependency security owners:
+the exact package files, existing security tests, Vite/Playwright configuration
+and the required audit workflow. The unchanged `web.chat` route supplies the
+responsive acceptance spec, with 8,222 initial route bytes. No application
+donor, new product behavior, ownership or runtime configuration is introduced.
+
+Local execution uses Node 24.19.0 and an isolated npm 11.19.0, matching the
+CI npm version. The initial npm 11.9.0 diagnostic dropped ten existing `libc`
+constraints; that output was rejected. The controller authorized restoring
+only the two assigned package files to source `9b958ec0a485355474427e38bad288a1afb9c983`
+before using the matching resolver. Both raw outputs and deltas are retained.
+The final npm-generated lock has exactly two changed entries:
+
+| Lock entry | Change |
+| --- | --- |
+| Root package `""` | Exact `devDependencies.vite` pin 8.2.2 to 8.2.4 |
+| `node_modules/vite` | Version, official tarball URL and resolver-provided integrity for 8.2.4 |
+
+All other 182 entries, including all ten Linux `libc` restrictions, are
+identical. No transitive package changed. React, the React plugin, TypeScript
+and the existing js-yaml override are unchanged. The existing compact JSON
+format was restored with parsed equality to the raw npm 11.19.0 output;
+integrity was not edited manually. Final package-lock SHA-256:
+`4bb81d6189b423a4a7c04edebfc959062cf9805182195d2313f8cf324a94019a`.
+
+Commands below ran in `apps/web`; npm 11.19.0, its cache and `node_modules`
+were isolated from other worktrees:
+
+```sh
+vite_repair_npm=/tmp/izo-asa-pr277-vite-npm-tool/node_modules/npm/bin/npm-cli.js
+node "$vite_repair_npm" install --save-dev --save-exact vite@8.2.4 --package-lock-only --ignore-scripts --no-audit --no-fund --cache /tmp/izo-asa-pr277-vite-npm-cache
+node "$vite_repair_npm" ci --ignore-scripts --no-audit --no-fund --cache /tmp/izo-asa-pr277-vite-npm-cache
+NPM_CONFIG_CACHE=/tmp/izo-asa-pr277-vite-npm-cache node "$vite_repair_npm" audit --registry=https://registry.npmjs.org --include=dev --include=optional --include=peer --audit-level=high --json
+node --test security/dependencies.test.mjs
+node security/dependencies.test.mjs
+PATH=/tmp/izo-asa-pr277-vite-npm-tool/node_modules/.bin:$PATH NPM_CONFIG_CACHE=/tmp/izo-asa-pr277-vite-npm-cache node "$vite_repair_npm" run build
+```
+
+All commands above returned exit 0. `npm ci` installed 157 platform-applicable
+packages. The exact npm audit reported 183 total dependencies and zero findings
+at every severity: info, low, moderate, high and critical. Its JSON SHA-256 is
+`7d34e555ada87ba82c9bec5627f1ccab262514c1bc68c6c7cdd3ee270a20623f`.
+The exact CI test command reports one successful file in this local runner;
+direct execution of the same unchanged file additionally confirms all four
+named security cases: **4 passed, 0 failed, 0 skipped**. Build/typecheck passed
+with installed Vite 8.2.4. The generated TypeScript contract is an ignored build
+artifact; tracked contract sources remain unchanged. The build's 500 kB chunk
+warning remains visible; no warning threshold was changed.
+
+### Local browser limitation and required follow-up
+
+**LOCAL_BROWSER_BLOCKED_CDN / NOT_RUN:** the pinned Playwright 1.61.0 installer
+could not obtain Chromium v1228 / Chrome for Testing 149.0.7827.55. Its five
+normal download attempts returned invalid ZIP content. One bounded HEAD check
+of the same official URL returned HTTP 200 with `Content-Type: text/html` and
+`Content-Length: 195`. No browser/version fallback or further download loop
+was used. An independent local bind probe also demonstrated sandbox `EPERM`;
+it is environment evidence, not an application failure.
+
+The twelve selected `chat-sidebar.spec.ts` cases across `phone-small` and
+`laptop` were **not run**; no passed/skipped/flaky count is invented. The intended
+`--retries=0` local check remains unfulfilled. The controller requires the full
+unchanged remote viewport matrix, including these cases, after publication.
+Full new required CI is **PENDING**. The earlier Pillow-only review belongs to
+its historical source; it does not approve this expanded source.
+
+Vite receipts, raw resolver output, audit JSON, build/security logs and the
+browser download/HEAD diagnostics are retained in
+`/tmp/izo-asa-pr277-vite-evidence`.
 
 ## State and maintenance
 
 All four canonical state files remain byte-identical to the accepted base,
 including all 30 checkpoints. The completed package, source lineage and
 `next_package=NONE` are unchanged. `project_state.py verify` returned the
-expected exit 2 for the isolated repair branch versus canonical
+expected exit 2 for both isolated repair branches versus canonical
 `codex/p1-chat-message-edit-001`; this is not a PASS and was not suppressed.
 
 | Existing changed file | Bytes before / after | Lines before / after |
@@ -161,13 +252,15 @@ expected exit 2 for the isolated repair branch versus canonical
 | `requirements.in` | 185 / 185 | 10 / 10 |
 | `requirements.lock` | 655 / 655 | 34 / 34 |
 | `tests/test_media_boundaries.py` | 3,734 / 3,734 | 87 / 87 |
+| `apps/web/package.json` | 1,062 / 1,062 | 40 / 40 |
+| `apps/web/package-lock.json` | 79,950 / 79,950 | 189 / 189 |
 
 The handwritten test uses less than one quarter of its 16 KB byte limit and
 stays 263 lines below its 350-line hard limit.
 No existing owner or live document grows; no route, dependency owner, runtime
 API or local live-doc file is added. This report stays in `docs/reviews`, outside
 default live context. The controller-created manifest is included unchanged
-in the five-file commit with explicit controller authorization.
+in the seven-file cumulative PR scope with explicit controller authorization.
 
 ## Local completion
 
@@ -175,13 +268,16 @@ in the five-file commit with explicit controller authorization.
 | --- | --- |
 | `python tools/check_docs.py` | PASS, exit 0 |
 | `python tools/repository_hygiene.py --base a6a95ef66f8cf92b65588fa07c1f7b3557b314dc` | PASS, exit 0 |
-| `python tools/check_change.py --base a6a95ef66f8cf92b65588fa07c1f7b3557b314dc --scope tools/scopes/closeout276-pillow-recovery-001.json` | PASS, exactly five paths, no unapproved sensitive changes |
+| `python tools/check_change.py --base a6a95ef66f8cf92b65588fa07c1f7b3557b314dc --scope tools/scopes/closeout276-pillow-recovery-001.json` | PASS, exactly seven paths, no unapproved sensitive changes |
 | `python tools/export_contracts.py --check` | PASS, exit 0, Python 3.13.16 |
 | `git diff --check` | PASS, exit 0 |
 
-`SELF_REVIEW: PASS` for the bounded implementation and completed local checks.
-Full required remote CI remains **PENDING** and independent review of the
-published commit remains required before acceptance.
+`SELF_REVIEW: ESCALATE` solely for the unavailable local browser evidence.
+The minimal dependency diff, security checks, build and repository gates pass;
+there is no identified code or scope blocker to publication for required CI.
+Local browser acceptance remains blocked as documented above. Full required
+remote CI is **PENDING** and independent review of the new published commit
+remains required before acceptance.
 
 Exact final commit, independent review and required remote CI belong in the
 repair PR evidence. This report grants no merge, deployment or successor
