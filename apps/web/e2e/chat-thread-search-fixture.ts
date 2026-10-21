@@ -40,6 +40,10 @@ export async function releaseRead(page: Page, pause: ReturnType<typeof gate>, qu
   await (await response).finished()
   await settled(page)
 }
+export async function pauseSearchClock(page: Page) {
+  await page.clock.install({ time: new Date('2026-10-21T00:00:00Z') })
+  await page.clock.pauseAt(new Date('2026-10-21T00:00:01Z'))
+}
 type Read = { q: string; cursor: string | null; owner: string }
 type Rule = { q: string; cursor?: string | null; pause?: ReturnType<typeof gate>;
   failure?: string; status?: number; network?: boolean }
@@ -71,7 +75,7 @@ export async function searchFixture(page: Page, ignoreAbort = false) {
   }))
   const state = { threads, reads: [] as Read[], finished: [] as Read[], rules: [] as Rule[],
     overrides: new Map<string, ThreadView[]>(), otherThreads: [] as ThreadView[], patches: 0,
-    patchPause: null as ReturnType<typeof gate> | null, patchFailure: '', owner: graph.app.account.id }
+    patchPause: null as ReturnType<typeof gate> | null, patchFailure: '', owner: graph.app.account.id, searchLimit: 0 }
   await page.route('**/api/v1/auth/logout', async route => {
     expect(route.request().headers()['x-csrf-token']).toBe('workspace-csrf')
     graph.app.signedIn = false
@@ -93,6 +97,12 @@ export async function searchFixture(page: Page, ignoreAbort = false) {
     const q = url.searchParams.get('q') ?? '', cursor = url.searchParams.get('cursor')
     const read = { q, cursor, owner: graph.app.account.id }
     state.reads.push(read)
+    // Held handlers retain permits even when their browser request was cancelled.
+    if (q && state.searchLimit && state.reads.filter(item => item.q && !state.finished.includes(item)).length > state.searchLimit) {
+      await json({ error: { code: 'search_unavailable' } }, 503)
+      state.finished.push(read)
+      return
+    }
     const ruleIndex = state.rules.findIndex(rule => rule.q === q && (rule.cursor === undefined || rule.cursor === cursor))
     const rule = ruleIndex < 0 ? undefined : state.rules.splice(ruleIndex, 1)[0]
     const prefix = q ? `s:${encodeURIComponent(q)}:` : 'h:'
@@ -113,4 +123,73 @@ export async function searchFixture(page: Page, ignoreAbort = false) {
   await openSide(page)
   await expect(rows(page)).toHaveCount(50)
   return { ...graph, data: state }
+}
+
+export async function expectSearchPagesAndHistory(page: Page) {
+  const fixture = await searchFixture(page), query = 'Архив IZO'
+  await earlier(page).click(); await expect(rows(page)).toHaveCount(100)
+  const ids = await rows(page).evaluateAll(elements => elements.map(element => element.id))
+  const list = side(page).locator('.chat-history-list')
+  await list.evaluate(element => { element.scrollTop = 237 })
+  const scroll = await list.evaluate(element => element.scrollTop)
+  await search(page, query); await results(page, 'Показано: 50')
+  fixture.data.rules.push({ q: query, cursor: `s:${encodeURIComponent(query)}:50`, failure: 'search_unavailable' })
+  await more(page).click()
+  await expect(alert(page)).toHaveText('Поиск временно недоступен. Повторите попытку.')
+  await expect(rows(page)).toHaveCount(50)
+  const failed = fixture.data.reads.at(-1)!
+  await retry(page).click(); await results(page, 'Показано: 100')
+  expect(fixture.data.reads.at(-1)).toEqual(failed)
+  await more(page).click(); await results(page, 'Найдено: 103')
+  expect(new Set(await rows(page).evaluateAll(elements => elements.map(element => element.id))).size).toBe(103)
+  await expect(more(page)).toHaveCount(0)
+  await input(page).fill('')
+  await expect(rows(page)).toHaveCount(100)
+  expect(await rows(page).evaluateAll(elements => elements.map(element => element.id))).toEqual(ids)
+  await expect.poll(() => list.evaluate(element => element.scrollTop)).toBe(scroll)
+  await earlier(page).click(); await expect(rows(page)).toHaveCount(150)
+  expect(fixture.data.reads.at(-1)?.cursor).toBe('h:100')
+  await earlier(page).click(); await expect(rows(page)).toHaveCount(151)
+}
+
+export async function expectSearchAccountIsolation(page: Page) {
+  const fixture = await searchFixture(page, true)
+  for (const logout of [false, true]) {
+    const pause = gate(), query = logout ? 'Архив IZO' : 'Архив'
+    fixture.data.rules.push({ q: query, pause, failure: 'search_unavailable' })
+    await search(page, query); await expect.poll(() => fixture.data.reads.at(-1)?.q).toBe(query)
+    if (logout) {
+      await profile(page).click()
+      await side(page).getByRole('menuitem', { name: 'Выйти' }).click()
+      await expect(page.getByRole('button', { name: 'Профиль в боковой панели' })).toHaveCount(0)
+    } else { await input(page).fill(''); await expect(rows(page)).toHaveCount(50) }
+    await releaseRead(page, pause, query)
+    await expect(alert(page)).toHaveCount(0)
+    if (logout) await expect(rows(page)).toHaveCount(0)
+    else await expect(earlier(page)).toBeVisible()
+  }
+  fixture.app.account.id = '33333333-3333-4333-8333-333333333333'; fixture.app.signedIn = true
+  fixture.data.otherThreads = [{ ...fixture.thread, id: '33333333-3333-4333-8333-333333333334', title: 'Чат другого аккаунта' }]
+  await page.reload(); await openSide(page)
+  await expect(rows(page)).toHaveText(['Чат другого аккаунта'])
+  await search(page, 'Архив'); await results(page, 'Чаты не найдены')
+  expect(fixture.data.reads.at(-1)?.owner).toBe(fixture.app.account.id)
+}
+
+export async function expectSearchGraphReload(page: Page) {
+  const fixture = await searchFixture(page), raw = '  %_\\  '
+  expect(fixture.data.threads.indexOf(fixture.thread)).toBe(150)
+  await expect(side(page).getByRole('button', { name: fixture.thread.title, exact: true })).toHaveCount(0)
+  await search(page, raw)
+  await results(page, 'Найдено: 1')
+  expect(fixture.data.reads.filter(read => read.q).map(read => read.q)).toEqual([raw])
+  await rows(page).click()
+  await savedGraph(page, fixture.state.active)
+  expect(fixture.state.commands).toEqual([])
+  await page.reload(); await openSide(page)
+  await expect(input(page)).toHaveCount(0)
+  await expect(rows(page)).toHaveCount(50)
+  await search(page, raw); await results(page, 'Найдено: 1')
+  await rows(page).click()
+  await savedGraph(page, fixture.state.active)
 }

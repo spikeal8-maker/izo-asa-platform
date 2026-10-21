@@ -38,9 +38,12 @@ export function useThreadSearch(accountId: string | undefined) {
   currentAccount.current = accountId
   const generation = useRef(0)
   const pending = useRef<AbortController | null>(null)
+  const scheduled = useRef<ReturnType<typeof setTimeout> | null>(null)
   const publish = useCallback((next: SearchState) => { state.current = next; setStored(next) }, [])
   const cancel = useCallback(() => {
     generation.current++
+    if (scheduled.current !== null) clearTimeout(scheduled.current)
+    scheduled.current = null
     pending.current?.abort()
     pending.current = null
   }, [])
@@ -48,10 +51,10 @@ export function useThreadSearch(accountId: string | undefined) {
     cancel()
     publish(empty(currentAccount.current))
   }, [cancel, publish])
-  useEffect(() => {
+  useLayoutEffect(() => {
     if (state.current.accountId !== accountId) resetSearch()
   }, [accountId, resetSearch])
-  useEffect(() => () => cancel(), [cancel])
+  useLayoutEffect(() => () => cancel(), [cancel])
 
   const read = useCallback(async (cursor: string | null) => {
     const source = state.current
@@ -87,9 +90,19 @@ export function useThreadSearch(accountId: string | undefined) {
     if (state.current.accountId === currentAccount.current && state.current.query === query) return
     cancel()
     const error = queryProblem(query)
+    const account = currentAccount.current, started = generation.current
+    const loading = Boolean(account && query.trim() && !error)
     publish({ ...empty(currentAccount.current), query, active: Boolean(query.trim() || error),
-      error, invalid: Boolean(error) })
-    void read(null)
+      error, invalid: Boolean(error), loading })
+    if (!loading) return
+    // Abort/fence immediately; only new text waits so typing does not occupy server permits.
+    const timer = setTimeout(() => {
+      if (scheduled.current !== timer || generation.current !== started || currentAccount.current !== account
+          || state.current.accountId !== account || state.current.query !== query) return
+      scheduled.current = null
+      void read(null)
+    }, 300)
+    scheduled.current = timer
   }, [cancel, publish, read])
   const invalidateSearch = useCallback((renamed?: ThreadView) => {
     const source = state.current

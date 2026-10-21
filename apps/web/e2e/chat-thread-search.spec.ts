@@ -1,53 +1,75 @@
 import { expect, test } from '@playwright/test'
 import { noOverflow } from './workspace-fixtures'
-import { alert, earlier, gate, input, more, openSide, profile, releaseRead, results, retry, rows, savedGraph,
+import { alert, expectSearchAccountIsolation, expectSearchGraphReload, expectSearchPagesAndHistory, gate, input, more, openSide,
+  pauseSearchClock, profile, releaseRead, results, retry, rows,
   search, searchFixture, settled, side, status } from './chat-thread-search-fixture'
 
 test.beforeEach(({}, info) => test.skip(!['phone-small', 'laptop'].includes(info.project.name), 'Search boundary on touch and desktop'))
 
-test('finds the 151st title via raw literal query and opens saved Graph selections after reload', async ({ page }) => {
-  const fixture = await searchFixture(page), raw = '  %_\\  '
-  expect(fixture.data.threads.indexOf(fixture.thread)).toBe(150)
-  await expect(side(page).getByRole('button', { name: fixture.thread.title, exact: true })).toHaveCount(0)
-  await search(page, raw)
-  await results(page, 'Найдено: 1')
-  expect(fixture.data.reads.filter(read => read.q).map(read => read.q)).toEqual([raw])
-  await rows(page).click()
-  await savedGraph(page, fixture.state.active)
-  expect(fixture.state.commands).toEqual([])
-  await page.reload(); await openSide(page)
-  await expect(input(page)).toHaveCount(0)
+test('debounces a typing burst before it consumes two server permits', async ({ page }) => {
+  const fixture = await searchFixture(page, true), pause = gate(), query = 'Архив IZO'
+  fixture.data.searchLimit = 2
+  fixture.data.rules.push({ q: 'А', pause }, { q: 'Ар', pause })
+  await pauseSearchClock(page)
+  try {
+    await search(page, 'А'); await page.clock.runFor(100)
+    await input(page).fill('Ар'); await page.clock.runFor(100)
+    await input(page).fill(query); await page.clock.runFor(300)
+    await expect.poll(() => fixture.data.finished.some(read => read.q === query)).toBe(true)
+    await test.info().attach('burst-requests', { body: JSON.stringify(fixture.data.reads), contentType: 'application/json' })
+    expect(fixture.data.reads.filter(read => read.q).map(read => read.q)).toEqual([query])
+    await results(page, 'Показано: 50'); await expect(alert(page)).toHaveCount(0)
+  } finally { pause.release() }
+})
+
+test('late success stays fenced throughout the next query debounce and empty is announced after its response', async ({ page }) => {
+  const fixture = await searchFixture(page, true), pause = gate()
+  fixture.data.rules.push({ q: 'Архив', pause })
+  await pauseSearchClock(page)
+  try {
+    await search(page, 'Архив'); await page.clock.runFor(300)
+    await expect.poll(() => fixture.data.reads.at(-1)?.q).toBe('Архив')
+    await input(page).fill('Нет совпадений')
+    const response = page.waitForResponse(result => new URL(result.url()).searchParams.get('q') === 'Архив')
+    pause.release(); await (await response).finished()
+    await page.clock.runFor(299)
+    expect(fixture.data.reads.filter(read => read.q).map(read => read.q)).toEqual(['Архив'])
+    await results(page, 'Ищем чаты…'); await expect(rows(page)).toHaveCount(0)
+    await page.clock.runFor(1)
+    await results(page, 'Чаты не найдены')
+    expect(fixture.data.reads.at(-1)?.q).toBe('Нет совпадений')
+  } finally { pause.release() }
+})
+
+test('clear, account logout and Chat unmount cancel scheduled query dispatch', async ({ page }) => {
+  const fixture = await searchFixture(page)
+  await pauseSearchClock(page)
+  await search(page, 'Архив'); await page.clock.runFor(299)
+  await results(page, 'Ищем чаты…'); await expect(rows(page)).toHaveCount(0)
+  await input(page).fill(''); await page.clock.runFor(1000)
   await expect(rows(page)).toHaveCount(50)
-  await search(page, raw); await results(page, 'Найдено: 1')
-  await rows(page).click()
-  await savedGraph(page, fixture.state.active)
+  await search(page, 'Архив')
+  await profile(page).click(); await side(page).getByRole('menuitem', { name: 'Выйти' }).click()
+  await expect(profile(page)).toHaveCount(0); await page.clock.runFor(1000)
+  expect(fixture.data.reads.filter(read => read.q)).toEqual([])
+  fixture.app.account.id = '33333333-3333-4333-8333-333333333333'; fixture.app.signedIn = true
+  fixture.data.otherThreads = [{ ...fixture.thread, title: 'Новый аккаунт' }]
+  await page.reload(); await openSide(page)
+  await expect(rows(page)).toHaveText(['Новый аккаунт'])
+  await search(page, 'Новый'); await page.clock.runFor(300); await results(page, 'Найдено: 1')
+  expect(fixture.data.reads.at(-1)?.owner).toBe(fixture.app.account.id)
+  await input(page).fill('Архив')
+  await profile(page).click(); await side(page).getByRole('menuitem', { name: 'Помощь', exact: true }).click()
+  await expect(page).toHaveURL(/\/help$/); await page.clock.runFor(1000)
+  expect(fixture.data.reads.filter(read => read.q).map(read => read.q)).toEqual(['Новый'])
+})
+
+test('finds the 151st title via raw literal query and opens saved Graph selections after reload', async ({ page }) => {
+  await expectSearchGraphReload(page)
 })
 
 test('paginates 103 matches, retries failed page and restores ordinary pages, cursor and scroll', async ({ page }) => {
-  const fixture = await searchFixture(page), query = 'Архив IZO'
-  await earlier(page).click(); await expect(rows(page)).toHaveCount(100)
-  const ids = await rows(page).evaluateAll(elements => elements.map(element => element.id))
-  const list = side(page).locator('.chat-history-list')
-  await list.evaluate(element => { element.scrollTop = 237 })
-  const scroll = await list.evaluate(element => element.scrollTop)
-  await search(page, query); await results(page, 'Показано: 50')
-  fixture.data.rules.push({ q: query, cursor: `s:${encodeURIComponent(query)}:50`, failure: 'search_unavailable' })
-  await more(page).click()
-  await expect(alert(page)).toHaveText('Поиск временно недоступен. Повторите попытку.')
-  await expect(rows(page)).toHaveCount(50)
-  const failed = fixture.data.reads.at(-1)!
-  await retry(page).click(); await results(page, 'Показано: 100')
-  expect(fixture.data.reads.at(-1)).toEqual(failed)
-  await more(page).click(); await results(page, 'Найдено: 103')
-  expect(new Set(await rows(page).evaluateAll(elements => elements.map(element => element.id))).size).toBe(103)
-  await expect(more(page)).toHaveCount(0)
-  await input(page).fill('')
-  await expect(rows(page)).toHaveCount(100)
-  expect(await rows(page).evaluateAll(elements => elements.map(element => element.id))).toEqual(ids)
-  await expect.poll(() => list.evaluate(element => element.scrollTop)).toBe(scroll)
-  await earlier(page).click(); await expect(rows(page)).toHaveCount(150)
-  expect(fixture.data.reads.at(-1)?.cursor).toBe('h:100')
-  await earlier(page).click(); await expect(rows(page)).toHaveCount(151)
+  await expectSearchPagesAndHistory(page)
 })
 
 test('first-page overload is distinct from empty and never retries automatically', async ({ page }) => {
@@ -117,27 +139,7 @@ test('late A success and error cannot overwrite B even if the transport ignores 
 })
 
 test('late overload after clear or logout cannot paint; another account starts with its own history', async ({ page }) => {
-  const fixture = await searchFixture(page, true)
-  for (const logout of [false, true]) {
-    const pause = gate(), query = logout ? 'Архив IZO' : 'Архив'
-    fixture.data.rules.push({ q: query, pause, failure: 'search_unavailable' })
-    await search(page, query); await expect.poll(() => fixture.data.reads.at(-1)?.q).toBe(query)
-    if (logout) {
-      await profile(page).click()
-      await side(page).getByRole('menuitem', { name: 'Выйти' }).click()
-      await expect(page.getByRole('button', { name: 'Профиль в боковой панели' })).toHaveCount(0)
-    } else { await input(page).fill(''); await expect(rows(page)).toHaveCount(50) }
-    await releaseRead(page, pause, query)
-    await expect(alert(page)).toHaveCount(0)
-    if (logout) await expect(rows(page)).toHaveCount(0)
-    else await expect(earlier(page)).toBeVisible()
-  }
-  fixture.app.account.id = '33333333-3333-4333-8333-333333333333'; fixture.app.signedIn = true
-  fixture.data.otherThreads = [{ ...fixture.thread, id: '33333333-3333-4333-8333-333333333334', title: 'Чат другого аккаунта' }]
-  await page.reload(); await openSide(page)
-  await expect(rows(page)).toHaveText(['Чат другого аккаунта'])
-  await search(page, 'Архив'); await results(page, 'Чаты не найдены')
-  expect(fixture.data.reads.at(-1)?.owner).toBe(fixture.app.account.id)
+  await expectSearchAccountIsolation(page)
 })
 
 test('confirmed rename keeps its form until save, refreshes membership and fences a held page', async ({ page }) => {
