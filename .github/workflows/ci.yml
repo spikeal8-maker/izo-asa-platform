@@ -67,6 +67,8 @@ jobs:
           npx playwright install --with-deps chromium
           npm run test:e2e
       - name: Container integration
+        env:
+          IZO_CHAT_PREVIEW_ACCOUNT_EMAILS: preview@local.izo,search@local.izo
         run: |
           python tools/bootstrap.py
           docker compose up --build --wait --wait-timeout 240
@@ -200,7 +202,7 @@ jobs:
           IZO_RECOVERY_SECRET=ssssssssssssssssssssssssssssssssssssssssssssssss
           IZO_RECOVERY_DELIVERY=test
           IZO_CHAT_ROOT_KEY=$chat_root
-          IZO_CHAT_PREVIEW_ACCOUNT_EMAILS=preview@local.izo
+          IZO_CHAT_PREVIEW_ACCOUNT_EMAILS=preview@local.izo,search@local.izo
           EOF
           preview="docker compose -f $bundle/compose.yaml -p izo-chat-preview-clean --env-file $bundle/.env"
           $preview up -d --wait --wait-timeout 240
