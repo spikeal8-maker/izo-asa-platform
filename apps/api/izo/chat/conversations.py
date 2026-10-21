@@ -13,6 +13,7 @@ from .request_state import RequestStateMixin
 from .schemas import MessageView, RequestView, ThreadDetail, ThreadList, ThreadView
 from .thread_pages import list_threads, thread_view
 from .thread_titles import rename_thread
+from .thread_title_search_v1 import title_key
 
 
 class ConversationMixin(AttachmentMixin, RequestStateMixin):
@@ -22,7 +23,7 @@ class ConversationMixin(AttachmentMixin, RequestStateMixin):
         with self.engine.begin() as conn:
             account, _ = self._account(conn, raw, csrf, mutation=True)
             conn.execute(sa.insert(t.threads).values(id=thread_id,
-                account_id=account["id"], title=safe, next_sequence=1,
+                account_id=account["id"], title=safe, title_search_key=title_key(safe), next_sequence=1,
                 created_at=now, updated_at=now))
             create_graph(conn, thread_id, now)
         return ThreadView(id=thread_id, title=safe, created_at=now, updated_at=now)
@@ -34,8 +35,8 @@ class ConversationMixin(AttachmentMixin, RequestStateMixin):
     def _thread_view(row) -> ThreadView:
         return thread_view(row)
 
-    def list_threads(self, raw, cursor: str | None = None) -> ThreadList:
-        return list_threads(self, raw, cursor)
+    def list_threads(self, raw, cursor: str | None = None, q: str = "") -> ThreadList:
+        return list_threads(self, raw, cursor, q)
 
     @classmethod
     def _message_view(cls, row, attachment_rows=()) -> MessageView:
@@ -95,7 +96,8 @@ def persist_request(service, conn, account_id, thread, command, material, turn, 
     if not regenerate and sequence == 1 and title == "Новый чат" and not thread["title_is_manual"]:
         title = material.text.replace("\n", " ").strip()[:72] or "Изображение"
     conn.execute(sa.update(t.threads).where(t.threads.c.id == thread["id"]).values(
-        next_sequence=sequence + (1 if regenerate else 2), title=title, updated_at=now))
+        next_sequence=sequence + (1 if regenerate else 2), title=title,
+        title_search_key=title_key(title), updated_at=now))
     advance_revision(conn, thread["id"])
     row = conn.execute(sa.select(t.requests).where(t.requests.c.id == request_id)).mappings().one()
     freeze_context(service, conn, row, turn, "edit" if edit else "regenerate" if regenerate else "send")
