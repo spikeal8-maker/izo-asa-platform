@@ -10,6 +10,8 @@ Expanded/compact desktop state is a UI preference. Hidden mobile history leaves 
 
 `useThreadHistory` keeps unique thread rows and the loaded cursor beyond 50; account change/reload starts a fresh list. `ThreadRenameForm`/`useThreadRenameEditor` own draft, Unicode validity, save/cancel/error and focus after PATCH unlock. `useThreadHistory` updates only the confirmed title and fences earlier reads without dropping pages or the selected chat.
 
+`useThreadSearch` owns raw `q`, server result pages and manual retry independently of ordinary history. Account/query/generation/request fences and abort reject late success and error. The server owns matching; the client validates code-point bounds only. Clearing restores loaded history and scroll. Confirmed Rename fences reads immediately; membership reload waits for the editor to close. Search errors retain confirmed pages; `search_unavailable` never means empty results or automatic retry. Query text is ephemeral. `chat-thread-search.spec.ts` covers this boundary.
+
 `useThreadSelection` owns selection identity, physical-history cursors and same-thread reopen. `useChatScroll` preserves message anchors before prepend/replacement and through image layout changes; explicit user scroll releases the anchor. Late reads cannot update another account/thread. Composer draft is preserved by same-thread branch recovery.
 
 ## Models and attachments

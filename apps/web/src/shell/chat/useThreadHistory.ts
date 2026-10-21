@@ -1,8 +1,10 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { apiRequest, type ThreadList, type ThreadView } from '../../shared/api'
 import { chatProblem } from './chatAttachments'
+import { useThreadSearch } from './useThreadSearch'
 
 export function useThreadHistory(accountId: string | undefined, setError: (value: string) => void) {
+  const { search, resetSearch, invalidateSearch } = useThreadSearch(accountId)
   const [history, setHistory] = useState<ThreadView[]>([])
   const [historyCursor, setHistoryCursor] = useState<string | null>(null)
   const [loadingHistory, setLoadingHistory] = useState(false)
@@ -21,6 +23,7 @@ export function useThreadHistory(accountId: string | undefined, setError: (value
     setLoadingHistory(false)
   }, [])
   const resetHistory = useCallback(() => {
+    resetSearch()
     revision.current++
     loadedEarlier.current = false
     cancelHistoryLoad()
@@ -31,7 +34,7 @@ export function useThreadHistory(accountId: string | undefined, setError: (value
     setRenamingThreadId(null)
     setHistory([])
     setHistoryCursor(null)
-  }, [cancelHistoryLoad])
+  }, [cancelHistoryLoad, resetSearch])
   useEffect(() => () => {
     pending.current?.abort()
     pending.current = null
@@ -60,6 +63,7 @@ export function useThreadHistory(accountId: string | undefined, setError: (value
       setHistory(current => keepEarlier
         ? [...page.threads, ...current.filter(thread => !latest.has(thread.id))] : page.threads)
       if (!keepEarlier) setHistoryCursor(page.next_cursor ?? null)
+      invalidateSearch()
     } catch (reason) {
       if (!controller.signal.aborted && currentAccount.current === accountId
           && started === revision.current && !renaming.current) throw reason
@@ -67,7 +71,7 @@ export function useThreadHistory(accountId: string | undefined, setError: (value
       signal?.removeEventListener('abort', abort)
       if (refreshing.current === controller) refreshing.current = null
     }
-  }, [accountId, cancelHistoryLoad])
+  }, [accountId, cancelHistoryLoad, invalidateSearch])
   const loadMoreHistory = useCallback(async () => {
     if (!accountId || !historyCursor || pending.current || refreshing.current) return
     const controller = new AbortController()
@@ -112,6 +116,7 @@ export function useThreadHistory(accountId: string | undefined, setError: (value
           || renaming.current !== controller) return false
       revision.current++
       setHistory(current => current.map(item => item.id === threadId ? { ...item, title: thread.title } : item))
+      invalidateSearch(thread)
       return true
     } finally {
       if (renaming.current === controller) {
@@ -119,8 +124,8 @@ export function useThreadHistory(accountId: string | undefined, setError: (value
         if (currentAccount.current === accountId) setRenamingThreadId(null)
       }
     }
-  }, [accountId])
+  }, [accountId, invalidateSearch])
 
-  return { history, historyCursor, loadingHistory, renamingThreadId, renameThread,
+  return { history, historyCursor, loadingHistory, renamingThreadId, renameThread, search,
     resetHistory, loadMoreHistory, refreshHistory }
 }

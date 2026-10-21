@@ -22,7 +22,7 @@ const [currentChatId, setCurrentChatId] = useState<string | null>(null)
 const [busy, setBusy] = useState(false)
 const [activeRequestId, setActiveRequestId] = useState<string | null>(null)
 const [error, setError] = useState('')
-const { history, historyCursor, loadingHistory, renamingThreadId, renameThread,
+const { history, historyCursor, loadingHistory, renamingThreadId, renameThread, search,
   resetHistory, loadMoreHistory, refreshHistory } = useThreadHistory(auth?.account.id, setError)
 const idle = () => {setBusy(false);setActiveRequestId(null)}
 const refreshPolicy = () => apiRequest<ChatPolicyView>('/api/v1/chat/policy').then(setBasePolicy)
@@ -184,7 +184,7 @@ setCredential(value); idle()
 }
 return {
 policy, catalogError, credentials,
-sidebar: { history, historyCursor, loadingHistory, renamingThreadId, currentChatId, busy,
+sidebar: { history, historyCursor, loadingHistory, renamingThreadId, currentChatId, busy, search,
 onLoadMoreHistory: () => void loadMoreHistory(),
 onRenameChat: (id: string, title: string) => auth ? renameThread(id, title, auth.csrf_token) : Promise.resolve(false) },
 messages, openingThread, activeRequestId,

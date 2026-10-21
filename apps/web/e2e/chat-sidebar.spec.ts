@@ -55,7 +55,7 @@ test('mobile drawer is inert when closed and dismissals restore opener focus', a
   await workspace(page)
   const thread = { id: '11111111-1111-4111-8111-111111111122', title: 'Первый разговор',
     created_at: 1, updated_at: 2 }
-  await page.route('**/api/v1/chat/threads', route => route.fulfill({ json: { threads: [thread] } }))
+  await page.route('**/api/v1/chat/threads{,?*}', route => route.fulfill({ json: { threads: [thread] } }))
   await page.route(`**/api/v1/chat/threads/${thread.id}`, route => route.fulfill({ json: {
     thread, messages: [{ id: '11111111-1111-4111-8111-111111111123', role: 'user',
       content: 'Открытый разговор', state: 'complete' }],
