@@ -4,7 +4,7 @@
   "scope_class": "cross_domain",
   "risk": "high",
   "independent_review_required": true,
-  "max_files": 33,
+  "max_files": 35,
   "large_scope_reason": "One bounded owned-history title-search feature spans an existing API and private derived-key migration, the existing sidebar and its independent query state, focused integration/browser/real-preview acceptance, generated contract and native package activation. Exact paths are partitioned between backend, frontend, browser QA and controller writers; no second Chat execution path is introduced. Add one required isolated PostgreSQL acceptance step because the existing standalone Graph test runner is not invoked by CI; no production Compose/image or existing gate changes. Reviewed pre-write acceptance split: lifecycle/seed/restart stays in chat-thread-search-live.mjs; UI/paging/rename/Graph assertions move to chat-search-ui-live.mjs, which also supplies the unchanged legacy rename sequence. This keeps the near-limit live entry below its unchanged 80% growth boundary without removing coverage.",
   "domains": [
     "Existing Chat thread-list API and derived title-search key",
@@ -26,6 +26,8 @@
     "tests/test_chat_thread_search_migration.py",
     "tests/test_chat_thread_search_postgres.py",
     "tests/test_chat_graph_migration.py",
+    "tools/chat_thread_search_postgres_ci.py",
+    "tests/test_chat_thread_search_ci.py",
     "apps/web/src/shell/chat/ChatSidebar.tsx",
     "apps/web/src/shell/chat/useThreadHistory.ts",
     "apps/web/src/shell/chat/useChatRuntime.ts",
@@ -48,6 +50,7 @@
     ".github/workflows/ci.yml"
   ],
   "sensitive_approved": [
+    "tools/chat_thread_search_postgres_ci.py",
     "apps/api/migrations/versions/0020_chat_thread_title_search.py",
     "tools/scopes/p1-chat-thread-search-001.json",
     "docs/PLAN.json",
@@ -63,7 +66,7 @@
     "No full-text message search, ranking, fuzzy matching, casefold, accent folding, Unicode normalization, SQL wildcards or browser Unicode-version parity promise",
     "No generated Unicode mapping engine/data, unneeded trigram dependency, arbitrary first-N history scan or per-row application round trips",
     "No archive/restore implementation, new history surface, broad redesign, context-engine expansion or graph/edit changes",
-    "No changes to existing CI assertions, retries or timeouts; ci.yml may add isolated PostgreSQL acceptance and explicitly admit preview@local.izo plus search@local.izo only in its two isolated integration test stacks. Production/default admission, Compose, bootstrap and preview-builder owners remain unchanged. No dependency, validator or scope-limit bypass.",
+    "No changes to existing CI assertions, retries or timeouts; ci.yml may add isolated PostgreSQL acceptance and explicitly admit preview@local.izo plus search@local.izo only in its two isolated integration test stacks. Its new PostgreSQL orchestration is extracted to one guarded tool with one focused test owner to satisfy the unchanged 16000-byte workflow budget. Production/default admission, Compose, bootstrap and preview-builder owners remain unchanged. No dependency, validator or scope-limit bypass.",
     "No merge, deployment, release or production-provider calls as part of implementation authorization"
   ]
 }
