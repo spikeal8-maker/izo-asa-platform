@@ -3,9 +3,10 @@ import type { AuthView, ThreadView } from '../../shared/api'
 import { Icon } from '../../shared/ui/Icon'
 import { AccountMenu } from '../TopBar'
 import { ThreadRenameForm, useThreadRenameEditor } from './ThreadRenameForm'
+import { useThreadSearchView, type ThreadSearch } from './useThreadSearch'
 import './ChatSidebar.css'
 
-export function ChatSidebar({ auth, history, historyCursor, loadingHistory, onLoadMoreHistory,
+export function ChatSidebar({ auth, history, historyCursor, loadingHistory, onLoadMoreHistory, search,
   currentChatId, busy, renamingThreadId, onRenameChat, theme, onThemeChange, onLogout,
   compact, drawerOpen, hiddenFromKeyboard, onNewChat, onOpenChat, onClose, onExpand }: {
   auth: AuthView | null | undefined
@@ -13,6 +14,7 @@ export function ChatSidebar({ auth, history, historyCursor, loadingHistory, onLo
   historyCursor: string | null
   loadingHistory: boolean
   onLoadMoreHistory: () => void
+  search: ThreadSearch
   currentChatId: string | null
   busy: boolean
   renamingThreadId: string | null
@@ -29,7 +31,6 @@ export function ChatSidebar({ auth, history, historyCursor, loadingHistory, onLo
   onExpand: () => void
 }) {
   const [searchOpen, setSearchOpen] = useState(false)
-  const [searchQuery, setSearchQuery] = useState('')
   const [profileOpen, setProfileOpen] = useState(false)
   const profileRef = useRef<HTMLDivElement>(null)
   const profileButtonRef = useRef<HTMLButtonElement>(null)
@@ -37,13 +38,15 @@ export function ChatSidebar({ auth, history, historyCursor, loadingHistory, onLo
   const closeButtonRef = useRef<HTMLButtonElement>(null)
   const { editingId, historyList, openRename, closeRename } = useThreadRenameEditor(
     hiddenFromKeyboard || compact, renamingThreadId, closeButtonRef)
+  const { searchButton, searchInput, changeSearch, historyScroll, focusedRow } = useThreadSearchView(
+    search, editingId, historyList, closeRename)
 
   useEffect(() => {
     if (!hiddenFromKeyboard && !compact) return
     setSearchOpen(false)
-    setSearchQuery('')
+    search.setQuery('')
     setProfileOpen(false)
-  }, [hiddenFromKeyboard, compact])
+  }, [hiddenFromKeyboard, compact, search.setQuery])
 
   useLayoutEffect(() => {
     if (drawerOpen) closeButtonRef.current?.focus({ preventScroll: true })
@@ -70,10 +73,7 @@ export function ChatSidebar({ auth, history, historyCursor, loadingHistory, onLo
     return () => document.removeEventListener('keydown', escape)
   }, [profileOpen])
 
-  const normalizedSearch = searchQuery.trim().toLocaleLowerCase('ru-RU')
-  const visibleHistory = normalizedSearch
-    ? history.filter(chat => chat.title.toLocaleLowerCase('ru-RU').includes(normalizedSearch))
-    : history
+  const visibleHistory = search.active ? search.rows : history
   const initial = auth?.account.display_name.trim().slice(0, 1).toUpperCase() || ''
 
   return <aside ref={sidebarRef} className={`chat-sidebar ${compact ? 'is-compact' : ''}`}
@@ -98,12 +98,15 @@ export function ChatSidebar({ auth, history, historyCursor, loadingHistory, onLo
     <div className="chat-sidebar-head">
       {searchOpen
         ? <label className="chat-search-box chat-search-head"><Icon name="search" />
-            <input autoFocus value={searchQuery} onChange={event => { setSearchQuery(event.target.value); closeRename(false) }}
+            <input ref={searchInput} autoFocus value={search.query} onChange={event => changeSearch(event.target.value)}
               aria-label="Поиск по чатам" placeholder="Поиск по чатам"
+              aria-invalid={search.invalid || undefined} aria-describedby={search.error ? 'chat-search-error' : undefined}
               onKeyDown={event => {
                 if (event.key === 'Escape') {
+                  event.preventDefault(); event.stopPropagation()
                   setSearchOpen(false)
-                  setSearchQuery('')
+                  changeSearch('')
+                  searchButton.current?.focus({ preventScroll: true })
                 }
               }} />
           </label>
@@ -113,8 +116,8 @@ export function ChatSidebar({ auth, history, historyCursor, loadingHistory, onLo
           aria-label={compact ? 'Развернуть панель' : 'Скрыть панель'}
           onClick={() => { setSearchOpen(false); setProfileOpen(false); compact ? onExpand() : onClose() }}>
           <Icon name="panel" /></button>
-        <button className="chat-icon-button" aria-label="Поиск чатов" aria-expanded={searchOpen}
-          onClick={() => { if (compact) onExpand(); setSearchOpen(value => compact || !value); if (searchOpen) setSearchQuery('') }}><Icon name="search" /></button>
+        <button ref={searchButton} className="chat-icon-button" aria-label="Поиск чатов" aria-expanded={searchOpen}
+          onClick={() => { if (compact) onExpand(); setSearchOpen(value => compact || !value); if (searchOpen) changeSearch('') }}><Icon name="search" /></button>
       </div>
     </div>
 
@@ -123,7 +126,14 @@ export function ChatSidebar({ auth, history, historyCursor, loadingHistory, onLo
     </div>
 
     {!compact && <><div className="chat-side-section">Чаты</div>
-    <div ref={historyList} className="chat-history-list" aria-label="Список чатов">
+    <div ref={historyList} className="chat-history-list" aria-label="Список чатов"
+      onScroll={event => { if (!search.active) historyScroll.current = event.currentTarget.scrollTop }}
+      onFocusCapture={event => { focusedRow.current = event.target }}>
+      {search.active && !search.error && <div className="chat-side-section" role="status" aria-label="Результаты поиска">
+        {search.loading ? 'Ищем чаты…' : !search.rows.length ? 'Чаты не найдены'
+          : `${search.cursor ? 'Показано' : 'Найдено'}: ${search.rows.length}`}</div>}
+      {search.active && search.error && <><p id="chat-search-error" role="alert">{search.error}</p>
+        {!search.invalid && <button className="chat-history-more" onClick={search.retry}>Повторить поиск</button>}</>}
       {visibleHistory.map(chat => <div className="chat-history-row" key={chat.id}>
         <button className={chat.id === currentChatId ? 'chat-history-item active' : 'chat-history-item'}
           id={`chat-history-${chat.id}`} onClick={() => onOpenChat(chat)} disabled={busy}
@@ -136,9 +146,11 @@ export function ChatSidebar({ auth, history, historyCursor, loadingHistory, onLo
         {editingId === chat.id && <ThreadRenameForm title={chat.title}
           onSave={title => onRenameChat(chat.id, title)} onClose={closeRename} />}
       </div>)}
-      {historyCursor && <button className="chat-history-more" onClick={onLoadMoreHistory}
-        disabled={loadingHistory} aria-label="Загрузить ранние чаты">
-        {loadingHistory ? 'Загружаем…' : 'Загрузить ранние чаты'}</button>}
+      {(search.active ? search.cursor && !search.error : historyCursor) && <button className="chat-history-more"
+        onClick={search.active ? search.loadMore : onLoadMoreHistory} disabled={search.active ? search.loading : loadingHistory}
+        aria-label={search.active ? 'Загрузить ещё результаты' : 'Загрузить ранние чаты'}>
+        {(search.active ? search.loading : loadingHistory) ? 'Загружаем…'
+          : search.active ? 'Загрузить ещё результаты' : 'Загрузить ранние чаты'}</button>}
     </div></>}
 
     {auth && <div className="chat-sidebar-bottom">
