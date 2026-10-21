@@ -58,7 +58,13 @@ await G(page);await page.reload();c=P(page);await e(E(c,N.m)).toBeEnabled();awai
 })
 test('s',async({page})=>{
 await G(page);const rows=[{id:'11111111-1111-4111-8111-111111111112',title:'Первый проект',created_at:1,updated_at:2},{id:'11111111-1111-4111-8111-111111111113',title:'Второй проект',created_at:1,updated_at:3}]
-await page.route('**/api/v1/chat/threads',r=>r.fulfill({json:{threads:rows}}));await F(page);const s=S(page);await O(page);await V(B(s,'Первый проект'),B(s,'Второй проект'));await B(s,N.q).click();const q=E(s,N.b);await q.fill('Первый');await V(B(s,'Первый проект'));await C(B(s,'Второй проект'),0)
+const queries: string[] = []
+await page.route(/\/api\/v1\/chat\/threads(?:\?.*)?$/,r=>{
+const query=new URL(r.request().url()).searchParams.get('q')
+if(query!==null)queries.push(query)
+const visible=query===null?rows:rows.filter(row=>row.title.toLowerCase().includes(query.trim().toLowerCase()))
+return r.fulfill({json:{threads:visible,next_cursor:null}})
+});await F(page);const s=S(page);await O(page);await V(B(s,'Первый проект'),B(s,'Второй проект'));await B(s,N.q).click();const q=E(s,N.b);await q.fill('Первый');await V(B(s,'Первый проект'));await C(B(s,'Второй проект'),0);e(queries).toContain('Первый')
 })
 test('p',async({page},i)=>{
 test.skip(!i.project.name.startsWith('phone'));await F(page);if(i.project.name==='phone'){await E(page,N.m).focus();await page.setViewportSize({width:390,height:560});await page.waitForTimeout(80)

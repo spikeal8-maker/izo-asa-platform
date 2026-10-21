@@ -6,6 +6,8 @@ import { join } from 'node:path'
 import { chromium, expect } from '@playwright/test'
 import { graphBefore, graphAfter } from './chat-graph-live.mjs'
 import { editBefore, editAfter, contextCases, command, complete, terminal, button } from './chat-message-edit-live.mjs'
+import { searchBefore, searchAfter } from './chat-thread-search-live.mjs'
+import { rename } from './chat-search-ui-live.mjs'
 
 if (process.env.IZO_ENVIRONMENT !== 'test' || process.env.IZO_CHAT_ACCEPTANCE !== 'isolated')
   throw new Error('Explicit isolated Chat stack required')
@@ -17,9 +19,9 @@ const evidence = 'apps/web/test-results/chat-live'
 await mkdir(evidence, { recursive: true })
 const browser = await chromium.launch()
 
-async function context() {
+async function context(touch = false) {
   const result = await browser.newContext({
-    baseURL: origin, viewport: { width: 1440, height: 900 },
+    baseURL: origin, viewport: { width: 1440, height: 900 }, hasTouch: touch,
   })
   await result.route('**/*', route =>
     new URL(route.request().url()).origin === origin ? route.continue() : route.abort())
@@ -52,16 +54,6 @@ async function send(page, text) {
 }
 
 const serverThreads = page => command(page, 'threads')
-
-async function rename(page, oldTitle, title) {
-  const row = page.locator('.chat-history-row').filter({
-    has: button(page, oldTitle),
-  })
-  await button(row, 'Переименовать').click()
-  await page.getByRole('textbox', { name: 'Название чата', exact: true }).fill(title)
-  await button(page, 'Сохранить').click()
-  await expect(button(page, title)).toBeVisible()
-}
 
 async function concurrentRename(page) {
   const policy = await command(page, 'policy'), thread = await command(page, 'threads', 'POST', { title: null }, 201)
@@ -140,6 +132,7 @@ print(json.dumps(observed,default=str,ensure_ascii=False))`
   else proof.contexts = actual
   await writeFile(`${evidence}/edit-${phase}-${preview ? 18080 : 8080}.json`, JSON.stringify({ phase, origin, proof, actual }, null, 2))
   console.log(`CHAT_EDIT_CONTEXT_${phase.toUpperCase()}_OK: ${actual.length} retained contexts`)
+  return actual
 }
 
 const email = 'preview@local.izo'
@@ -187,6 +180,7 @@ try {
     state.edit = await editBefore(page, evidence)
     await editFollowup(page, state.edit)
     await editContexts(state.edit)
+    state.search = await searchBefore(context, authenticate, state, page, evidence, editContexts)
     await writeFile(file, JSON.stringify(state), { mode: 0o600 })
     await ctx.close()
     console.log(
@@ -238,6 +232,7 @@ try {
     await graphAfter(page, state.graph, evidence)
     await editAfter(page, state.edit, evidence)
     await editContexts(state.edit)
+    await searchAfter(context, authenticate, state, page, evidence, editContexts)
     await ctx.close()
     console.log(
       'CHAT_BROWSER_AFTER_OK: login, durable titles/messages, reload, mobile rename after Compose restart',

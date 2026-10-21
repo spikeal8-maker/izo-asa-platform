@@ -67,6 +67,8 @@ jobs:
           npx playwright install --with-deps chromium
           npm run test:e2e
       - name: Container integration
+        env:
+          IZO_CHAT_PREVIEW_ACCOUNT_EMAILS: preview@local.izo,search@local.izo
         run: |
           python tools/bootstrap.py
           docker compose up --build --wait --wait-timeout 240
@@ -123,6 +125,12 @@ jobs:
           docker compose stop storage
           docker compose exec -T api python -c "import urllib.request, urllib.error; r=urllib.request.urlopen('http://127.0.0.1:8000/api/health/live'); assert r.status==200"
           docker compose exec -T api python -c "import http.client; c=http.client.HTTPConnection('localhost',8000,timeout=10); c.request('GET','/api/health/ready'); assert c.getresponse().status==503"
+      - name: Chat thread search PostgreSQL acceptance
+        timeout-minutes: 5
+        env:
+          IZO_ENVIRONMENT: test
+          IZO_CHAT_GRAPH_ACCEPTANCE: isolated
+        run: .venv/bin/python -B tools/chat_thread_search_postgres_ci.py
       - name: Build and clean-test offline Chat preview
         run: |
           set -euo pipefail
@@ -159,7 +167,7 @@ jobs:
           IZO_RECOVERY_SECRET=ssssssssssssssssssssssssssssssssssssssssssssssss
           IZO_RECOVERY_DELIVERY=test
           IZO_CHAT_ROOT_KEY=$chat_root
-          IZO_CHAT_PREVIEW_ACCOUNT_EMAILS=preview@local.izo
+          IZO_CHAT_PREVIEW_ACCOUNT_EMAILS=preview@local.izo,search@local.izo
           EOF
           preview="docker compose -f $bundle/compose.yaml -p izo-chat-preview-clean --env-file $bundle/.env"
           $preview up -d --wait --wait-timeout 240

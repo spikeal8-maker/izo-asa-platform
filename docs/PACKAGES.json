@@ -464,6 +464,14 @@
       "goal": "Persist owner-controlled Chat Thread renaming across reload and restart with manual-title protection and desktop/mobile sidebar editing.",
       "status": "complete"
     },
+    "P1-CHAT-THREAD-SEARCH-001": {
+      "decides_next": true,
+      "depends_on": [
+        "P1-CHAT-MESSAGE-EDIT-001"
+      ],
+      "goal": "Extend existing literal case-insensitive chat-title search across all owned history through the existing thread-list API, with owner isolation, query-bound stable cursors and independent search/list UI state. Preserve Chat execution, history and provider semantics.",
+      "status": "active"
+    },
     "P1-CONVERSATION-GRAPH-001": {
       "checkpoint": "P1-CONVERSATION-GRAPH-001",
       "decides_next": true,

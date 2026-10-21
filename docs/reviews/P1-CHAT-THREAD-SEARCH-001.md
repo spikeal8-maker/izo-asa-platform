@@ -1,0 +1,120 @@
+# P1-CHAT-THREAD-SEARCH-001 — implementation and review evidence
+
+## Goal and accepted base
+
+The owner selected server-side title search across the complete Account history, including threads beyond the first two 50-row pages. Reuse the existing Chat API, sidebar and persisted Conversation Graph. No second history surface, Chat execution backend or authentication owner is introduced.
+
+Accepted predecessor: PR #277, source `d7727ac26346598ebf64d145fcbdd5b7f4581235`, ordinary merge `321fcb4fe193993db70aa705a46842e9836daac0`, tree `0b9c5344e017f7b76a419b491d24068f556e61cd`. The pre-merge exact-head owner waiver is comment 6309003038. The actual merge has its own push Foundation CI 39551265110 and Dependency Security 39551265154; their final successful conclusions must precede native activation.
+
+The unchanged native `project_state.py begin-decided-next`, through the authorized GitHub Connector, activated this package from the accepted actual main. Its activation receipt SHA256 is `605cfce55b014f8bb73653d936d7d5504b4132b86afe07c4412c4faea6c26916`. Native postchecks confirmed the new branch/package, unchanged existing package records, byte-identical CHECKPOINTS and only the expected three canonical state deltas. The controller did not edit canonical state manually.
+
+The Message Edit package remains terminal `complete`; all 30 prior checkpoints are preserved. The search package stays `active` during implementation and publication. Its future merge, waiver and closeout require separate owner acceptance.
+
+## SOURCE_AUDIT — FULL, bounded to title search
+
+The target source is the exact accepted merge above. Reuse the existing prepared audit and implementation contracts; inspect only the affected owners and their delta. Canonical owners are `docs/UX.md` Chat history, `docs/ARCHITECTURE.md` Chat, and the API/Web Chat READMEs. Existing target code owns the authenticated 50-row thread list, exclusive created-time/ID cursor, atomic rename and Graph open path. Local-only sidebar filtering is the capability gap. Existing Account, history, rename, Graph, Message Edit and browser tests remain authoritative regressions.
+
+Applicable donor `spikeal8-maker/IZO_ASA` was freshly read at unchanged main `51543df2b6a559d693e3ed75b11baeacdb9033d3`; the prepared audit at that exact source is reused:
+
+| Donor source | Classification | Decision |
+| --- | --- | --- |
+| `frontend/src/desktopChat/DesktopChatWorkspace.tsx` | ADOPT_BEHAVIOR | Retain trimmed, case-insensitive literal title matching as the user expectation; loaded-array filtering cannot satisfy full-history search. |
+| `backend/app/services/phone_chat_history.py` | REJECT | Its updated-time LIMIT 50 history without search/cursors is weaker than the target created-time/ID pagination. |
+| `backend/app/api/routers/phone_chat.py` and frontend Chat API | REJECT | No applicable full-history title-search contract; retain target API and auth. |
+| `backend/test_phone_chat_history.py` | REJECT | No adequate search/isolation/pagination coverage; add target-owner tests. |
+
+No donor code, schema, credentials, users, sessions, data or provider execution is imported. The owner-authorized prepared contract supplies the bounded decisions below. This is not a new broad platform audit or a claim that unimplemented behavior has passed.
+
+## Bounded product and implementation decisions
+
+The existing `GET /api/v1/chat/threads` gains optional `q`; it retains `ThreadList`, 50-row pages and ordinary list behavior when normalized `q` is empty. Search covers every owned title in SQL. Results use `created_at DESC, id DESC`, exclusive keyset boundaries and LIMIT 51. A page never duplicates an already traversed ID. This is live pagination: new rows above the boundary require refresh; rename can change membership of later pages.
+
+Matcher v1 trims explicit JavaScript edge whitespace and applies whole-string Python 3.13 / Unicode 15.1 lowercase to both query and complete title. Match is a literal substring; no casefold, accent folding, NFC/NFKC, SQL wildcard, ranking or browser Unicode-version parity. Raw query is at most 256 code points; NUL rejects before PostgreSQL. A normalized query longer than 240 cannot match, while cursor validation still applies. A private derived key is backfilled by migration 0020 and updated atomically on create, first-admission auto-title and rename under the existing thread-lock ownership. Future matcher/Unicode changes require explicit backfill and cursor-version treatment.
+
+Search cursor v2 binds Account, normalized query, matcher version and exclusive created-time/ID boundary. Invalid, foreign, changed-query/version or mixed ordinary/search cursors return `invalid_thread_cursor`; no cursor grants authorization. Ordinary v1 pagination is preserved.
+
+Nonempty searches use two nonblocking permits per API process before pool checkout, released in `finally` on every path. Ordinary history bypasses this admission. After normal auth and cursor validation, PostgreSQL search SELECT uses transaction-local `statement_timeout=1000ms`. Permit refusal, pool TimeoutError and PostgreSQL 57014/55P03 become 503 `search_unavailable` after transaction rollback, without partial results, SQL disclosure or automatic retries. Other errors and shared auth/engine behavior are preserved. This does not promise fleet fairness or a total HTTP deadline.
+
+The sidebar uses separate history and search rows, cursors, loading/error state and scroll. Clearing search restores loaded ordinary pages. Abort plus Account/query/generation/request fences discard stale success and failure. Rename confirms membership against the server without destroying its active form. Existing thread opening preserves branch/attempt selection and messages. Keyboard, touch, mobile drawer, focus and scroll remain part of acceptance; query text is ephemeral.
+
+## Finite writer ownership
+
+The initial manifest allowed33 exact paths, `cross_domain`, high risk, independent review required; the documented SEARCH-CI-003 extraction increases this to35 exact paths within the unchanged class limit40. Backend owns fourteen paths including API, private migration, tests and one additive PostgreSQL CI step. Frontend owns eight paths in the existing sidebar/runtime and focused browser tests. Browser QA owns three real acceptance paths. Controller owns eight orchestration/documentation/generated-contract paths; all four canonical state paths are native-tool-only, with CHECKPOINTS expected unchanged. Fix assignments below transfer exclusive ownership of frozen paths for bounded repairs.
+
+Every writer receives the DEVELOPMENT task contract, a separate worktree/branch, the same integrated decision base, explicit non-goals and its own path list. No path has two active writers. Read-only independent review remains separate from implementation and fixes.
+
+### Explicit PostgreSQL CI invocation
+
+The existing `tests/test_chat_graph_migration.py::run_postgres` is a standalone runner and is not invoked by the current workflow. Merely adding another import would not prove PostgreSQL execution. The workflow adds a required isolated PostgreSQL 17 acceptance step after Container integration, using the already pulled image, synthetic credentials, a loopback random port, health barrier and guaranteed container cleanup. It runs the new standalone test owner from the host development environment. Existing assertions, skips, retries, timeouts and gates are unchanged; the new step has its own five-minute bound. The bounded two-account test configuration below is also permitted. No production Compose, runtime image or dependency changes are authorized.
+
+## Acceptance and evidence boundaries
+
+Targeted server tests cover complete history, Account isolation, exact query bounds/normalization/Unicode, literal wildcard characters, no-result/empty input, cursor misuse and stable tie-breaking across more than 100 matches, concurrent create/rename, derived-key migration/atomicity and capacity/timeout/rollback behavior. PostgreSQL proves actual SQL behavior, query cancellation, released auth locks, restored transaction-local timeout and retry after recovered capacity.
+
+Playwright covers fast query changes, held API responses and abort, stale errors, first/next-page retry, Account changes, preserved history pages/cursor/scroll, rename, Graph result opening, reload/login, focus and mobile interactions. Real isolated Compose and clean-preview acceptance seed at least 151 threads in dedicated synthetic accounts, find rows beyond the first two pages and preserve selected branches/attempts before and after retained-volume restart. No paid model calls are permitted.
+
+The separately published focus-test repair PR #278 is not merged into this package and does not alter its runtime. Its controlled reproduction and independent review remain separate technical-debt evidence. Existing CI retry policy is unchanged.
+
+## Implemented source and pre-publication evidence
+
+Frozen Backend `c3a6e583f15fbc91308a48aabb2ff0cc66b71c3c`, Frontend `be4bea825af54afc157255e9a5d475a27d24323f` and Browser QA `374cb14263421e1513e28c571b4a5c49815d8a37` are integrated without component drift. OpenAPI adds only optional bounded `q`. Controller SELF_REVIEW covers ownership, cursor/transaction races, unchanged Graph execution, scope and evidence provenance.
+
+Backend:131 targeted tests passed; two affected migration tests were rerun after stronger index assertions. Real PostgreSQL17.11:8 named cases passed, plus that strengthened migration recheck. Frontend:154 affected regressions passed before a narrow current401 cleanup; all16 search cases passed on final source. Chromium140/rev1193 is diagnostic, retries0; pinned149 fullCI remains mandatory. Integrated production build, native state verify, docs, scope, hygiene, generated contract and diff checks passed.
+
+Maintenance:31/33 scoped paths; root context4164 B, PLAN1809 B; API/Web local READMEs5969/5753 B. No changed handwritten file is in the warning zone. Sidebar/runtime have2/20 B remaining before the unchanged80% byte threshold; further growth requires owner separation. New search owners keep query work separate from Graph/history; live-entry split reduces its size. Full per-file dimensions/headroom and independent review receipts accompany the PR.
+
+Independent review found only the isolated admission blocker below; separate Fix Implementer commit `c29bf41e118ab26a2ce97b76bc5b000581c58b57` preserves all other workflow bytes. Actual HTTP proof:6 before and6 after cases, including a still-denied third account. Final re-review and exact published-source CI/real Compose evidence are recorded on the PR; they are not predicted by this pre-publication record. Internal review is not formal GitHub APPROVED.
+
+Focused contract review found one concrete CI readiness race: the official PostgreSQL entrypoint first serves a temporary Unix socket. SEARCH-CI-001 requires the new container health check to use `pg_isready -h 127.0.0.1 -p 5432` before the host TCP runner starts. The backend writer applied the correction; independent review verified it in both the original step and its extracted helper. No runtime PASS is claimed by the static review.
+
+## Reviewed acceptance-owner split before the extra path
+
+The complete seven-scenario browser acceptance candidate measured 14581 B / 239 lines; the existing live entry measured 13094 B / 252 lines against a 12794 B baseline. Its original six-byte growth margin cannot accommodate the required invocation and context reuse. The controller inspected the lifecycle, shared UI helpers and legacy rename sequence before approving one additional path.
+
+`chat-thread-search-live.mjs` owns isolated account setup, seed/provenance and retained restart orchestration. `chat-search-ui-live.mjs` owns reusable public UI paging, focus/scroll, rename and Graph assertions. The existing entry imports a compatible rename helper while retaining its visible-title assertion and all original calls. Browser QA is the sole writer of all three paths; no product owner, workflow or dependency is added. The manifest now permits 33 exact paths, within the unchanged cross-domain40 limit. Each new auxiliary owner must remain at or below12800 B/280 lines, and the existing entry must regain space below12800 B. No test assertion, runtime check, retry, timeout or size threshold is relaxed. Independent review must verify the actual extraction and coverage equivalence.
+
+## SEARCH-QA-002 — isolated account admission correction
+
+Independent integrated review found that the live fixture registers `search@local.izo`, while both existing CI stacks admit only `preview@local.izo`; the first seed POST would fail with403. Before any fix, the controller explicitly permitted the already-scoped `ci.yml` to admit these two exact synthetic addresses in the Container integration step and the clean-preview temporary environment. Compose interpolation already accepts this configured value. Bootstrap, preview-builder defaults, production Compose and the ChatService admission guard remain unchanged. The separate Fix Implementer owns this one-path correction; the reviewer must verify it and the real CI must execute it. No new scope path or account/permission owner is introduced.
+
+## SEARCH-CI-003 — required workflow modularity repair
+
+The first published source `b9e811e7344155ca92d82c647c330b3ae0dd89a2`, tree `291ffc34d9ae2b24a8c93386cf92946e84fe2b05`, failed Foundation CI39558102453 at the existing `test_ci_workflows_stay_modular`: ci.yml is17703 B against an unchanged16000 B limit. Actual unit results were1485 passed,1 failed,1 skipped; browser, PostgreSQL acceptance and both real preview stacks did not run. Security39558102127 and Review Source39558102272 passed. Acceptance remains blocked until a corrected exact source passes all required CI.
+
+Before assigning writes, the controller inspected the added41-line PostgreSQL orchestration and the established tool/test owners. Extract that cohesive disposable-container responsibility into `tools/chat_thread_search_postgres_ci.py`, tested by `tests/test_chat_thread_search_ci.py`; ci.yml retains its five-minute step and invokes it with the existing isolated environment. This adds two exact paths (35 allowed,33 expected changed), below the unchanged cross-domain40 limit, and explicitly approves the new tool as sensitive. It is responsibility separation, not a budget increase or assertion change. The separate Fix Implementer alone owns the workflow and these two new paths; controller alone owns this record and the manifest.
+
+Preserve PostgreSQL17 image reuse without pulls, loopback ephemeral port, TCP health barrier,45 readiness probes, original health settings, synthetic credentials and the existing standalone eight-case runner. Add guarded environment validation, cleanup of only the created container, failure propagation and cancellation cleanup. Prove healthy/unhealthy/expired readiness, runner failure and cancellation behavior with isolated subprocess fixtures; actual Docker execution remains a required CI condition. All other workflow bytes, including the two-account admission correction, remain unchanged. Do not alter retries, timeouts, architecture limits, tests, dependencies or canonical state. Independent review must check the extraction and exact-source binding before a new complete CI run.
+
+## SEARCH-REVIEW-004 — burst typing and server admission
+
+GitHub COMMENTED review5595979460 on the first published exact source raised P1 discussion4333878653: aborting a browser fetch does not cancel the synchronous server handler. Immediate search on every keystroke can occupy both process permits while the latest valid text receives503. The controller accepts this bounded UX/load finding for correction; it is not a formal GitHub approval.
+
+The Frontend Implementer owns an isolated fix in the existing `useThreadSearch.ts`, search spec and fixture paths. Cancel/fence obsolete responses immediately, debounce dispatch of newly typed text by300ms, and clear pending timers on query, account, reset and unmount changes. Pending search must show loading without stale rows or an empty-result flash. Manual retry, pagination and confirmed Rename refresh keep their explicit behavior. Strengthen rapid-input/slow-response/account tests without changing test retries, assertions or timeouts, and retain the prior regression coverage. The independent reviewer checks the actual fixed source and evidence; full required CI on the combined corrected source remains mandatory.
+
+## Corrected-source integration evidence
+
+SEARCH-CI-003 is implemented by separate Fix Implementer commit `39b62f090fbba5d273742e34a1cc2a2533468192`, tree `0aa021d6373cd1442f3ca7115c76f0997498c5b1`. The helper owns the previous PostgreSQL technical environment constants; workflow retains both explicit opt-ins. The actual effective environment and every workflow byte outside the new PostgreSQL step are unchanged. Local targeted results: 76 passed, 0 failed/skipped, including 38 new helper cases with real Python signal delivery and fake Docker commands. Independent verdict: APPROVE_EXACT_CI_EXTRACTION_TECHNICAL_REVIEW, no blocking findings; receipt SHA256 `675f0a61b8d562d2b1a6908bbbe6fd6428ac10ce6bdb3c94228c3edd31ad4a03`. Actual Docker and full CI remain required. Workflow is 15999 B / 264 lines: one byte below the unchanged hard limit. The required responsibility split is complete; further workflow growth requires another bounded extraction, not a higher limit or cosmetic compression.
+
+SEARCH-REVIEW-004 is implemented by Frontend Implementer commit `bd3f23c6292fb02a76aae1bf023ea94eb9dcf573`, tree `a7665521ea8e5b6376f1ed11a82a74feb0e040ab`. Before the hook change, the same controlled two-permit burst case failed on both phone and laptop after sending three GET requests. With the fix, only the final text is sent, and all 22 focused cases pass with retries0. Production build and hygiene pass. Three legacy test bodies were moved byte-identically into the existing fixture; the other five bodies and all original assertions remain. Independent verdict: APPROVE_EXACT_DEBOUNCE_FIX_TECHNICAL_REVIEW, no blocking findings; receipt SHA256 `aa0b0d14ec724868d2ec5968952ecbb370d08ea7c921025f5b276ac6b295faa6`. This local Chromium140 evidence and transport mock do not replace pinned149/full CI or real PostgreSQL load tests. Debounce coalesces typing bursts; ordinary overload retains explicit503/manual retry.
+
+The controller integrates both frozen commits with their original ancestry. Scope is now 33 changed paths of 35 allowed, within the unchanged cross-domain40 limit. All previous backend and Browser QA implementation blobs are preserved except the explicitly reviewed CI extraction; frontend differs only in the three reviewed debounce paths. No canonical state, dependencies, production configuration, Graph, Rename or Message Edit owner changes are introduced by these repairs. Updated full per-file dimensions and exact published-source results belong in the PR. Internal technical verdicts are not formal GitHub APPROVED, and no owner waiver or merge is authorized for this package.
+
+
+## SEARCH-CI-005 — full-browser legacy shell fixture correction
+
+Required Foundation CI [39561292723](https://github.com/spikeal8-maker/izo-asa-platform/actions/runs/39561292723) on source `34231d6f3b0bf2d0828d28df4b616d35ba6b2768` completed FAILURE at `Build and responsive browser checks`. Unit/architecture and build prerequisites, Windows, Dependency Security and Review Source passed; Compose, PostgreSQL acceptance and offline preview were SKIPPED, **not PASS**.
+
+Browser summary: 1327 passed, 703 skipped, 10 failed from one existing `apps/web/e2e/shell.spec.ts:59` case on ten responsive viewports; 1 distinct `chat-scroll.spec.ts:171` flaky first attempt on phone-small passed its existing retry. The old shell test intercepted only exact `GET /api/v1/chat/threads`, but the new search requests `GET /api/v1/chat/threads?q=...`. Its fallback fixture therefore returned zero rows, failing the valid assertion that «Первый проект» is visible. The failing evidence concerns a stale mock rather than actual PostgreSQL title matching.
+
+Before writing, explicitly extend scope by one exact path, `apps/web/e2e/shell.spec.ts`, from 35 to 36 allowed, within unchanged cross-domain40; this test path has one writer. The correction makes the synthetic server fixture intercept both history and optional query, returning literal case-insensitive title-substring matches from its own two rows. Preserve all existing UI expectations and add an assertion that raw search query `Первый` reached the mock. Production, retries, timeouts, unrelated scroll assertions and required gates remain unchanged. Targeted Playwright on phone-small/laptop, full pinned Chromium149 CI and the real Compose/preview acceptance are mandatory; a diagnostic Node matcher check alone is not acceptance.
+
+Keep the unrelated scrolling flaky result visible without hiding or suppressing it. Search remains active and unaccepted; no owner waiver, merge or production deployment is authorized.
+
+
+## SEARCH-LIVE-006 — empty-thread draft acceptance selector
+
+The second corrected source `ee7e10bf1b374fcd74e1492729228567d0f99a2b` passed the full pinned-browser stage (1335 passed, 703 skipped, 3 flaky focus-recovery cases), but [Foundation CI 39636015800](https://github.com/spikeal8-maker/izo-asa-platform/actions/runs/39636015800) FAILED in the **real Compose Container integration**. The new 151-thread acceptance stopped in `chat-search-ui-live.mjs:129`: `locator('.chat-composer-dock textarea')` was absent when checking the saved draft `Search draft`. Standalone PostgreSQL acceptance, after-restart and clean offline preview were SKIPPED and remain unproven on this source.
+
+Source review establishes a fixed test assumption: the synthetic thread opened by `searchHistory` has **no messages** (151 threads are seeded with titles alone). `ChatPage.tsx` intentionally mounts the sole authenticated ChatComposer inside `.chat-start-state` whenever `runtime.messages.length === 0`, not inside `.chat-composer-dock` (the latter exists only once messages render). The very same live test successfully entered the draft via the accessible textbox helper `composer(page)`, then attempted to verify it through the wrong DOM-specific wrapper. The failure reported `element(s) not found`, not a mismatched draft value. This explains the observed exact assertion; it does not by itself prove any unobserved UX flows.
+
+Before correction the exact existing scoped owner `apps/web/acceptance/chat-search-ui-live.mjs` was already allowed; no scope expansion, package-state or product-source change is necessary. Strengthen the acceptance precondition by asserting the opened target history row is active and the expected empty-thread start state is visible; verify the draft after search via the **same accessible `Сообщение` textbox** used to fill it. Keep value `Search draft`, scroll restore and all original account isolation, pagination, Graph and restart assertions unchanged. No retry/timeout/skip or CI guard change. This is a narrow Browser QA fixture repair, not a claim of real post-restart PASS. Full required CI on the new published SHA must execute real Compose, PostgreSQL and offline preview before acceptance.
