@@ -55,9 +55,15 @@ Playwright covers fast query changes, held API responses and abort, stale errors
 
 The separately published focus-test repair PR #278 is not merged into this package and does not alter its runtime. Its controlled reproduction and independent review remain separate technical-debt evidence. Existing CI retry policy is unchanged.
 
-## Implementation status at initial decision commit
+## Implemented source and pre-publication evidence
 
-Implementation, generated-contract update, targeted tests, integrated gates, independent technical review, real browser/PostgreSQL evidence and exact published-source required CI are pending. This document establishes the accepted bounded contract and writer ownership; it does not claim completed code or PASS results.
+Frozen Backend `c3a6e583f15fbc91308a48aabb2ff0cc66b71c3c`, Frontend `be4bea825af54afc157255e9a5d475a27d24323f` and Browser QA `374cb14263421e1513e28c571b4a5c49815d8a37` are integrated without component drift. OpenAPI adds only optional bounded `q`. Controller SELF_REVIEW covers ownership, cursor/transaction races, unchanged Graph execution, scope and evidence provenance.
+
+Backend:131 targeted tests passed; two affected migration tests were rerun after stronger index assertions. Real PostgreSQL17.11:8 named cases passed, plus that strengthened migration recheck. Frontend:154 affected regressions passed before a narrow current401 cleanup; all16 search cases passed on final source. Chromium140/rev1193 is diagnostic, retries0; pinned149 fullCI remains mandatory. Integrated production build, native state verify, docs, scope, hygiene, generated contract and diff checks passed.
+
+Maintenance:31/33 scoped paths; root context4164 B, PLAN1809 B; API/Web local READMEs5969/5753 B. No changed handwritten file is in the warning zone. Sidebar/runtime have2/20 B remaining before the unchanged80% byte threshold; further growth requires owner separation. New search owners keep query work separate from Graph/history; live-entry split reduces its size. Full per-file dimensions/headroom and independent review receipts accompany the PR.
+
+Independent review found only the isolated admission blocker below; separate Fix Implementer commit `c29bf41e118ab26a2ce97b76bc5b000581c58b57` preserves all other workflow bytes. Actual HTTP proof:6 before and6 after cases, including a still-denied third account. Final re-review and exact published-source CI/real Compose evidence are recorded on the PR; they are not predicted by this pre-publication record. Internal review is not formal GitHub APPROVED.
 
 Focused contract review found one concrete CI readiness race: the official PostgreSQL entrypoint first serves a temporary Unix socket. SEARCH-CI-001 requires the new container health check to use `pg_isready -h 127.0.0.1 -p 5432` before the host TCP runner starts. The backend writer must apply this correction; independent review will verify the actual diff. No runtime PASS is claimed by the static review.
 
