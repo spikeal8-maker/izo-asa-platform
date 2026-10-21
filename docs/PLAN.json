@@ -9,18 +9,18 @@
       "pr": 22,
       "state": "technical_ci_pass_draft"
     },
-    "working_branch": "codex/p1-chat-message-edit-001",
+    "working_branch": "codex/p1-chat-thread-search-001",
     "provider_direction": "fal.ai / fal-ai/flux-2/klein/4b",
     "merge_deployed": false,
     "current_package_base": {
-      "branch": "codex/p1-conversation-graph-001",
-      "sha": "a0e58dfd0d3daf3dbc027c94eb857fd9c8724c4e",
+      "branch": "codex/p1-chat-message-edit-001",
+      "sha": "321fcb4fe193993db70aa705a46842e9836daac0",
       "state": "completed_package_successor_base",
-      "checkpoint": "P1-CONVERSATION-GRAPH-001"
+      "checkpoint": "P1-CHAT-MESSAGE-EDIT-001"
     },
     "next_branch_source": "verified_working_head"
   },
-  "active_package": "P1-CHAT-MESSAGE-EDIT-001",
+  "active_package": "P1-CHAT-THREAD-SEARCH-001",
   "next_package": null,
   "rules": {
     "one_active_package": true,
