@@ -63,7 +63,7 @@
     "No full-text message search, ranking, fuzzy matching, casefold, accent folding, Unicode normalization, SQL wildcards or browser Unicode-version parity promise",
     "No generated Unicode mapping engine/data, unneeded trigram dependency, arbitrary first-N history scan or per-row application round trips",
     "No archive/restore implementation, new history surface, broad redesign, context-engine expansion or graph/edit changes",
-    "No changes to existing CI assertions, retries or timeouts; only the additive isolated PostgreSQL acceptance step is allowed in ci.yml. No dependency, validator or scope-limit bypass.",
+    "No changes to existing CI assertions, retries or timeouts; ci.yml may add isolated PostgreSQL acceptance and explicitly admit preview@local.izo plus search@local.izo only in its two isolated integration test stacks. Production/default admission, Compose, bootstrap and preview-builder owners remain unchanged. No dependency, validator or scope-limit bypass.",
     "No merge, deployment, release or production-provider calls as part of implementation authorization"
   ]
 }
