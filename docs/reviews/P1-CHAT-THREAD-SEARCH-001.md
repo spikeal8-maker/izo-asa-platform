@@ -39,7 +39,7 @@ The sidebar uses separate history and search rows, cursors, loading/error state 
 
 ## Finite writer ownership
 
-The manifest allows 32 exact paths, `cross_domain`, high risk, independent review required. Backend owns fourteen paths including API, private migration, tests and one additive PostgreSQL CI step. Frontend owns eight paths in the existing sidebar/runtime and focused browser tests. Browser QA owns two real acceptance paths. Controller owns eight orchestration/documentation/generated-contract paths; all four canonical state paths are native-tool-only, with CHECKPOINTS expected unchanged.
+The manifest allows 33 exact paths, `cross_domain`, high risk, independent review required. Backend owns fourteen paths including API, private migration, tests and one additive PostgreSQL CI step. Frontend owns eight paths in the existing sidebar/runtime and focused browser tests. Browser QA owns three real acceptance paths. Controller owns eight orchestration/documentation/generated-contract paths; all four canonical state paths are native-tool-only, with CHECKPOINTS expected unchanged.
 
 Every writer receives the DEVELOPMENT task contract, a separate worktree/branch, the same integrated decision base, explicit non-goals and its own path list. No path has two active writers. Read-only independent review remains separate from implementation and fixes.
 
@@ -60,3 +60,9 @@ The separately published focus-test repair PR #278 is not merged into this packa
 Implementation, generated-contract update, targeted tests, integrated gates, independent technical review, real browser/PostgreSQL evidence and exact published-source required CI are pending. This document establishes the accepted bounded contract and writer ownership; it does not claim completed code or PASS results.
 
 Focused contract review found one concrete CI readiness race: the official PostgreSQL entrypoint first serves a temporary Unix socket. SEARCH-CI-001 requires the new container health check to use `pg_isready -h 127.0.0.1 -p 5432` before the host TCP runner starts. The backend writer must apply this correction; independent review will verify the actual diff. No runtime PASS is claimed by the static review.
+
+## Reviewed acceptance-owner split before the extra path
+
+The complete seven-scenario browser acceptance candidate measured 14581 B / 239 lines; the existing live entry measured 13094 B / 252 lines against a 12794 B baseline. Its original six-byte growth margin cannot accommodate the required invocation and context reuse. The controller inspected the lifecycle, shared UI helpers and legacy rename sequence before approving one additional path.
+
+`chat-thread-search-live.mjs` owns isolated account setup, seed/provenance and retained restart orchestration. `chat-search-ui-live.mjs` owns reusable public UI paging, focus/scroll, rename and Graph assertions. The existing entry imports a compatible rename helper while retaining its visible-title assertion and all original calls. Browser QA is the sole writer of all three paths; no product owner, workflow or dependency is added. The manifest now permits 33 exact paths, within the unchanged cross-domain40 limit. Each new auxiliary owner must remain at or below12800 B/280 lines, and the existing entry must regain space below12800 B. No test assertion, runtime check, retry, timeout or size threshold is relaxed. Independent review must verify the actual extraction and coverage equivalence.
