@@ -119,6 +119,8 @@ async function searchHistory(page, proof, ordinary, matches, phase, folder) {
     const selected = page.locator(`#chat-history-${proof.ids[0]}`)
     if (name === 'phone') await selected.tap()
     else { await selected.focus(); await selected.press('Enter') }
+    await expect(selected).toHaveClass(/\bactive\b/)
+    await expect(page.locator('.chat-start-state')).toBeVisible()
     await composer(page).fill(draft)
     await panel(page)
     const position = await scroll(page).evaluate(element => { element.scrollTop = 420; return element.scrollTop })
@@ -126,7 +128,7 @@ async function searchHistory(page, proof, ordinary, matches, phase, folder) {
     await query(page, marker); await input(page).fill('')
     await checkRows(page, proof.ids.slice(0, 150))
     await expect.poll(() => scroll(page).evaluate((element, saved) => Math.abs(element.scrollTop - saved), position)).toBeLessThanOrEqual(1)
-    await expect(page.locator('.chat-composer-dock textarea')).toHaveValue(draft)
+    await expect(composer(page)).toHaveValue(draft)
     await expect(selected).toHaveClass(/\bactive\b/)
     await more(page, null, ordinary.cursors[2], proof.ids)
     const remaining = proof.ids.filter(id => !matches.includes(id)), final = listReply(page, other)
