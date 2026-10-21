@@ -4,7 +4,7 @@
   "scope_class": "cross_domain",
   "risk": "high",
   "independent_review_required": true,
-  "max_files": 35,
+  "max_files": 36,
   "large_scope_reason": "One bounded owned-history title-search feature spans an existing API and private derived-key migration, the existing sidebar and its independent query state, focused integration/browser/real-preview acceptance, generated contract and native package activation. Exact paths are partitioned between backend, frontend, browser QA and controller writers; no second Chat execution path is introduced. Add one required isolated PostgreSQL acceptance step because the existing standalone Graph test runner is not invoked by CI; no production Compose/image or existing gate changes. Reviewed pre-write acceptance split: lifecycle/seed/restart stays in chat-thread-search-live.mjs; UI/paging/rename/Graph assertions move to chat-search-ui-live.mjs, which also supplies the unchanged legacy rename sequence. This keeps the near-limit live entry below its unchanged 80% growth boundary without removing coverage.",
   "domains": [
     "Existing Chat thread-list API and derived title-search key",
@@ -36,6 +36,7 @@
     "apps/web/e2e/chat-thread-search.spec.ts",
     "apps/web/e2e/chat-thread-search-fixture.ts",
     "apps/web/e2e/chat-sidebar.spec.ts",
+    "apps/web/e2e/shell.spec.ts",
     "apps/web/acceptance/chat-thread-search-live.mjs",
     "apps/web/acceptance/chat-search-ui-live.mjs",
     "apps/web/acceptance/chat-live.mjs",
