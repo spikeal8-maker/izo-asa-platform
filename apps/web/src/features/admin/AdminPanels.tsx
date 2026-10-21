@@ -14,6 +14,7 @@ export function AdminNav({ access, current }: { access: Access; current: 'users'
     <Link href="/admin/users" aria-current={current === 'users' ? 'page' : undefined}>Пользователи</Link>
     {access.permissions.includes('audit.read') && <Link href="/admin/audit" aria-current={current === 'audit' ? 'page' : undefined}>Журнал действий</Link>}
     {access.permissions.includes('access.read') && <Link href="/admin/access" aria-current={current === 'access' ? 'page' : undefined}>Доступ</Link>}
+    {access.permissions.includes('connections.read') && <Link href="/admin/providers">Провайдеры</Link>}
     <Link href="/account/credits">Мои баллы</Link>
   </nav>
 }

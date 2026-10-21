@@ -1,0 +1,77 @@
+# P0-B1 — Admin-managed DeepSeek registry: implementation evidence
+
+## Result and explicit limits
+
+Server-side encrypted platform DeepSeek configuration is stored separately from personal BYOK.
+Admin can replace, verify, disable/enable the configuration, change model and bounded
+daily/concurrency settings through authenticated, CSRF-protected APIs.
+**B1 is metadata/secret management only. available_to_users is permanently false.**
+Stored daily and concurrency values are NOT YET enforced as fleet budget guards.
+Platform-funded Chat routing, paid model use, and full Chat redesign are NOT implemented.
+No real DeepSeek key or paid request was used.
+
+## Git ancestry and runtime isolation
+
+- New branch: codex/p0-platform-providers-registry-001.
+- Exact source parent: PR #279, 7270d9d2caf86dc6917497b6e2a07a3859d4af48.
+- Previous main: 321fcb4fe193993db70aa705a46842e9836daac0.
+- PR #279 remains open; this is a stacked change, NOT a merge to main.
+- Stable D2-R2 demo: localhost:18080, Compose izo-asa-demo279, kept unchanged.
+- B1 isolated preview: localhost:18081, Compose izo-asa-p0-preview.
+- Separate Postgres/object volumes and explicit per-project network subnets.
+- No changes to global Docker networking, Firewall, DNS, VPN, routes or other projects.
+- Only a synthetic isolated P0 QA operator was bootstrapped. NOT the owner's account.
+
+## Source reuse and ownership
+
+| Existing target owner | Reused component | B1 change |
+|---|---|---|
+| Accounts | staff_session, password, CSRF, origin | Fresh staff/permission checks and reauthentication |
+| Access | permissions registry/bootstrap | Existing connections.read/write and secrets.bind, no new roles |
+| Chat credentials | AES-GCM and root key | Separate platform AAD/UUID namespace, no user-owned key |
+| DeepSeek | existing adapter plus built-in fake | Real verification only by explicit action, fake only in test |
+| Admin | append-only events | Metadata-only audit, no secret payload |
+| Chat / Graph | existing conversations | Not modified; no second inference/request backend |
+| Web | existing same-origin apiRequest and Admin navigation | New /admin/providers page with CSRF |
+| PostgreSQL | Alembic migration | 0021_platform_chat_registry, new constrained table |
+
+Fresh donor code was not imported; existing repository owners were reused.
+Provider compatibility and actual paid results are NOT proven by synthetic tests.
+
+## Security checks
+
+- Read requires connections.read. Save/verify require connections.write and secrets.bind.
+- Settings require connections.write. Fresh password proof and recheck before write.
+- Secret is write-only AES-GCM ciphertext, never present in GET/DTO or audit.
+- Rotation invalidates verified status and disables the connection.
+- Mere save does not set verified. Synthetic verification uses FakeDeepSeekProvider.
+- UUID replay, stale revision and conflicting intents are rejected.
+- Models bounded to deepseek-flash and deepseek-v4-pro, no arbitrary provider URL.
+- Daily bounds 1–200, concurrency 1–10; not yet charged/spend-limited.
+- A normal registered account is denied staff operations.
+
+## Tests and screenshots
+
+- P0 focused Linux pytest: 14 passed, 0 failed (isolated --network none).
+- Compose build / TypeScript typecheck / API readiness / migration completed.
+- Chromium browser: 13 actual checks PASS including save, verify, model/policy,
+  disable/reenable, reload, route visibility, mobile 390px without page overflow.
+- Initial UI omitted CSRF token; observed POST 403. Corrected and retested HTTP 200.
+- Restarted P0 containers; API/Web/Postgres healthy; migration version 0021.
+- Actual DeepSeek response: NOT TESTED. Staff catalog/grants mutations: NOT TESTED.
+
+| Real browser screenshot | Evidence |
+|---|---|
+| Before Admin connection | [Desktop before](assets/p0-b1-before-desktop.png) |
+| After saving and verifying | [Desktop after](assets/p0-b1-after-desktop.png) |
+| Responsive layout | [Mobile after](assets/p0-b1-after-mobile.png) |
+
+## Unresolved acceptance and next dependencies
+
+1. Independent security and read-only source review: PENDING; this is NOT an approval.
+2. Exact-head full required GitHub CI: PENDING until PR creation.
+3. Confirm real owner's identity before a real staff bootstrap.
+4. P0-B2/C needs account admission, charged-request routing, global concurrency,
+   daily spend enforcement, replay/recovery and zero-BYOK browser E2E.
+5. P0-D must improve overall desktop/mobile UI. Existing narrow mobile topbar is cramped.
+6. Do not merge this stacked draft PR or modify protected main without owner decision.
