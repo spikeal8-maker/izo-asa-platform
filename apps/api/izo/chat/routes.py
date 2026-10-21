@@ -145,10 +145,10 @@ def attach_chat(app, database_config, accounts_provider) -> None:
 
     @router.get(
         "/threads", response_model=ThreadList)
-    def threads(request: Request, cursor: str | None = None):
+    def threads(request: Request, cursor: str | None = None, q: str = Query(default="", max_length=256)):
         service = runtime_service(request)
         return service.list_threads(
-            bearer(request, service), cursor)
+            bearer(request, service), cursor, q)
 
     @router.post(
         "/threads",

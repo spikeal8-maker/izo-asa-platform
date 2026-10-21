@@ -8,6 +8,7 @@ from . import tables as t
 from .credentials import ChatError
 from .schemas import ThreadRename, ThreadView
 from .thread_pages import thread_view
+from .thread_title_search_v1 import title_key
 
 
 def rename_thread(service, raw, csrf, thread_id: UUID, title: str) -> ThreadView:
@@ -28,7 +29,7 @@ def rename_thread(service, raw, csrf, thread_id: UUID, title: str) -> ThreadView
         updated = conn.execute(sa.update(t.threads).where(
             t.threads.c.id == thread_id,
             t.threads.c.account_id == account["id"]
-        ).values(title=safe, title_is_manual=True,
+        ).values(title=safe, title_search_key=title_key(safe), title_is_manual=True,
                  updated_at=max(row["updated_at"], service.now()))
           .returning(t.threads)).mappings().one()
         return thread_view(updated)

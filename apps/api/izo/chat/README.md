@@ -62,9 +62,10 @@ Detail returns 100 latest physical messages and `next_before_sequence`;
 Graph leaves this contract intact. Check ownership before messages/assets.
 
 `GET /threads` returns `ThreadList`: 50 owned threads, `created_at DESC, id DESC`,
-exclusive cursor. Optional `q` searches all owned titles in SQL (LIMIT 51), without history cutoff. Raw q: at most 256 Unicode code points (422 beyond),
-NUL rejects with 400 before PostgreSQL. Matcher v1 trims explicit JavaScript edge
-whitespace, then applies whole-string Python 3.13/Unicode 15.1 lowercase to query
+exclusive cursor. `q` searches all owned titles in one SQL query (LIMIT 51).
+Raw q: at most 256 code points (422 beyond); NUL/invalid Unicode: 400 `invalid_input`.
+`thread_title_search_v1.py` trims JavaScript edge whitespace, then applies
+whole-string Python 3.13/Unicode 15.1 lowercase to query
 and complete title; match literal substring. No casefold/accent folding, NFC/NFKC, wildcards or JS Unicode parity. Empty normalized q retains ordinary list/v1 cursor. Normalized
 q over 240 cannot match; still validate cursor. PostgreSQL `strpos`/SQLite `instr`
 treat %, _ and backslash literally.
