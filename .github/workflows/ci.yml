@@ -130,42 +130,7 @@ jobs:
         env:
           IZO_ENVIRONMENT: test
           IZO_CHAT_GRAPH_ACCEPTANCE: isolated
-          IZO_PG_HOST: 127.0.0.1
-          IZO_PG_USER: izo_search_ci
-          IZO_PG_DATABASE: izo_search_ci
-          IZO_PG_PASSWORD: izo-search-ci-disposable
-          PYTHONPATH: apps/api:tests:.
-          PYTHONDONTWRITEBYTECODE: '1'
-        run: |
-          set -euo pipefail
-          search_pg_name="izo-search-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}"
-          cleanup_search_pg() {
-            docker rm --force --volumes "$search_pg_name" >/dev/null 2>&1 || true
-          }
-          trap cleanup_search_pg EXIT
-          trap 'exit 130' INT
-          trap 'exit 143' TERM
-          search_pg_container="$(docker run --detach --rm --pull=never \
-            --name "$search_pg_name" \
-            --publish 127.0.0.1::5432 \
-            --env POSTGRES_USER="$IZO_PG_USER" \
-            --env POSTGRES_DB="$IZO_PG_DATABASE" \
-            --env POSTGRES_PASSWORD="$IZO_PG_PASSWORD" \
-            --health-cmd="pg_isready -h 127.0.0.1 -p 5432 -U $IZO_PG_USER -d $IZO_PG_DATABASE" \
-            --health-interval=1s --health-timeout=3s --health-retries=30 \
-            postgres:17-bookworm)"
-          search_pg_health='starting'
-          for search_pg_attempt in {1..45}; do
-            search_pg_health="$(docker inspect --format '{{.State.Health.Status}}' "$search_pg_container")"
-            if [[ "$search_pg_health" == healthy ]]; then break; fi
-            if [[ "$search_pg_health" == unhealthy ]]; then exit 1; fi
-            sleep 1
-          done
-          test "$search_pg_health" = healthy
-          search_pg_binding="$(docker port "$search_pg_container" 5432/tcp)"
-          [[ "$search_pg_binding" =~ ^127\.0\.0\.1:([0-9]+)$ ]]
-          export IZO_PG_PORT="${BASH_REMATCH[1]}"
-          .venv/bin/python -B tests/test_chat_thread_search_postgres.py
+        run: .venv/bin/python -B tools/chat_thread_search_postgres_ci.py
       - name: Build and clean-test offline Chat preview
         run: |
           set -euo pipefail
