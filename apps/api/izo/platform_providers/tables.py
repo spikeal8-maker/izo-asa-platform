@@ -23,3 +23,13 @@ connections = sa.Table("platform_chat_connections", metadata,
     sa.CheckConstraint("concurrency_limit BETWEEN 1 AND 10", name="platform_concurrency_bound"),
     sa.CheckConstraint("model IN ('deepseek-flash','deepseek-v4-pro')",
                        name="platform_model_bound"))
+
+# UTC daily admission ledger for the isolated no-spend fake-provider vertical.
+daily_usage = sa.Table("platform_chat_daily_usage", metadata,
+    sa.Column("provider", sa.String(24), primary_key=True),
+    sa.Column("day_start", sa.BigInteger, primary_key=True),
+    sa.Column("requests_admitted", sa.Integer, nullable=False),
+    sa.Column("confirmed_cost_microusd", sa.BigInteger, nullable=False, server_default="0"),
+    sa.CheckConstraint("requests_admitted >= 0 AND requests_admitted <= 200",
+                       name="platform_daily_count_bounds"),
+    sa.CheckConstraint("confirmed_cost_microusd >= 0", name="platform_daily_cost_bounds"))

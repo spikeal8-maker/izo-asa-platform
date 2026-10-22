@@ -5,6 +5,7 @@ from sqlalchemy.exc import IntegrityError
 from . import tables as t
 from .branches import edit_material, edit_receipt, ensure_idle, intent_fingerprint, replay_edit, send_fence
 from .credentials import ChatError
+from .platform_admission import admit_platform
 from .conversations import persist_request
 from .graph_selection import check_revision, member_attempt, member_turn, owned_branch
 from .graph_selection import graph_state, owned_thread
@@ -109,7 +110,9 @@ def _material(service, conn, account_id, thread_id, command, turn_id, *, edit=Fa
 
 def _admission(service, conn, account_id, material, dynamic):
     head, allowed = service.catalog.public_text(conn, lock=True)
-    if material.model == OPENROUTER_AUTO_MODEL:
+    if material.model.startswith("platform:"):
+        provider, vision = "platform-deepseek", False
+    elif material.model == OPENROUTER_AUTO_MODEL:
         provider, vision = "openrouter", False
     elif "/" in material.model:
         if dynamic is None:
@@ -125,6 +128,8 @@ def _admission(service, conn, account_id, material, dynamic):
         raise ChatError(422, "model_vision_unsupported")
     assets = service._attachment_assets(conn, account_id, material.attachment_ids)
     service._consume_rate(conn, account_id, "request", REQUEST_WINDOW_LIMIT)
+    if provider == "platform-deepseek":
+        return admit_platform(service, conn, account_id, material, head, allowed)
     connection = conn.execute(sa.select(t.connections).where(
         t.connections.c.account_id == account_id, t.connections.c.provider == provider
     ).with_for_update()).mappings().first()

@@ -1,20 +1,37 @@
-# Platform provider registry · B1
+# Platform provider registry · P0-B1 / isolated P0-B2 fake
 
-Separate staff-governed platform credential **metadata and encrypted storage**.
-This module never creates a second Chat execution path and never exposes credentials
-in a response. Existing BYOK accounts, Chat requests, Graph and Catalog are unchanged.
-The initial DeepSeek connection is **not yet offered to users**:
-\`available_to_users=false\` is intentionally unconditional until the audited
-P0-C routing/admission/budget package. Enabling here records operator intent only.
+One Accounts/Access-governed **server-owned** DeepSeek key: encrypted PostgreSQL
+ciphertext under a platform-specific AES-GCM AAD and namespace. Never return
+plaintext, nonce, ciphertext or owner selector in public responses.
 
-Auth and permissions remain in Accounts: \`connections.read\` for read;
-\`connections.write\` plus \`secrets.bind\` and password reauthentication for
-key replacement/verification; \`connections.write\` for policy changes.
-Admin append-only events record change metadata, not secret contents.
-Only fixed DeepSeek adapter in test/development; fake provider in test.
-Owner credentials are never inferred from \`preview@local.izo\`.
+P0-B1 staff endpoints reuse Accounts session, CSRF, same-origin, current-password
+reauthentication, `connections.read`, `connections.write` and `secrets.bind`.
+Rotation invalidates verification and disables the setting; audit records
+nonsecret action metadata. Personal BYOK remains independent.
 
-B1: one encrypted row, exact UUID replay, optimistic revision CAS, audit,
-fixed model/budget bounds, synthetic verification, UI.
-B2/C: account-level admission, paid cost/fleet limits, routing, provider
-draining, secure live verification policy and real-model browser acceptance.
+P0-B2/C synthetic acceptance is **explicitly opt-in**: both
+`IZO_ENVIRONMENT=test` and `IZO_CHAT_PLATFORM_DEMO=isolated` must be
+present in the server process. Only the normal Chat preview account allowlist
+can use this path. Real provider execution is **not enabled** by this flag:
+test environment creates only `FakeDeepSeekProvider`.
+
+The existing Chat/Graph/Request API implements admission, SSE, persisted history,
+branching, UUID replay and UNKNOWN_PAID_OUTCOME. On isolated demo, one global
+PostgreSQL platform row lock serializes admission across accounts before reading
+the daily usage row or inserting per-account **shadow references**.
+The shadow credential holds an encrypted placeholder, not the shared provider key.
+Chat execution rechecks platform state/generation and decrypts the central key
+on the server only. A rotated or disabled provider cannot start a new request.
+
+Daily admission and global concurrency are bounded by database transactions;
+errors 429 are returned without increasing the durable daily counter.
+The `confirmed_cost_microusd` column remains **exactly zero only because this
+mode never calls a paid service**. This is not real paid-cost accounting.
+True USD/RUB token reconciliation, budget reservation, spend caps, fleet leases
+and live provider failover are explicitly **NOT IMPLEMENTED**.
+
+Test entrypoints: `tests/test_platform_chat_fake.py`,
+`apps/web/e2e/platform-fake-chat.spec.ts`,
+`tools/platform_chat_postgres_race.py` and
+`.github/workflows/p0-platform-fake.yml`.
+Never use this package or synthetic assertions as approval for a paid deployment.

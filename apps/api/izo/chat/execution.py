@@ -9,6 +9,7 @@ import sqlalchemy as sa
 from cryptography.exceptions import InvalidTag
 from . import tables as t
 from .credentials import ChatError, decrypt
+from .platform_admission import platform_key, SHADOW_PROVIDER, PLATFORM_MODEL_PREFIX
 from .graph_context import freeze_legacy_claim, load_context, read_snapshot
 from .graph_selection import locked_request
 from .provider import ProviderFailure
@@ -27,16 +28,21 @@ class ExecutionMixin(VisionContextMixin):
 					or connection["generation"]
 					!= request_row["credential_generation"]):
 				raise ChatError(503, "credential_unavailable")
-			try:
-				key = decrypt(
-					root, account_id, connection["id"],
-					connection["generation"], connection["nonce"],
-					connection["ciphertext"], connection["provider"])
-			except (InvalidTag, UnicodeError, ValueError):
-				raise ChatError(503, "credential_unavailable") from None
+			if connection["provider"] == SHADOW_PROVIDER:
+				key = platform_key(self, conn, root, request_row, connection)
+			else:
+				try:
+					key = decrypt(
+						root, account_id, connection["id"],
+						connection["generation"], connection["nonce"],
+						connection["ciphertext"], connection["provider"])
+				except (InvalidTag, UnicodeError, ValueError):
+					raise ChatError(503, "credential_unavailable") from None
 			snapshot, chosen, grouped = load_context(self, conn, account_id, request_row)
-		provider = connection["provider"]
-		if request_row["model"] == OPENROUTER_AUTO_MODEL:
+		provider = "deepseek" if connection["provider"] == SHADOW_PROVIDER else connection["provider"]
+		if request_row["model"].startswith(PLATFORM_MODEL_PREFIX):
+			resolved_provider, provider_model = "deepseek", request_row["model"].removeprefix(PLATFORM_MODEL_PREFIX)
+		elif request_row["model"] == OPENROUTER_AUTO_MODEL:
 			resolved_provider, provider_model = "openrouter", "openrouter/auto"
 		elif "/" in request_row["model"]:
 			resolved_provider, provider_model = "openrouter", request_row["model"]
