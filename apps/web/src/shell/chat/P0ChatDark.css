@@ -1,0 +1,78 @@
+/* P0-D dark theme: preserve contrast while retaining the new hierarchy. */
+:root[data-theme="dark"] .chat-shell {
+  --p0-ink: #e0e9fd;
+  --p0-main: #111a2b;
+  --p0-panel: #202d43;
+  --p0-outline: #37455d;
+  --p0-muted: #aab9ce;
+  --p0-shadow: 0 10px 36px #080f2373;
+}
+:root[data-theme="dark"] .chat-shell .global-header {
+  background: #20283b;
+  color: #dbe5f9;
+  border-bottom-color: #394962;
+}
+:root[data-theme="dark"] .chat-shell .chat-main {
+  background: radial-gradient(circle at 58% 4%, #29294c, transparent 33%), var(--p0-main);
+}
+:root[data-theme="dark"] .chat-shell .chat-toolbar {
+  background: #1a273ae8;
+  color: #e6ebfa;
+  border-bottom-color: #3b4660;
+}
+:root[data-theme="dark"] .chat-shell .chat-toolbar .chat-credential-toggle {
+  background: #253550;
+  color: #dce6f9;
+  border-color: #495777;
+}
+:root[data-theme="dark"] .chat-shell .chat-start-state {
+  background: radial-gradient(ellipse at 50% 35%, #352f67a8, transparent 55%);
+}
+:root[data-theme="dark"] .chat-shell .chat-start-state h1 {
+  color: #f3f3ff;
+}
+:root[data-theme="dark"] .chat-shell .chat-start-note {
+  color: #b7c4dd;
+}
+:root[data-theme="dark"] .chat-shell .chat-user-bubble {
+  background: linear-gradient(120deg, #413c73, #353d67);
+  color: #f0f1ff;
+  border-color: #5f6095;
+}
+:root[data-theme="dark"] .chat-shell .chat-assistant-message {
+  background: var(--p0-panel);
+  color: #e7effe;
+  border-color: #3f506b;
+  border-left-color: #9d8aff;
+}
+:root[data-theme="dark"] .chat-shell .chat-assistant-message > p,
+:root[data-theme="dark"] .chat-shell .chat-assistant-message h1,
+:root[data-theme="dark"] .chat-shell .chat-assistant-message h2,
+:root[data-theme="dark"] .chat-shell .chat-assistant-message h3 {
+  color: #e7effe;
+}
+:root[data-theme="dark"] .chat-shell .chat-assistant-message blockquote {
+  background: #363458;
+}
+:root[data-theme="dark"] .chat-shell .chat-composer-dock {
+  background: linear-gradient(180deg, transparent, #111a2bf2 35%, #111a2b 80%);
+}
+:root[data-theme="dark"] .chat-shell .chat-composer {
+  background: #26364f;
+  border-color: #4b5b77;
+  box-shadow: 0 14px 42px #02060f8a;
+}
+:root[data-theme="dark"] .chat-shell .chat-composer textarea {
+  color: #f5f7ff;
+}
+:root[data-theme="dark"] .chat-shell .chat-composer textarea::placeholder {
+  color: #b6c1d5;
+}
+:root[data-theme="dark"] .chat-shell .chat-model-selector {
+  color: #d8dcff;
+  background: #353858;
+}
+:root[data-theme="dark"] .chat-shell .chat-composer-note,
+:root[data-theme="dark"] .chat-shell .chat-message-actions button {
+  color: #aebed6;
+}

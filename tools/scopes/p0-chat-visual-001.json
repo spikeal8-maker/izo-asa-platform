@@ -1,0 +1,35 @@
+{
+  "schema_version": 1,
+  "package_id": "P0-CHAT-VISUAL-001",
+  "base": "0ab3cbaf596344a0678ee074e96ff3d4c2a2bf85",
+  "scope_class": "cross_domain",
+  "risk": "medium",
+  "independent_review_required": true,
+  "max_files": 8,
+  "large_scope_reason": "Distinct frontend-only visual hierarchy across the existing Chat sidebar/composer/messages surfaces and Admin styling, preserving all functional contracts. Four authored CSS files are small and layered after existing styles; App.tsx only imports them. Browser checks cover desktop/mobile, focus, no overflow and model picker. Same-data screenshots are retained as D2-R2 QA artifacts outside Git per hygiene. This stacks on P0-B2 fake-only functional source without touching its owned files.",
+  "domains": [
+    "Web Chat visual system",
+    "Web Admin visual styling",
+    "Responsive Playwright visual acceptance"
+  ],
+  "allowed": [
+    "apps/web/src/shell/App.tsx",
+    "apps/web/src/shell/chat/P0ChatSurface.css",
+    "apps/web/src/shell/chat/P0ChatDetail.css",
+    "apps/web/src/shell/chat/P0ChatDark.css",
+    "apps/web/src/features/admin/P0AdminSurface.css",
+    "apps/web/e2e/p0-chat-visual.spec.ts",
+    "docs/reviews/P0-CHAT-VISUAL-001.md",
+    "tools/scopes/p0-chat-visual-001.json"
+  ],
+  "sensitive_approved": [
+    "tools/scopes/p0-chat-visual-001.json"
+  ],
+  "non_goals": [
+    "No mutation of Accounts/Graph/Chat execution or any API/staff security contracts.",
+    "No reset or rebase of B2 functional code, main or PR #279/#280; UX is an isolated stacked branch.",
+    "No introduction of a second Chat backend, real provider call or unexpected tracked PNG.",
+    "No relaxation of repository hygiene, testing, accessibility or CSS CSP policy.",
+    "No production deployment or merge without owner approval."
+  ]
+}

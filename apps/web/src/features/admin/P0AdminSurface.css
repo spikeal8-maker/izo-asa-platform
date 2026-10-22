@@ -1,0 +1,79 @@
+/* P0-D: unify staff console surfaces with the redesigned Chat shell. */
+.admin-page {
+  --p0-console-border: #dde4f2;
+  --p0-console-accent: #7057e7;
+  --p0-console-muted: #7b86a0;
+  max-width: 1500px;
+  margin: 0 auto;
+}
+.admin-page .page-heading {
+  padding-top: 16px;
+  padding-bottom: 9px;
+}
+.admin-page .page-heading h1 {
+  color: #293651;
+  font-weight: 760;
+  letter-spacing: -.045em;
+}
+.admin-page .page-heading .eyebrow {
+  font-weight: 700;
+  letter-spacing: .12em;
+  color: #7460cb;
+}
+.admin-page .admin-links {
+  border-bottom: 1px solid var(--p0-console-border);
+  padding-bottom: 11px;
+}
+.admin-page .admin-links a {
+  border-radius: 10px;
+  padding: 9px 12px;
+  font-size: 13px;
+  font-weight: 600;
+  transition: background .16s;
+}
+.admin-page .admin-links a[aria-current="page"] {
+  background: #ede9ff;
+  color: #503ca7;
+}
+.admin-page .admin-links a:hover {
+  background: #f3f0ff;
+}
+.admin-page .admin-panel {
+  border: 1px solid var(--p0-console-border);
+  box-shadow: 0 7px 20px #2d315214;
+  border-radius: 15px;
+}
+.provider-admin .provider-heading strong {
+  background: #efedff;
+  border-color: #d9d2ff;
+  color: #513bb0;
+}
+.provider-admin .provider-form input,
+.provider-admin .provider-form select,
+.provider-admin .provider-auth input {
+  border: 1px solid #d8deeb;
+  border-radius: 10px;
+  min-height: 42px;
+  background: #fff;
+}
+.provider-admin .provider-form input:focus-visible,
+.provider-admin .provider-form select:focus-visible,
+.provider-admin .provider-auth input:focus-visible {
+  outline: 3px solid #9b8cf3;
+  outline-offset: 1px;
+}
+.provider-admin .provider-panel .primary {
+  background: #6654de;
+  color: #fff;
+  border-radius: 10px;
+  border: 0;
+  padding: 10px 16px;
+  font-weight: 650;
+}
+.provider-admin .provider-panel .primary:not(:disabled):hover {
+  background: #5644c7;
+}
+@media (max-width: 640px) {
+  .admin-page .admin-links a { padding: 7px 10px; }
+  .admin-page .page-heading h1 { font-size: 28px; }
+}
