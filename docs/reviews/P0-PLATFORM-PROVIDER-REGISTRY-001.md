@@ -62,9 +62,9 @@ Provider compatibility and actual paid results are NOT proven by synthetic tests
 
 | Real browser screenshot | Evidence |
 |---|---|
-| Before Admin connection | [Desktop before](assets/p0-b1-before-desktop.png) |
-| After saving and verifying | [Desktop after](assets/p0-b1-after-desktop.png) |
-| Responsive layout | [Mobile after](assets/p0-b1-after-mobile.png) |
+| Before Admin connection | Desktop before: `C:\Users\spike\Projects\izo-asa-p0-preview-qa\P0_B1_before_desktop.png` |
+| After saving and verifying | Desktop after: `C:\Users\spike\Projects\izo-asa-p0-preview-qa\P0_B1_after_desktop.png` |
+| Responsive layout | Mobile after: `C:\Users\spike\Projects\izo-asa-p0-preview-qa\P0_B1_after_mobile.png` |
 
 ## Unresolved acceptance and next dependencies
 

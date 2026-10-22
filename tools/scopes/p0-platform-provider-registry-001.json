@@ -1,0 +1,60 @@
+{
+  "package_id": "P0-PLATFORM-PROVIDER-REGISTRY-001",
+  "base": "7270d9d2caf86dc6917497b6e2a07a3859d4af48",
+  "scope_class": "cross_domain",
+  "risk": "high",
+  "independent_review_required": true,
+  "max_files": 26,
+  "large_scope_reason": "One bounded staff-managed DeepSeek credential registry spans Accounts-owned permission checks, existing Chat AES-GCM primitives, a separate SQL migration, existing Admin UI components, security/HTTP regression tests, generated OpenAPI contract and exact-source visual evidence. Backend and frontend splits were made in isolated worktrees, preserving backend method ASTs and reusing the original JSX; no Chat execution pipeline or paid request semantics are changed. The original PNG evidence was intentionally removed from the Git tree rather than creating binary allowlist exceptions.",
+  "domains": [
+    "Existing Accounts/Access staff authorization and secrets",
+    "Platform-owned encrypted provider registry and migration",
+    "Admin Web UI with existing API and responsive shell",
+    "Targeted security, persistence and operational evidence"
+  ],
+  "allowed": [
+    "apps/api/izo/admin/service.py",
+    "apps/api/izo/app.py",
+    "apps/api/izo/platform_providers/README.md",
+    "apps/api/izo/platform_providers/__init__.py",
+    "apps/api/izo/platform_providers/namespace.py",
+    "apps/api/izo/platform_providers/operations.py",
+    "apps/api/izo/platform_providers/routes.py",
+    "apps/api/izo/platform_providers/schemas.py",
+    "apps/api/izo/platform_providers/service.py",
+    "apps/api/izo/platform_providers/tables.py",
+    "apps/api/migrations/versions/0021_platform_chat_registry.py",
+    "apps/web/src/features/admin/AdminPage.tsx",
+    "apps/web/src/features/admin/AdminPanels.tsx",
+    "apps/web/src/features/admin/ProviderAdminPage.tsx",
+    "apps/web/src/features/admin/ProviderAdminPanels.tsx",
+    "apps/web/src/features/admin/provider-admin-types.ts",
+    "apps/web/src/features/admin/provider-admin.css",
+    "apps/web/src/shell/App.tsx",
+    "apps/web/src/shell/TopBar.tsx",
+    "docs/CONTEXT_MAP.json",
+    "docs/reviews/P0-PLATFORM-PROVIDER-REGISTRY-001.md",
+    "packages/contracts/openapi.json",
+    "tests/test_platform_providers_http.py",
+    "tools/scopes/p0-platform-provider-registry-001.json"
+  ],
+  "sensitive_approved": [
+    "apps/api/migrations/versions/0021_platform_chat_registry.py",
+    "apps/api/izo/admin/service.py",
+    "apps/api/izo/app.py",
+    "apps/api/izo/platform_providers/namespace.py",
+    "apps/api/izo/platform_providers/operations.py",
+    "packages/contracts/openapi.json",
+    "docs/CONTEXT_MAP.json",
+    "tools/scopes/p0-platform-provider-registry-001.json"
+  ],
+  "non_goals": [
+    "No additional Chat backend, alternate auth, account or Credits ownership; no requests routed to server-owned provider in B1.",
+    "No paid calls or fleet spending; daily and concurrency numbers are persisted operator intent only, not enforcement.",
+    "No bypass of CSRF, verified staff, current password, encryption, UUID replay, budget gates or repository-hygiene thresholds.",
+    "No production credentials, owner account promotion, DNS, VPN, Firewall, Docker daemon setting or other Compose stack mutation.",
+    "No rewrite of project state PLAN, canonical active package/checkpoint, protected main or open PR #279.",
+    "No large redesign of Chat, Studio, Gallery or Admin outside the provider settings panel.",
+    "No tracked binary screenshots or changes to repository hygiene allowlist; evidence stays local and in CI artifacts where generated."
+  ]
+}
