@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react'
 import type { AuthView } from '../shared/api'
 import { Icon } from '../shared/ui/Icon'
-import { Link } from './router'
+import { ChatStartNotice } from './chat/ChatStartNotice'
 import { ChatComposer } from './chat/ChatComposer'
 import { ChatCredentialPanel } from './chat/ChatCredentialPanel'
 import { ChatMessage } from './chat/ChatMessage'
@@ -158,13 +158,7 @@ onClick={() => void branches.retry()}>Обновить ветку</button>}
 {empty
 ? <div className="chat-start-state">
 <h1>Чем я могу помочь?</h1>
-{auth === undefined
-? <p className="chat-start-note" role="status">Проверяем вход…</p>
-: !auth
-? <p className="chat-start-note">Для сохранённого разговора нужен аккаунт. <Link href="/login">Войти</Link></p>
-: !runtime.credentials.some(item => item.verified)
-? <p className="chat-start-note">Подключите и проверьте API key провайдера.</p>
-: null}
+<ChatStartNotice auth={auth} credentials={runtime.credentials} policy={runtime.policy} />
 {runtimeNote}
 {composer}
 </div>

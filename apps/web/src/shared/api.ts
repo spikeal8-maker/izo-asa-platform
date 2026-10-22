@@ -1,4 +1,5 @@
 import type { components } from './api.generated'
+import { platformChatErrors } from './platform-chat-errors'
 export type FoundationStatus = components['schemas']['FoundationStatus']
 export type AuthView = components['schemas']['AuthView']
 export type GuestView = components['schemas']['GuestView']
@@ -38,6 +39,7 @@ export const chatErrors: Record<string, string> = {
   active_request_exists: 'В этом чате уже выполняется ответ.',
   request_conflict: 'Повторный запрос имеет другие параметры.',
   chat_rate_limited: 'Достигнут временный лимит Chat. Повторите позднее.',
+  ...platformChatErrors,
   provider_rate_limited: 'Провайдер ограничил частоту запросов.',
   provider_balance: 'Провайдер не разрешил запрос для этого ключа.',
   provider_empty_response: 'Провайдер вернул пустой ответ.',

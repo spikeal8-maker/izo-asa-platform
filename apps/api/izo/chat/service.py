@@ -9,6 +9,7 @@ from ..catalog.service import CatalogService
 
 from . import tables as t
 from .catalog import CatalogMixin, OpenRouterCatalogCache
+from .platform_policy import PlatformPolicyMixin
 from .conversations import ConversationMixin
 from .credentials import ChatError, CredentialMixin
 from .schemas import (
@@ -18,7 +19,7 @@ from .execution import ExecutionMixin
 from .request_state import UNKNOWN_PAID_OUTCOME
 
 
-class ChatService(CatalogMixin, CredentialMixin, ConversationMixin, ExecutionMixin):
+class ChatService(PlatformPolicyMixin, CatalogMixin, CredentialMixin, ConversationMixin, ExecutionMixin):
     @staticmethod
     def _request_fingerprint(thread_id, text, model, connection_id, generation,
                              model_revision=MODEL_REVISION, attachment_ids=()) -> str:
@@ -32,12 +33,13 @@ class ChatService(CatalogMixin, CredentialMixin, ConversationMixin, ExecutionMix
         return hashlib.sha256(raw).hexdigest()
 
     def __init__(self, auth, policy, provider, clock=time.time,
-                 providers=None, openrouter_catalog=None, media_store=None):
+                 providers=None, openrouter_catalog=None, media_store=None, platform_demo=False):
         self.auth, self.engine, self.policy = auth, auth.engine, policy
         self.provider, self.clock = provider, clock
         self.providers = {"deepseek": provider, **(providers or {})}
         self._openrouter_catalog = openrouter_catalog or OpenRouterCatalogCache(clock=clock)
         self.media_store = media_store
+        self.platform_demo = platform_demo
         self.catalog = CatalogService(auth)
         self._stops: dict[object, Event] = {}
         self._stop_lock = Lock()

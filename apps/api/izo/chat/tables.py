@@ -30,7 +30,7 @@ connections = sa.Table("chat_connections", metadata,
     sa.Column("updated_at", sa.BigInteger, nullable=False),
     sa.UniqueConstraint("id", "account_id", name="chat_connection_owner"),
     sa.UniqueConstraint("account_id", "provider", name="chat_connection_account_provider"),
-    sa.CheckConstraint("provider IN ('deepseek','openrouter') AND generation > 0 AND revision > 0",
+    sa.CheckConstraint("provider IN ('deepseek','openrouter','platform-deepseek') AND generation > 0 AND revision > 0",
                        name="chat_connection_bounds"))
 
 threads = sa.Table("chat_threads", metadata,
