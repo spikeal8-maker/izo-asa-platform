@@ -2,28 +2,9 @@ import { useCallback, useEffect, useState, type FormEvent } from 'react'
 import { ApiError, apiRequest, type AuthView } from '../../shared/api'
 import { Link } from '../../shell/router'
 import './provider-admin.css'
+import { ProviderAdminPanels } from './ProviderAdminPanels'
 
-type Provider = {
-  provider: 'deepseek'
-  configured: boolean
-  enabled: boolean
-  verified: boolean
-  status: 'not_configured' | 'not_verified' | 'disabled' | 'verified'
-  model: 'deepseek-flash' | 'deepseek-v4-pro'
-  revision: number | null
-  generation: number | null
-  daily_limit: number
-  concurrency_limit: number
-  available_to_users: boolean
-}
-type ProviderList = { connections: Provider[] }
-const endpoint = '/api/v1/admin/providers'
-const labels: Record<Provider['status'], string> = {
-  not_configured: 'Ключ не настроен',
-  not_verified: 'Требуется проверка ключа',
-  disabled: 'Выключено',
-  verified: 'Ключ проверен, настройка включена',
-}
+import { endpoint, type Provider, type ProviderList } from './provider-admin-types'
 
 function explain(reason: unknown): string {
   if (reason instanceof ApiError) {
@@ -136,62 +117,14 @@ export function ProviderAdminPage({ auth }: { auth: AuthView | null | undefined 
       setError(''); setNotice(''); setLoading(true)
       void refresh().catch(e => setError(explain(e))).finally(() => setLoading(false))
     }} disabled={busy}>Обновить состояние</button>}
-    {provider && <div className="provider-columns">
-      <div className="admin-panel provider-panel">
-        <div className="provider-heading">
-          <div><small>ПОДКЛЮЧЕНИЕ</small><h2>DeepSeek</h2></div>
-          <strong>{labels[provider.status]}</strong>
-        </div>
-        <dl className="summary-list">
-          <div><dt>Ключ</dt><dd>{provider.configured ? 'Сохранён на сервере' : 'Не добавлен'}</dd></div>
-          <div><dt>Проверка</dt><dd>{provider.verified ? 'Выполнена' : 'Не выполнена'}</dd></div>
-          <div><dt>Версия настроек</dt><dd>{provider.revision ?? '—'}</dd></div>
-          <div><dt>Пользователям</dt><dd>{provider.available_to_users ? 'Доступен' : 'Ещё не подключён'}</dd></div>
-        </dl>
-        <form onSubmit={event => form(event, 'save')} className="provider-form">
-          <h3>Добавить или заменить ключ</h3>
-          <label>Новый API-ключ
-            <input type="password" autoComplete="off" spellCheck={false}
-              value={key} onChange={e => setKey(e.target.value)}
-              minLength={8} maxLength={512} required />
-          </label>
-          <button className="primary" type="submit" disabled={busy || !password || !key.trim()}>
-            Сохранить ключ на сервере
-          </button>
-        </form>
-        <button type="button" disabled={!provider.configured || busy || !password}
-          onClick={() => void change('verify')}>Проверить подключение</button>
-      </div>
-      <div className="admin-panel provider-panel">
-        <h2>Модель и ограничения</h2>
-        <form onSubmit={event => form(event, 'policy')} className="provider-form">
-          <label>Модель
-            <select value={model} onChange={e => setModel(e.target.value as Provider['model'])}>
-              <option value="deepseek-flash">DeepSeek Flash</option>
-              <option value="deepseek-v4-pro">DeepSeek V4 Pro</option>
-            </select>
-          </label>
-          <label>Лимит запросов в сутки
-            <input type="number" min={1} max={200} step={1} value={daily}
-              onChange={e => setDaily(Number(e.target.value))} required />
-          </label>
-          <label>Максимум одновременных запросов
-            <input type="number" min={1} max={10} step={1} value={concurrency}
-              onChange={e => setConcurrency(Number(e.target.value))} required />
-          </label>
-          <label className="provider-check"><input type="checkbox" checked={enabled}
-            onChange={e => setEnabled(e.target.checked)} /> Разрешить подключение в настройках</label>
-          <button className="primary" type="submit" disabled={busy || !password || !provider.configured}>
-            Сохранить настройки
-          </button>
-        </form>
-        <div className="provider-auth"><label>Текущий пароль администратора для операций
-          <input type="password" autoComplete="current-password" value={password}
-            onChange={e => setPassword(e.target.value)} minLength={1} maxLength={128} /></label>
-          <p>Пароль нужен для подтверждения операции и не сохраняется в браузере.</p>
-        </div>
-      </div>
-    </div>}
+    {provider && <ProviderAdminPanels provider={provider}
+      keyValue={key} setKey={setKey}
+      password={password} setPassword={setPassword}
+      model={model} setModel={setModel}
+      enabled={enabled} setEnabled={setEnabled}
+      daily={daily} setDaily={setDaily}
+      concurrency={concurrency} setConcurrency={setConcurrency}
+      busy={busy} change={change} form={form} />}
     <p className="provider-limit"><strong>Граница этапа B1.</strong> Здесь реально сохраняются, проверяются и выключаются
       настройки подключения. Маршрутизация пользовательских запросов и контроль расходов будут включены отдельным
       проверяемым этапом. В тестовом окружении проверка ключа синтетическая, без обращения к DeepSeek.</p>
