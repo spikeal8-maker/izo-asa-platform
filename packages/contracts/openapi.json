@@ -978,7 +978,7 @@
           },
           "providers": {
             "items": {
-              "$ref": "#/components/schemas/ProviderView"
+              "$ref": "#/components/schemas/izo__catalog__schemas__ProviderView"
             },
             "title": "Providers",
             "type": "array"
@@ -2870,22 +2870,20 @@
         "title": "ProofInput",
         "type": "object"
       },
-      "ProviderView": {
+      "ProviderList": {
         "properties": {
-          "id": {
-            "title": "Id",
-            "type": "string"
-          },
-          "label": {
-            "title": "Label",
-            "type": "string"
+          "connections": {
+            "items": {
+              "$ref": "#/components/schemas/izo__platform_providers__schemas__ProviderView"
+            },
+            "title": "Connections",
+            "type": "array"
           }
         },
         "required": [
-          "id",
-          "label"
+          "connections"
         ],
-        "title": "ProviderView",
+        "title": "ProviderList",
         "type": "object"
       },
       "PublishInput": {
@@ -3100,6 +3098,51 @@
           "display_name"
         ],
         "title": "RegisterInput",
+        "type": "object"
+      },
+      "ReplaceKey": {
+        "additionalProperties": false,
+        "properties": {
+          "current_password": {
+            "format": "password",
+            "maxLength": 128,
+            "minLength": 1,
+            "title": "Current Password",
+            "type": "string",
+            "writeOnly": true
+          },
+          "expected_revision": {
+            "anyOf": [
+              {
+                "minimum": 1.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Expected Revision"
+          },
+          "key": {
+            "format": "password",
+            "maxLength": 512,
+            "minLength": 8,
+            "title": "Key",
+            "type": "string",
+            "writeOnly": true
+          },
+          "operation_id": {
+            "format": "uuid",
+            "title": "Operation Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "operation_id",
+          "key",
+          "current_password"
+        ],
+        "title": "ReplaceKey",
         "type": "object"
       },
       "RequestCreate": {
@@ -3560,6 +3603,64 @@
         "title": "ThreadView",
         "type": "object"
       },
+      "UpdatePolicy": {
+        "additionalProperties": false,
+        "properties": {
+          "concurrency_limit": {
+            "maximum": 10.0,
+            "minimum": 1.0,
+            "title": "Concurrency Limit",
+            "type": "integer"
+          },
+          "current_password": {
+            "format": "password",
+            "maxLength": 128,
+            "minLength": 1,
+            "title": "Current Password",
+            "type": "string",
+            "writeOnly": true
+          },
+          "daily_limit": {
+            "maximum": 200.0,
+            "minimum": 1.0,
+            "title": "Daily Limit",
+            "type": "integer"
+          },
+          "enabled": {
+            "title": "Enabled",
+            "type": "boolean"
+          },
+          "expected_revision": {
+            "minimum": 1.0,
+            "title": "Expected Revision",
+            "type": "integer"
+          },
+          "model": {
+            "enum": [
+              "deepseek-flash",
+              "deepseek-v4-pro"
+            ],
+            "title": "Model",
+            "type": "string"
+          },
+          "operation_id": {
+            "format": "uuid",
+            "title": "Operation Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "operation_id",
+          "expected_revision",
+          "enabled",
+          "model",
+          "daily_limit",
+          "concurrency_limit",
+          "current_password"
+        ],
+        "title": "UpdatePolicy",
+        "type": "object"
+      },
       "UploadIntent": {
         "additionalProperties": false,
         "properties": {
@@ -3702,6 +3803,36 @@
         "title": "ValidationError",
         "type": "object"
       },
+      "VerifyKey": {
+        "additionalProperties": false,
+        "properties": {
+          "current_password": {
+            "format": "password",
+            "maxLength": 128,
+            "minLength": 1,
+            "title": "Current Password",
+            "type": "string",
+            "writeOnly": true
+          },
+          "expected_revision": {
+            "minimum": 1.0,
+            "title": "Expected Revision",
+            "type": "integer"
+          },
+          "operation_id": {
+            "format": "uuid",
+            "title": "Operation Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "operation_id",
+          "expected_revision",
+          "current_password"
+        ],
+        "title": "VerifyKey",
+        "type": "object"
+      },
       "izo__catalog__schemas__ModelView": {
         "properties": {
           "enabled": {
@@ -3772,6 +3903,24 @@
         "title": "ModelView",
         "type": "object"
       },
+      "izo__catalog__schemas__ProviderView": {
+        "properties": {
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "label": {
+            "title": "Label",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "label"
+        ],
+        "title": "ProviderView",
+        "type": "object"
+      },
       "izo__chat__schemas__ModelView": {
         "properties": {
           "description": {
@@ -3812,6 +3961,94 @@
           "price"
         ],
         "title": "ModelView",
+        "type": "object"
+      },
+      "izo__platform_providers__schemas__ProviderView": {
+        "properties": {
+          "available_to_users": {
+            "default": false,
+            "title": "Available To Users",
+            "type": "boolean"
+          },
+          "concurrency_limit": {
+            "title": "Concurrency Limit",
+            "type": "integer"
+          },
+          "configured": {
+            "title": "Configured",
+            "type": "boolean"
+          },
+          "daily_limit": {
+            "title": "Daily Limit",
+            "type": "integer"
+          },
+          "enabled": {
+            "title": "Enabled",
+            "type": "boolean"
+          },
+          "generation": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Generation"
+          },
+          "model": {
+            "enum": [
+              "deepseek-flash",
+              "deepseek-v4-pro"
+            ],
+            "title": "Model",
+            "type": "string"
+          },
+          "provider": {
+            "const": "deepseek",
+            "default": "deepseek",
+            "title": "Provider",
+            "type": "string"
+          },
+          "revision": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Revision"
+          },
+          "status": {
+            "enum": [
+              "not_configured",
+              "not_verified",
+              "disabled",
+              "verified"
+            ],
+            "title": "Status",
+            "type": "string"
+          },
+          "verified": {
+            "title": "Verified",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "configured",
+          "enabled",
+          "verified",
+          "status",
+          "model",
+          "revision",
+          "generation",
+          "daily_limit",
+          "concurrency_limit"
+        ],
+        "title": "ProviderView",
         "type": "object"
       }
     }
@@ -4326,6 +4563,160 @@
         "summary": "Me",
         "tags": [
           "admin"
+        ]
+      }
+    },
+    "/api/v1/admin/providers": {
+      "get": {
+        "operationId": "list_providers_api_v1_admin_providers_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProviderList"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "4XX": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AuthErrorView"
+                }
+              }
+            },
+            "description": "Client Error"
+          }
+        },
+        "summary": "List Providers",
+        "tags": [
+          "admin-providers"
+        ]
+      }
+    },
+    "/api/v1/admin/providers/deepseek/config": {
+      "patch": {
+        "operationId": "update_config_api_v1_admin_providers_deepseek_config_patch",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdatePolicy"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/izo__platform_providers__schemas__ProviderView"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "4XX": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AuthErrorView"
+                }
+              }
+            },
+            "description": "Client Error"
+          }
+        },
+        "summary": "Update Config",
+        "tags": [
+          "admin-providers"
+        ]
+      }
+    },
+    "/api/v1/admin/providers/deepseek/credential": {
+      "post": {
+        "operationId": "save_key_api_v1_admin_providers_deepseek_credential_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ReplaceKey"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/izo__platform_providers__schemas__ProviderView"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "4XX": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AuthErrorView"
+                }
+              }
+            },
+            "description": "Client Error"
+          }
+        },
+        "summary": "Save Key",
+        "tags": [
+          "admin-providers"
+        ]
+      }
+    },
+    "/api/v1/admin/providers/deepseek/verify": {
+      "post": {
+        "operationId": "verify_key_api_v1_admin_providers_deepseek_verify_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/VerifyKey"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/izo__platform_providers__schemas__ProviderView"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "4XX": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AuthErrorView"
+                }
+              }
+            },
+            "description": "Client Error"
+          }
+        },
+        "summary": "Verify Key",
+        "tags": [
+          "admin-providers"
         ]
       }
     },

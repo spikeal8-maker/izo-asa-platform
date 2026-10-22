@@ -31,7 +31,7 @@ export function AdminLink({ path }: { path: string }) {
       .then(value => {
         if (controller.signal.aborted) return
         const permissions = value.account.permissions
-        setHref(permissions.includes('users.read_limited') ? '/admin/users' : permissions.includes('access.read') ? '/admin/access' : '')
+        setHref(permissions.includes('users.read_limited') ? '/admin/users' : permissions.includes('access.read') ? '/admin/access' : permissions.includes('connections.read') ? '/admin/providers' : '')
       }).catch(() => { if (!controller.signal.aborted) setHref('') })
     return () => controller.abort()
   }, [path])

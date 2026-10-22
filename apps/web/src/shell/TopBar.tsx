@@ -132,7 +132,8 @@ export function TopBar({ path, auth, theme, onThemeChange, onLogout }: {
   const permissions = auth?.account.permissions ?? []
   const adminHref = permissions.includes('catalog.read') ? '/admin/catalog'
     : permissions.includes('users.read_limited') ? '/admin/users'
-      : permissions.includes('access.read') ? '/admin/access' : null
+      : permissions.includes('access.read') ? '/admin/access'
+        : permissions.includes('connections.read') ? '/admin/providers' : null
 
   return <header className="global-header" data-testid="global-header">
     <div className="header-left">

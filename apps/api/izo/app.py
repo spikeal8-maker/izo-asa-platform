@@ -16,6 +16,7 @@ from .accounts.routes import attach_accounts
 from .credits.routes import attach_credits
 from .entitlements.routes import attach_entitlements
 from .admin.routes import attach_admin
+from .platform_providers.routes import attach_platform_providers
 from .catalog.routes import attach_catalog
 from .access.routes import attach_access
 from .settings.routes import attach_settings
@@ -48,6 +49,7 @@ def create_app(config: Settings | None = None,
     attach_credits(app, accounts_service)
     attach_entitlements(app, accounts_service)
     attach_admin(app, accounts_service)
+    attach_platform_providers(app, accounts_service, config)
     attach_catalog(app, accounts_service)
     attach_access(app, accounts_service)
     attach_settings(app, accounts_service)
