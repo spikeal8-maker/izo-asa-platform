@@ -123,6 +123,9 @@ jobs:
       - name: Install web
         working-directory: apps/web
         run: npm ci
+      - name: Install browser for runtime acceptance
+        working-directory: apps/web
+        run: npx playwright install --with-deps chromium
       - name: Container integration
         env:
           IZO_CHAT_PREVIEW_ACCOUNT_EMAILS: preview@local.izo,search@local.izo
@@ -235,6 +238,9 @@ jobs:
       - name: Install web
         working-directory: apps/web
         run: npm ci
+      - name: Install browser for preview acceptance
+        working-directory: apps/web
+        run: npx playwright install --with-deps chromium
       - name: Prepare isolated source images for clean Chat preview
         env:
           IZO_CHAT_PREVIEW_ACCOUNT_EMAILS: preview@local.izo,search@local.izo
