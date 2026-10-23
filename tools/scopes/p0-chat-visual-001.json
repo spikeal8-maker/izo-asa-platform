@@ -3,26 +3,28 @@
   "package_id": "P0-CHAT-VISUAL-001",
   "base": "0ab3cbaf596344a0678ee074e96ff3d4c2a2bf85",
   "scope_class": "cross_domain",
-  "risk": "medium",
+  "risk": "high",
   "independent_review_required": true,
-  "max_files": 8,
-  "large_scope_reason": "Distinct frontend-only visual hierarchy across the existing Chat sidebar/composer/messages surfaces and Admin styling, preserving all functional contracts. Four authored CSS files are small and layered after existing styles; App.tsx only imports them. Browser checks cover desktop/mobile, focus, no overflow and model picker. Same-data screenshots are retained as D2-R2 QA artifacts outside Git per hygiene. This stacks on P0-B2 fake-only functional source without touching its owned files.",
+  "max_files": 9,
+  "large_scope_reason": "Distinct frontend-only visual hierarchy across the existing Chat sidebar/composer/messages surfaces and Admin styling, preserving all functional contracts. Four authored CSS files are small and layered after existing styles; App.tsx only imports them. Browser checks cover desktop/mobile, focus, no overflow and model picker. Same-data screenshots are retained as D2-R2 QA artifacts outside Git per hygiene. This stacks on P0-B2 fake-only functional source without touching its owned files. All four authored CSS files remain separate and below hygiene limits. A security-sensitive CI workflow file is the ninth exact path: its three parallel, complete source/runtime/offline-preview jobs prevent prior 30-minute timeout and their original checks are retained without reduced coverage. A required fail-closed verify job depends on all three success states.",
   "domains": [
     "Web Chat visual system",
     "Web Admin visual styling",
     "Responsive Playwright visual acceptance"
   ],
   "allowed": [
-    "apps/web/src/shell/App.tsx",
-    "apps/web/src/shell/chat/P0ChatSurface.css",
-    "apps/web/src/shell/chat/P0ChatDetail.css",
-    "apps/web/src/shell/chat/P0ChatDark.css",
-    "apps/web/src/features/admin/P0AdminSurface.css",
+    ".github/workflows/ci.yml",
     "apps/web/e2e/p0-chat-visual.spec.ts",
+    "apps/web/src/features/admin/P0AdminSurface.css",
+    "apps/web/src/shell/App.tsx",
+    "apps/web/src/shell/chat/P0ChatDark.css",
+    "apps/web/src/shell/chat/P0ChatDetail.css",
+    "apps/web/src/shell/chat/P0ChatSurface.css",
     "docs/reviews/P0-CHAT-VISUAL-001.md",
     "tools/scopes/p0-chat-visual-001.json"
   ],
   "sensitive_approved": [
+    ".github/workflows/ci.yml",
     "tools/scopes/p0-chat-visual-001.json"
   ],
   "non_goals": [
