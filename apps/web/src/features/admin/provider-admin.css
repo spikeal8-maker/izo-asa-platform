@@ -100,3 +100,65 @@
   .provider-columns { grid-template-columns: minmax(0, 1fr); }
   .provider-panel { padding: 15px; }
 }
+
+/* Explicit reauthentication step belongs before every protected action. */
+.provider-admin .provider-auth-top {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(260px, 390px);
+  gap: 20px;
+  align-items: center;
+  margin-top: 18px;
+  padding: 18px 22px;
+  border: 1px solid var(--border, #d8dce4);
+  border-left: 4px solid #7961ef;
+  border-radius: 14px;
+  background: var(--surface, #fff);
+  box-shadow: 0 5px 18px rgba(29, 42, 78, 0.055);
+}
+.provider-admin .provider-auth-intro h2 {
+  margin: 0 0 7px;
+  font-size: 1.12rem;
+}
+.provider-admin .provider-auth-intro p,
+.provider-admin .provider-auth-control p {
+  margin: 0;
+  line-height: 1.5;
+  color: var(--provider-muted);
+  font-size: 0.88rem;
+}
+.provider-admin .provider-auth-control {
+  display: grid;
+  gap: 8px;
+}
+.provider-admin .provider-auth-control label {
+  font-weight: 650;
+  font-size: 0.9rem;
+}
+.provider-admin .provider-auth-control input {
+  box-sizing: border-box;
+  width: 100%;
+  min-width: 0;
+  min-height: 42px;
+  border: 1px solid #bcc7dd;
+  border-radius: 9px;
+  padding: 9px 12px;
+  background: var(--surface, #fff);
+}
+.provider-admin .provider-auth-control input:focus-visible {
+  outline: 3px solid #a394f4;
+  outline-offset: 1px;
+}
+@media (max-width: 880px) {
+  .provider-admin .provider-auth-top {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 13px;
+    padding: 14px;
+  }
+}
+
+.provider-admin .provider-action-hint {
+  margin: -8px 0 2px;
+  font-size: 0.85rem;
+  line-height: 1.45;
+  color: var(--provider-muted);
+}

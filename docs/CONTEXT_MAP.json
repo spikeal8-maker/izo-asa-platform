@@ -96,8 +96,8 @@
     "web.admin": {
       "keywords": ["админка", "начислить", "пользователь в админке", "admin", "grant", "staff"],
       "read_first": ["apps/web/AGENTS.md", "apps/web/src/features/admin/README.md"],
-      "tests": ["apps/web/e2e/admin.spec.ts"],
-      "expand_if_needed": ["apps/web/src/features/admin/AdminPage.tsx", "apps/web/src/features/admin/GrantForm.tsx", "apps/web/src/shared/workspace-api.ts", "docs/ADMIN.md"],
+      "tests": ["apps/web/e2e/admin.spec.ts", "apps/web/e2e/admin-provider-reauth.spec.ts"],
+      "expand_if_needed": ["apps/web/src/features/admin/AdminPage.tsx", "apps/web/src/features/admin/GrantForm.tsx", "apps/web/src/features/admin/ProviderAdminPage.tsx", "apps/web/src/features/admin/ProviderAdminPanels.tsx", "apps/web/src/shared/workspace-api.ts", "docs/ADMIN.md"],
       "do_not_read_by_default": ["docs/PRODUCT.md", "docs/AI_RUNTIME.md", "apps/api/izo/providers"]
     },
     "web.credits": {
