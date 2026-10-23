@@ -12,3 +12,10 @@
   outline: 2px solid #b94e2c;
   outline-offset: 1px;
 }
+
+/* An open credential dialog must remain above the floating chat composer.
+   The surrounding toolbar needs its own stacking context only while open. */
+.chat-page .chat-toolbar:has(.chat-credential-popover) {
+  position: relative;
+  z-index: 100;
+}

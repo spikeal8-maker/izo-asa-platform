@@ -30,6 +30,9 @@ test('rejects OpenRouter key in DeepSeek and DeepSeek key in OpenRouter before P
   await openrouter.getByLabel('Новый API key OpenRouter').fill('sk-or-v1-' + 'b'.repeat(64))
   await expect(openrouter.getByRole('alert')).toHaveCount(0)
   await expect(openrouter.getByRole('button', { name: 'Сохранить и проверить' })).toBeEnabled()
+  await openrouter.getByLabel('Новый API key OpenRouter').fill('sk-' + 'b'.repeat(32))
+  await openrouter.getByRole('button', { name: 'Отмена' }).click()
+  await expect(openrouter.getByLabel('Новый API key OpenRouter')).toHaveCount(0)
   expect(recorded).toHaveLength(0)
 })
 

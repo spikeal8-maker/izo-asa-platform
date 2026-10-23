@@ -54,3 +54,12 @@ shared paid execution or modification of other Docker projects.
 
 The incorrectly stored key in the current 18084 account remains available
 for deliberate replacement through the ordinary authorized Chat UI.
+
+## Additional real-browser UX regression
+
+On the unchanged existing account, two inline help notices could extend the
+provider popover beneath the floating composer; the composer intercepted
+the OpenRouter Cancel button. The fix raises only the chat toolbar that
+currently contains an open credential popover. It does not permanently
+reorder the drawer or other Chat layers. The laptop/phone Playwright test
+now clicks Cancel after a wrong-vendor warning to prevent recurrence.
