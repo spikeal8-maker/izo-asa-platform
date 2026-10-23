@@ -1,13 +1,4 @@
 /* P0-D: message hierarchy, actions, composer and responsive surfaces. */
-.chat-shell .chat-turn {
-  font-size: 15px;
-  line-height: 1.64;
-  margin-bottom: 7px;
-  color: var(--p0-ink);
-}
-.chat-shell .chat-turn-user {
-  margin-top: 12px;
-}
 .chat-shell .chat-user-bubble {
   background: linear-gradient(120deg, #e9e9ff, #f1f1ff);
   border: 1px solid #dadbfb;
@@ -19,7 +10,6 @@
 .chat-shell .chat-turn-assistant {
   max-width: 100%;
   justify-content: flex-start;
-  margin-top: 0;
 }
 .chat-shell .chat-assistant-message {
   position: relative;
@@ -50,8 +40,7 @@
   height: 26px;
 }
 .chat-shell .chat-assistant-message > p {
-  color: #283954;
-  line-height: 1.72;
+  color: var(--color-text);
 }
 .chat-shell .chat-assistant-message h1,
 .chat-shell .chat-assistant-message h2,
@@ -89,16 +78,9 @@
   border-color: #dad6f3;
 }
 .chat-shell .chat-composer-dock {
-  padding: 30px 22px 14px;
   background: linear-gradient(180deg, transparent, #f5f7fcec 25%, #f5f7fc 58%);
 }
-.chat-shell .chat-composer-wrap {
-  width: min(100%, 810px);
-}
 .chat-shell .chat-composer {
-  --composer-control-size: 45px;
-  --composer-input-size: 15px;
-  --composer-label-size: 12px;
   border: 1px solid #ccd5eb;
   border-radius: 19px;
   background: #fff;
@@ -152,7 +134,6 @@
 .chat-shell .chat-composer-note {
   color: #8190ab;
   font-size: 11px;
-  padding-top: 9px;
 }
 .chat-shell .chat-popover {
   border: 1px solid #d7def0;
@@ -187,16 +168,14 @@
 }
 @media (max-width: 700px) {
   .chat-shell .chat-composer-dock {
-    padding: 13px 7px 5px;
     background: linear-gradient(180deg, transparent, #f5f7fc 23%);
   }
-  .chat-shell .chat-composer { --composer-control-size: 42px; border-radius: 17px; padding: 5px 6px; }
+  .chat-shell .chat-composer { border-radius: 17px; }
   .chat-shell .chat-composer.is-expanded { border-radius: 17px; }
-  .chat-shell .chat-user-bubble { max-width: 92%; padding: 10px 13px; }
-  .chat-shell .chat-assistant-message { padding: 18px 15px 15px 16px; width: 100%; }
+  .chat-shell .chat-user-bubble { max-width: 92%; }
+  .chat-shell .chat-assistant-message { width: 100%; }
   .chat-shell .chat-assistant-message::before { left: 10px; }
   .chat-shell .chat-composer-note { font-size: 10px; }
-  .chat-shell .chat-turn { font-size: 14px; }
 }
 @media (prefers-reduced-motion: reduce) {
   .chat-shell .chat-history-item,

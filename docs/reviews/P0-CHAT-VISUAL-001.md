@@ -48,3 +48,26 @@ No changes to Chat/Graph/Accounts/API/SSO/paid workers/database/runtime network.
 - No paid/production inference, owner access promotion, changed limits,
   CSS-in-JS CSP bypass, tracking large binary images or discarded user data.
 - No main merge or owner waiver; independent read-only review required.
+
+## Exact-source CI correction (successor commit)
+
+The initial P0-D source (`fe13d2d739cacf5e9669d0fbf9f034d6dc0ee717`) failed
+full Foundation CI on existing layout/semantics constraints:
+body-theme prose color, mobile scroll retention after rename, composer
+maximum width, 280px laptop sidebar and 8K scaling. The new CSS had
+overridden inherited sizing and introduced extra chat-turn vertical spacing.
+
+The correction **removes those new layout overrides** without modifying
+test expectations, production behavior, design-system limits or the
+underlying Chat/Graph/Accounts modules. Existing media-aware sizes,
+scroll geometry, font scale and focus behavior are again owned by
+the original Chat CSS. Navy sidebar, high-contrast active rows,
+assistant response surfaces, input focus, Admin styling and dark theme
+still differ substantially from the original UI.
+
+Before committing, the 36-title targeted Playwright matrix on D2-R2:
+**18 PASS / 0 FAIL / 18 SKIP** (skips are intentionally inapplicable
+project/test combinations). Includes old Rename/scroll, Markdown theme,
+composer width, focus after Graph selection, laptop shell and 8K shell.
+Full GitHub CI must be repeated on the new exact SHA, not treated as
+already passing based on targeted results.

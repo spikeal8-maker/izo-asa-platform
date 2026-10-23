@@ -45,7 +45,9 @@
   border-color: #3f506b;
   border-left-color: #9d8aff;
 }
-:root[data-theme="dark"] .chat-shell .chat-assistant-message > p,
+:root[data-theme="dark"] .chat-shell .chat-assistant-message > p {
+  color: var(--color-text);
+}
 :root[data-theme="dark"] .chat-shell .chat-assistant-message h1,
 :root[data-theme="dark"] .chat-shell .chat-assistant-message h2,
 :root[data-theme="dark"] .chat-shell .chat-assistant-message h3 {
