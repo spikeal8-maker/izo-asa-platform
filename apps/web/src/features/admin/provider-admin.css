@@ -1,5 +1,5 @@
 .provider-admin {
-  --provider-muted: var(--muted, #657081);
+  --provider-muted: var(--color-text-secondary);
   max-width: 1480px;
   margin: 0 auto;
   padding: 18px 24px 48px;
@@ -109,10 +109,10 @@
   align-items: center;
   margin-top: 18px;
   padding: 18px 22px;
-  border: 1px solid var(--border, #d8dce4);
-  border-left: 4px solid #7961ef;
+  border: 1px solid var(--color-border);
+  border-left: 4px solid var(--color-brand);
   border-radius: 14px;
-  background: var(--surface, #fff);
+  background: var(--color-surface);
   box-shadow: 0 5px 18px rgba(29, 42, 78, 0.055);
 }
 .provider-admin .provider-auth-intro h2 {
@@ -139,13 +139,14 @@
   width: 100%;
   min-width: 0;
   min-height: 42px;
-  border: 1px solid #bcc7dd;
+  border: 1px solid var(--color-border);
   border-radius: 9px;
   padding: 9px 12px;
-  background: var(--surface, #fff);
+  background: var(--color-surface);
+  color: var(--color-text);
 }
 .provider-admin .provider-auth-control input:focus-visible {
-  outline: 3px solid #a394f4;
+  outline: 3px solid color-mix(in srgb, var(--color-brand) 78%, var(--color-surface));
   outline-offset: 1px;
 }
 @media (max-width: 880px) {

@@ -186,3 +186,48 @@ test('P0 reauth: invalid password is reported, never cached, and key stays edita
   await expect(key).toHaveValue(fakeKey)
   expect(calls).toBe(1)
 })
+
+test('P0 admin reauthentication uses semantic tokens in light and dark', async ({ page }) => {
+  await page.route('**/api/v1/admin/providers', route =>
+    route.fulfill({ json: { connections: [initial()] } }))
+  await page.goto('/admin/providers')
+  const passwordInput = page.getByLabel('Текущий пароль аккаунта IZO ASA')
+  await expect(passwordInput).toBeVisible()
+  for (const theme of ['light', 'dark'] as const) {
+    await page.evaluate(value => { document.documentElement.dataset.theme = value }, theme)
+    await passwordInput.focus()
+    const colors = await passwordInput.evaluate(element => {
+      const panel = element.closest('.provider-auth-top')
+      if (!panel) throw new Error('Missing protected confirmation panel')
+      const sample = document.createElement('span')
+      sample.style.cssText = [
+        'background:var(--color-surface)',
+        'color:var(--color-text)',
+        'border:1px solid var(--color-border)',
+        'border-left-color:var(--color-brand)',
+        'outline:3px solid color-mix(in srgb, var(--color-brand) 78%, var(--color-surface))',
+      ].join(';')
+      panel.appendChild(sample)
+      const expected = getComputedStyle(sample)
+      const container = getComputedStyle(panel)
+      const input = getComputedStyle(element)
+      const result = {
+        background: container.backgroundColor, expectedBackground: expected.backgroundColor,
+        accent: container.borderLeftColor, expectedAccent: expected.borderLeftColor,
+        inputBackground: input.backgroundColor, expectedInputBackground: expected.backgroundColor,
+        inputColor: input.color, expectedInputColor: expected.color,
+        inputBorder: input.borderTopColor, expectedInputBorder: expected.borderTopColor,
+        focusOutline: input.outlineColor, expectedFocusOutline: expected.outlineColor,
+      }
+      sample.remove()
+      return result
+    })
+    expect(colors.background).toBe(colors.expectedBackground)
+    expect(colors.accent).toBe(colors.expectedAccent)
+    expect(colors.inputBackground).toBe(colors.expectedInputBackground)
+    expect(colors.inputColor).toBe(colors.expectedInputColor)
+    expect(colors.inputBorder).toBe(colors.expectedInputBorder)
+    expect(colors.focusOutline).toBe(colors.expectedFocusOutline)
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true)
+  }
+})
