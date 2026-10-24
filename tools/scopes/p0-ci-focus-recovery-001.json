@@ -1,0 +1,54 @@
+{
+  "schema_version": 1,
+  "package_id": "P0-CI-FOCUS-RECOVERY-001",
+  "base": "0ab3cbaf596344a0678ee074e96ff3d4c2a2bf85",
+  "scope_class": "cross_domain",
+  "risk": "high",
+  "independent_review_required": true,
+  "max_files": 6,
+  "large_scope_reason": "Isolate previously published Foundation CI modularization and an independently tested deterministic composer focus regression from P0 Chat visual source PR #282 without weakening or increasing the original nine-path visual scope. The exact inherited 5 source blobs are unchanged from #282 at 6dd26e8598726c088f8f080c86f20c4f6825f720; the sixth file is only this integration scope. The focus change is from separate PR #278 at 100f7c7e75f1777203fd93b569433066e9eacb51, itself full CI SUCCESS. Integration is stacked on P0-B2/C #281; merge-based ancestry updates preserve history and trees. High-risk external review is still mandatory.",
+  "domains": [
+    "Foundation CI and clean-preview lifecycle",
+    "Chat Graph focus test deterministic acceptance",
+    "Source provenance and scope reconciliation"
+  ],
+  "allowed": [
+    ".github/workflows/ci.yml",
+    "tools/ci_preview_acceptance.sh",
+    "apps/web/e2e/conversation-graph-races.spec.ts",
+    "docs/reviews/CHAT-COMPOSER-FOCUS-001.md",
+    "tools/scopes/chat-composer-focus-001.json",
+    "tools/scopes/p0-ci-focus-recovery-001.json"
+  ],
+  "sensitive_approved": [
+    ".github/workflows/ci.yml",
+    "tools/ci_preview_acceptance.sh",
+    "tools/scopes/chat-composer-focus-001.json",
+    "tools/scopes/p0-ci-focus-recovery-001.json"
+  ],
+  "non_goals": [
+    "No modifications to runtime Chat, API, Admin, database, paid provider or user ownership.",
+    "No test disabling, timeout or retry increase, weakened assertions or raised budgets.",
+    "Do not change original visual scope max_files=9, original #278 scope or canonical PLAN/PACKAGES/CURRENT.",
+    "No main merge, production deployment, owner waiver, or real paid provider execution without separate owner authorization."
+  ],
+  "sources": [
+    {
+      "pr": 278,
+      "sha": "100f7c7e75f1777203fd93b569433066e9eacb51",
+      "paths": [
+        "apps/web/e2e/conversation-graph-races.spec.ts",
+        "docs/reviews/CHAT-COMPOSER-FOCUS-001.md",
+        "tools/scopes/chat-composer-focus-001.json"
+      ]
+    },
+    {
+      "pr": 282,
+      "sha": "6dd26e8598726c088f8f080c86f20c4f6825f720",
+      "paths": [
+        ".github/workflows/ci.yml",
+        "tools/ci_preview_acceptance.sh"
+      ]
+    }
+  ]
+}
