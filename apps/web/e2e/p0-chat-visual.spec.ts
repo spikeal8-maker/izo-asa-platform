@@ -235,7 +235,8 @@ test('P0 Graph fixture waits for authenticated mobile drawer before selecting a 
     releaseAuth()
     await opening
     await expect(answer(page)).toContainText('Ответ 1, вариант 1')
-    await expect(page.locator('.chat-sidebar')).toHaveAttribute('aria-hidden', 'false')
+    // Selecting the opened thread intentionally dismisses the mobile drawer.
+    await expect(page.locator('.chat-sidebar')).toHaveAttribute('aria-hidden', 'true')
   } finally {
     releaseAuth()
   }
