@@ -23,13 +23,30 @@ export function ProviderAdminPage({ auth }: { auth: AuthView | null | undefined 
   const [error, setError] = useState('')
   const [notice, setNotice] = useState('')
   const [uncertain, setUncertain] = useState(false)
-  // In-memory only: never persist a platform key or administrator password in storage.
+  const [sessionInvalid, setSessionInvalid] = useState(false)
+  // Volatile secrets and original UUID are discarded on session invalidation/unmount.
   const pending = useRef<Pending | null>(null)
+  const invalidated = useRef(false)
+  useEffect(() => {
+    const clearPrivateState = () => {
+      invalidated.current = true
+      pending.current = null
+      setSessionInvalid(true); setProvider(null)
+      setKey(''); setPassword(''); setUncertain(false); setBusy(false)
+      setNotice(''); setError('Сессия завершилась. Войдите повторно.')
+    }
+    window.addEventListener('izo:session-invalid', clearPrivateState)
+    return () => {
+      window.removeEventListener('izo:session-invalid', clearPrivateState)
+      pending.current = null
+    }
+  }, [])
 
   const refresh = useCallback(async (signal?: AbortSignal) => {
     const result = await apiRequest<ProviderList>(endpoint, { signal })
     const item = result.connections[0]
     if (!item) throw Error('Missing configured provider')
+    if (invalidated.current || signal?.aborted) return
     setProvider(item)
     setModel(item.model); setEnabled(item.enabled)
     setDaily(item.daily_limit); setConcurrency(item.concurrency_limit)
@@ -38,13 +55,13 @@ export function ProviderAdminPage({ auth }: { auth: AuthView | null | undefined 
     const controller = new AbortController()
     setLoading(true)
     void refresh(controller.signal).catch(e => {
-      if (!controller.signal.aborted) setError(explain(e))
+      if (!controller.signal.aborted && !invalidated.current) setError(explain(e))
     }).finally(() => { if (!controller.signal.aborted) setLoading(false) })
     return () => controller.abort()
   }, [refresh])
 
   async function change(kind: Kind) {
-    if (!provider || busy || !auth || (!password && !pending.current)) return
+    if (!provider || busy || !auth || invalidated.current || (!password && !pending.current)) return
     if (kind !== 'save' && provider.revision === null && !pending.current) return
     if (pending.current && pending.current.kind !== kind) return
     setBusy(true); setError(''); setNotice('')
@@ -73,6 +90,7 @@ export function ProviderAdminPage({ auth }: { auth: AuthView | null | undefined 
         : kind === 'verify' ? 'Сервер подтвердил проверку выбранным адаптером.'
           : 'Настройки сохранены в PostgreSQL.')
     } catch (reason) {
+      if (invalidated.current) return
       if (!(reason instanceof ApiError) || reason.status >= 500) {
         // An accepted mutation may have lost its HTTP response. Retry its exact UUID
         // and payload, never a new operation. In-memory secret expires on unmount.
@@ -88,11 +106,20 @@ export function ProviderAdminPage({ auth }: { auth: AuthView | null | undefined 
   function form(event: FormEvent, kind: Kind) {
     event.preventDefault(); void change(kind)
   }
-  function abandonPending() {
-    pending.current = null; setUncertain(false)
-    setKey(''); setPassword(''); setError('')
-    setLoading(true)
-    void refresh().catch(reason => setError(explain(reason))).finally(() => setLoading(false))
+  async function abandonPending() {
+    if (!pending.current || busy || invalidated.current) return
+    setBusy(true); setLoading(true); setError('')
+    try {
+      await refresh()
+      if (invalidated.current) return
+      // A successful server read, not an attempted read, releases the old UUID.
+      pending.current = null; setUncertain(false)
+      setKey(''); setPassword('')
+      setNotice('Состояние сервера обновлено. Проверьте результат перед новой операцией.')
+    } catch (reason) {
+      if (!invalidated.current) setError(explain(reason))
+      // A failed GET keeps the original UUID/payload and all mutations locked.
+    } finally { setLoading(false); setBusy(false) }
   }
   return <section className="admin-page provider-admin">
     <header className="page-heading">
@@ -117,11 +144,12 @@ export function ProviderAdminPage({ auth }: { auth: AuthView | null | undefined 
       }}>Повторить исходную операцию</button>
       <button type="button" disabled={busy} onClick={abandonPending}>Отказаться от повтора и перечитать состояние</button>
     </div>}
-    {!loading && <button type="button" onClick={() => {
+    {!loading && !sessionInvalid && <button type="button" onClick={() => {
       setError(''); setNotice(''); setLoading(true)
-      void refresh().catch(e => setError(explain(e))).finally(() => setLoading(false))
+      void refresh().catch(e => { if (!invalidated.current) setError(explain(e)) })
+        .finally(() => setLoading(false))
     }} disabled={busy || uncertain}>Обновить состояние</button>}
-    {provider && <ProviderAdminPanels provider={provider}
+    {!sessionInvalid && provider && <ProviderAdminPanels provider={provider}
       keyValue={key} setKey={setKey}
       password={password} setPassword={setPassword}
       model={model} setModel={setModel}

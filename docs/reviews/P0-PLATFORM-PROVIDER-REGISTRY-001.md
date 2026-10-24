@@ -75,3 +75,13 @@ Provider compatibility and actual paid results are NOT proven by synthetic tests
    daily spend enforcement, replay/recovery and zero-BYOK browser E2E.
 5. P0-D must improve overall desktop/mobile UI. Existing narrow mobile topbar is cramped.
 6. Do not merge this stacked draft PR or modify protected main without owner decision.
+
+## Follow-up: recovery, session invalidation and concurrent singleton (24 October 2026)
+
+- Previous exact source `7eccd15605f2d8cc8e5e9d66370d34f1548db9ed` received three independent P1 findings concerning an uncertain mutation's failed GET, session invalidation, and missing real PostgreSQL singleton acceptance.
+- A failed operator reconciliation GET now leaves the original volatile operation UUID/payload and the mutation lock intact. A successful GET is required before any explicit abandonment releases the pending operation. Exact-repeat uses the original ID and body.
+- The shared `izo:session-invalid` event clears the private key, current password, pending operation and provider snapshot, unmounts mutation controls and ignores late GET responses. Private data does not enter persistent browser storage.
+- Isolated D2-R2 Chromium regression: 4/4 PASS (phone + laptop, no retries), demonstrating the failed read plus exact-ID replay and session invalidation. TypeScript and production Vite: PASS.
+- A separate isolated PostgreSQL 17 container, with network isolation and two verified authorized staff accounts, exercised **actual** `PlatformProviderService.replace_key` concurrently. The calls were aligned after per-account authorization and before the singleton lock: exactly one revision-1 creation, one HTTP-semantic 409 revision conflict, a single success event, and replay of the exact winning operation without an additional success event. Output `P0_280_REAL_PG_SINGLETON_CONCURRENCY_PASS`; confirmed synthetic operations only; container/network removed. QA script: `C:\Users\spike\Projects\izo-asa-p0-preview-qa\P0_280_CONCURRENT_INIT_20261024.py` (untracked, no production credentials).
+- Real-PostgreSQL **CI wiring** remains an explicit review gate and should be combined with the already-approved `tools/platform_chat_postgres_race.py` in downstream PR #281, avoiding unauthorized changes to #280's 24/26 source scope. Local isolated QA is not represented as GitHub CI.
+- These changes do not authorize merge, paid-provider tests or production deployment. New exact-SHA CI and independent review are mandatory.
