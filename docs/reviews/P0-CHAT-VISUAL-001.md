@@ -110,3 +110,29 @@ screenshots are stored outside Git under `izo-asa-p0-preview-qa`.
 This is a local candidate until its exact published SHA passes full CI
 and independent review. No waiver, protected main merge, deployment,
 or paid DeepSeek call is authorized.
+
+## Dark history hover and selection contrast - 24 October 2026
+
+The independent Codex review of `80d0f17a82269f925d8e50fdb3d88761363f5335`
+identified P2 low contrast on dark-theme Chat history rows: inherited
+light-mode hover/selected backgrounds mixed `--color-text` with brand,
+while dark CSS enforced light text, resulting in approximately 1.50:1
+and 1.67:1 contrast.
+
+The fix is limited to existing `P0ChatDark.css`: unselected hover uses
+`color-mix(in srgb, var(--color-brand) 15%, var(--color-surface))`;
+selected rows including hover use 32% brand with semantic surface,
+semantic light text and a semantic brand/border mix.
+
+A real Chromium render of the exact-source production web bundle,
+with a synthetic visual history row only (no provider call/database write),
+measured text contrast of **12.58:1 hover** and **9.54:1 selected**.
+Results matched 1440px desktop and 390px mobile, with no overflow.
+Screenshots retained outside Git:
+`P0_DARK_HISTORY_P2_desktop_20261024.png` and
+`P0_DARK_HISTORY_P2_mobile_20261024.png` under the local QA folder.
+TypeScript/Vite production build PASS; Sidebar/P0 visual targeted Playwright
+matrix **26/26 PASS** on phone and laptop, zero retries. No new HEX.
+
+Exact-head full CI, separate-actor approval and owner merge
+authorization remain distinct acceptance gates.

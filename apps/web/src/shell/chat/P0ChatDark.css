@@ -114,4 +114,14 @@
   background: color-mix(in srgb, var(--color-brand) 27%, var(--color-surface));
   color: var(--color-text);
   border-color: color-mix(in srgb, var(--color-brand) 45%, var(--color-border));
+}/* Dark P0 history row accessibility: preserve text contrast through hover and selection. */
+:root[data-theme="dark"] .chat-shell .chat-history-item:hover:not(.active) {
+  background: color-mix(in srgb, var(--color-brand) 15%, var(--color-surface));
+  color: var(--color-text);
+}
+:root[data-theme="dark"] .chat-shell .chat-history-item.active,
+:root[data-theme="dark"] .chat-shell .chat-history-item.active:hover {
+  background: color-mix(in srgb, var(--color-brand) 32%, var(--color-surface));
+  color: var(--color-text);
+  border-color: color-mix(in srgb, var(--color-brand) 48%, var(--color-border));
 }
