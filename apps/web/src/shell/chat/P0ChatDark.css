@@ -1,0 +1,127 @@
+/* P0-D dark theme: preserve contrast while retaining the new hierarchy. */
+:root[data-theme="dark"] .chat-shell .global-header {
+  background: color-mix(in srgb, var(--color-surface) 90%, var(--color-brand));
+  color: color-mix(in srgb, var(--color-text) 85%, var(--color-brand));
+  border-bottom-color: color-mix(in srgb, var(--color-border) 85%, var(--color-brand));
+}
+:root[data-theme="dark"] .chat-shell .chat-main {
+  background: radial-gradient(circle at 58% 4%, color-mix(in srgb, var(--color-bg) 80%, var(--color-brand)), transparent 33%), var(--color-bg);
+}
+:root[data-theme="dark"] .chat-shell .chat-toolbar {
+  background: color-mix(in srgb, color-mix(in srgb, var(--color-surface) 90%, var(--color-brand)) 91%, transparent);
+  color: color-mix(in srgb, var(--color-text) 90%, var(--color-brand));
+  border-bottom-color: color-mix(in srgb, var(--color-border) 85%, var(--color-brand));
+}
+:root[data-theme="dark"] .chat-shell .chat-toolbar .chat-credential-toggle {
+  background: color-mix(in srgb, var(--color-surface) 80%, var(--color-brand));
+  color: color-mix(in srgb, var(--color-text) 85%, var(--color-brand));
+  border-color: color-mix(in srgb, var(--color-border) 70%, var(--color-brand));
+}
+:root[data-theme="dark"] .chat-shell .chat-start-state {
+  background: radial-gradient(ellipse at 50% 35%, color-mix(in srgb, color-mix(in srgb, var(--color-bg) 65%, var(--color-brand)) 66%, transparent), transparent 55%);
+}
+:root[data-theme="dark"] .chat-shell .chat-start-state h1 {
+  color: var(--color-text);
+}
+:root[data-theme="dark"] .chat-shell .chat-start-note {
+  color: color-mix(in srgb, var(--color-text) 25%, var(--color-text-secondary));
+}
+:root[data-theme="dark"] .chat-shell .chat-user-bubble {
+  background: linear-gradient(120deg, color-mix(in srgb, var(--color-bg) 60%, var(--color-brand)), color-mix(in srgb, var(--color-bg) 65%, var(--color-brand)));
+  color: var(--color-text);
+  border-color: color-mix(in srgb, var(--color-border) 50%, var(--color-brand));
+}
+:root[data-theme="dark"] .chat-shell .chat-assistant-message {
+  background: var(--color-surface);
+  color: color-mix(in srgb, var(--color-text) 95%, var(--color-brand));
+  border-color: color-mix(in srgb, var(--color-border) 80%, var(--color-brand));
+  border-left-color: color-mix(in srgb, var(--color-text) 10%, var(--color-brand));
+}
+:root[data-theme="dark"] .chat-shell .chat-assistant-message > p {
+  color: var(--color-text);
+}
+:root[data-theme="dark"] .chat-shell .chat-assistant-message h1,
+:root[data-theme="dark"] .chat-shell .chat-assistant-message h2,
+:root[data-theme="dark"] .chat-shell .chat-assistant-message h3 {
+  color: color-mix(in srgb, var(--color-text) 95%, var(--color-brand));
+}
+:root[data-theme="dark"] .chat-shell .chat-assistant-message blockquote {
+  background: color-mix(in srgb, var(--color-surface) 75%, var(--color-brand));
+}
+:root[data-theme="dark"] .chat-shell .chat-composer-dock {
+  background: linear-gradient(180deg, transparent, color-mix(in srgb, color-mix(in srgb, var(--color-bg) 95%, var(--color-brand)) 95%, transparent) 35%, color-mix(in srgb, var(--color-bg) 95%, var(--color-brand)) 80%);
+}
+:root[data-theme="dark"] .chat-shell .chat-composer {
+  background: color-mix(in srgb, var(--color-surface) 80%, var(--color-brand));
+  border-color: color-mix(in srgb, var(--color-border) 70%, var(--color-brand));
+  box-shadow: 0 14px 42px color-mix(in srgb, var(--color-bg) 54%, transparent);
+}
+:root[data-theme="dark"] .chat-shell .chat-composer textarea {
+  color: var(--color-text);
+}
+:root[data-theme="dark"] .chat-shell .chat-composer textarea::placeholder {
+  color: color-mix(in srgb, var(--color-text) 20%, var(--color-text-secondary));
+}
+:root[data-theme="dark"] .chat-shell .chat-model-selector {
+  color: color-mix(in srgb, var(--color-text) 75%, var(--color-brand));
+  background: color-mix(in srgb, var(--color-surface) 75%, var(--color-brand));
+}
+:root[data-theme="dark"] .chat-shell .chat-composer-note,
+:root[data-theme="dark"] .chat-shell .chat-message-actions button {
+  color: color-mix(in srgb, var(--color-text) 15%, var(--color-text-secondary));
+}
+
+/* Dark P0 keeps the same hierarchy using only the canonical semantic tokens. */
+:root[data-theme="dark"] .chat-shell .chat-sidebar {
+  background: linear-gradient(160deg,
+    color-mix(in srgb, var(--color-brand) 12%, var(--color-bg)),
+    color-mix(in srgb, var(--color-brand) 20%, var(--color-bg)));
+  color: var(--color-text);
+  border-right-color: var(--color-border);
+}
+:root[data-theme="dark"] .chat-shell .chat-sidebar-head,
+:root[data-theme="dark"] .chat-shell .chat-profile-name,
+:root[data-theme="dark"] .chat-shell .chat-search-box input,
+:root[data-theme="dark"] .chat-shell .chat-history-item,
+:root[data-theme="dark"] .chat-shell .chat-sidebar-actions button,
+:root[data-theme="dark"] .chat-shell .chat-profile-button {
+  color: var(--color-text);
+}
+:root[data-theme="dark"] .chat-shell .chat-sidebar-title,
+:root[data-theme="dark"] .chat-shell .chat-side-section,
+:root[data-theme="dark"] .chat-shell .chat-profile-plan,
+:root[data-theme="dark"] .chat-shell .chat-search-box input::placeholder {
+  color: var(--color-text-secondary);
+}
+:root[data-theme="dark"] .chat-shell .chat-sidebar .chat-icon-button {
+  color: var(--color-text-secondary);
+}
+:root[data-theme="dark"] .chat-shell .chat-sidebar .chat-icon-button:hover:not(:disabled) {
+  color: var(--color-text);
+  background: color-mix(in srgb, var(--color-brand) 25%, var(--color-surface));
+}
+:root[data-theme="dark"] .chat-shell .chat-search-box,
+:root[data-theme="dark"] .chat-shell .chat-sidebar-bottom {
+  background: color-mix(in srgb, var(--color-brand) 10%, var(--color-surface));
+  border-color: var(--color-border);
+}
+:root[data-theme="dark"] .chat-shell .chat-sidebar-actions button:first-child {
+  background: var(--color-brand);
+  color: var(--color-on-brand);
+  border-color: color-mix(in srgb, var(--color-brand) 40%, var(--color-border));
+}
+:root[data-theme="dark"] .chat-shell .chat-message-actions button:hover:not(:disabled) {
+  background: color-mix(in srgb, var(--color-brand) 27%, var(--color-surface));
+  color: var(--color-text);
+  border-color: color-mix(in srgb, var(--color-brand) 45%, var(--color-border));
+}/* Dark P0 history row accessibility: preserve text contrast through hover and selection. */
+:root[data-theme="dark"] .chat-shell .chat-history-item:hover:not(.active) {
+  background: color-mix(in srgb, var(--color-brand) 15%, var(--color-surface));
+  color: var(--color-text);
+}
+:root[data-theme="dark"] .chat-shell .chat-history-item.active,
+:root[data-theme="dark"] .chat-shell .chat-history-item.active:hover {
+  background: color-mix(in srgb, var(--color-brand) 32%, var(--color-surface));
+  color: var(--color-text);
+  border-color: color-mix(in srgb, var(--color-brand) 48%, var(--color-border));
+}

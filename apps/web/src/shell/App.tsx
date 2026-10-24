@@ -3,6 +3,10 @@ import { detectHost } from '../platform/host'
 import { SectionPage } from './SectionPage'
 import { canonicalRoute } from './navigation'
 import { usePath } from './router'
+import './chat/P0ChatSurface.css'
+import './chat/P0ChatDetail.css'
+import './chat/P0ChatDark.css'
+import '../features/admin/P0AdminSurface.css'
 import { ChatPage } from './ChatPage'
 import { Studio } from '../features/studio/Studio'
 import { ResultPanel } from '../features/studio/ResultPanel'
@@ -96,7 +100,9 @@ export function App() {
       {catalogAdmin ? <AdminCatalogPage auth={auth} /> : providerAdmin ? <ProviderAdminPage auth={auth} /> : accessAdmin ? <AccessPage key={path} /> : admin ? <AdminPage key={path} path={path} /> : credits ? <CreditsPage />
         : security ? <SecurityPage key={path} mode={security} />
         : account ? <AccountPage key={path} mode={path === '/register' ? 'register' : path === '/login' ? 'login' : 'account'} />
-        : chat ? <ChatPage key={auth?.account.id ?? 'guest'} auth={auth} theme={theme} onThemeChange={setTheme} onLogout={() => void logout()} />
+        : chat ? auth === undefined
+          ? <div className="chat-auth-loading" role="status">Проверяем вход…</div>
+          : <ChatPage key={auth?.account.id ?? 'guest'} auth={auth} theme={theme} onThemeChange={setTheme} onLogout={() => void logout()} />
         : feed ? <FeedPage /> : studio ? <Studio key={path} /> : gallery ? <Gallery key={path} />
         : detail ? <AssetPage key={path} id={path.slice('/gallery/'.length)} />
         : jobs ? <ResultPanel key={path} id={path === '/jobs' ? undefined : path.slice('/jobs/'.length)} />

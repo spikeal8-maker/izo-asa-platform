@@ -1,0 +1,82 @@
+/* P0-D: unify staff console surfaces with the redesigned Chat shell. */
+.admin-page {
+  --p0-console-border: var(--color-border);
+  --p0-console-accent: var(--color-brand);
+  --p0-console-muted: var(--color-text-secondary);
+  max-width: 1500px;
+  margin: 0 auto;
+}
+.admin-page .page-heading {
+  padding-top: 16px;
+  padding-bottom: 9px;
+}
+.admin-page .page-heading h1 {
+  color: var(--color-text);
+  font-weight: 760;
+  letter-spacing: -.045em;
+}
+.admin-page .page-heading .eyebrow {
+  font-weight: 700;
+  letter-spacing: .12em;
+  color: var(--color-brand);
+}
+.admin-page .admin-links {
+  border-bottom: 1px solid var(--p0-console-border);
+  padding-bottom: 11px;
+}
+.admin-page .admin-links a {
+  border-radius: 10px;
+  padding: 9px 12px;
+  font-size: 13px;
+  font-weight: 600;
+  transition: background .16s;
+}
+.admin-page .admin-links a[aria-current="page"] {
+  background: var(--color-brand-soft);
+  color: var(--color-brand);
+}
+.admin-page .admin-links a:hover {
+  background: color-mix(in srgb, var(--color-brand) 9%, var(--color-surface));
+}
+.admin-page .admin-panel {
+  border: 1px solid var(--p0-console-border);
+  box-shadow: 0 7px 20px color-mix(in srgb, var(--color-text) 8%, transparent);
+  border-radius: 15px;
+  background: var(--color-surface);
+  color: var(--color-text);
+}
+.provider-admin .provider-heading strong {
+  background: var(--color-brand-soft);
+  border-color: color-mix(in srgb, var(--color-brand) 20%, var(--color-border));
+  color: var(--color-brand);
+}
+.provider-admin .provider-form input,
+.provider-admin .provider-form select,
+.provider-admin .provider-auth input {
+  border: 1px solid var(--color-border);
+  border-radius: 10px;
+  min-height: 42px;
+  background: var(--color-surface);
+  color: var(--color-text);
+}
+.provider-admin .provider-form input:focus-visible,
+.provider-admin .provider-form select:focus-visible,
+.provider-admin .provider-auth input:focus-visible {
+  outline: 3px solid color-mix(in srgb, var(--color-brand) 78%, var(--color-surface));
+  outline-offset: 1px;
+}
+.provider-admin .provider-panel .primary {
+  background: var(--color-brand);
+  color: var(--color-on-brand);
+  border-radius: 10px;
+  border: 0;
+  padding: 10px 16px;
+  font-weight: 650;
+}
+.provider-admin .provider-panel .primary:not(:disabled):hover {
+  background: color-mix(in srgb, var(--color-brand) 88%, var(--color-text));
+}
+@media (max-width: 640px) {
+  .admin-page .admin-links a { padding: 7px 10px; }
+  .admin-page .page-heading h1 { font-size: 28px; }
+}
