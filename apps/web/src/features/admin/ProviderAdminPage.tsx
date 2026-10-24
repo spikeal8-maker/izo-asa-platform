@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState, type FormEvent } from 'react'
+import { useCallback, useEffect, useRef, useState, type FormEvent } from 'react'
 import { ApiError, apiRequest, type AuthView } from '../../shared/api'
 import { Link } from '../../shell/router'
 import './provider-admin.css'
@@ -32,6 +32,7 @@ export function ProviderAdminPage({ auth }: { auth: AuthView | null | undefined 
   const [provider, setProvider] = useState<Provider | null>(null)
   const [key, setKey] = useState('')
   const [password, setPassword] = useState('')
+  const passwordInputRef = useRef<HTMLInputElement>(null)
   const [model, setModel] = useState<Provider['model']>('deepseek-flash')
   const [enabled, setEnabled] = useState(false)
   const [daily, setDaily] = useState(30)
@@ -59,7 +60,13 @@ export function ProviderAdminPage({ auth }: { auth: AuthView | null | undefined 
   }, [refresh])
 
   async function change(kind: 'save' | 'verify' | 'policy') {
-    if (!provider || busy || !password || !auth) return
+    if (!provider || busy || !auth) return
+    if (!password) {
+      setNotice('')
+      setError('Для сохранения ключа, проверки подключения и изменения настроек введите текущий пароль вашего аккаунта IZO ASA в поле «Подтверждение действий» над карточками.')
+      passwordInputRef.current?.focus()
+      return
+    }
     setBusy(true); setError(''); setNotice('')
     try {
       const body = { operation_id: requestId(), current_password: password }
@@ -119,7 +126,8 @@ export function ProviderAdminPage({ auth }: { auth: AuthView | null | undefined 
     }} disabled={busy}>Обновить состояние</button>}
     {provider && <ProviderAdminPanels provider={provider}
       keyValue={key} setKey={setKey}
-      password={password} setPassword={setPassword}
+      password={password} setPassword={text => { setPassword(text); if (error) setError('') }}
+      passwordInputRef={passwordInputRef}
       model={model} setModel={setModel}
       enabled={enabled} setEnabled={setEnabled}
       daily={daily} setDaily={setDaily}

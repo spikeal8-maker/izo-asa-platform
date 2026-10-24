@@ -11,6 +11,7 @@
 | ACCESS load/mutate orchestration | `AccessPage.tsx` | `e2e/access.spec.ts` |
 | ACCESS lookup/subject presentation | `AccessPanels.tsx` | `e2e/access.spec.ts` |
 | Общий transport/CSRF | `../../shared/api.ts` | affected admin/access spec |
+| Серверные ИИ-провайдеры и повторная проверка пароля | `ProviderAdminPage.tsx`, `ProviderAdminPanels.tsx` | `e2e/admin-provider-reauth.spec.ts` |
 
 ## Инварианты
 
