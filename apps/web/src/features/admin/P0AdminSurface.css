@@ -42,6 +42,8 @@
   border: 1px solid var(--p0-console-border);
   box-shadow: 0 7px 20px color-mix(in srgb, var(--color-text) 8%, transparent);
   border-radius: 15px;
+  background: var(--color-surface);
+  color: var(--color-text);
 }
 .provider-admin .provider-heading strong {
   background: var(--color-brand-soft);

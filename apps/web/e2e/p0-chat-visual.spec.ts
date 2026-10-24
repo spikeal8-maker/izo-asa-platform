@@ -98,6 +98,21 @@ test('P0 Admin provider forms preserve semantic input colors in both themes', as
   await expect(fields.first()).toBeVisible()
   for (const theme of ['light', 'dark'] as const) {
     await page.evaluate(value => { document.documentElement.dataset.theme = value }, theme)
+    const panelColors = await page.locator('.provider-panel').first().evaluate(panel => {
+      const sample = document.createElement('span')
+      sample.style.cssText = 'background:var(--color-surface);color:var(--color-text)'
+      panel.appendChild(sample)
+      const actual = getComputedStyle(panel)
+      const expected = getComputedStyle(sample)
+      const result = {
+        background: actual.backgroundColor, expectedBackground: expected.backgroundColor,
+        foreground: actual.color, expectedForeground: expected.color,
+      }
+      sample.remove()
+      return result
+    })
+    expect(panelColors.background).toBe(panelColors.expectedBackground)
+    expect(panelColors.foreground).toBe(panelColors.expectedForeground)
     const colors = await fields.evaluateAll(elements => {
       const sample = document.createElement('span')
       sample.style.cssText = 'background:var(--color-surface);color:var(--color-text);border:1px solid var(--color-border)'
