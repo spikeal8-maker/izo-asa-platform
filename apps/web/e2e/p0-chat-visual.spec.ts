@@ -1,5 +1,6 @@
 import { expect, test } from '@playwright/test'
 import { noOverflow, workspace } from './workspace-fixtures'
+import { graphFixture, openGraphThread, answer } from './conversation-graph-fixture'
 
 test('P0 Chat visual hierarchy applies to desktop and keeps controls operable', async ({ page }) => {
   await workspace(page)
@@ -212,4 +213,30 @@ test('P0 mobile drawer is not usable before the initial account check finishes',
   await opener.click()
   await expect(page.getByRole('dialog', { name: 'История чатов' })).toBeVisible()
   await expect(page.locator('.chat-sidebar')).toHaveAttribute('aria-hidden', 'false')
+})
+
+test('P0 Graph fixture waits for authenticated mobile drawer before selecting a persisted thread', async ({ page }) => {
+  await graphFixture(page)
+  let reportAuthRequested!: () => void
+  let releaseAuth!: () => void
+  const authRequested = new Promise<void>(resolve => { reportAuthRequested = resolve })
+  const authGate = new Promise<void>(resolve => { releaseAuth = resolve })
+  await page.route('**/api/v1/auth/me', async route => {
+    reportAuthRequested()
+    await authGate
+    await route.fallback()
+  })
+  await page.setViewportSize({ width: 390, height: 844 })
+  await page.goto('/')
+  try {
+    await authRequested
+    await expect(page.getByRole('status')).toContainText('Проверяем вход…')
+    const opening = openGraphThread(page)
+    releaseAuth()
+    await opening
+    await expect(answer(page)).toContainText('Ответ 1, вариант 1')
+    await expect(page.locator('.chat-sidebar')).toHaveAttribute('aria-hidden', 'false')
+  } finally {
+    releaseAuth()
+  }
 })
