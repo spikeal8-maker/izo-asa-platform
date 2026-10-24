@@ -143,3 +143,49 @@ test('credential refresh arriving before platform policy never forces personal k
   await page.getByRole('button', { name: 'Настройки DeepSeek и OpenRouter' }).click()
   await expect(page.getByRole('dialog', { name: 'Провайдеры' })).toBeVisible()
 })
+
+test('provider warnings maintain readable contrast in both themes', async ({ page }) => {
+  await workspace(page)
+  await page.route('**/api/v1/chat/credentials', route => route.fulfill({
+    json: { credentials: [
+      { provider: 'deepseek', configured: true, enabled: true, verified: false, revision: 3, generation: 3 },
+      noKeys[1],
+    ] },
+  }))
+  await page.goto('/')
+  await page.locator('.chat-credential-toggle').click()
+  const card = page.locator('.chat-provider-card[aria-label="DeepSeek"]')
+  const warning = card.locator('.chat-provider-key-warning')
+  const contrast = () => warning.evaluate(element => {
+    const canvas = document.createElement('canvas')
+    canvas.width = canvas.height = 1
+    const context = canvas.getContext('2d')!
+    const luminance = (color: string) => {
+      context.clearRect(0, 0, 1, 1)
+      context.fillStyle = color
+      context.fillRect(0, 0, 1, 1)
+      const rgb = Array.from(context.getImageData(0, 0, 1, 1).data).slice(0, 3)
+      const linear = rgb.map(n => {
+        const c = n / 255
+        return c <= 0.04045 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4
+      })
+      return linear[0] * 0.2126 + linear[1] * 0.7152 + linear[2] * 0.0722
+    }
+    const style = getComputedStyle(element)
+    const foreground = luminance(style.color)
+    const background = luminance(style.backgroundColor)
+    return (Math.max(foreground, background) + 0.05) / (Math.min(foreground, background) + 0.05)
+  })
+  await expect(card.locator('[role=status].chat-provider-key-warning')).toBeVisible()
+  for (const theme of ['light', 'dark'] as const) {
+    await page.evaluate(value => { document.documentElement.dataset.theme = value }, theme)
+    expect(await contrast(), 'saved key warning contrast in ' + theme).toBeGreaterThanOrEqual(4.5)
+  }
+  await card.locator('.chat-provider-actions button').nth(1).click()
+  await card.locator('input[type=password]').fill('sk-or-v1-' + 'a'.repeat(64))
+  await expect(card.locator('.chat-provider-key-warning[role=alert]')).toBeVisible()
+  for (const theme of ['light', 'dark'] as const) {
+    await page.evaluate(value => { document.documentElement.dataset.theme = value }, theme)
+    expect(await contrast(), 'wrong-provider warning contrast in ' + theme).toBeGreaterThanOrEqual(4.5)
+  }
+})
