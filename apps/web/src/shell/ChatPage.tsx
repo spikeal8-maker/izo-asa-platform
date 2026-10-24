@@ -136,7 +136,7 @@ aria-label="Открыть панель" aria-expanded={drawerOpen} onClick={() 
 </button>}
 {auth && <ChatCredentialPanel
 auth={auth} credentials={runtime.credentials}
-platformAvailable={Boolean(runtime.policy?.models.some(item => item.provider === 'platform'))}
+platformAvailable={runtime.policy?.models.some(item => item.provider === 'platform')}
 onChange={runtime.setCredential} onDisabled={runtime.credentialDisabled}
 onError={runtime.setError} />}
 {branches.activeId && <div className="chat-branch-controls chat-message-actions" role="group" tabIndex={-1} aria-label="Ветки разговора"

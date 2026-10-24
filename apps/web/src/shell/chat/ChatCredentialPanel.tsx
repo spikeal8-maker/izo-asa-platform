@@ -16,7 +16,7 @@ export function ChatCredentialPanel({
 }: {
   auth: AuthView
   credentials: CredentialView[]
-  platformAvailable: boolean
+  platformAvailable: boolean | undefined
   onChange: (value: CredentialView) => void
   onDisabled: (value: CredentialView) => void
   onError: (message: string) => void
@@ -24,7 +24,7 @@ export function ChatCredentialPanel({
   const [open, setOpen] = useState(false)
   const [busyProvider, setBusyProvider] = useState<ChatProviderId | null>(null)
   const wrapper = useRef<HTMLDivElement>(null)
-  const firstRun = credentials.length > 0 && credentials.every(item => !item.configured) && !platformAvailable
+  const firstRun = credentials.length > 0 && credentials.every(item => !item.configured) && platformAvailable === false
   const connected = providers.filter(
     item => credentialFor(credentials, item.id)?.verified).length
   const deepseekOnly = connected === 1 && credentialFor(credentials, 'deepseek')?.verified
