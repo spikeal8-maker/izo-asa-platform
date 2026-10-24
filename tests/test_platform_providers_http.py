@@ -9,6 +9,7 @@ from fastapi.exceptions import RequestValidationError
 from fastapi.testclient import TestClient
 
 from izo.accounts import tables as accounts
+from izo.admin import tables as admin_tables
 from izo.accounts.security import AuthError
 from izo.accounts.http_security import AuthBodyLimit
 from izo.chat.execution import FakeDeepSeekProvider
@@ -71,11 +72,14 @@ def settings(revision, enabled=True, **change):
 
 
 def test_nonstaff_and_anonymous_are_denied(platform_http):
-    client, _, _, _ = platform_http
+    client, admin, users, _ = platform_http
     assert client.get(BASE).status_code == 401
     assert client.get(BASE, headers=headers(platform_http, 2)).status_code == 403
     assert client.post(BASE + "/deepseek/credential", headers=headers(platform_http, 2),
                        json=replace()).status_code == 403
+    with admin.auth.engine.begin() as conn:
+        assert conn.execute(sa.select(admin_tables.events.c.actor_id).where(
+            admin_tables.events.c.outcome == "denied")).scalar_one() == users[2]
     assert client.get(BASE, headers=headers(platform_http)).json() == {
         "connections": [{"provider": "deepseek", "configured": False,
             "enabled": False, "verified": False, "status": "not_configured",
@@ -151,11 +155,14 @@ def test_credential_mutations_reject_cross_origin_and_csrf(platform_http, mutati
 
 
 def test_secrets_and_password_never_appear_on_rejections(platform_http):
-    client, _, _, _ = platform_http
+    client, admin, users, _ = platform_http
     h = headers(platform_http)
     wrong = client.post(BASE + "/deepseek/credential", headers=h,
         json=replace(current_password="wrong-password"))
     assert wrong.status_code == 403
+    with admin.auth.engine.begin() as conn:
+        assert conn.execute(sa.select(admin_tables.events.c.actor_id).where(
+            admin_tables.events.c.outcome == "denied")).scalar_one() == users[0]
     invalid = client.post(BASE + "/deepseek/credential", headers=h,
         json={**replace(), "actor_id": str(uuid4())})
     assert invalid.status_code == 422

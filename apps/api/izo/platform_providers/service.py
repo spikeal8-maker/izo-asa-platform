@@ -12,7 +12,7 @@ from ..chat.schemas import ChatSettings
 from . import tables as t
 from .schemas import ProviderList, ProviderView
 from .namespace import PLATFORM_ID, PLATFORM_NAMESPACE, AAD_PROVIDER
-from .operations import ProviderOperationsMixin
+from .operations import ProviderOperationsMixin, audit_denials
 
 class PlatformProviderService(ProviderOperationsMixin):
     def __init__(self, auth, provider, policy: ChatSettings | None = None):
@@ -79,6 +79,7 @@ class PlatformProviderService(ProviderOperationsMixin):
                 .where(t.connections.c.provider == "deepseek")).mappings().first()
         return ProviderList(connections=[self._view(row)])
 
+    @audit_denials("platform.key.replaced")
     def replace_key(self, raw, csrf, command, peer):
         key = command.key.get_secret_value()
         root = self._root()
@@ -88,6 +89,10 @@ class PlatformProviderService(ProviderOperationsMixin):
         proof = self._proof(raw, csrf, command.current_password.get_secret_value(), peer, perms)
         with self.auth.engine.begin() as conn:
             actor = self._authorized(conn, raw, csrf, perms, proof)
+            if conn.dialect.name == "postgresql":
+                # Serialize singleton creation: SELECT FOR UPDATE cannot lock absent rows.
+                conn.execute(sa.select(sa.func.pg_advisory_xact_lock(
+                    sa.cast(0x495A4F50, sa.BigInteger))))
             row = conn.execute(sa.select(t.connections).where(
                 t.connections.c.provider == "deepseek").with_for_update()).mappings().first()
             if self._last_op(row, command.operation_id, digest):
