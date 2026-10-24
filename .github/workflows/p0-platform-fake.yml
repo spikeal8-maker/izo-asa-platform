@@ -25,7 +25,12 @@ jobs:
         run: |
           docker compose up -d --wait --wait-timeout 180 postgres
           docker compose run --rm migrate
-      - name: Real PostgreSQL absent-row quota race, zero paid calls
+      - name: Real PostgreSQL singleton initialization, zero paid calls
+        run: |
+          docker compose run --rm --no-deps \
+            -e IZO_P0_PLATFORM_PG_ACCEPTANCE=isolated \
+            api python tools/platform_provider_singleton_postgres.py
+      - name: Real PostgreSQL quota and actual Chat admission race, zero paid calls
         run: |
           docker compose run --rm --no-deps \
             -e IZO_P0_PLATFORM_PG_ACCEPTANCE=isolated \

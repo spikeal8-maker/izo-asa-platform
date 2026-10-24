@@ -1,32 +1,14 @@
-import { useCallback, useEffect, useState, type FormEvent } from 'react'
+import { useCallback, useEffect, useRef, useState, type FormEvent } from 'react'
 import { ApiError, apiRequest, type AuthView } from '../../shared/api'
 import { Link } from '../../shell/router'
 import './provider-admin.css'
 import { ProviderAdminPanels } from './ProviderAdminPanels'
 
-import { endpoint, type Provider, type ProviderList } from './provider-admin-types'
+import { endpoint, explainProviderError as explain, type Provider, type ProviderList } from './provider-admin-types'
 
-function explain(reason: unknown): string {
-  if (reason instanceof ApiError) {
-    const errors: Record<string, string> = {
-      forbidden: 'Недостаточно полномочий для операции.',
-      verification_required: 'Подтвердите административную учётную запись.',
-      reauth_required: 'Неверный текущий пароль администратора.',
-      provider_not_verified: 'Сначала проверьте подключение.',
-      provider_not_configured: 'Сначала сохраните ключ.',
-      provider_revision_conflict: 'Настройки изменились. Обновите данные.',
-      provider_changed_during_verify: 'Ключ изменился во время проверки. Повторите чтение.',
-      credential_rejected: 'Проверка отклонила ключ. Подключение не подтверждено.',
-      credential_unavailable: 'Не удалось прочитать зашифрованный ключ.',
-      credential_storage_unavailable: 'На сервере недоступен корневой ключ шифрования.',
-      rate_limited: 'Достигнут лимит проверок. Повторите позже.',
-      invalid_input: 'Проверьте поля и ограничения.'
-    }
-    return errors[reason.code] ?? 'Сервер отклонил операцию (' + reason.code + ').'
-  }
-  return 'Нет ответа от сервера. Обновите данные перед повтором.'
-}
 const requestId = () => crypto.randomUUID()
+type Kind = 'save' | 'verify' | 'policy'
+type Pending = { kind: Kind; payload: Record<string, unknown> }
 
 export function ProviderAdminPage({ auth }: { auth: AuthView | null | undefined }) {
   const [provider, setProvider] = useState<Provider | null>(null)
@@ -40,11 +22,31 @@ export function ProviderAdminPage({ auth }: { auth: AuthView | null | undefined 
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
   const [notice, setNotice] = useState('')
+  const [uncertain, setUncertain] = useState(false)
+  const [sessionInvalid, setSessionInvalid] = useState(false)
+  // Volatile secrets and original UUID are discarded on session invalidation/unmount.
+  const pending = useRef<Pending | null>(null)
+  const invalidated = useRef(false)
+  useEffect(() => {
+    const clearPrivateState = () => {
+      invalidated.current = true
+      pending.current = null
+      setSessionInvalid(true); setProvider(null)
+      setKey(''); setPassword(''); setUncertain(false); setBusy(false)
+      setNotice(''); setError('Сессия завершилась. Войдите повторно.')
+    }
+    window.addEventListener('izo:session-invalid', clearPrivateState)
+    return () => {
+      window.removeEventListener('izo:session-invalid', clearPrivateState)
+      pending.current = null
+    }
+  }, [])
 
   const refresh = useCallback(async (signal?: AbortSignal) => {
     const result = await apiRequest<ProviderList>(endpoint, { signal })
     const item = result.connections[0]
     if (!item) throw Error('Missing configured provider')
+    if (invalidated.current || signal?.aborted) return
     setProvider(item)
     setModel(item.model); setEnabled(item.enabled)
     setDaily(item.daily_limit); setConcurrency(item.concurrency_limit)
@@ -53,49 +55,71 @@ export function ProviderAdminPage({ auth }: { auth: AuthView | null | undefined 
     const controller = new AbortController()
     setLoading(true)
     void refresh(controller.signal).catch(e => {
-      if (!controller.signal.aborted) setError(explain(e))
+      if (!controller.signal.aborted && !invalidated.current) setError(explain(e))
     }).finally(() => { if (!controller.signal.aborted) setLoading(false) })
     return () => controller.abort()
   }, [refresh])
 
-  async function change(kind: 'save' | 'verify' | 'policy') {
-    if (!provider || busy || !password || !auth) return
+  async function change(kind: Kind) {
+    if (!provider || busy || !auth || invalidated.current || (!password && !pending.current)) return
+    if (kind !== 'save' && provider.revision === null && !pending.current) return
+    if (pending.current && pending.current.kind !== kind) return
     setBusy(true); setError(''); setNotice('')
+    const body = { operation_id: requestId(), current_password: password }
+    const operation = pending.current ?? {
+      kind, payload: kind === 'save'
+        ? { ...body, key, expected_revision: provider.revision }
+        : kind === 'verify' ? { ...body, expected_revision: provider.revision }
+          : { ...body, expected_revision: provider.revision, enabled,
+            model, daily_limit: daily, concurrency_limit: concurrency },
+    }
+    pending.current = operation
     try {
-      const body = { operation_id: requestId(), current_password: password }
-      let updated: Provider
-      if (kind === 'save') {
-        updated = await apiRequest<Provider>(endpoint + '/deepseek/credential', {
-          method: 'POST', csrf: auth.csrf_token,
-          data: { ...body, key, expected_revision: provider.revision }
-        })
-        setKey('')
-      } else if (kind === 'verify') {
-        if (provider.revision === null) return
-        updated = await apiRequest<Provider>(endpoint + '/deepseek/verify', {
-          method: 'POST', csrf: auth.csrf_token,
-          data: { ...body, expected_revision: provider.revision }
-        })
-      } else {
-        if (provider.revision === null) return
-        updated = await apiRequest<Provider>(endpoint + '/deepseek/config', {
-          method: 'PATCH', csrf: auth.csrf_token, data: {
-            ...body, expected_revision: provider.revision, enabled,
-            model, daily_limit: daily, concurrency_limit: concurrency
-          }
-        })
-      }
+      const route = kind === 'save' ? '/deepseek/credential'
+        : kind === 'verify' ? '/deepseek/verify' : '/deepseek/config'
+      const updated = await apiRequest<Provider>(endpoint + route, {
+        method: kind === 'policy' ? 'PATCH' : 'POST',
+        csrf: auth.csrf_token, data: operation.payload,
+      })
+      pending.current = null; setUncertain(false)
+      setPassword('')
+      if (kind === 'save') setKey('')
       setProvider(updated); setEnabled(updated.enabled); setModel(updated.model)
       setDaily(updated.daily_limit); setConcurrency(updated.concurrency_limit)
       setNotice(kind === 'save' ? 'Новый ключ зашифрован на сервере. Требуется проверка.'
         : kind === 'verify' ? 'Сервер подтвердил проверку выбранным адаптером.'
           : 'Настройки сохранены в PostgreSQL.')
-    } catch (reason) { setError(explain(reason)) }
-    finally { setPassword(''); setBusy(false) }
+    } catch (reason) {
+      if (invalidated.current) return
+      if (!(reason instanceof ApiError) || reason.status >= 500) {
+        // An accepted mutation may have lost its HTTP response. Retry its exact UUID
+        // and payload, never a new operation. In-memory secret expires on unmount.
+        setUncertain(true)
+        setError('Ответ сервера неизвестен. Повторите ту же операцию или явно сбросьте её после проверки состояния.')
+      } else {
+        pending.current = null; setUncertain(false); setPassword('')
+        setError(explain(reason))
+      }
+    } finally { setBusy(false) }
   }
 
-  function form(event: FormEvent, kind: 'save' | 'verify' | 'policy') {
+  function form(event: FormEvent, kind: Kind) {
     event.preventDefault(); void change(kind)
+  }
+  async function abandonPending() {
+    if (!pending.current || busy || invalidated.current) return
+    setBusy(true); setLoading(true); setError('')
+    try {
+      await refresh()
+      if (invalidated.current) return
+      // A successful server read, not an attempted read, releases the old UUID.
+      pending.current = null; setUncertain(false)
+      setKey(''); setPassword('')
+      setNotice('Состояние сервера обновлено. Проверьте результат перед новой операцией.')
+    } catch (reason) {
+      if (!invalidated.current) setError(explain(reason))
+      // A failed GET keeps the original UUID/payload and all mutations locked.
+    } finally { setLoading(false); setBusy(false) }
   }
   return <section className="admin-page provider-admin">
     <header className="page-heading">
@@ -113,18 +137,26 @@ export function ProviderAdminPage({ auth }: { auth: AuthView | null | undefined 
     {loading && <p role="status">Загружаем настройки подключения…</p>}
     {error && <p className="field-error" role="alert">{error}</p>}
     {notice && <p role="status" className="provider-notice">{notice}</p>}
-    {!loading && <button type="button" onClick={() => {
+    {uncertain && <div className="provider-notice" role="group" aria-label="Неопределённая операция">
+      <p>Запрос мог выполниться. Повтор использует сохранённые только в памяти UUID и данные.</p>
+      <button type="button" disabled={busy} onClick={() => {
+        if (pending.current) void change(pending.current.kind)
+      }}>Повторить исходную операцию</button>
+      <button type="button" disabled={busy} onClick={abandonPending}>Отказаться от повтора и перечитать состояние</button>
+    </div>}
+    {!loading && !sessionInvalid && <button type="button" onClick={() => {
       setError(''); setNotice(''); setLoading(true)
-      void refresh().catch(e => setError(explain(e))).finally(() => setLoading(false))
-    }} disabled={busy}>Обновить состояние</button>}
-    {provider && <ProviderAdminPanels provider={provider}
+      void refresh().catch(e => { if (!invalidated.current) setError(explain(e)) })
+        .finally(() => setLoading(false))
+    }} disabled={busy || uncertain}>Обновить состояние</button>}
+    {!sessionInvalid && provider && <ProviderAdminPanels provider={provider}
       keyValue={key} setKey={setKey}
       password={password} setPassword={setPassword}
       model={model} setModel={setModel}
       enabled={enabled} setEnabled={setEnabled}
       daily={daily} setDaily={setDaily}
       concurrency={concurrency} setConcurrency={setConcurrency}
-      busy={busy} change={change} form={form} />}
+      busy={busy || uncertain} change={change} form={form} />}
     <p className="provider-limit"><strong>Граница этапа B1.</strong> Здесь реально сохраняются, проверяются и выключаются
       настройки подключения. Маршрутизация пользовательских запросов и контроль расходов будут включены отдельным
       проверяемым этапом. В тестовом окружении проверка ключа синтетическая, без обращения к DeepSeek.</p>
