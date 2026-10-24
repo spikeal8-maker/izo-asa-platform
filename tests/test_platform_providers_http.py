@@ -1,4 +1,4 @@
-"""P0-B1 real staff HTTP: encrypted key, verified status, auditing and denial."""
+"""P0-B1 staff provider HTTP: encryption, audit, replay and access."""
 import base64
 from uuid import uuid4
 import sqlalchemy as sa
@@ -21,6 +21,7 @@ from test_admin import admin_env, password_hash, PASSWORD
 BASE = "/api/v1/admin/providers"
 KEY = "x" * 32
 ROOT = base64.urlsafe_b64encode(b"r" * 32).decode("ascii").rstrip("=")
+CONFIG = BASE + "/deepseek/config"
 
 
 @pytest.fixture
@@ -53,6 +54,10 @@ def headers(env, user=0):
     return {"Cookie": service.auth.policy.cookie_name + "=" + sessions[user].bearer,
             "Origin": "http://localhost:8080", "X-IZO-Request": "web",
             "X-CSRF-Token": sessions[user].view.csrf_token}
+
+
+def post(client, h, action, data):
+    return client.post(BASE + "/deepseek/" + action, headers=h, json=data)
 
 
 def replace(**change):
@@ -90,7 +95,7 @@ def test_nonstaff_and_anonymous_are_denied(platform_http):
 def test_key_write_verify_and_settings_survive_reopen(platform_http):
     client, admin, _, _ = platform_http
     session = headers(platform_http)
-    created = client.post(BASE + "/deepseek/credential", headers=session, json=replace())
+    created = post(client, session, "credential", replace())
     assert created.status_code == 200, created.text
     first = created.json()
     assert first["configured"] and not first["verified"] and not first["enabled"]
@@ -100,19 +105,18 @@ def test_key_write_verify_and_settings_survive_reopen(platform_http):
         row = conn.execute(sa.select(platform.connections)).mappings().one()
         assert KEY.encode() not in row["ciphertext"]
         assert b"x" * 32 not in row["ciphertext"]
-    checked = client.post(BASE + "/deepseek/verify", headers=session,
-                          json=verify(first["revision"]))
+    checked = post(client, session, "verify", verify(first["revision"]))
     assert checked.status_code == 200, checked.text
     verified = checked.json()
     assert verified["verified"] and not verified["enabled"]
-    changed = client.patch(BASE + "/deepseek/config", headers=session,
+    changed = client.patch(CONFIG, headers=session,
                            json=settings(verified["revision"], model="deepseek-v4-pro"))
     assert changed.status_code == 200, changed.text
     state = changed.json()
     assert state["enabled"] and state["verified"] and state["model"] == "deepseek-v4-pro"
     assert state["available_to_users"] is False
     assert client.get(BASE, headers=session).json()["connections"][0] == state
-    disabled = client.patch(BASE + "/deepseek/config", headers=session,
+    disabled = client.patch(CONFIG, headers=session,
                             json=settings(state["revision"], enabled=False))
     assert disabled.status_code == 200
     assert disabled.json()["status"] == "disabled"
@@ -123,23 +127,39 @@ def test_key_write_verify_and_settings_survive_reopen(platform_http):
                                "platform.policy.changed"}
 
 
-def test_replay_revision_and_rotation(platform_http):
-    client, _, _, _ = platform_http
+def test_replay_revision_rotation_and_overlapping_verify(platform_http):
+    client, admin, _, _ = platform_http
     h = headers(platform_http)
     command = replace()
-    first = client.post(BASE + "/deepseek/credential", headers=h, json=command)
+    first = post(client, h, "credential", command)
     assert first.status_code == 200
-    assert client.post(BASE + "/deepseek/credential", headers=h, json=command).json() == first.json()
+    assert post(client, h, "credential", command).json() == first.json()
     changed = dict(command, key="z"*32)
-    assert client.post(BASE + "/deepseek/credential", headers=h, json=changed).status_code == 409
-    bad = client.post(BASE + "/deepseek/credential", headers=h,
-                      json=replace(expected_revision=333))
+    assert post(client, h, "credential", changed).status_code == 409
+    bad = post(client, h, "credential", replace(expected_revision=333))
     assert bad.status_code == 409
-    rotation = client.post(BASE + "/deepseek/credential", headers=h,
-                           json=replace(expected_revision=first.json()["revision"]))
+    rotation = post(client, h, "credential", replace(expected_revision=first.json()["revision"]))
     assert rotation.status_code == 200
     assert rotation.json()["generation"] == 2
     assert not rotation.json()["verified"]
+    command = verify(rotation.json()["revision"])
+    class Probe:
+        calls = 0
+        def verify(self, key, timeout=15):
+            assert key == KEY
+            self.calls += 1
+            if self.calls == 1:
+                self.receipt = post(client, h, "verify", command)
+    probe = Probe()
+    client.app.state.platform_provider_adapter = probe
+    replay = post(client, h, "verify", command)
+    assert probe.calls == 2 and probe.receipt.status_code == replay.status_code == 200
+    assert probe.receipt.json() == replay.json()
+    with admin.auth.engine.begin() as conn:
+        assert conn.scalar(sa.text("SELECT COUNT(*) FROM admin_events "
+                                   "WHERE action='platform.key.verified'")) == 1
+    wrong = post(client, h, "verify", {**command, "expected_revision": command["expected_revision"] + 1})
+    assert wrong.status_code == 409 and wrong.json()["error"]["code"] == "idempotency_conflict"
 
 
 @pytest.mark.parametrize("mutation", [
@@ -157,14 +177,12 @@ def test_credential_mutations_reject_cross_origin_and_csrf(platform_http, mutati
 def test_secrets_and_password_never_appear_on_rejections(platform_http):
     client, admin, users, _ = platform_http
     h = headers(platform_http)
-    wrong = client.post(BASE + "/deepseek/credential", headers=h,
-        json=replace(current_password="wrong-password"))
+    wrong = post(client, h, "credential", replace(current_password="wrong-password"))
     assert wrong.status_code == 403
     with admin.auth.engine.begin() as conn:
         assert conn.execute(sa.select(admin_tables.events.c.actor_id).where(
             admin_tables.events.c.outcome == "denied")).scalar_one() == users[0]
-    invalid = client.post(BASE + "/deepseek/credential", headers=h,
-        json={**replace(), "actor_id": str(uuid4())})
+    invalid = post(client, h, "credential", {**replace(), "actor_id": str(uuid4())})
     assert invalid.status_code == 422
     assert KEY not in invalid.text and PASSWORD not in invalid.text
     assert client.get(BASE+"?with_secrets=1", headers=h).status_code == 422
@@ -173,11 +191,9 @@ def test_secrets_and_password_never_appear_on_rejections(platform_http):
 def test_fake_verify_is_not_secret_saved(platform_http):
     client, _, _, _ = platform_http
     h = headers(platform_http)
-    created = client.post(BASE + "/deepseek/credential", headers=h,
-        json=replace(key="wrong-synthetic-key"))
+    created = post(client, h, "credential", replace(key="wrong-synthetic-key"))
     assert created.status_code == 200
-    status = client.post(BASE + "/deepseek/verify", headers=h,
-        json=verify(created.json()["revision"]))
+    status = post(client, h, "verify", verify(created.json()["revision"]))
     assert status.status_code == 422
     assert status.json() == {"error": {"code": "credential_rejected"}}
     assert not client.get(BASE, headers=h).json()["connections"][0]["verified"]
@@ -197,18 +213,16 @@ def test_revoked_staff_permission_denied_without_restart(platform_http):
 def test_rotation_disables_verified_active_connection(platform_http):
     client, _, _, _ = platform_http
     h = headers(platform_http)
-    created = client.post(BASE + "/deepseek/credential", headers=h, json=replace()).json()
-    checked = client.post(BASE + "/deepseek/verify", headers=h,
-                          json=verify(created["revision"])).json()
-    enabled = client.patch(BASE + "/deepseek/config", headers=h,
+    created = post(client, h, "credential", replace()).json()
+    checked = post(client, h, "verify", verify(created["revision"])).json()
+    enabled = client.patch(CONFIG, headers=h,
                            json=settings(checked["revision"])).json()
     assert enabled["enabled"] and enabled["verified"]
-    rotated = client.post(BASE + "/deepseek/credential", headers=h,
-                          json=replace(expected_revision=enabled["revision"], key="z"*32))
+    rotated = post(client, h, "credential", replace(expected_revision=enabled["revision"], key="z"*32))
     assert rotated.status_code == 200
     assert rotated.json()["generation"] == 2
     assert not rotated.json()["enabled"] and not rotated.json()["verified"]
-    attempted = client.patch(BASE + "/deepseek/config", headers=h,
+    attempted = client.patch(CONFIG, headers=h,
                              json=settings(rotated.json()["revision"]))
     assert attempted.status_code == 409
     assert attempted.json() == {"error": {"code": "provider_not_verified"}}
@@ -222,13 +236,13 @@ def test_write_requires_secrets_bind_and_permissions_are_fresh(platform_http):
             accounts.permissions.c.account_id == users[0],
             accounts.permissions.c.permission == "secrets.bind"))
     assert client.get(BASE, headers=h).status_code == 200
-    assert client.post(BASE + "/deepseek/credential", headers=h, json=replace()).status_code == 403
+    assert post(client, h, "credential", replace()).status_code == 403
 
 
 def test_verify_rechecks_generation_after_remote_probe(platform_http):
     client, admin, _, _ = platform_http
     h = headers(platform_http)
-    stored = client.post(BASE + "/deepseek/credential", headers=h, json=replace()).json()
+    stored = post(client, h, "credential", replace()).json()
 
     class RacingProbe:
         def verify(self, key, timeout=15):
@@ -239,8 +253,7 @@ def test_verify_rechecks_generation_after_remote_probe(platform_http):
                     generation=platform.connections.c.generation + 1))
 
     client.app.state.platform_provider_adapter = RacingProbe()
-    checked = client.post(BASE + "/deepseek/verify", headers=h,
-                          json=verify(stored["revision"]))
+    checked = post(client, h, "verify", verify(stored["revision"]))
     assert checked.status_code == 409
     assert checked.json() == {"error": {"code": "provider_changed_during_verify"}}
     assert client.get(BASE, headers=h).json()["connections"][0]["verified"] is False
@@ -249,13 +262,12 @@ def test_verify_rechecks_generation_after_remote_probe(platform_http):
 def test_settings_exact_replay_does_not_increase_revision(platform_http):
     client, _, _, _ = platform_http
     h = headers(platform_http)
-    first = client.post(BASE + "/deepseek/credential", headers=h, json=replace()).json()
-    verified = client.post(BASE + "/deepseek/verify", headers=h,
-                           json=verify(first["revision"])).json()
+    first = post(client, h, "credential", replace()).json()
+    verified = post(client, h, "verify", verify(first["revision"])).json()
     command = settings(verified["revision"])
-    updated = client.patch(BASE + "/deepseek/config", headers=h, json=command)
+    updated = client.patch(CONFIG, headers=h, json=command)
     assert updated.status_code == 200
-    replay = client.patch(BASE + "/deepseek/config", headers=h, json=command)
+    replay = client.patch(CONFIG, headers=h, json=command)
     assert replay.status_code == 200 and replay.json() == updated.json()
     altered = dict(command, daily_limit=11)
-    assert client.patch(BASE + "/deepseek/config", headers=h, json=altered).status_code == 409
+    assert client.patch(CONFIG, headers=h, json=altered).status_code == 409

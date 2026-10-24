@@ -64,6 +64,7 @@ export function ProviderAdminPage({ auth }: { auth: AuthView | null | undefined 
     if (!provider || busy || !auth || invalidated.current || (!password && !pending.current)) return
     if (kind !== 'save' && provider.revision === null && !pending.current) return
     if (pending.current && pending.current.kind !== kind) return
+    const retryingPending = pending.current !== null
     setBusy(true); setError(''); setNotice('')
     const body = { operation_id: requestId(), current_password: password }
     const operation = pending.current ?? {
@@ -91,11 +92,14 @@ export function ProviderAdminPage({ auth }: { auth: AuthView | null | undefined 
           : 'Настройки сохранены в PostgreSQL.')
     } catch (reason) {
       if (invalidated.current) return
-      if (!(reason instanceof ApiError) || reason.status >= 500) {
-        // An accepted mutation may have lost its HTTP response. Retry its exact UUID
-        // and payload, never a new operation. In-memory secret expires on unmount.
+      const throttledReplay = retryingPending && reason instanceof ApiError && reason.status === 429
+      if (!(reason instanceof ApiError) || reason.status >= 500 || throttledReplay) {
+        // A throttled replay is not evidence the earlier uncertain write failed:
+        // throttle runs before the server checks the original operation UUID.
         setUncertain(true)
-        setError('Ответ сервера неизвестен. Повторите ту же операцию или явно сбросьте её после проверки состояния.')
+        setError(throttledReplay
+          ? 'Повтор временно ограничен. Исходный UUID сохранён; новые изменения заблокированы до повтора или успешной сверки.'
+          : 'Ответ сервера неизвестен. Повторите ту же операцию или явно сбросьте её после проверки состояния.')
       } else {
         pending.current = null; setUncertain(false); setPassword('')
         setError(explain(reason))

@@ -77,6 +77,9 @@ class ProviderOperationsMixin:
             actor = self._authorized(conn, raw, csrf, perms, proof)
             current = conn.execute(sa.select(t.connections).where(
                 t.connections.c.provider == "deepseek").with_for_update()).mappings().first()
+            # A matching request may have committed while this probe was in flight.
+            if self._last_op(current, command.operation_id, digest):
+                return self._view(current)
             if (current is None or current["revision"] != command.expected_revision
                     or current["generation"] != generation):
                 raise AuthError(409, "provider_changed_during_verify")
