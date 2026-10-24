@@ -69,3 +69,41 @@ test('a previously saved unverified key shows corrective instructions after relo
   await expect(page.locator('.chat-provider-card[aria-label="DeepSeek"]').getByRole('status'))
     .toContainText('Проверьте, что он принадлежит DeepSeek')
 })
+
+test('platform fake starts without automatic personal key prompt but keeps BYOK accessible', async ({ page }) => {
+  await workspace(page)
+  await page.route('**/api/v1/chat/credentials', route =>
+    route.fulfill({ json: { credentials: noKeys } }))
+  await page.route('**/api/v1/chat/policy', route => route.fulfill({
+    json: {
+      revision: 'platform-optional-byok-test', default_model: 'platform:deepseek-flash',
+      models: [{ id: 'platform:deepseek-flash', label: 'Платформа · DeepSeek Flash',
+        provider: 'platform', text: true, vision: false,
+        description: 'Синтетический тест, не оплачиваемый DeepSeek.',
+        price: { currency: 'RUB', input_kopeks_per_million: null,
+          output_kopeks_per_million: null, image_kopeks_per_image: null } }],
+      max_input_chars: 6000, max_output_tokens: 2048, max_attachments: 0, max_image_bytes: 0,
+    },
+  }))
+  await page.goto('/')
+  await expect(page.getByText('Свой API-ключ необязателен.', { exact: false })).toBeVisible()
+  const settings = page.getByRole('button', { name: 'Настройки DeepSeek и OpenRouter' })
+  await expect(settings).toHaveAttribute('aria-expanded', 'false')
+  await expect(page.getByRole('dialog', { name: 'Провайдеры' })).toHaveCount(0)
+  await expect(page.getByRole('textbox', { name: 'Сообщение' })).toBeVisible()
+  await settings.click()
+  await expect(page.getByRole('dialog', { name: 'Провайдеры' })).toBeVisible()
+  await expect(page.locator('.chat-provider-card[aria-label="DeepSeek"]')
+    .getByRole('button', { name: 'Добавить ключ' })).toBeVisible()
+})
+
+test('BYOK-only first run still opens existing key onboarding', async ({ page }) => {
+  await workspace(page)
+  await page.route('**/api/v1/chat/credentials', route =>
+    route.fulfill({ json: { credentials: noKeys } }))
+  await page.goto('/')
+  await expect(page.getByText('Подключите и проверьте API key провайдера.')).toBeVisible()
+  await expect(page.getByRole('dialog', { name: 'Провайдеры' })).toBeVisible()
+  await expect(page.locator('.chat-provider-card[aria-label="DeepSeek"]')
+    .getByLabel('API ключ DeepSeek')).toBeVisible()
+})
