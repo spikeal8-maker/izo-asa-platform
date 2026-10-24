@@ -107,3 +107,39 @@ test('BYOK-only first run still opens existing key onboarding', async ({ page })
   await expect(page.locator('.chat-provider-card[aria-label="DeepSeek"]')
     .getByLabel('API ключ DeepSeek')).toBeVisible()
 })
+
+test('credential refresh arriving before platform policy never forces personal key onboarding', async ({ page }) => {
+  await workspace(page)
+  let releasePolicy = () => {}
+  const policyGate = new Promise<void>(resolve => { releasePolicy = resolve })
+  let credentialReads = 0
+  await page.route('**/api/v1/chat/credentials', route => {
+    credentialReads++
+    return route.fulfill({ json: { credentials: noKeys } })
+  })
+  await page.route('**/api/v1/chat/policy', async route => {
+    await policyGate
+    return route.fulfill({ json: {
+      revision: 'delayed-platform-policy', default_model: 'platform:deepseek-flash',
+      models: [{ id: 'platform:deepseek-flash', label: 'Платформа · DeepSeek Flash',
+        provider: 'platform', text: true, vision: false,
+        description: 'Бесплатный синтетический тест.',
+        price: { currency: 'RUB', input_kopeks_per_million: null,
+          output_kopeks_per_million: null, image_kopeks_per_image: null } }],
+      max_input_chars: 6000, max_output_tokens: 2048, max_attachments: 0, max_image_bytes: 0,
+    } })
+  })
+  try {
+    await page.goto('/')
+    await expect(page.getByRole('button', { name: 'Настройки DeepSeek и OpenRouter' })).toBeVisible()
+    await page.evaluate(() => window.dispatchEvent(new Event('focus')))
+    await expect.poll(() => credentialReads).toBeGreaterThanOrEqual(2)
+    await expect(page.getByRole('dialog', { name: 'Провайдеры' })).toHaveCount(0)
+  } finally {
+    releasePolicy()
+  }
+  await expect(page.getByText('Свой API-ключ необязателен.', { exact: false })).toBeVisible()
+  await expect(page.getByRole('dialog', { name: 'Провайдеры' })).toHaveCount(0)
+  await page.getByRole('button', { name: 'Настройки DeepSeek и OpenRouter' }).click()
+  await expect(page.getByRole('dialog', { name: 'Провайдеры' })).toBeVisible()
+})
