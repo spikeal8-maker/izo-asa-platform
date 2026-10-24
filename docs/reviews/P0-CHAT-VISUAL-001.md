@@ -71,3 +71,68 @@ project/test combinations). Includes old Rename/scroll, Markdown theme,
 composer width, focus after Graph selection, laptop shell and 8K shell.
 Full GitHub CI must be repeated on the new exact SHA, not treated as
 already passing based on targeted results.
+
+
+## Mobile drawer during initial authentication — 24 October 2026
+
+- Exact prior #282 source `14f3415493c6f96c458e3e3840787db95117e479` failed real Compose acceptance at `chat-live.mjs:221`: the renamed row was absent from the accessibility tree after reload and the mobile drawer was closed.
+- Root cause: `App.tsx` rendered `ChatPage` using the temporary `guest` React key before `/api/v1/auth/me` resolved; the authenticated key then remounted Chat, discarding a just-opened mobile drawer. No PostgreSQL title loss was demonstrated by that failure.
+- New isolated deterministic Playwright test deliberately holds the initial auth request. **Before** gating, the opener was wrongly clickable and the test failed on both initial run and retry. **After** gating, interactive Chat mounts only once initial session resolution completes; the same test passes.
+- D2-R2 exact-worktree validation: production TypeScript/Vite build PASS; P0 visual **12/12 PASS** (phone/laptop); Sidebar/Rename/Search/Responsive **42 PASS, 18 intentional project skips, 0 failed, 0 retry**; repository hygiene PASS; no paid provider calls.
+- New exact-source GitHub CI and independent review remain mandatory. Do not count targeted browser results as completed real Compose restart acceptance.
+
+## Semantic color token reconciliation - 24 October 2026
+
+The independent Codex review of exact source `b66c4d0cfdbd751612aeef57e4dacb3a7d34812e`
+reported a P1 violation of the approved theme invariant: the P0 Chat overlay
+maintained a parallel `--p0-*` palette and additional hard-coded colors.
+A second P2 finding identified insufficient contrast for hovered message
+actions in the dark theme.
+
+The bounded candidate changes the existing `P0ChatSurface.css`,
+`P0ChatDetail.css`, and `P0ChatDark.css` only (plus this review note and
+the existing `p0-chat-visual.spec.ts`). All authored colors are derived
+from runtime `--color-*` semantic tokens in `src/shell/theme.css`,
+using `color-mix` for gradients, elevation, state and focus treatments.
+The parallel `--p0-*` palette and new component-level `--color-*` overrides
+are removed. No new HEX colors were introduced. The sidebar hierarchy,
+message cards, composer geometry and responsive drawer remain intact;
+no Graph, Accounts, provider, storage or permission logic was modified.
+
+Playwright now compares the Chat main surface with the computed semantic
+background instead of an obsolete fixed RGB value, confirms overriding
+the semantic brand token changes the sidebar gradient, and checks a
+hovered dark-theme message action against the 4.5:1 contrast threshold.
+D2-R2 TypeScript/Vite PASS; 40-case Sidebar/Responsive/P0 matrix:
+33 PASS, 7 pre-defined skips, 0 failures, retries=0. Chromium light/dark
+screenshots are stored outside Git under `izo-asa-p0-preview-qa`.
+
+This is a local candidate until its exact published SHA passes full CI
+and independent review. No waiver, protected main merge, deployment,
+or paid DeepSeek call is authorized.
+
+## Dark history hover and selection contrast - 24 October 2026
+
+The independent Codex review of `80d0f17a82269f925d8e50fdb3d88761363f5335`
+identified P2 low contrast on dark-theme Chat history rows: inherited
+light-mode hover/selected backgrounds mixed `--color-text` with brand,
+while dark CSS enforced light text, resulting in approximately 1.50:1
+and 1.67:1 contrast.
+
+The fix is limited to existing `P0ChatDark.css`: unselected hover uses
+`color-mix(in srgb, var(--color-brand) 15%, var(--color-surface))`;
+selected rows including hover use 32% brand with semantic surface,
+semantic light text and a semantic brand/border mix.
+
+A real Chromium render of the exact-source production web bundle,
+with a synthetic visual history row only (no provider call/database write),
+measured text contrast of **12.58:1 hover** and **9.54:1 selected**.
+Results matched 1440px desktop and 390px mobile, with no overflow.
+Screenshots retained outside Git:
+`P0_DARK_HISTORY_P2_desktop_20261024.png` and
+`P0_DARK_HISTORY_P2_mobile_20261024.png` under the local QA folder.
+TypeScript/Vite production build PASS; Sidebar/P0 visual targeted Playwright
+matrix **26/26 PASS** on phone and laptop, zero retries. No new HEX.
+
+Exact-head full CI, separate-actor approval and owner merge
+authorization remain distinct acceptance gates.

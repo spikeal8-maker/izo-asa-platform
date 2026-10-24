@@ -22,8 +22,12 @@ const attempt = (turn: number, ordinal: number) => ({
 })
 export async function openGraphThread(page: Page, title = 'Разговор с вариантами') {
   const opener = page.getByRole('button', { name: 'Открыть панель', exact: true })
+  const row = page.getByRole('button', { name: title, exact: true })
+  // An initial authenticated Chat mounts after /auth/me. Observe its real
+  // visible desktop row or mobile opener before deciding whether to open the drawer.
+  await expect.poll(async () => await row.isVisible() || await opener.isVisible()).toBe(true)
   if (await opener.isVisible()) await opener.click()
-  await page.getByRole('button', { name: title, exact: true }).click()
+  await row.click()
 }
 export const answer = (page: Page, sequence = 1) => page.locator(`[data-turn-id="${uuid(10000 + sequence)}"]`)
 export const regenerateButton = (page: Page) => answer(page).getByRole('button', { name: 'Ответить заново', exact: true })
