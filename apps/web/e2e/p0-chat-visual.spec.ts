@@ -17,7 +17,12 @@ test('P0 Chat visual hierarchy applies to desktop and keeps controls operable', 
     return { background: item.backgroundImage, border: item.borderRightColor }
   })
   expect(style.background).toContain('linear-gradient')
-  expect(style.background).toContain('rgb(20, 33, 60)')
+  // Varying the approved brand token must propagate into the sidebar gradient.
+  const beforeBrandChange = await sidebar.evaluate(el => getComputedStyle(el).backgroundImage)
+  await page.evaluate(() => document.documentElement.style.setProperty('--color-brand', 'rgb(33, 180, 111)'))
+  const afterBrandChange = await sidebar.evaluate(el => getComputedStyle(el).backgroundImage)
+  expect(afterBrandChange).not.toBe(beforeBrandChange)
+  await page.evaluate(() => document.documentElement.style.removeProperty('--color-brand'))
   await page.getByRole('button', { name: 'Выбрать модель' }).click()
   await expect(page.getByRole('menu', { name: 'Модели' })).toBeVisible()
   await page.keyboard.press('Escape')
@@ -32,7 +37,8 @@ test('P0 visual mobile drawer remains accessible and no horizontal clipping', as
   await page.goto('/')
   await expect(page.locator('.chat-page')).toBeVisible()
   const mainColor = await page.locator('.chat-main').evaluate(el => getComputedStyle(el).backgroundColor)
-  expect(mainColor).toBe('rgb(245, 247, 252)')
+  const documentColor = await page.evaluate(() => getComputedStyle(document.body).backgroundColor)
+  expect(mainColor).toBe(documentColor)
   await page.getByRole('button', { name: 'Открыть панель' }).click()
   await expect(page.locator('.chat-sidebar')).toBeVisible()
   await expect(page.getByRole('button', { name: 'Новый чат' })).toBeVisible()
@@ -184,6 +190,15 @@ test('P0 fenced code copy toolbar uses semantic contrast in light and dark', asy
     expect(colors.background).toBe(colors.expectedBackground)
     expect(colors.foreground).toBe(colors.expectedForeground)
   }
+  // Hovered actions must retain the canonical readable text color in dark mode.
+  await page.evaluate(() => { document.documentElement.dataset.theme = 'dark' })
+  await page.locator('.chat-page').evaluate(el => {
+    el.insertAdjacentHTML('beforeend', '<div class="chat-message-actions"><button>Copy</button></div>')
+  })
+  const button = page.locator('.chat-page > .chat-message-actions button')
+  await button.hover()
+  await expect.poll(async () => button.evaluate(el =>
+    getComputedStyle(el).color === getComputedStyle(document.body).color)).toBe(true)
 })
 
 

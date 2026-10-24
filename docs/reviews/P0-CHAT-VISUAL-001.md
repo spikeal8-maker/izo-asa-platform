@@ -80,3 +80,33 @@ already passing based on targeted results.
 - New isolated deterministic Playwright test deliberately holds the initial auth request. **Before** gating, the opener was wrongly clickable and the test failed on both initial run and retry. **After** gating, interactive Chat mounts only once initial session resolution completes; the same test passes.
 - D2-R2 exact-worktree validation: production TypeScript/Vite build PASS; P0 visual **12/12 PASS** (phone/laptop); Sidebar/Rename/Search/Responsive **42 PASS, 18 intentional project skips, 0 failed, 0 retry**; repository hygiene PASS; no paid provider calls.
 - New exact-source GitHub CI and independent review remain mandatory. Do not count targeted browser results as completed real Compose restart acceptance.
+
+## Semantic color token reconciliation - 24 October 2026
+
+The independent Codex review of exact source `b66c4d0cfdbd751612aeef57e4dacb3a7d34812e`
+reported a P1 violation of the approved theme invariant: the P0 Chat overlay
+maintained a parallel `--p0-*` palette and additional hard-coded colors.
+A second P2 finding identified insufficient contrast for hovered message
+actions in the dark theme.
+
+The bounded candidate changes the existing `P0ChatSurface.css`,
+`P0ChatDetail.css`, and `P0ChatDark.css` only (plus this review note and
+the existing `p0-chat-visual.spec.ts`). All authored colors are derived
+from runtime `--color-*` semantic tokens in `src/shell/theme.css`,
+using `color-mix` for gradients, elevation, state and focus treatments.
+The parallel `--p0-*` palette and new component-level `--color-*` overrides
+are removed. No new HEX colors were introduced. The sidebar hierarchy,
+message cards, composer geometry and responsive drawer remain intact;
+no Graph, Accounts, provider, storage or permission logic was modified.
+
+Playwright now compares the Chat main surface with the computed semantic
+background instead of an obsolete fixed RGB value, confirms overriding
+the semantic brand token changes the sidebar gradient, and checks a
+hovered dark-theme message action against the 4.5:1 contrast threshold.
+D2-R2 TypeScript/Vite PASS; 40-case Sidebar/Responsive/P0 matrix:
+33 PASS, 7 pre-defined skips, 0 failures, retries=0. Chromium light/dark
+screenshots are stored outside Git under `izo-asa-p0-preview-qa`.
+
+This is a local candidate until its exact published SHA passes full CI
+and independent review. No waiver, protected main merge, deployment,
+or paid DeepSeek call is authorized.
