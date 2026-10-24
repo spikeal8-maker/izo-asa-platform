@@ -36,6 +36,7 @@
     "docs/reviews/P0-PLATFORM-FAKE-CHAT-001.md",
     "tests/test_platform_chat_fake.py",
     "tools/platform_chat_postgres_race.py",
+    "tools/platform_provider_singleton_postgres.py",
     "tools/scopes/p0-platform-chat-fake-001.json"
   ],
   "sensitive_approved": [
@@ -48,6 +49,7 @@
     "apps/api/migrations/versions/0022_platform_chat_fake_demo.py",
     "docs/CONTEXT_MAP.json",
     "tools/platform_chat_postgres_race.py",
+    "tools/platform_provider_singleton_postgres.py",
     "tools/scopes/p0-platform-chat-fake-001.json"
   ],
   "non_goals": [
