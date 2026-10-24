@@ -1,0 +1,23 @@
+{
+  "package_id": "CHAT-COMPOSER-FOCUS-001",
+  "base": "321fcb4fe193993db70aa705a46842e9836daac0",
+  "scope_class": "tiny",
+  "risk": "medium",
+  "independent_review_required": true,
+  "max_files": 3,
+  "goal": "Make the uncertain-selection composer-focus test establish real focus before controlled Graph recovery, preserving the existing runtime and final assertions.",
+  "allowed": [
+    "apps/web/e2e/conversation-graph-races.spec.ts",
+    "tools/scopes/chat-composer-focus-001.json",
+    "docs/reviews/CHAT-COMPOSER-FOCUS-001.md"
+  ],
+  "sensitive_approved": [
+    "tools/scopes/chat-composer-focus-001.json"
+  ],
+  "non_goals": [
+    "No application runtime, search implementation, shared fixture, dependency or workflow changes",
+    "No manual canonical state changes, package activation or checkpoint changes",
+    "No timeout or retry increase, skips, assertion weakening or broad spec refactor",
+    "No GitHub publication, merge, deployment or paid provider actions by the implementer"
+  ]
+}
