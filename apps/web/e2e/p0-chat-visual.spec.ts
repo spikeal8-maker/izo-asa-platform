@@ -94,7 +94,7 @@ test('P0 Admin provider forms preserve semantic input colors in both themes', as
       daily_limit: 30, concurrency_limit: 1, available_to_users: false }],
   } }))
   await page.goto('/admin/providers')
-  const fields = page.locator('.provider-form input, .provider-form select, .provider-auth input')
+  const fields = page.locator('.provider-form input:not([type="checkbox"]), .provider-form select, .provider-auth input:not([type="checkbox"])')
   await expect(fields.first()).toBeVisible()
   for (const theme of ['light', 'dark'] as const) {
     await page.evaluate(value => { document.documentElement.dataset.theme = value }, theme)
@@ -117,6 +117,19 @@ test('P0 Admin provider forms preserve semantic input colors in both themes', as
       expect(actual.color).toBe(colors.expected.color)
       expect(actual.border).toBe(colors.expected.border)
     }
+    const checkColor = await page.locator('.provider-check input[type="checkbox"]').evaluate(element => {
+      const sample = document.createElement('input')
+      sample.type = 'checkbox'
+      sample.style.accentColor = 'var(--color-brand)'
+      document.body.appendChild(sample)
+      const result = {
+        actual: getComputedStyle(element).accentColor,
+        expected: getComputedStyle(sample).accentColor,
+      }
+      sample.remove()
+      return result
+    })
+    expect(checkColor.actual).toBe(checkColor.expected)
     await noOverflow(page)
   }
 })
