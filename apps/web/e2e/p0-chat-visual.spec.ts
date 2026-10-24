@@ -184,3 +184,32 @@ test('P0 fenced code copy toolbar uses semantic contrast in light and dark', asy
     expect(colors.foreground).toBe(colors.expectedForeground)
   }
 })
+
+
+test('P0 mobile drawer is not usable before the initial account check finishes', async ({ page }) => {
+  const fixture = await workspace(page)
+  let resolveAuth!: () => void
+  let notifyAuth!: () => void
+  const pendingAuth = new Promise<void>(resolve => { resolveAuth = resolve })
+  const authStarted = new Promise<void>(resolve => { notifyAuth = resolve })
+  await page.route('**/api/v1/auth/me', async route => {
+    notifyAuth()
+    await pendingAuth
+    await route.fulfill({ json: { account: fixture.account, csrf_token: 'workspace-csrf' } })
+  })
+  await page.setViewportSize({ width: 390, height: 844 })
+  await page.goto('/')
+  try {
+    await authStarted
+    await expect(page.getByRole('status')).toContainText('Проверяем вход…')
+    // A session change must never destroy an already opened drawer.
+    await expect(page.getByRole('button', { name: 'Открыть панель' })).toHaveCount(0)
+  } finally {
+    resolveAuth()
+  }
+  const opener = page.getByRole('button', { name: 'Открыть панель' })
+  await expect(opener).toBeVisible()
+  await opener.click()
+  await expect(page.getByRole('dialog', { name: 'История чатов' })).toBeVisible()
+  await expect(page.locator('.chat-sidebar')).toHaveAttribute('aria-hidden', 'false')
+})

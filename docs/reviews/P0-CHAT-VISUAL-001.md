@@ -71,3 +71,12 @@ project/test combinations). Includes old Rename/scroll, Markdown theme,
 composer width, focus after Graph selection, laptop shell and 8K shell.
 Full GitHub CI must be repeated on the new exact SHA, not treated as
 already passing based on targeted results.
+
+
+## Mobile drawer during initial authentication — 24 October 2026
+
+- Exact prior #282 source `14f3415493c6f96c458e3e3840787db95117e479` failed real Compose acceptance at `chat-live.mjs:221`: the renamed row was absent from the accessibility tree after reload and the mobile drawer was closed.
+- Root cause: `App.tsx` rendered `ChatPage` using the temporary `guest` React key before `/api/v1/auth/me` resolved; the authenticated key then remounted Chat, discarding a just-opened mobile drawer. No PostgreSQL title loss was demonstrated by that failure.
+- New isolated deterministic Playwright test deliberately holds the initial auth request. **Before** gating, the opener was wrongly clickable and the test failed on both initial run and retry. **After** gating, interactive Chat mounts only once initial session resolution completes; the same test passes.
+- D2-R2 exact-worktree validation: production TypeScript/Vite build PASS; P0 visual **12/12 PASS** (phone/laptop); Sidebar/Rename/Search/Responsive **42 PASS, 18 intentional project skips, 0 failed, 0 retry**; repository hygiene PASS; no paid provider calls.
+- New exact-source GitHub CI and independent review remain mandatory. Do not count targeted browser results as completed real Compose restart acceptance.

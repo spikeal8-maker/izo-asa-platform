@@ -196,3 +196,12 @@
 @media (max-width: 600px) {
   .chat-shell .chat-toolbar { padding-right: 8px; }
 }
+
+/* Do not expose interactive Chat controls before the initial session resolves. */
+.chat-shell .chat-auth-loading {
+  display: grid;
+  place-items: center;
+  min-height: min(68vh, 680px);
+  color: var(--color-text-secondary);
+  font-size: 0.95rem;
+}
