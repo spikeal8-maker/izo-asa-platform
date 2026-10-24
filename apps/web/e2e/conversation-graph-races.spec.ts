@@ -52,13 +52,31 @@ test('fresh revision conflict refreshes selection without repeating a command', 
 test('an uncertain selection reads persisted state and preserves deliberate composer focus', async ({ page }) => {
   const fixture = await graphFixture(page)
   fixture.addVariant(); fixture.state.abortSelection = true
-  await page.goto('/'); await openGraphThread(page)
-  await nextButton(page).click()
-  const input = page.getByRole('textbox', { name: 'Сообщение', exact: true })
-  await input.focus()
-  await expect(answer(page)).toContainText('Ответ 1, вариант 2')
-  await expect(input).toBeFocused()
-  expect(fixture.state.commands).toHaveLength(1)
+  const attemptsGate = gate(), graphGate = gate()
+  fixture.state.graphGate = graphGate; fixture.state.graphDelayAt = 2
+  let attemptsRequested = false
+  // Establish actual focus before recovery can temporarily disable the composer.
+  await page.route(/\/turns\/[^/]+\/attempts(?:\?|$)/, async route => {
+    attemptsRequested = true; await attemptsGate.wait; await route.fallback()
+  })
+  try {
+    await page.goto('/'); await openGraphThread(page)
+    await nextButton(page).click()
+    const input = page.getByRole('textbox', { name: 'Сообщение', exact: true })
+    await expect.poll(() => attemptsRequested).toBe(true)
+    await expect(input).toBeEnabled()
+    await input.focus()
+    await expect(input).toBeFocused()
+    attemptsGate.release()
+    await expect.poll(() => fixture.state.graphReads).toBe(2)
+    await expect(input).toBeDisabled()
+    graphGate.release()
+    await expect(answer(page)).toContainText('Ответ 1, вариант 2')
+    await expect(input).toBeFocused()
+    expect(fixture.state.commands).toHaveLength(1)
+  } finally {
+    attemptsGate.release(); graphGate.release()
+  }
 })
 
 for (const outcome of ['completed', 'interrupted', 'error', 'stopped']) test(`${outcome}: late selection respects commit order and terminal lifecycle`, async ({ page }) => {
