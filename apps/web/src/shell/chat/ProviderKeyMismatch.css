@@ -1,0 +1,21 @@
+.chat-credential-popover .chat-provider-key-warning {
+  margin: 5px 0 9px;
+  padding: 9px 11px;
+  border: 1px solid color-mix(in srgb, var(--color-error) 40%, var(--color-border));
+  border-radius: 9px;
+  background: color-mix(in srgb, var(--color-error) 9%, var(--color-surface));
+  color: var(--color-text);
+  font-size: 13px;
+  line-height: 1.5;
+}
+.chat-provider-key-form input[aria-invalid="true"] {
+  outline: 2px solid var(--color-error);
+  outline-offset: 1px;
+}
+
+/* An open credential dialog must remain above the floating chat composer.
+   The surrounding toolbar needs its own stacking context only while open. */
+.chat-page .chat-toolbar:has(.chat-credential-popover) {
+  position: relative;
+  z-index: 100;
+}

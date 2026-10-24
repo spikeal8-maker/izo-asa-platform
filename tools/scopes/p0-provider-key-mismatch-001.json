@@ -1,0 +1,44 @@
+{
+  "package_id": "P0-PROVIDER-KEY-MISMATCH-001",
+  "base": "311baec81f94ae999d1cc8ae3987a8878ca78f91",
+  "scope_class": "cross_domain",
+  "risk": "high",
+  "independent_review_required": true,
+  "max_files": 18,
+  "large_scope_reason": "This single targeted credential-integrity hotfix must enforce the provider boundary in both Accounts-owned Chat HTTP and the browser card, without breaking current credential encryption, revision, UUID replay, legacy BYOK, Graph or paid-outcome handling. It splits oversized existing React code by pure component extraction; the new Python and TypeScript helpers are intentionally small. Focused HTTP and Playwright coverage plus doc routing and exact-source evidence complete the narrow patch. All changes are stacked on the existing unmerged PR #282. Targeted first-run UX reconciliation: the platform fake model already works without BYOK, but ChatCredentialPanel auto-opens a personal key form. One owned ChatPage.tsx policy prop is added before implementation to keep BYOK optional in platform mode, while retaining BYOK-only onboarding and manual provider settings.",
+  "domains": [
+    "Provider-qualified account-owned Chat credential writes",
+    "Chat provider card and client-side key validation",
+    "HTTP and responsive browser regression acceptance",
+    "Chat initial policy/credential display for platform fake versus BYOK"
+  ],
+  "allowed": [
+    "apps/api/izo/chat/credentials.py",
+    "apps/api/izo/chat/provider_key_validation.py",
+    "apps/web/e2e/provider-key-mismatch.spec.ts",
+    "apps/web/src/shell/ChatPage.tsx",
+    "apps/web/src/shell/chat/ChatCredentialPanel.tsx",
+    "apps/web/src/shell/chat/ProviderCredentialCard.tsx",
+    "apps/web/src/shell/chat/ProviderKeyMismatch.css",
+    "apps/web/src/shell/chat/providerKeyMismatch.ts",
+    "docs/CONTEXT_MAP.json",
+    "docs/reviews/P0-PROVIDER-KEY-GUARD-001.md",
+    "tests/test_provider_key_mismatch_http.py",
+    "tools/scopes/p0-provider-key-mismatch-001.json"
+  ],
+  "sensitive_approved": [
+    "apps/api/izo/chat/credentials.py",
+    "apps/api/izo/chat/provider_key_validation.py",
+    "docs/CONTEXT_MAP.json",
+    "tools/scopes/p0-provider-key-mismatch-001.json"
+  ],
+  "non_goals": [
+    "No plaintext API keys, raw credential fingerprint, account passwords or auth tokens in Git/PR/screenshots.",
+    "No automatic cross-provider key migration, login bypass or user-controlled credential mutation outside authorized application API.",
+    "No change to live OpenRouter or DeepSeek provider origin, paid model traffic, retry strategy or budget.",
+    "No changes to production owner permissions, protected main, canonical PLAN or unrelated projects.",
+    "No global Docker, firewall, VPN, DNS or route setting changes, and no removal of QA databases.",
+    "Never weaken repository hygiene, existing tests, CSRF, encryption, rate limits, UUID replay or access checks.",
+    "No change to fake provider availability, paid inference, personal key verification or server policy; only initial disclosure of the optional BYOK panel."
+  ]
+}

@@ -54,8 +54,8 @@
     "web.chat": {
       "keywords": ["chat sidebar", "чат", "боковая панель", "sidebar", "drawer", "история чатов", "пустой чат", "центрирование чата"],
       "read_first": ["apps/web/AGENTS.md", "apps/web/src/shell/chat/README.md"],
-      "tests": ["apps/web/e2e/chat-sidebar.spec.ts", "apps/web/e2e/chat-responsive.spec.ts"],
-      "expand_if_needed": ["apps/web/src/shell/ChatPage.tsx", "apps/web/src/shell/chat.css", "apps/web/src/shell/chat/ChatSidebar.tsx", "apps/web/src/shell/chat/ChatSidebar.css", "docs/UX_PRODUCT_SHELL.md"],
+      "tests": ["apps/web/e2e/chat-sidebar.spec.ts", "apps/web/e2e/chat-responsive.spec.ts", "apps/web/e2e/provider-key-mismatch.spec.ts"],
+      "expand_if_needed": ["apps/web/src/shell/ChatPage.tsx", "apps/web/src/shell/chat.css", "apps/web/src/shell/chat/ChatSidebar.tsx", "apps/web/src/shell/chat/ChatSidebar.css", "apps/web/src/shell/chat/ChatCredentialPanel.tsx", "apps/web/src/shell/chat/ProviderCredentialCard.tsx", "apps/web/src/shell/chat/providerKeyMismatch.ts", "docs/UX_PRODUCT_SHELL.md"],
       "do_not_read_by_default": ["apps/api", "docs/ADMIN.md", "docs/OPERATIONS.md"]
     },
     "web.feed": {
@@ -194,8 +194,8 @@
     "api.chat": {
       "keywords": ["deepseek", "chat backend", "чат backend", "streaming chat", "credential", "byok", "thread", "chat request"],
       "read_first": ["apps/api/AGENTS.md", "apps/api/izo/chat/README.md"],
-      "tests": ["tests/test_chat.py", "tests/test_chat_http.py", "tests/test_platform_chat_fake.py"],
-      "expand_if_needed": ["apps/api/izo/chat/service.py", "apps/api/izo/chat/credentials.py", "apps/api/izo/chat/conversations.py", "apps/api/izo/chat/execution.py", "apps/api/izo/chat/platform_admission.py", "apps/api/izo/chat/platform_policy.py", "apps/api/izo/chat/provider.py", "apps/web/src/shell/ChatPage.tsx", "tools/platform_chat_postgres_race.py", "compose.yaml"],
+      "tests": ["tests/test_chat.py", "tests/test_chat_http.py", "tests/test_platform_chat_fake.py", "tests/test_provider_key_mismatch_http.py"],
+      "expand_if_needed": ["apps/api/izo/chat/service.py", "apps/api/izo/chat/credentials.py", "apps/api/izo/chat/provider_key_validation.py", "apps/api/izo/chat/conversations.py", "apps/api/izo/chat/execution.py", "apps/api/izo/chat/platform_admission.py", "apps/api/izo/chat/platform_policy.py", "apps/api/izo/chat/provider.py", "apps/web/src/shell/ChatPage.tsx", "tools/platform_chat_postgres_race.py", "compose.yaml"],
       "do_not_read_by_default": ["docs/ADMIN.md", "apps/api/izo/jobs", "apps/api/izo/media"]
     },
     "ops.runtime": {
