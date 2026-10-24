@@ -85,3 +85,87 @@ test('P0 model picker stays legible with semantic colors in both themes', async 
     await expect(menu).toHaveCount(0)
   }
 })
+
+test('P0 Admin provider forms preserve semantic input colors in both themes', async ({ page }) => {
+  await workspace(page)
+  await page.route('**/api/v1/admin/providers', route => route.fulfill({ json: {
+    connections: [{ provider: 'deepseek', configured: false, enabled: false, verified: false,
+      status: 'not_configured', model: 'deepseek-flash', revision: null, generation: null,
+      daily_limit: 30, concurrency_limit: 1, available_to_users: false }],
+  } }))
+  await page.goto('/admin/providers')
+  const fields = page.locator('.provider-form input:not([type="checkbox"]), .provider-form select, .provider-auth input:not([type="checkbox"])')
+  await expect(fields.first()).toBeVisible()
+  for (const theme of ['light', 'dark'] as const) {
+    await page.evaluate(value => { document.documentElement.dataset.theme = value }, theme)
+    const colors = await fields.evaluateAll(elements => {
+      const sample = document.createElement('span')
+      sample.style.cssText = 'background:var(--color-surface);color:var(--color-text);border:1px solid var(--color-border)'
+      document.body.appendChild(sample)
+      const style = getComputedStyle(sample)
+      const expected = { background: style.backgroundColor, color: style.color, border: style.borderTopColor }
+      const found = elements.map(element => {
+        const actual = getComputedStyle(element)
+        return { background: actual.backgroundColor, color: actual.color, border: actual.borderTopColor }
+      })
+      sample.remove()
+      return { expected, found }
+    })
+    expect(colors.found.length).toBeGreaterThanOrEqual(3)
+    for (const actual of colors.found) {
+      expect(actual.background).toBe(colors.expected.background)
+      expect(actual.color).toBe(colors.expected.color)
+      expect(actual.border).toBe(colors.expected.border)
+    }
+    const checkColor = await page.locator('.provider-check input[type="checkbox"]').evaluate(element => {
+      const sample = document.createElement('input')
+      sample.type = 'checkbox'
+      sample.style.accentColor = 'var(--color-brand)'
+      document.body.appendChild(sample)
+      const result = {
+        actual: getComputedStyle(element).accentColor,
+        expected: getComputedStyle(sample).accentColor,
+      }
+      sample.remove()
+      return result
+    })
+    expect(checkColor.actual).toBe(checkColor.expected)
+    await noOverflow(page)
+  }
+})
+
+test('P0 fenced code copy toolbar uses semantic contrast in light and dark', async ({ page }) => {
+  await workspace(page)
+  await page.goto('/')
+  for (const theme of ['light', 'dark'] as const) {
+    await page.evaluate(value => { document.documentElement.dataset.theme = value }, theme)
+    const colors = await page.evaluate(() => {
+      const parent = document.querySelector('.chat-page')
+      if (!parent) throw new Error('Chat page not mounted')
+      const block = document.createElement('div')
+      block.className = 'chat-code-block'
+      const toolbar = document.createElement('div')
+      toolbar.className = 'chat-code-toolbar'
+      const copy = document.createElement('button')
+      copy.type = 'button'
+      copy.textContent = 'Копировать'
+      toolbar.appendChild(copy)
+      block.appendChild(toolbar)
+      const sample = document.createElement('span')
+      sample.style.cssText = 'background:var(--color-surface);color:var(--color-text-secondary);border:1px solid var(--color-border)'
+      block.appendChild(sample)
+      parent.appendChild(block)
+      const toolbarStyle = getComputedStyle(toolbar)
+      const copyStyle = getComputedStyle(copy)
+      const expectedStyle = getComputedStyle(sample)
+      const colors = {
+        background: toolbarStyle.backgroundColor, expectedBackground: expectedStyle.backgroundColor,
+        foreground: copyStyle.color, expectedForeground: expectedStyle.color,
+      }
+      block.remove()
+      return colors
+    })
+    expect(colors.background).toBe(colors.expectedBackground)
+    expect(colors.foreground).toBe(colors.expectedForeground)
+  }
+})

@@ -153,12 +153,12 @@
   box-shadow: 0 20px 54px #27365a38;
 }
 .chat-shell .chat-code-block {
-  border: 1px solid #dce1ee;
+  border: 1px solid var(--color-border);
   border-radius: 10px;
 }
 .chat-shell .chat-code-toolbar {
-  color: #62718a;
-  background: #eef1f7;
+  color: var(--color-text-secondary);
+  background: var(--color-surface);
 }
 .chat-shell button:focus-visible,
 .chat-shell input:focus-visible,
