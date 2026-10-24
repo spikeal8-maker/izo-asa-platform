@@ -12,10 +12,11 @@ const credentialFor = (credentials: CredentialView[], provider: ChatProviderId) 
   credentials.find(item => item.provider === provider)
 
 export function ChatCredentialPanel({
-  auth, credentials, onChange, onDisabled, onError,
+  auth, credentials, platformAvailable, onChange, onDisabled, onError,
 }: {
   auth: AuthView
   credentials: CredentialView[]
+  platformAvailable: boolean
   onChange: (value: CredentialView) => void
   onDisabled: (value: CredentialView) => void
   onError: (message: string) => void
@@ -23,7 +24,7 @@ export function ChatCredentialPanel({
   const [open, setOpen] = useState(false)
   const [busyProvider, setBusyProvider] = useState<ChatProviderId | null>(null)
   const wrapper = useRef<HTMLDivElement>(null)
-  const firstRun = credentials.length > 0 && credentials.every(item => !item.configured)
+  const firstRun = credentials.length > 0 && credentials.every(item => !item.configured) && !platformAvailable
   const connected = providers.filter(
     item => credentialFor(credentials, item.id)?.verified).length
   const deepseekOnly = connected === 1 && credentialFor(credentials, 'deepseek')?.verified
