@@ -41,3 +41,47 @@ test('P0 visual mobile drawer remains accessible and no horizontal clipping', as
   await expect(page.getByRole('textbox', { name: 'Сообщение' })).toBeVisible()
   await noOverflow(page)
 })
+
+test('P0 model picker stays legible with semantic colors in both themes', async ({ page }) => {
+  await workspace(page)
+  await page.goto('/')
+  for (const theme of ['light', 'dark'] as const) {
+    await page.evaluate(value => { document.documentElement.dataset.theme = value }, theme)
+    await page.getByRole('button', { name: 'Выбрать модель' }).click()
+    const menu = page.getByRole('menu', { name: 'Модели' })
+    await expect(menu).toBeVisible()
+    const colors = await menu.evaluate(element => {
+      const sample = document.createElement('span')
+      sample.style.cssText = 'background:var(--color-surface);color:var(--color-text);border:1px solid var(--color-border)'
+      element.appendChild(sample)
+      const actual = getComputedStyle(element)
+      const expected = getComputedStyle(sample)
+      const value = {
+        background: actual.backgroundColor, expectedBackground: expected.backgroundColor,
+        foreground: actual.color, expectedForeground: expected.color,
+        border: actual.borderTopColor, expectedBorder: expected.borderTopColor,
+      }
+      sample.remove()
+      return value
+    })
+    expect(colors.background).toBe(colors.expectedBackground)
+    expect(colors.foreground).toBe(colors.expectedForeground)
+    expect(colors.border).toBe(colors.expectedBorder)
+    await menu.getByRole('menuitem', { name: /Текст/ }).click()
+    const providerTitle = page.locator('.chat-model-provider-title').first()
+    await expect(providerTitle).toBeVisible()
+    const providerColors = await providerTitle.evaluate(element => {
+      const sample = document.createElement('span')
+      sample.style.color = 'var(--color-brand)'
+      element.appendChild(sample)
+      const actual = getComputedStyle(element).color
+      const expected = getComputedStyle(sample).color
+      sample.remove()
+      return { actual, expected }
+    })
+    expect(providerColors.actual).toBe(providerColors.expected)
+    await noOverflow(page)
+    await page.keyboard.press('Escape')
+    await expect(menu).toHaveCount(0)
+  }
+})

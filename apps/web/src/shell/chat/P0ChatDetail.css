@@ -136,13 +136,14 @@
   font-size: 11px;
 }
 .chat-shell .chat-popover {
-  border: 1px solid #d7def0;
+  border: 1px solid var(--color-border);
   border-radius: 13px;
-  background: #fff;
-  box-shadow: 0 24px 58px #24335d38;
+  background: var(--color-surface);
+  color: var(--color-text);
+  box-shadow: 0 24px 58px color-mix(in srgb, var(--color-text) 20%, transparent);
 }
 .chat-shell .chat-model-provider-title {
-  color: #6650c4;
+  color: var(--color-brand);
   font-size: 12px;
   font-weight: 760;
   letter-spacing: .055em;
