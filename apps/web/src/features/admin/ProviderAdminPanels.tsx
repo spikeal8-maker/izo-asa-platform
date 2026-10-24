@@ -1,5 +1,29 @@
 import type { FormEvent, RefObject } from 'react'
+import { Link } from '../../shell/router'
 import { labels, type Provider } from './provider-admin-types'
+
+export function ProviderAdminHeader() {
+  return <>
+    <header className="page-heading">
+      <p className="eyebrow">АДМИНИСТРИРОВАНИЕ / ИИ</p>
+      <h1>Провайдеры</h1>
+      <p>Защищённые серверные подключения. Личные ключи пользователей остаются отдельным BYOK-режимом.</p>
+    </header>
+    <nav className="admin-links" aria-label="Административные разделы">
+      <Link href="/admin/users">Пользователи</Link>
+      <Link href="/admin/catalog">Каталог моделей</Link>
+      <Link href="/admin/access">Доступ</Link>
+      <Link href="/admin/audit">Аудит</Link>
+      <Link href="/admin/providers" aria-current="page">Провайдеры</Link>
+    </nav>
+  </>
+}
+
+export function ProviderAdminStageNote() {
+  return <p className="provider-limit"><strong>Граница этапа B1.</strong> Здесь реально сохраняются, проверяются и выключаются
+    настройки подключения. Маршрутизация пользовательских запросов и контроль расходов будут включены отдельным
+    проверяемым этапом. В тестовом окружении проверка ключа синтетическая, без обращения к DeepSeek.</p>
+}
 
 type Action = 'save' | 'verify' | 'policy'
 type Props = {
