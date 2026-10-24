@@ -63,3 +63,34 @@ the OpenRouter Cancel button. The fix raises only the chat toolbar that
 currently contains an open credential popover. It does not permanently
 reorder the drawer or other Chat layers. The laptop/phone Playwright test
 now clicks Cancel after a wrong-vendor warning to prevent recurrence.
+
+## Semantic warning contrast after independent P1 review (24 October 2026)
+
+Codex's exact-HEAD read-only review of `d03c6a85dbc475600a501e64a79ed3b6a5f44078`
+identified insufficient dark-theme contrast in warning paragraphs displayed for
+mismatched DeepSeek/OpenRouter key prefixes or a saved, unverified credential.
+`ChatRuntime.css` gives `.chat-credential-popover p` a semantic secondary text
+color, overriding the prior low-specificity warning foreground while
+`ProviderKeyMismatch.css` retained a hard-coded light `#fff3ed` background.
+
+A new deterministic Playwright regression was added to the existing
+`provider-key-mismatch.spec.ts` before changing styles. It reproduced
+**1.8736:1** contrast for saved-unverified guidance in the dark theme
+on both phone and laptop, below the 4.5:1 minimum.
+
+The repair modifies only the already scoped `ProviderKeyMismatch.css`:
+`.chat-credential-popover .chat-provider-key-warning` now uses the canonical
+`--color-text` for warning text, a semantic
+`color-mix(in srgb, var(--color-error) 9%, var(--color-surface))`
+background and a semantic error/border mix. Higher selector specificity
+beats the generic paragraph styling. Invalid input outline derives from
+`--color-error`. No new hex, provider-validation rules or API changes.
+
+After repair, TypeScript/Vite production build **PASS** and
+Playwright `provider-key-mismatch.spec.ts` **14/14 PASS**
+(phone and laptop, zero retries), including contrast >=4.5:1
+in both themes for saved-unverified and wrong-provider warnings,
+BYOK-only onboarding, platform fake, and delayed policy retrieval.
+
+Full exact-SHA GitHub Foundation CI, independent structured review
+and owner permission for merge remain separate requirements.

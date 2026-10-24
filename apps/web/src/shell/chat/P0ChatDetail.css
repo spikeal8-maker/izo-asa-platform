@@ -1,11 +1,11 @@
 /* P0-D: message hierarchy, actions, composer and responsive surfaces. */
 .chat-shell .chat-user-bubble {
-  background: linear-gradient(120deg, #e9e9ff, #f1f1ff);
-  border: 1px solid #dadbfb;
+  background: linear-gradient(120deg, color-mix(in srgb, var(--color-surface) 90%, var(--color-brand)), color-mix(in srgb, var(--color-surface) 25%, var(--color-brand-soft)));
+  border: 1px solid color-mix(in srgb, var(--color-surface) 80%, var(--color-brand));
   border-radius: 17px 17px 5px 17px;
   padding: 12px 17px;
-  color: #303958;
-  box-shadow: 0 4px 13px #25295b08;
+  color: color-mix(in srgb, var(--color-text) 65%, var(--color-brand));
+  box-shadow: 0 4px 13px color-mix(in srgb, color-mix(in srgb, var(--color-text) 70%, var(--color-brand)) 3%, transparent);
 }
 .chat-shell .chat-turn-assistant {
   max-width: 100%;
@@ -15,12 +15,12 @@
   position: relative;
   width: min(100%, 790px);
   padding: 20px 24px 20px 25px;
-  border: 1px solid var(--p0-outline);
-  border-left: 3px solid #8872f7;
+  border: 1px solid var(--color-border);
+  border-left: 3px solid color-mix(in srgb, var(--color-surface) 25%, var(--color-brand));
   border-radius: 5px 16px 16px 16px;
-  background: var(--p0-panel);
-  box-shadow: var(--p0-shadow);
-  color: #293550;
+  background: var(--color-surface);
+  box-shadow: 0 10px 36px color-mix(in srgb, var(--color-text) 6%, transparent);
+  color: color-mix(in srgb, var(--color-text) 70%, var(--color-brand));
 }
 .chat-shell .chat-assistant-message::before {
   content: "ИИ";
@@ -29,12 +29,12 @@
   left: 13px;
   display: grid;
   place-items: center;
-  background: linear-gradient(130deg, #7a62f2, #5e8aff);
-  color: #fff;
+  background: linear-gradient(130deg, color-mix(in srgb, var(--color-surface) 15%, var(--color-brand)), color-mix(in srgb, var(--color-surface) 25%, var(--color-brand)));
+  color: var(--color-surface);
   font-size: 10px;
   font-weight: 770;
   letter-spacing: .06em;
-  border: 3px solid var(--p0-main);
+  border: 3px solid var(--color-bg);
   border-radius: 8px;
   width: 29px;
   height: 26px;
@@ -45,94 +45,94 @@
 .chat-shell .chat-assistant-message h1,
 .chat-shell .chat-assistant-message h2,
 .chat-shell .chat-assistant-message h3 {
-  color: #29385e;
+  color: color-mix(in srgb, var(--color-text) 65%, var(--color-brand));
   letter-spacing: -.025em;
 }
 .chat-shell .chat-assistant-message blockquote {
-  border-left: 3px solid #927bff;
-  background: #f5f3ff;
+  border-left: 3px solid color-mix(in srgb, var(--color-surface) 30%, var(--color-brand));
+  background: color-mix(in srgb, var(--color-surface) 40%, var(--color-brand-soft));
   padding: 12px 17px;
   border-radius: 4px 10px 10px 4px;
 }
 .chat-shell .chat-assistant-message table {
-  border: 1px solid #dce5f4;
+  border: 1px solid color-mix(in srgb, var(--color-border) 45%, var(--color-brand-soft));
   overflow: hidden;
   border-radius: 10px;
   width: 100%;
 }
 .chat-shell .chat-assistant-message th {
-  background: #f3f5fc;
-  color: #3d4e75;
+  background: color-mix(in srgb, var(--color-surface) 40%, var(--color-brand-soft));
+  color: color-mix(in srgb, var(--color-text-secondary) 85%, var(--color-brand));
 }
 .chat-shell .chat-message-actions button,
 .chat-shell .chat-load-older {
   border: 1px solid transparent;
   border-radius: 9px;
   font-size: 12px;
-  color: #687b99;
+  color: color-mix(in srgb, var(--color-border) 30%, var(--color-text-secondary));
   transition: background .16s, color .16s;
 }
 .chat-shell .chat-message-actions button:hover:not(:disabled) {
-  background: #e8e6fa;
-  color: #4d40ac;
-  border-color: #dad6f3;
+  background: color-mix(in srgb, var(--color-surface) 85%, var(--color-brand));
+  color: color-mix(in srgb, var(--color-text) 20%, var(--color-brand));
+  border-color: color-mix(in srgb, var(--color-brand) 15%, var(--color-brand-soft));
 }
 .chat-shell .chat-composer-dock {
-  background: linear-gradient(180deg, transparent, #f5f7fcec 25%, #f5f7fc 58%);
+  background: linear-gradient(180deg, transparent, color-mix(in srgb, color-mix(in srgb, var(--color-surface) 95%, var(--color-brand)) 93%, transparent) 25%, color-mix(in srgb, var(--color-surface) 95%, var(--color-brand)) 58%);
 }
 .chat-shell .chat-composer {
-  border: 1px solid #ccd5eb;
+  border: 1px solid color-mix(in srgb, var(--color-bg) 75%, var(--color-brand));
   border-radius: 19px;
-  background: #fff;
+  background: var(--color-surface);
   padding: 7px 9px;
-  box-shadow: 0 16px 45px #253c6b1c, 0 0 0 5px #dedffb40;
+  box-shadow: 0 16px 45px color-mix(in srgb, color-mix(in srgb, var(--color-text) 60%, var(--color-brand)) 11%, transparent), 0 0 0 5px color-mix(in srgb, color-mix(in srgb, var(--color-surface) 80%, var(--color-brand)) 25%, transparent);
 }
 .chat-shell .chat-composer:focus-within {
-  border-color: #9382ff;
-  box-shadow: 0 13px 42px #6252a72b, 0 0 0 4px #dbd4ff65;
+  border-color: color-mix(in srgb, var(--color-surface) 35%, var(--color-brand));
+  box-shadow: 0 13px 42px color-mix(in srgb, color-mix(in srgb, var(--color-text-secondary) 30%, var(--color-brand)) 17%, transparent), 0 0 0 4px color-mix(in srgb, color-mix(in srgb, var(--color-surface) 80%, var(--color-brand)) 40%, transparent);
 }
 .chat-shell .chat-composer.is-expanded { border-radius: 19px; }
 .chat-shell .chat-composer textarea {
-  color: #1f2b45;
+  color: color-mix(in srgb, var(--color-text) 80%, var(--color-brand));
   font-weight: 480;
   letter-spacing: 0;
 }
 .chat-shell .chat-composer textarea::placeholder {
-  color: #8b95a8;
+  color: color-mix(in srgb, var(--color-border) 50%, var(--color-text-secondary));
 }
 .chat-shell .chat-circle-button {
   border-radius: 11px;
-  color: #6a7791;
+  color: color-mix(in srgb, var(--color-text-secondary) 75%, var(--color-brand-soft));
 }
 .chat-shell .chat-circle-button:hover:not(:disabled) {
-  background: #f1f0fe;
-  color: #5c4ac5;
+  background: color-mix(in srgb, var(--color-surface) 25%, var(--color-brand-soft));
+  color: var(--color-brand);
 }
 .chat-shell .chat-model-selector {
   max-width: 130px;
   border-radius: 11px;
   padding: 0 10px;
-  background: #f4f4fc;
-  color: #4f5180;
+  background: color-mix(in srgb, var(--color-surface) 40%, var(--color-brand-soft));
+  color: color-mix(in srgb, var(--color-text-secondary) 70%, var(--color-brand));
   font-weight: 670;
 }
-.chat-shell .chat-model-selector:hover:not(:disabled) { background: #eae8fa; }
+.chat-shell .chat-model-selector:hover:not(:disabled) { background: color-mix(in srgb, var(--color-surface) 85%, var(--color-brand)); }
 .chat-shell .chat-send-button {
   border-radius: 12px;
-  color: #fff;
-  background: linear-gradient(130deg, #7961ef, #624de1);
-  box-shadow: 0 5px 11px #7763ce35;
+  color: var(--color-surface);
+  background: linear-gradient(130deg, color-mix(in srgb, var(--color-surface) 15%, var(--color-brand)), color-mix(in srgb, var(--color-brand) 95%, var(--color-brand-soft)));
+  box-shadow: 0 5px 11px color-mix(in srgb, color-mix(in srgb, var(--color-brand) 85%, var(--color-brand-soft)) 21%, transparent);
 }
 .chat-shell .chat-send-button:hover:not(:disabled) {
-  background: linear-gradient(130deg, #7055e5, #5644cb);
+  background: linear-gradient(130deg, color-mix(in srgb, var(--color-surface) 10%, var(--color-brand)), var(--color-brand));
 }
 .chat-shell .chat-send-button:disabled {
-  color: #7786a0;
-  background: #e5e9f4;
+  color: color-mix(in srgb, var(--color-border) 40%, var(--color-text-secondary));
+  background: color-mix(in srgb, var(--color-border) 25%, var(--color-brand-soft));
   box-shadow: none;
 }
 .chat-shell .chat-composer-note {
-  color: #8190ab;
+  color: color-mix(in srgb, var(--color-text-secondary) 60%, var(--color-brand-soft));
   font-size: 11px;
 }
 .chat-shell .chat-popover {
@@ -150,7 +150,7 @@
 }
 .chat-shell .chat-credential-popover {
   border-radius: 15px;
-  box-shadow: 0 20px 54px #27365a38;
+  box-shadow: 0 20px 54px color-mix(in srgb, color-mix(in srgb, var(--color-text) 65%, var(--color-brand)) 22%, transparent);
 }
 .chat-shell .chat-code-block {
   border: 1px solid var(--color-border);
@@ -164,12 +164,12 @@
 .chat-shell input:focus-visible,
 .chat-shell textarea:focus-visible,
 .chat-shell select:focus-visible {
-  outline: 3px solid #9c8cf5;
+  outline: 3px solid color-mix(in srgb, var(--color-surface) 40%, var(--color-brand));
   outline-offset: 2px;
 }
 @media (max-width: 700px) {
   .chat-shell .chat-composer-dock {
-    background: linear-gradient(180deg, transparent, #f5f7fc 23%);
+    background: linear-gradient(180deg, transparent, color-mix(in srgb, var(--color-surface) 95%, var(--color-brand)) 23%);
   }
   .chat-shell .chat-composer { border-radius: 17px; }
   .chat-shell .chat-composer.is-expanded { border-radius: 17px; }
