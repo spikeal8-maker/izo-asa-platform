@@ -1,16 +1,49 @@
 """Operations for platform-owned provider verification and policy update."""
 import json
+from functools import wraps
+from uuid import uuid4
+
 import sqlalchemy as sa
 from cryptography.exceptions import InvalidTag
 
+from ..accounts import admin_access as access
 from ..accounts.security import AuthError
+from ..admin import tables as audit
 from ..chat.credential_crypto import decrypt, operation_fingerprint
 from ..chat.provider import ProviderFailure
 from . import tables as t
 from .namespace import PLATFORM_ID, PLATFORM_NAMESPACE, AAD_PROVIDER
 
 
+def audit_denials(action):
+    """Record known-actor failures after the failed mutation has rolled back."""
+    def decorated(fn):
+        @wraps(fn)
+        def run(self, raw, csrf, command, peer):
+            try:
+                return fn(self, raw, csrf, command, peer)
+            except AuthError as error:
+                if error.status != 401:
+                    self._audit_denied(raw, action)
+                raise
+        return run
+    return decorated
+
+
 class ProviderOperationsMixin:
+    def _audit_denied(self, raw, action):
+        # A separate transaction avoids losing evidence when a mutation rolls back.
+        # No password, key, request body, or user-selected operation UUID is recorded.
+        try:
+            with self.auth.engine.begin() as conn:
+                actor = access.session_owner(conn, raw)
+                conn.execute(sa.insert(audit.events).values(
+                    id=uuid4(), actor_id=actor, action=action, outcome="denied",
+                    created_at=self.auth.now()))
+        except (AuthError, sa.exc.SQLAlchemyError):
+            pass  # Preserve the original denial on invalid/revoked sessions or DB outage.
+
+    @audit_denials("platform.key.verified")
     def verify(self, raw, csrf, command, peer):
         root = self._root()
         digest = operation_fingerprint(root, "platform:verify:deepseek",
@@ -44,6 +77,9 @@ class ProviderOperationsMixin:
             actor = self._authorized(conn, raw, csrf, perms, proof)
             current = conn.execute(sa.select(t.connections).where(
                 t.connections.c.provider == "deepseek").with_for_update()).mappings().first()
+            # A matching request may have committed while this probe was in flight.
+            if self._last_op(current, command.operation_id, digest):
+                return self._view(current)
             if (current is None or current["revision"] != command.expected_revision
                     or current["generation"] != generation):
                 raise AuthError(409, "provider_changed_during_verify")
@@ -55,6 +91,7 @@ class ProviderOperationsMixin:
             self._event(conn, actor, "platform.key.verified", command.operation_id)
             return self._view(conn.execute(sa.select(t.connections)).mappings().one())
 
+    @audit_denials("platform.policy.changed")
     def configure(self, raw, csrf, command, peer):
         root = self._root()
         payload = command.model_dump(mode="json", exclude={"current_password", "operation_id"})
