@@ -90,3 +90,11 @@ workflow's disposable volumes.
 4. Do **not** expose a paid platform endpoint, API key or network access.
 5. Real DeepSeek, budget settlement, actual provider workers and deployment
    outside loopback remain NOT TESTED / NOT AUTHORIZED.
+
+## PostgreSQL acceptance hardening — 24 October 2026
+
+- The dedicated P0 workflow now runs two independent **real PostgreSQL** gates after a fresh isolated Compose migration.
+- `tools/platform_provider_singleton_postgres.py` reproduces simultaneous initialization by two different authenticated staff users in an empty registry: exactly one successful creation, a deterministic 409 conflict, and an exact-UUID replay without duplicate success events. Uses `PlatformProviderService.replace_key` and synthetic secrets, then removes its singleton row while preserving the append-only audit, with all synthetic actors and records destroyed by the disposable CI Compose volume teardown.
+- `tools/platform_chat_postgres_race.py` retains the old six-worker absent-row quota case and additionally opens a loopback-only real FastAPI service backed by the same PostgreSQL. Two distinct ordinary accounts simultaneously POST real Chat requests through `graph_requests.admit_request` with `concurrency_limit=1`. A test-only barrier aligns calls immediately before actual `admit_platform`, with production row locking and request persistence unchanged. Required outcome: 202 + 429 `platform_concurrency_limit`, no quota charge for rejected request, exact UUID replay without double charging, release of capacity after SSE completion and cross-account thread denial.
+- Test environment is fail-closed (`IZO_ENVIRONMENT=test`, `IZO_P0_PLATFORM_PG_ACCEPTANCE=isolated`, `pg_host=postgres`); synthetic `FakeDeepSeekProvider`, no real provider calls or credit charges, and workflow owns the disposable Compose database/volumes.
+- This same downstream workflow also supplies CI-wired evidence for the real PostgreSQL singleton race fix in upstream PR #280 without editing the #280 source scope. Each new source SHA requires exact-source full GitHub checks and independent review.
