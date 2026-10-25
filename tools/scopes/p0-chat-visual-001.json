@@ -5,23 +5,26 @@
   "scope_class": "cross_domain",
   "risk": "high",
   "independent_review_required": true,
-  "max_files": 9,
-  "large_scope_reason": "Distinct frontend-only visual hierarchy across the existing Chat sidebar/composer/messages surfaces and Admin styling, preserving all functional contracts. Four authored CSS files are small and layered after existing styles; App.tsx only imports them. Browser checks cover desktop/mobile, focus, no overflow and model picker. Same-data screenshots are retained as D2-R2 QA artifacts outside Git per hygiene. This stacks on P0-B2 fake-only functional source without touching its owned files. All four authored CSS files remain separate and below hygiene limits. A security-sensitive CI workflow file is the ninth exact path: its three parallel, complete source/runtime/offline-preview jobs prevent prior 30-minute timeout and their original checks are retained without reduced coverage. A required fail-closed verify job depends on all three success states. After the initial-auth gate exposed a real fixture precondition race, the pre-existing shared Graph E2E opener is explicitly scoped for a deterministic visible-readiness check. Exact failed Chromium trace showed a saved row hidden in a closed mobile drawer because nonblocking isVisible() ran before /auth/me completed. The package adds only this one test-fixture path (nine changed files total), retaining original base and max_files=9. Production auth/data flow and test assertions/timeout/retry budgets are unchanged.",
+  "max_files": 11,
+  "large_scope_reason": "Distinct frontend-only visual hierarchy across the existing Chat sidebar/composer/messages surfaces and Admin styling, preserving all functional contracts. Four authored CSS files are small and layered after existing styles; App.tsx only imports them. Browser checks cover desktop/mobile, focus, no overflow and model picker. Same-data screenshots are retained as D2-R2 QA artifacts outside Git per hygiene. This stacks on P0-B2 fake-only functional source without touching its owned files. All four authored CSS files remain separate and below hygiene limits. A security-sensitive CI workflow file is the ninth exact path: its three parallel, complete source/runtime/offline-preview jobs prevent prior 30-minute timeout and their original checks are retained without reduced coverage. A required fail-closed verify job depends on all three success states. After the initial-auth gate exposed a real fixture precondition race, the pre-existing shared Graph E2E opener is explicitly scoped for a deterministic visible-readiness check. Exact failed Chromium trace showed a saved row hidden in a closed mobile drawer because nonblocking isVisible() ran before /auth/me completed. The original visual package changed nine paths with max_files=9; the bounded amendment below supersedes this historical count. Production auth/data flow and test assertions/timeout/retry budgets are unchanged. Owner-approved bounded scope amendment (2026-10-25): exact #282 Foundation CI 40192598241 demonstrated a Chat sticky-bottom race during same-frame streaming growth. The only two additional files are apps/web/src/shell/chat/useChatScroll.ts (canonical scroll owner) and apps/web/e2e/chat-scroll.spec.ts (nearest deterministic regression). The local reproduction failed by 1344 px before repair and passed 16/16 targeted Chromium checks without retries after repair. max_files=11 applies only to this PR; global size/context budgets, timeouts, retries and assertions remain unchanged. Five other mobile history-readiness flakes remain independently reviewable.",
   "domains": [
     "Web Chat visual system",
     "Web Admin visual styling",
     "Responsive Playwright visual acceptance",
-    "Graph browser fixture readiness after resolved initial authentication"
+    "Graph browser fixture readiness after resolved initial authentication",
+    "Bounded Chat scroll-follow owner and Playwright regression"
   ],
   "allowed": [
     ".github/workflows/ci.yml",
     "apps/web/e2e/conversation-graph-fixture.ts",
     "apps/web/e2e/p0-chat-visual.spec.ts",
+    "apps/web/e2e/chat-scroll.spec.ts",
     "apps/web/src/features/admin/P0AdminSurface.css",
     "apps/web/src/shell/App.tsx",
     "apps/web/src/shell/chat/P0ChatDark.css",
     "apps/web/src/shell/chat/P0ChatDetail.css",
     "apps/web/src/shell/chat/P0ChatSurface.css",
+    "apps/web/src/shell/chat/useChatScroll.ts",
     "docs/reviews/P0-CHAT-VISUAL-001.md",
     "tools/scopes/p0-chat-visual-001.json"
   ],
