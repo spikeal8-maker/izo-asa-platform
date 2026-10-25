@@ -159,6 +159,7 @@ test('P0 Admin provider forms preserve semantic input colors in both themes', as
 test('P0 fenced code copy toolbar uses semantic contrast in light and dark', async ({ page }) => {
   await workspace(page)
   await page.goto('/')
+  await expect(page.locator('.chat-page')).toBeVisible()
   for (const theme of ['light', 'dark'] as const) {
     await page.evaluate(value => { document.documentElement.dataset.theme = value }, theme)
     const colors = await page.evaluate(() => {
