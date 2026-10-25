@@ -9,6 +9,7 @@ from .credential_crypto import decrypt, encrypt, operation_fingerprint
 from .credential_disable import CredentialDisableMixin
 from .credential_read import ChatError
 from .provider import ProviderFailure
+from .provider_key_validation import key_belongs_to_other_provider
 from .schemas import CREDENTIAL_WINDOW_LIMIT, CredentialView
 class CredentialMixin(CredentialDisableMixin):
     def save_credential(
@@ -17,6 +18,8 @@ class CredentialMixin(CredentialDisableMixin):
         provider = self._provider_id(provider)
         root = self._root()
         key = command.key.get_secret_value()
+        if key_belongs_to_other_provider(provider, key):
+            raise ChatError(422, "credential_provider_mismatch")
         operation_hash = operation_fingerprint(
             root, f"save:{provider}",
             (str(command.expected_revision) + "\0" + key).encode("utf-8"))
