@@ -139,8 +139,15 @@
       "keywords": ["admin api", "permission", "staff permission", "compensation", "админ api", "права сотрудника", "начисление backend"],
       "read_first": ["apps/api/AGENTS.md", "apps/api/izo/admin/README.md"],
       "tests": ["tests/test_admin.py", "tests/test_admin_boundaries.py", "tests/test_admin_http.py"],
-      "expand_if_needed": ["apps/api/izo/admin/service.py", "apps/api/izo/admin/routes.py", "docs/ADMIN.md", "apps/api/izo/credits/README.md"],
+      "expand_if_needed": ["apps/api/izo/admin/service.py", "apps/api/izo/admin/routes.py", "apps/api/izo/platform_providers/README.md", "apps/api/izo/platform_providers/routes.py", "docs/ADMIN.md", "apps/api/izo/credits/README.md"],
       "do_not_read_by_default": ["docs/UX.md", "apps/api/izo/providers"]
+    },
+    "api.platform_providers": {
+      "keywords": ["platform provider", "server-managed deepseek", "provider registry", "admin provider connection", "server provider key", "shared deepseek", "провайдеры"],
+      "read_first": ["apps/api/AGENTS.md", "apps/api/izo/platform_providers/README.md"],
+      "tests": ["tests/test_platform_providers_http.py"],
+      "expand_if_needed": ["apps/api/izo/platform_providers/routes.py", "apps/api/izo/platform_providers/service.py", "apps/api/izo/platform_providers/schemas.py", "apps/api/izo/platform_providers/operations.py", "apps/api/izo/platform_providers/namespace.py", "apps/api/izo/platform_providers/tables.py", "apps/api/migrations/versions/0021_platform_chat_registry.py", "apps/api/izo/chat/credential_crypto.py"],
+      "do_not_read_by_default": ["docs/UX.md", "apps/api/izo/credits", "apps/web/src/features/gallery"]
     },
     "api.catalog": {
       "keywords": ["каталог моделей", "прайс моделей", "цена модели", "model catalog", "model price", "catalog permission"],

@@ -13,6 +13,7 @@ from .schemas import (AdminAccess, AdminUsers, AdminUser, AdminEvent, AdminEvent
                       CompensationInput, CompensationReceipt)
 
 STAFF = ("users.read_limited", "credits.read", "credits.grant", "audit.read", "access.read")
+VISIBLE = (*STAFF, "connections.read")  # Display-only; operator bootstrap grants are unchanged.
 
 
 class AdminService:
@@ -61,7 +62,7 @@ class AdminService:
         with self._action(raw, "admin.access") as conn:
             actor, session, grants = access.staff_session(self.auth, conn, raw, {"users.read_limited"})
             maximum = self._limit(conn, actor["id"]) if {"credits.grant", "credits.read"} <= grants else 0
-            return AdminAccess(permissions=sorted(grants.intersection(STAFF)),
+            return AdminAccess(permissions=sorted(grants.intersection(VISIBLE)),
                                max_grant=maximum, csrf_token=session["csrf_token"])
 
     def users(self, raw, query: str, limit=20, after: UUID | None = None):
