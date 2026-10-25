@@ -200,3 +200,23 @@ test('content growth follows only a reader near the end', async ({ page }) => {
   })
   await expect.poll(() => distanceFromBottom(page)).toBeLessThanOrEqual(2)
 })
+
+test('same-frame scroll to end and content growth preserves sticky bottom', async ({ page }) => {
+  await setup(page, [A])
+  await page.route(`**/api/v1/chat/threads/${A.id}`, route => route.fulfill({
+    json: { thread: A, messages: messages('A') },
+  }))
+  await page.goto('/')
+  await choose(page, A.title)
+  await expect(page.getByText(/^A 24 /)).toBeAttached()
+  await expect.poll(() => distanceFromBottom(page)).toBeLessThanOrEqual(2)
+  await scroll(page).evaluate(node => { node.scrollTop = 200 })
+  await expect.poll(() => scroll(page).evaluate(node => node.scrollTop)).toBeGreaterThanOrEqual(180)
+  await scroll(page).evaluate(node => {
+    node.scrollTop = node.scrollHeight
+    const extra = document.createElement('div')
+    extra.textContent = 'Concurrent incoming streamed text '.repeat(80)
+    node.querySelector('.chat-turns')!.append(extra)
+  })
+  await expect.poll(() => distanceFromBottom(page)).toBeLessThanOrEqual(2)
+})
