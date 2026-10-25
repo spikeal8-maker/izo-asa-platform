@@ -192,3 +192,8 @@
   color: var(--color-text-secondary);
   font-size: 0.95rem;
 }
+
+/* Search validation and retry guidance must remain legible on the dark sidebar. */
+.chat-shell .chat-sidebar #chat-search-error {
+  color: var(--color-surface);
+}
