@@ -1,5 +1,29 @@
-import type { FormEvent } from 'react'
+import type { FormEvent, RefObject } from 'react'
+import { Link } from '../../shell/router'
 import { labels, type Provider } from './provider-admin-types'
+
+export function ProviderAdminHeader() {
+  return <>
+    <header className="page-heading">
+      <p className="eyebrow">АДМИНИСТРИРОВАНИЕ / ИИ</p>
+      <h1>Провайдеры</h1>
+      <p>Защищённые серверные подключения. Личные ключи пользователей остаются отдельным BYOK-режимом.</p>
+    </header>
+    <nav className="admin-links" aria-label="Административные разделы">
+      <Link href="/admin/users">Пользователи</Link>
+      <Link href="/admin/catalog">Каталог моделей</Link>
+      <Link href="/admin/access">Доступ</Link>
+      <Link href="/admin/audit">Аудит</Link>
+      <Link href="/admin/providers" aria-current="page">Провайдеры</Link>
+    </nav>
+  </>
+}
+
+export function ProviderAdminStageNote() {
+  return <p className="provider-limit"><strong>Граница этапа B1.</strong> Здесь реально сохраняются, проверяются и выключаются
+    настройки подключения. Маршрутизация пользовательских запросов и контроль расходов будут включены отдельным
+    проверяемым этапом. В тестовом окружении проверка ключа синтетическая, без обращения к DeepSeek.</p>
+}
 
 type Action = 'save' | 'verify' | 'policy'
 type Props = {
@@ -8,6 +32,7 @@ type Props = {
   setKey: (text: string) => void
   password: string
   setPassword: (text: string) => void
+  passwordInputRef: RefObject<HTMLInputElement | null>
   model: Provider['model']
   setModel: (model: Provider['model']) => void
   enabled: boolean
@@ -22,10 +47,23 @@ type Props = {
 }
 
 export function ProviderAdminPanels(props: Props) {
-  const { provider, keyValue: key, setKey, password, setPassword,
+  const { provider, keyValue: key, setKey, password, setPassword, passwordInputRef,
     model, setModel, enabled, setEnabled, daily, setDaily,
     concurrency, setConcurrency, busy, change, form } = props
-  return <div className="provider-columns">
+  return <>
+    <section className="provider-auth provider-auth-top" aria-labelledby="provider-auth-title">
+      <div className="provider-auth-intro">
+        <h2 id="provider-auth-title">Подтверждение действий</h2>
+        <p>Чтобы сохранить ключ, проверить подключение или изменить лимиты, введите пароль, с которым вы входите в IZO ASA. Это не API-ключ.</p>
+      </div>
+      <div className="provider-auth-control">
+        <label htmlFor="provider-admin-password">Текущий пароль аккаунта IZO ASA</label>
+        <input id="provider-admin-password" ref={passwordInputRef} type="password" autoComplete="current-password"
+          value={password} onChange={e => setPassword(e.target.value)} minLength={1} maxLength={128} />
+        <p>Пароль нужен для каждой операции, очищается после попытки и не сохраняется в браузере.</p>
+      </div>
+    </section>
+    <div className="provider-columns">
       <div className="admin-panel provider-panel">
         <div className="provider-heading">
           <div><small>ПОДКЛЮЧЕНИЕ</small><h2>DeepSeek</h2></div>
@@ -44,12 +82,13 @@ export function ProviderAdminPanels(props: Props) {
               value={key} onChange={e => setKey(e.target.value)}
               minLength={8} maxLength={512} required />
           </label>
-          <button className="primary" type="submit" disabled={busy || !password || !key.trim()}>
+          <button className="primary" type="submit" disabled={busy || !key.trim()}>
             Сохранить ключ на сервере
           </button>
         </form>
-        <button type="button" disabled={!provider.configured || busy || !password}
+        <button type="button" disabled={!provider.configured || busy}
           onClick={() => void change('verify')}>Проверить подключение</button>
+        {!provider.configured && <p className="provider-action-hint">Проверка станет доступна после сохранения API-ключа.</p>}
       </div>
       <div className="admin-panel provider-panel">
         <h2>Модель и ограничения</h2>
@@ -70,15 +109,11 @@ export function ProviderAdminPanels(props: Props) {
           </label>
           <label className="provider-check"><input type="checkbox" checked={enabled}
             onChange={e => setEnabled(e.target.checked)} /> Разрешить подключение в настройках</label>
-          <button className="primary" type="submit" disabled={busy || !password || !provider.configured}>
+          <button className="primary" type="submit" disabled={busy || !provider.configured}>
             Сохранить настройки
           </button>
         </form>
-        <div className="provider-auth"><label>Текущий пароль администратора для операций
-          <input type="password" autoComplete="current-password" value={password}
-            onChange={e => setPassword(e.target.value)} minLength={1} maxLength={128} /></label>
-          <p>Пароль нужен для подтверждения операции и не сохраняется в браузере.</p>
-        </div>
       </div>
-  </div>
+    </div>
+  </>
 }

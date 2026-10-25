@@ -1,5 +1,5 @@
 .provider-admin {
-  --provider-muted: var(--muted, #657081);
+  --provider-muted: var(--color-text-secondary);
   max-width: 1480px;
   margin: 0 auto;
   padding: 18px 24px 48px;
@@ -99,4 +99,67 @@
   .provider-admin { padding: 14px 12px 36px; }
   .provider-columns { grid-template-columns: minmax(0, 1fr); }
   .provider-panel { padding: 15px; }
+}
+
+/* Explicit reauthentication step belongs before every protected action. */
+.provider-admin .provider-auth-top {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(260px, 390px);
+  gap: 20px;
+  align-items: center;
+  margin-top: 18px;
+  padding: 18px 22px;
+  border: 1px solid var(--color-border);
+  border-left: 4px solid var(--color-brand);
+  border-radius: 14px;
+  background: var(--color-surface);
+  box-shadow: 0 5px 18px rgba(29, 42, 78, 0.055);
+}
+.provider-admin .provider-auth-intro h2 {
+  margin: 0 0 7px;
+  font-size: 1.12rem;
+}
+.provider-admin .provider-auth-intro p,
+.provider-admin .provider-auth-control p {
+  margin: 0;
+  line-height: 1.5;
+  color: var(--provider-muted);
+  font-size: 0.88rem;
+}
+.provider-admin .provider-auth-control {
+  display: grid;
+  gap: 8px;
+}
+.provider-admin .provider-auth-control label {
+  font-weight: 650;
+  font-size: 0.9rem;
+}
+.provider-admin .provider-auth-control input {
+  box-sizing: border-box;
+  width: 100%;
+  min-width: 0;
+  min-height: 42px;
+  border: 1px solid var(--color-border);
+  border-radius: 9px;
+  padding: 9px 12px;
+  background: var(--color-surface);
+  color: var(--color-text);
+}
+.provider-admin .provider-auth-control input:focus-visible {
+  outline: 3px solid color-mix(in srgb, var(--color-brand) 78%, var(--color-surface));
+  outline-offset: 1px;
+}
+@media (max-width: 880px) {
+  .provider-admin .provider-auth-top {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 13px;
+    padding: 14px;
+  }
+}
+
+.provider-admin .provider-action-hint {
+  margin: -8px 0 2px;
+  font-size: 0.85rem;
+  line-height: 1.45;
+  color: var(--provider-muted);
 }

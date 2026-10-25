@@ -1,8 +1,7 @@
 import { useCallback, useEffect, useRef, useState, type FormEvent } from 'react'
 import { ApiError, apiRequest, type AuthView } from '../../shared/api'
-import { Link } from '../../shell/router'
 import './provider-admin.css'
-import { ProviderAdminPanels } from './ProviderAdminPanels'
+import { ProviderAdminHeader, ProviderAdminPanels, ProviderAdminStageNote } from './ProviderAdminPanels'
 
 import { endpoint, explainProviderError as explain, type Provider, type ProviderList } from './provider-admin-types'
 
@@ -14,6 +13,7 @@ export function ProviderAdminPage({ auth }: { auth: AuthView | null | undefined 
   const [provider, setProvider] = useState<Provider | null>(null)
   const [key, setKey] = useState('')
   const [password, setPassword] = useState('')
+  const passwordInputRef = useRef<HTMLInputElement>(null)
   const [model, setModel] = useState<Provider['model']>('deepseek-flash')
   const [enabled, setEnabled] = useState(false)
   const [daily, setDaily] = useState(30)
@@ -61,7 +61,13 @@ export function ProviderAdminPage({ auth }: { auth: AuthView | null | undefined 
   }, [refresh])
 
   async function change(kind: Kind) {
-    if (!provider || busy || !auth || invalidated.current || (!password && !pending.current)) return
+    if (!provider || busy || !auth || invalidated.current) return
+    if (!password && !pending.current) {
+      setNotice('')
+      setError('Для сохранения ключа, проверки подключения и изменения настроек введите текущий пароль вашего аккаунта IZO ASA в поле «Подтверждение действий» над карточками.')
+      passwordInputRef.current?.focus()
+      return
+    }
     if (kind !== 'save' && provider.revision === null && !pending.current) return
     if (pending.current && pending.current.kind !== kind) return
     const retryingPending = pending.current !== null
@@ -126,18 +132,7 @@ export function ProviderAdminPage({ auth }: { auth: AuthView | null | undefined 
     } finally { setLoading(false); setBusy(false) }
   }
   return <section className="admin-page provider-admin">
-    <header className="page-heading">
-      <p className="eyebrow">АДМИНИСТРИРОВАНИЕ / ИИ</p>
-      <h1>Провайдеры</h1>
-      <p>Защищённые серверные подключения. Личные ключи пользователей остаются отдельным BYOK-режимом.</p>
-    </header>
-    <nav className="admin-links" aria-label="Административные разделы">
-      <Link href="/admin/users">Пользователи</Link>
-      <Link href="/admin/catalog">Каталог моделей</Link>
-      <Link href="/admin/access">Доступ</Link>
-      <Link href="/admin/audit">Аудит</Link>
-      <Link href="/admin/providers" aria-current="page">Провайдеры</Link>
-    </nav>
+    <ProviderAdminHeader />
     {loading && <p role="status">Загружаем настройки подключения…</p>}
     {error && <p className="field-error" role="alert">{error}</p>}
     {notice && <p role="status" className="provider-notice">{notice}</p>}
@@ -155,14 +150,13 @@ export function ProviderAdminPage({ auth }: { auth: AuthView | null | undefined 
     }} disabled={busy || uncertain}>Обновить состояние</button>}
     {!sessionInvalid && provider && <ProviderAdminPanels provider={provider}
       keyValue={key} setKey={setKey}
-      password={password} setPassword={setPassword}
+      password={password} setPassword={text => { setPassword(text); if (error) setError('') }}
+      passwordInputRef={passwordInputRef}
       model={model} setModel={setModel}
       enabled={enabled} setEnabled={setEnabled}
       daily={daily} setDaily={setDaily}
       concurrency={concurrency} setConcurrency={setConcurrency}
       busy={busy || uncertain} change={change} form={form} />}
-    <p className="provider-limit"><strong>Граница этапа B1.</strong> Здесь реально сохраняются, проверяются и выключаются
-      настройки подключения. Маршрутизация пользовательских запросов и контроль расходов будут включены отдельным
-      проверяемым этапом. В тестовом окружении проверка ключа синтетическая, без обращения к DeepSeek.</p>
+    <ProviderAdminStageNote />
   </section>
 }

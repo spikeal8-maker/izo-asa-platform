@@ -1,0 +1,35 @@
+{
+  "package_id": "P0-ADMIN-PROVIDER-REAUTH-UI-001",
+  "base": "c937e50bd3aeab1ee876b63b5ceabc64843827a6",
+  "scope_class": "cross_domain",
+  "risk": "medium",
+  "independent_review_required": true,
+  "max_files": 8,
+  "large_scope_reason": "A narrowly bounded frontend-only fix for invisible password requirements in server-owned DeepSeek settings. React page remains owner of local password and API calls; two panel cards share an explicit top-of-page confirmation control. The existing server authorization, encryption, revision and audit paths are unchanged. Responsive Playwright acceptance, owner documentation, docs routing and exact-path scope are included.",
+  "domains": [
+    "Admin provider form UX",
+    "Responsive browser acceptance",
+    "Ownership/test routing documentation"
+  ],
+  "allowed": [
+    "apps/web/e2e/admin-provider-reauth.spec.ts",
+    "apps/web/src/features/admin/ProviderAdminPage.tsx",
+    "apps/web/src/features/admin/ProviderAdminPanels.tsx",
+    "apps/web/src/features/admin/README.md",
+    "apps/web/src/features/admin/provider-admin.css",
+    "docs/CONTEXT_MAP.json",
+    "docs/reviews/P0-ADMIN-PROVIDER-REAUTH-001.md",
+    "tools/scopes/p0-admin-provider-reauth-001.json"
+  ],
+  "sensitive_approved": [
+    "docs/CONTEXT_MAP.json",
+    "tools/scopes/p0-admin-provider-reauth-001.json"
+  ],
+  "non_goals": [
+    "No disabling or bypass of backend staff permission, current password verification, CSRF, encryption, session ownership or audit.",
+    "No real provider keys, user passwords, identity cookies, fake payment claims, or screenshots tracked in Git.",
+    "No changes to Auth/ACCESS ownership, protected main, paid provider endpoints, or database migrations.",
+    "No global Docker networking, other projects, firewall, DNS, routes or customer data changes.",
+    "No provider auto-enablement, paid live model verification or silent migration of wrong-vendor tokens."
+  ]
+}
