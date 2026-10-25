@@ -1,5 +1,6 @@
 """Staff-only DeepSeek platform credential registry, not a Chat execution path."""
 import json
+import os
 from uuid import uuid4
 
 import sqlalchemy as sa
@@ -38,7 +39,10 @@ class PlatformProviderService(ProviderOperationsMixin):
         return ProviderView(configured=True, enabled=row["enabled"],
             verified=verified, status=status, model=row["model"],
             revision=row["revision"], generation=row["generation"],
-            daily_limit=row["daily_limit"], concurrency_limit=row["concurrency_limit"])
+            daily_limit=row["daily_limit"], concurrency_limit=row["concurrency_limit"],
+            available_to_users=bool(row["enabled"] and verified and
+                os.getenv("IZO_ENVIRONMENT") == "test" and
+                os.getenv("IZO_CHAT_PLATFORM_DEMO") == "isolated"))
 
     def _identity(self, conn, raw, permissions, csrf=None, mutation=False):
         return access.staff_session(self.auth, conn, raw, permissions,

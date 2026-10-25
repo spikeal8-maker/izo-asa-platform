@@ -15,6 +15,7 @@ from .credential_routes import attach_credential_routes
 from .graph_routes import attach_graph_routes
 from .graph_schemas import ThreadDetail
 from .provider import DeepSeekProvider
+from .platform_admission import isolated_platform_demo
 from .provider_openrouter import FakeOpenRouterProvider, OpenRouterProvider
 from .execution import FakeDeepSeekProvider
 from .schemas import (
@@ -92,7 +93,8 @@ def attach_chat(app, database_config, accounts_provider) -> None:
                     ChatSettings(),
                     provider, providers={"openrouter": openrouter},
                     media_store=(getattr(request.app.state, "media_store", None)
-                                 or MediaStore(database_config)))
+                                 or MediaStore(database_config)),
+                    platform_demo=isolated_platform_demo(database_config))
                 request.app.state._chat_runtime_service = current
             return current
 

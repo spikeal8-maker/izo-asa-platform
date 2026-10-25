@@ -1,0 +1,41 @@
+name: P0 Platform Fake PostgreSQL
+on:
+  pull_request: {}
+  workflow_dispatch: {}
+permissions:
+  contents: read
+jobs:
+  postgres-concurrency:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 18
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd
+        with: {persist-credentials: false, fetch-depth: 0}
+      - uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1
+        with: {python-version: '3.13'}
+      - name: Generate disposable isolated test config
+        run: |
+          python tools/bootstrap.py
+          sed -i 's/^IZO_ENVIRONMENT=development$/IZO_ENVIRONMENT=test/' .env
+          grep -q '^IZO_ENVIRONMENT=test$' .env
+          test "$(git status --porcelain -- .env)" = ""
+      - name: Build the normal API and migrations
+        run: docker compose build api migrate
+      - name: Prepare only the fresh PostgreSQL database
+        run: |
+          docker compose up -d --wait --wait-timeout 180 postgres
+          docker compose run --rm migrate
+      - name: Real PostgreSQL singleton initialization, zero paid calls
+        run: |
+          docker compose run --rm --no-deps \
+            -e IZO_P0_PLATFORM_PG_ACCEPTANCE=isolated \
+            api python tools/platform_provider_singleton_postgres.py
+      - name: Real PostgreSQL quota and actual Chat admission race, zero paid calls
+        run: |
+          docker compose run --rm --no-deps \
+            -e IZO_P0_PLATFORM_PG_ACCEPTANCE=isolated \
+            api python tools/platform_chat_postgres_race.py
+      - name: Destroy only disposable CI Compose resources
+        if: always()
+        run: |
+          if [ -f .env ]; then docker compose down -v --remove-orphans; fi

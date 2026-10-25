@@ -1,0 +1,63 @@
+{
+  "package_id": "P0-PLATFORM-FAKE-CHAT-001",
+  "base": "6ae8c91a3297d3ec754872aaa04766cc5ceb1538",
+  "scope_class": "cross_domain",
+  "risk": "high",
+  "independent_review_required": true,
+  "max_files": 30,
+  "large_scope_reason": "A single narrowly test-gated no-BYOK vertical spans existing Chat admission/Graph/SSE/credential execution and catalog, encrypted server-owned DeepSeek configuration, one forward schema migration, the existing React composer and model selector, focused default-network-denied server tests, PostgreSQL absent-row concurrency acceptance, Playwright model-select tests, exact routing documentation, a new isolated CI workflow and an explicit scope. The code is stacked on PR #280 and PR #279. Existing Accounts/BYOK/Graph/SSO/Credits and production routing are not replaced or bypassed. Separate P0-D visual CSS uses distinct files and is outside this package.",
+  "domains": [
+    "Existing account-owned Chat admission and Graph execution",
+    "Test-only platform provider configuration and quota",
+    "Existing web model/Chat UI without required BYOK",
+    "Isolated PostgreSQL and browser acceptance"
+  ],
+  "allowed": [
+    ".github/workflows/p0-platform-fake.yml",
+    "apps/api/izo/chat/execution.py",
+    "apps/api/izo/chat/graph_requests.py",
+    "apps/api/izo/chat/platform_admission.py",
+    "apps/api/izo/chat/platform_policy.py",
+    "apps/api/izo/chat/routes.py",
+    "apps/api/izo/chat/service.py",
+    "apps/api/izo/chat/tables.py",
+    "apps/api/izo/platform_providers/README.md",
+    "apps/api/izo/platform_providers/service.py",
+    "apps/api/izo/platform_providers/tables.py",
+    "apps/api/migrations/versions/0022_platform_chat_fake_demo.py",
+    "apps/web/e2e/platform-fake-chat.spec.ts",
+    "apps/web/src/shared/api.ts",
+    "apps/web/src/shared/platform-chat-errors.ts",
+    "apps/web/src/shell/ChatPage.tsx",
+    "apps/web/src/shell/chat/ChatStartNotice.tsx",
+    "apps/web/src/shell/chat/modelCatalog.ts",
+    "apps/web/src/shell/chat/useChatPreflight.ts",
+    "docs/CONTEXT_MAP.json",
+    "docs/reviews/P0-PLATFORM-FAKE-CHAT-001.md",
+    "tests/test_platform_chat_fake.py",
+    "tools/platform_chat_postgres_race.py",
+    "tools/platform_provider_singleton_postgres.py",
+    "tools/scopes/p0-platform-chat-fake-001.json"
+  ],
+  "sensitive_approved": [
+    ".github/workflows/p0-platform-fake.yml",
+    "apps/api/izo/chat/execution.py",
+    "apps/api/izo/chat/graph_requests.py",
+    "apps/api/izo/chat/routes.py",
+    "apps/api/izo/chat/tables.py",
+    "apps/api/izo/platform_providers/service.py",
+    "apps/api/migrations/versions/0022_platform_chat_fake_demo.py",
+    "docs/CONTEXT_MAP.json",
+    "tools/platform_chat_postgres_race.py",
+    "tools/platform_provider_singleton_postgres.py",
+    "tools/scopes/p0-platform-chat-fake-001.json"
+  ],
+  "non_goals": [
+    "Never enable paid model requests, provider workers or production deployments; test and explicit isolated flag only.",
+    "No second Chat backend, duplicate request/Graph stores, alternative login/permissions or bypass of existing BYOK.",
+    "No real token-cost charging or financial budget guarantee: confirmed synthetic cost is exactly zero; real reconciliation is a separate reviewed package.",
+    "No production API keys, real owner privilege changes, broad UI redesign, Docker daemon or OS-network modifications.",
+    "No changes to active canonical PLAN/PACKAGES/CURRENT/CHECKPOINTS or hidden legacy waivers; no merge to protected main.",
+    "No tracked local .env, desktop screenshots, external customer data or private test credentials; only synthetic QA fixtures."
+  ]
+}

@@ -194,8 +194,8 @@
     "api.chat": {
       "keywords": ["deepseek", "chat backend", "чат backend", "streaming chat", "credential", "byok", "thread", "chat request"],
       "read_first": ["apps/api/AGENTS.md", "apps/api/izo/chat/README.md"],
-      "tests": ["tests/test_chat.py", "tests/test_chat_http.py"],
-      "expand_if_needed": ["apps/api/izo/chat/service.py", "apps/api/izo/chat/credentials.py", "apps/api/izo/chat/conversations.py", "apps/api/izo/chat/execution.py", "apps/api/izo/chat/provider.py", "apps/web/src/shell/ChatPage.tsx", "compose.yaml"],
+      "tests": ["tests/test_chat.py", "tests/test_chat_http.py", "tests/test_platform_chat_fake.py"],
+      "expand_if_needed": ["apps/api/izo/chat/service.py", "apps/api/izo/chat/credentials.py", "apps/api/izo/chat/conversations.py", "apps/api/izo/chat/execution.py", "apps/api/izo/chat/platform_admission.py", "apps/api/izo/chat/platform_policy.py", "apps/api/izo/chat/provider.py", "apps/web/src/shell/ChatPage.tsx", "tools/platform_chat_postgres_race.py", "compose.yaml"],
       "do_not_read_by_default": ["docs/ADMIN.md", "apps/api/izo/jobs", "apps/api/izo/media"]
     },
     "ops.runtime": {

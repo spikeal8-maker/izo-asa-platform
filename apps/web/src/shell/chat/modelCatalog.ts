@@ -16,7 +16,7 @@ export const autoModel: ChatModel = { id: 'auto', label: 'Авто', provider: '
   price: { currency: 'RUB', input_kopeks_per_million: null,
     output_kopeks_per_million: null, image_kopeks_per_image: null } }
 export const providerLabels: Record<string, string> = {
-  deepseek: 'DeepSeek', openrouter: 'OpenRouter',
+  platform: 'Платформа · тест', deepseek: 'DeepSeek', openrouter: 'OpenRouter',
 }
 export function providerFor(model: ChatModel): string { return model.provider || 'deepseek' }
 
@@ -25,11 +25,11 @@ export function textModels(policy: ChatDisplayPolicy | null): ChatModel[] {
 }
 
 export function modelAvailable(model: ChatModel, credentials: CredentialView[]): boolean {
-  return credentials.some(item => item.provider === providerFor(model) && item.verified)
+  return providerFor(model) === 'platform' || credentials.some(item => item.provider === providerFor(model) && item.verified)
 }
 
 export function groupedTextModels(models: ChatModel[]) {
-  return ['deepseek', 'openrouter'].map(provider => ({
+  return ['platform', 'deepseek', 'openrouter'].map(provider => ({
     provider, label: providerLabels[provider],
     models: models.filter(item => providerFor(item) === provider),
   })).filter(group => group.models.length > 0)

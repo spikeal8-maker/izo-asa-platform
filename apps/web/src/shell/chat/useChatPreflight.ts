@@ -1,5 +1,5 @@
 import { apiRequest, ApiError, chatProviderProblem, type ChatPolicyView, type ChatRequestView, type CredentialView } from '../../shared/api'
-import { providerFor, type ChatDisplayPolicy, type ChatModel } from './modelCatalog'
+import { modelAvailable, type ChatDisplayPolicy, type ChatModel } from './modelCatalog'
 import { fetchOpenRouterCatalog } from './useChatCatalog'
 import { isId } from '../../shared/workspace-api'
 import type { ChatAttachmentDraft, ImageType, Prepared } from './chatAttachments'
@@ -108,7 +108,7 @@ export function forgetUnstartedOperations(accountId: string | undefined, drafts:
 
 export function availableChatModel(policy: ChatDisplayPolicy | null, credentials: CredentialView[], id: string) {
   const model = policy?.models.find(item => item.id === id)
-  return model && credentials.some(item => item.provider === providerFor(model) && item.verified) ? model : undefined
+  return model && modelAvailable(model, credentials) ? model : undefined
 }
 
 /** Recheck server-owned price and model capabilities immediately before admission. */
