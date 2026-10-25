@@ -30,10 +30,13 @@ const setup = async (page: Page, items = threads) => {
 }
 
 async function choose(page: Page, title: string) {
-  if (await page.getByRole('button', { name: 'Открыть панель' }).isVisible()) {
-    await page.getByRole('button', { name: 'Открыть панель' }).click()
-  }
-  await page.getByRole('button', { name: title }).click()
+  const opener = page.getByRole('button', { name: 'Открыть панель', exact: true })
+  const row = page.getByRole('button', { name: title, exact: true })
+  // Initial Chat mounts after /auth/me; do not decide whether a mobile drawer
+  // needs opening before either the visible opener or desktop row is ready.
+  await expect.poll(async () => await row.isVisible() || await opener.isVisible()).toBe(true)
+  if (await opener.isVisible()) await opener.click()
+  await row.click()
 }
 
 test('delayed history load and A→B→A restore the reader viewport', async ({ page }) => {
