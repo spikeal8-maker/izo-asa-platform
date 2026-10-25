@@ -32,6 +32,7 @@
     "apps/web/src/features/admin/provider-admin.css",
     "apps/web/src/shell/App.tsx",
     "apps/web/src/shell/TopBar.tsx",
+    "apps/web/e2e/conversation-graph-races.spec.ts",
     "docs/CONTEXT_MAP.json",
     "docs/reviews/P0-PLATFORM-PROVIDER-REGISTRY-001.md",
     "packages/contracts/openapi.json",
