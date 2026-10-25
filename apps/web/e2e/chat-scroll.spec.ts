@@ -30,10 +30,13 @@ const setup = async (page: Page, items = threads) => {
 }
 
 async function choose(page: Page, title: string) {
-  if (await page.getByRole('button', { name: 'Открыть панель' }).isVisible()) {
-    await page.getByRole('button', { name: 'Открыть панель' }).click()
-  }
-  await page.getByRole('button', { name: title }).click()
+  const opener = page.getByRole('button', { name: 'Открыть панель', exact: true })
+  const row = page.getByRole('button', { name: title, exact: true })
+  // Initial Chat mounts after /auth/me; do not decide whether a mobile drawer
+  // needs opening before either the visible opener or desktop row is ready.
+  await expect.poll(async () => await row.isVisible() || await opener.isVisible()).toBe(true)
+  if (await opener.isVisible()) await opener.click()
+  await row.click()
 }
 
 test('delayed history load and A→B→A restore the reader viewport', async ({ page }) => {
@@ -196,6 +199,26 @@ test('content growth follows only a reader near the end', async ({ page }) => {
   await scroll(page).evaluate(node => {
     const extra = document.createElement('div')
     extra.textContent = 'Final streaming content '.repeat(60)
+    node.querySelector('.chat-turns')!.append(extra)
+  })
+  await expect.poll(() => distanceFromBottom(page)).toBeLessThanOrEqual(2)
+})
+
+test('same-frame scroll to end and content growth preserves sticky bottom', async ({ page }) => {
+  await setup(page, [A])
+  await page.route(`**/api/v1/chat/threads/${A.id}`, route => route.fulfill({
+    json: { thread: A, messages: messages('A') },
+  }))
+  await page.goto('/')
+  await choose(page, A.title)
+  await expect(page.getByText(/^A 24 /)).toBeAttached()
+  await expect.poll(() => distanceFromBottom(page)).toBeLessThanOrEqual(2)
+  await scroll(page).evaluate(node => { node.scrollTop = 200 })
+  await expect.poll(() => scroll(page).evaluate(node => node.scrollTop)).toBeGreaterThanOrEqual(180)
+  await scroll(page).evaluate(node => {
+    node.scrollTop = node.scrollHeight
+    const extra = document.createElement('div')
+    extra.textContent = 'Concurrent incoming streamed text '.repeat(80)
     node.querySelector('.chat-turns')!.append(extra)
   })
   await expect.poll(() => distanceFromBottom(page)).toBeLessThanOrEqual(2)

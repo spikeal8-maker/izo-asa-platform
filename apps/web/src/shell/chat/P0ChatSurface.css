@@ -1,0 +1,201 @@
+/* P0-D: deliberate desktop/mobile workspace composition, no behavior changes. */
+.chat-shell {
+  font-family: "Segoe UI Variable", "Segoe UI", system-ui, sans-serif;
+}
+.chat-shell .global-header {
+  border-bottom: 1px solid color-mix(in srgb, var(--color-border) 25%, var(--color-brand-soft));
+  box-shadow: 0 2px 13px color-mix(in srgb, color-mix(in srgb, var(--color-text) 90%, var(--color-brand)) 4%, transparent);
+  background: var(--color-surface);
+  z-index: 40;
+}
+.chat-shell .chat-page {
+  background: var(--color-bg);
+  color: var(--color-text);
+}
+.chat-shell .chat-sidebar {
+  background: linear-gradient(160deg, color-mix(in srgb, var(--color-text) 85%, var(--color-brand)) 0%, color-mix(in srgb, var(--color-text) 80%, var(--color-brand)) 55%, color-mix(in srgb, var(--color-text) 75%, var(--color-brand)) 100%);
+  border-right: 1px solid color-mix(in srgb, var(--color-text) 65%, var(--color-brand));
+  color: color-mix(in srgb, var(--color-surface) 20%, var(--color-brand-soft));
+  box-shadow: inset -1px 0 color-mix(in srgb, var(--color-surface) 4%, transparent);
+}
+.chat-shell .chat-sidebar-head {
+  height: var(--chat-toolbar-height);
+  color: color-mix(in srgb, var(--color-surface) 90%, var(--color-brand));
+  border-bottom: 1px solid color-mix(in srgb, color-mix(in srgb, var(--color-bg) 80%, var(--color-brand)) 11%, transparent);
+}
+.chat-shell .chat-sidebar-title {
+  font-size: 12px;
+  font-weight: 750;
+  letter-spacing: .12em;
+  text-transform: uppercase;
+  color: color-mix(in srgb, var(--color-border) 65%, var(--color-brand));
+}
+.chat-shell .chat-sidebar .chat-icon-button {
+  color: color-mix(in srgb, var(--color-border) 80%, var(--color-brand));
+}
+.chat-shell .chat-sidebar .chat-icon-button:hover:not(:disabled) {
+  background: color-mix(in srgb, var(--color-text) 55%, var(--color-brand));
+  color: var(--color-surface);
+}
+.chat-shell .chat-sidebar-actions {
+  gap: 6px;
+  padding: 14px 12px 10px;
+}
+.chat-shell .chat-sidebar-actions button {
+  color: color-mix(in srgb, var(--color-bg) 80%, var(--color-brand));
+  font-weight: 570;
+  border: 1px solid transparent;
+  border-radius: 11px;
+}
+.chat-shell .chat-sidebar-actions button:first-child {
+  color: var(--color-surface);
+  background: linear-gradient(105deg, color-mix(in srgb, var(--color-surface) 10%, var(--color-brand)), color-mix(in srgb, var(--color-surface) 20%, var(--color-brand)));
+  box-shadow: 0 5px 16px color-mix(in srgb, var(--color-text) 26%, transparent);
+  border-color: color-mix(in srgb, var(--color-surface) 30%, var(--color-brand));
+}
+.chat-shell .chat-sidebar-actions button:hover:not(:disabled) {
+  background: color-mix(in srgb, var(--color-text) 50%, var(--color-brand));
+  color: white;
+}
+.chat-shell .chat-sidebar-actions button:first-child:hover:not(:disabled) {
+  background: color-mix(in srgb, var(--color-brand) 75%, var(--color-brand-soft));
+}
+.chat-shell .chat-side-section {
+  color: color-mix(in srgb, var(--color-text-secondary) 55%, var(--color-brand-soft));
+  font-size: 11px;
+  letter-spacing: .13em;
+  text-transform: uppercase;
+  font-weight: 760;
+  padding-top: 16px;
+  padding-bottom: 9px;
+}
+.chat-shell .chat-history-list {
+  padding: 1px 12px 12px;
+  scrollbar-color: color-mix(in srgb, var(--color-text-secondary) 80%, var(--color-brand)) transparent;
+}
+.chat-shell .chat-history-item {
+  min-height: 40px;
+  border-radius: 10px;
+  color: color-mix(in srgb, var(--color-brand) 15%, var(--color-brand-soft));
+  font-size: 13px;
+  border: 1px solid transparent;
+  transition: background .15s, border-color .15s;
+}
+.chat-shell .chat-history-item:hover {
+  background: color-mix(in srgb, var(--color-text) 60%, var(--color-brand));
+  color: white;
+}
+.chat-shell .chat-history-item.active {
+  color: var(--color-surface);
+  background: color-mix(in srgb, var(--color-text) 50%, var(--color-brand));
+  border-color: color-mix(in srgb, var(--color-text-secondary) 40%, var(--color-brand));
+  box-shadow: inset 3px 0 color-mix(in srgb, var(--color-surface) 40%, var(--color-brand));
+}
+.chat-shell .chat-sidebar-bottom {
+  border-top: 1px solid color-mix(in srgb, color-mix(in srgb, var(--color-surface) 70%, var(--color-brand)) 12%, transparent);
+  background: color-mix(in srgb, var(--color-text) 29%, transparent);
+}
+.chat-shell .chat-profile-button {
+  color: color-mix(in srgb, var(--color-surface) 85%, var(--color-brand));
+}
+.chat-shell .chat-profile-name {
+  color: color-mix(in srgb, var(--color-surface) 95%, var(--color-brand));
+  font-weight: 680;
+}
+.chat-shell .chat-profile-plan {
+  color: color-mix(in srgb, var(--color-border) 65%, var(--color-brand));
+}
+.chat-shell .chat-search-box {
+  background: color-mix(in srgb, var(--color-text) 70%, var(--color-brand));
+  border: 1px solid color-mix(in srgb, var(--color-text-secondary) 90%, var(--color-brand));
+  color: color-mix(in srgb, var(--color-surface) 80%, var(--color-brand));
+}
+.chat-shell .chat-search-box input {
+  color: color-mix(in srgb, var(--color-surface) 40%, var(--color-brand-soft));
+}
+.chat-shell .chat-search-box input::placeholder {
+  color: color-mix(in srgb, var(--color-border) 85%, var(--color-brand));
+}
+.chat-shell .chat-search-box:focus-within {
+  outline: 2px solid color-mix(in srgb, var(--color-surface) 30%, var(--color-brand));
+  outline-offset: 1px;
+}
+.chat-shell .chat-main {
+  background: radial-gradient(circle at 58% 4%, color-mix(in srgb, color-mix(in srgb, var(--color-surface) 85%, var(--color-brand)) 60%, transparent), transparent 29%), var(--color-bg);
+}
+.chat-shell .chat-toolbar {
+  background: color-mix(in srgb, var(--color-surface) 85%, transparent);
+  backdrop-filter: blur(14px);
+  /* Keep nested provider controls above the following positioned message scroller. */
+  z-index: 1;
+  border-bottom: 1px solid var(--color-border);
+  box-shadow: 0 2px 8px color-mix(in srgb, color-mix(in srgb, var(--color-text) 75%, var(--color-brand)) 4%, transparent);
+  padding-right: 16px;
+  gap: 9px;
+}
+.chat-shell .chat-toolbar .chat-credential-toggle {
+  border: 1px solid var(--color-border);
+  background: var(--color-surface);
+  border-radius: 10px;
+  padding: 7px 10px;
+}
+.chat-shell .chat-toolbar .chat-branch-controls select {
+  background: color-mix(in srgb, var(--color-surface) 95%, var(--color-brand));
+  color: color-mix(in srgb, var(--color-text) 40%, var(--color-brand)) !important;
+  border: 1px solid color-mix(in srgb, var(--color-surface) 75%, var(--color-brand));
+  border-radius: 10px;
+  font-weight: 650;
+}
+.chat-shell .chat-scroll {
+  scrollbar-color: color-mix(in srgb, var(--color-border) 90%, var(--color-brand)) transparent;
+}
+.chat-shell .chat-start-state {
+  background: radial-gradient(ellipse at 50% 35%, color-mix(in srgb, color-mix(in srgb, var(--color-surface) 90%, var(--color-brand)) 68%, transparent), transparent 52%);
+}
+.chat-shell .chat-start-state h1 {
+  font-weight: 740;
+  letter-spacing: -.055em;
+  color: color-mix(in srgb, var(--color-text) 75%, var(--color-brand));
+}
+.chat-shell .chat-start-state h1::after {
+  content: "";
+  display: block;
+  height: 4px;
+  width: 56px;
+  margin: 17px auto 0;
+  border-radius: 10px;
+  background: linear-gradient(90deg, color-mix(in srgb, var(--color-surface) 30%, var(--color-brand)), color-mix(in srgb, var(--color-surface) 25%, var(--color-brand)));
+}
+.chat-shell .chat-start-note {
+  color: color-mix(in srgb, var(--color-text-secondary) 75%, var(--color-brand-soft));
+  line-height: 1.6;
+}
+.chat-shell .chat-runtime-note {
+  border: 1px solid color-mix(in srgb, var(--color-surface) 70%, var(--color-error));
+  background: color-mix(in srgb, var(--color-surface) 95%, var(--color-warning));
+  color: color-mix(in srgb, var(--color-brand) 25%, var(--color-warning));
+  border-radius: 13px;
+  box-shadow: 0 3px 9px color-mix(in srgb, color-mix(in srgb, var(--color-text) 50%, var(--color-warning)) 4%, transparent);
+}
+@media (max-width: 1119px) {
+  .chat-shell .chat-sidebar {
+    box-shadow: 16px 0 42px color-mix(in srgb, var(--color-text) 23%, transparent);
+  }
+}
+@media (max-width: 600px) {
+  .chat-shell .chat-toolbar { padding-right: 8px; }
+}
+
+/* Do not expose interactive Chat controls before the initial session resolves. */
+.chat-shell .chat-auth-loading {
+  display: grid;
+  place-items: center;
+  min-height: min(68vh, 680px);
+  color: var(--color-text-secondary);
+  font-size: 0.95rem;
+}
+
+/* Search validation and retry guidance must remain legible on the dark sidebar. */
+.chat-shell .chat-sidebar #chat-search-error {
+  color: var(--color-surface);
+}

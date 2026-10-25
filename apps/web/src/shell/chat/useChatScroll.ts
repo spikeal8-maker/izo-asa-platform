@@ -8,6 +8,7 @@ export function useChatScroll(ownerId: string | undefined, threadId: string | nu
   const positions = useRef(new Map<string, { top: number; atBottom: boolean }>())
   const shownThread = useRef<string | null>(null)
   const atBottom = useRef(true)
+  const observedHeight = useRef(0)
   type Anchor = { threadId: string; element: HTMLElement; offset: number }
   const prepend = useRef<({ height: number; top: number } & Anchor) | null>(null)
   const readingAnchor = useRef<Anchor | null>(null)
@@ -65,6 +66,7 @@ export function useChatScroll(ownerId: string | undefined, threadId: string | nu
     readingAnchor.current = null
     shownThread.current = null
     atBottom.current = true
+    observedHeight.current = 0
   }, [ownerId])
 
   useLayoutEffect(() => {
@@ -75,7 +77,10 @@ export function useChatScroll(ownerId: string | undefined, threadId: string | nu
       shownThread.current = threadId
       const saved = threadId ? positions.current.get(threadId) : undefined
       atBottom.current = saved?.atBottom ?? true
-      if (node) node.scrollTop = atBottom.current ? node.scrollHeight : saved?.top ?? 0
+      if (node) {
+        node.scrollTop = atBottom.current ? node.scrollHeight : saved?.top ?? 0
+        observedHeight.current = node.scrollHeight
+      }
     } else if (node && prepend.current?.threadId === threadId) {
       const anchor = prepend.current
       prepend.current = null
@@ -95,9 +100,21 @@ export function useChatScroll(ownerId: string | undefined, threadId: string | nu
   useLayoutEffect(() => {
     const node = scrollRef.current
     if (!node) return
+    observedHeight.current = node.scrollHeight
     const observer = new ResizeObserver(() => {
+      const previousHeight = observedHeight.current
+      const grew = node.scrollHeight > previousHeight + 1
+      const previousBottom = previousHeight - node.clientHeight
+      const atPreviousBottom = previousHeight > 0
+        && Math.abs(node.scrollTop - previousBottom) <= bottomDistance
       if (readingAnchor.current) alignReadingAnchor(node)
-      else if (atBottom.current) node.scrollTop = node.scrollHeight
+      else if (atBottom.current || (grew && atPreviousBottom)) {
+        node.scrollTop = node.scrollHeight
+        atBottom.current = true
+        if (shownThread.current) positions.current.set(shownThread.current,
+          { top: node.scrollTop, atBottom: true })
+      }
+      observedHeight.current = node.scrollHeight
     })
     observer.observe(node)
     if (node.firstElementChild) observer.observe(node.firstElementChild)
