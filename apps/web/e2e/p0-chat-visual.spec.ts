@@ -163,8 +163,7 @@ test('P0 fenced code copy toolbar uses semantic contrast in light and dark', asy
   for (const theme of ['light', 'dark'] as const) {
     await page.evaluate(value => { document.documentElement.dataset.theme = value }, theme)
     const colors = await page.evaluate(() => {
-      const parent = document.querySelector('.chat-page')
-      if (!parent) throw new Error('Chat page not mounted')
+      const parent = document.querySelector('.chat-page')!
       const block = document.createElement('div')
       block.className = 'chat-code-block'
       const toolbar = document.createElement('div')
